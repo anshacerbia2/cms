@@ -10,9 +10,9 @@ export declare class BanksService {
     constructor(prisma: PrismaService);
     createBank(dto: CreateBankDto): Promise<{
         id: bigint;
-        bankName: string;
         createdAt: Date;
         updatedAt: Date;
+        bankName: string;
         bankCode: string;
         bankBrand: string | null;
         bankAddress: string | null;
@@ -21,9 +21,9 @@ export declare class BanksService {
     createInternalAccount(dto: CreateInternalAccountDto): Promise<{
         bank: {
             id: bigint;
-            bankName: string;
             createdAt: Date;
             updatedAt: Date;
+            bankName: string;
             bankCode: string;
             bankBrand: string | null;
             bankAddress: string | null;
@@ -44,9 +44,9 @@ export declare class BanksService {
     findOneInternalAccount(id: number): Promise<{
         bank: {
             id: bigint;
-            bankName: string;
             createdAt: Date;
             updatedAt: Date;
+            bankName: string;
             bankCode: string;
             bankBrand: string | null;
             bankAddress: string | null;
@@ -66,9 +66,9 @@ export declare class BanksService {
     updateInternalAccount(id: number, dto: UpdateInternalAccountDto): Promise<{
         bank: {
             id: bigint;
-            bankName: string;
             createdAt: Date;
             updatedAt: Date;
+            bankName: string;
             bankCode: string;
             bankBrand: string | null;
             bankAddress: string | null;

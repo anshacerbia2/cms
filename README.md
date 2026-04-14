@@ -1,6 +1,6 @@
-# REKAYASA CMS - Enterprise Platform
+# Panconvince CMS - Enterprise Platform
 
-Modern CMS and Operational Management System for Rekayasa Industri, migrated from legacy Laravel to a state-of-the-art NestJS/React tech stack.
+Modern CMS and Operational Management System for Panconvince, migrated from legacy Laravel to a state-of-the-art NestJS/React tech stack.
 
 ## 🏗 High-Level Architecture
 
@@ -41,7 +41,7 @@ This project is a monorepo-style structure containing both backend and frontend 
 ### 🔐 Default Credentials (First Login)
 
 Use these credentials to access the system after seeding:
-- **Username**: `admin@rekayasa.com`
+- **Username**: `admin@pcmi.com`
 - **Password**: `pass123`
 - **Role**: Super Admin
 
@@ -62,7 +62,7 @@ Use these credentials to access the system after seeding:
 ## 📂 Project Structure
 
 ```text
-rekayasa-cms/
+cms/
 ├── backend/            # NestJS Application
 │   ├── prisma/         # Schema & Migrations
 │   └── src/            # Application Logic
@@ -94,5 +94,3 @@ This platform uses a custom **Midnight Blue & Gold** premium theme.
 Design tokens are managed in `frontend/src/index.css` using Tailwind CSS v4 variables.
 
 ---
-
-Developed with ❤️ for Rekayasa Industri.

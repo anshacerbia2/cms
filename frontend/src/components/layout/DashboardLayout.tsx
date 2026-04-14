@@ -103,7 +103,7 @@ function LayoutContent() {
 
         <footer className="py-6 px-6 md:px-12 border-t border-primary/10 flex justify-between items-center text-muted-foreground/30">
           <p className="text-[9px] font-bold tracking-[0.3em] uppercase">
-            © 2026 Rekayasa • CMS Enterprise v1.0.0
+            © 2026 Panconvince • CMS Enterprise v1.0.0
           </p>
         </footer>
       </div>

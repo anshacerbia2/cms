@@ -72,7 +72,7 @@ export default function LoginPage() {
             <Command className="text-white h-7 w-7 -rotate-3" />
           </div>
           <h1 className="text-2xl font-extrabold tracking-tighter uppercase font-headline text-primary">
-            CMS <span className="opacity-40 font-bold">Rekayasa</span>
+            CMS <span className="opacity-40 font-bold">Panconvince</span>
           </h1>
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] mt-1">
             Enterprise Management System

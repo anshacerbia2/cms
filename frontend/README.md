@@ -1,6 +1,6 @@
-# Rekayasa CMS - Frontend (React + Vite)
+# Panconvince CMS - Frontend (React + Vite)
 
-A premium, high-fidelity dashboard built for Rekayasa Industri using modern React patterns.
+A premium, high-fidelity dashboard built for Panconvince using modern React patterns.
 
 ## 🛠 Tech Stack
 - **React 18**: Frontend library.

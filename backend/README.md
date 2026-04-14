@@ -1,4 +1,4 @@
-# Rekayasa CMS - Backend API (NestJS)
+# Panconvince CMS - Backend API (NestJS)
 
 The backend provides a secure, type-safe RESTful API for the enterprise operational system.
 
@@ -18,7 +18,7 @@ The backend provides a secure, type-safe RESTful API for the enterprise operatio
 2. **Environment Configuration**
    Create a `.env` file in the `backend/` root:
    ```env
-   DATABASE_URL="postgresql://user:pass@localhost:5432/rekayasa_cms?schema=public"
+   DATABASE_URL="postgresql://user:pass@localhost:5432/cms_db?schema=public"
    JWT_SECRET="your-secure-secret"
    JWT_EXPIRES_IN="1d"
    ```

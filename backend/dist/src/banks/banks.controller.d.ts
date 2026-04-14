@@ -6,9 +6,9 @@ export declare class BanksController {
     constructor(banksService: BanksService);
     createBank(dto: CreateBankDto): Promise<{
         id: bigint;
-        bankName: string;
         createdAt: Date;
         updatedAt: Date;
+        bankName: string;
         bankCode: string;
         bankBrand: string | null;
         bankAddress: string | null;
@@ -17,9 +17,9 @@ export declare class BanksController {
     createInternalAccount(dto: CreateInternalAccountDto): Promise<{
         bank: {
             id: bigint;
-            bankName: string;
             createdAt: Date;
             updatedAt: Date;
+            bankName: string;
             bankCode: string;
             bankBrand: string | null;
             bankAddress: string | null;
@@ -40,9 +40,9 @@ export declare class BanksController {
     findOneInternalAccount(id: string): Promise<{
         bank: {
             id: bigint;
-            bankName: string;
             createdAt: Date;
             updatedAt: Date;
+            bankName: string;
             bankCode: string;
             bankBrand: string | null;
             bankAddress: string | null;
@@ -62,9 +62,9 @@ export declare class BanksController {
     updateInternalAccount(id: string, dto: any): Promise<{
         bank: {
             id: bigint;
-            bankName: string;
             createdAt: Date;
             updatedAt: Date;
+            bankName: string;
             bankCode: string;
             bankBrand: string | null;
             bankAddress: string | null;

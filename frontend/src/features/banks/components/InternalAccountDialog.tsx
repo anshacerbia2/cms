@@ -63,7 +63,7 @@ export function InternalAccountDialog({
       accountNo: "",
       branch: "",
       swiftCode: "",
-      holderName: "PT REKAYASA INDUSTRI",
+      holderName: "PT PANCONVINCE",
     },
   });
 
@@ -84,7 +84,7 @@ export function InternalAccountDialog({
         accountNo: "",
         branch: "",
         swiftCode: "",
-        holderName: "PT REKAYASA INDUSTRI",
+        holderName: "PT PANCONVINCE",
       });
     }
   }, [account, form, open]);
