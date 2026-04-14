@@ -1,0 +1,313 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- AUTH & RBAC ---
+
+model Role {
+  id          BigInt   @id @default(autoincrement())
+  name        String   @unique @db.VarChar(100)
+  slug        String   @unique @db.VarChar(150)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users       User[]
+  permissions RolePermission[]
+  menus       RoleMenu[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          BigInt   @id @default(autoincrement())
+  route       String   @unique @db.VarChar(150)
+  method      String?  @db.VarChar(10)
+  path        String?  @db.VarChar(255)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  roles       RolePermission[]
+  menus       Menu[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       BigInt     @map("role_id")
+  permissionId BigInt     @map("permission_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permission")
+}
+
+model User {
+  id              BigInt     @id @default(autoincrement())
+  name            String     @db.VarChar(255)
+  email           String     @unique @db.VarChar(255)
+  emailVerifiedAt DateTime?  @map("email_verified_at")
+  password        String     @db.VarChar(255)
+  phone           String?    @db.VarChar(255)
+  location        String?    @db.VarChar(255)
+  status          UserStatus @default(Active)
+  roleId          BigInt?    @map("role_id")
+  rememberToken   String?    @map("remember_token") @db.VarChar(100)
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  role            Role?      @relation(fields: [roleId], references: [id], onDelete: SetNull)
+
+  @@map("users")
+}
+
+enum UserStatus {
+  Active
+  Inactive
+  Suspended
+}
+
+model Menu {
+  id           BigInt   @id @default(autoincrement())
+  parentId     BigInt?  @map("parent_id")
+  name         String   @db.VarChar(100)
+  icon         String?  @db.VarChar(100)
+  permissionId BigInt?  @map("permission_id")
+  orderIndex   Int      @default(0) @map("order_index")
+  isVisible    Boolean  @default(true) @map("is_visible")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  parent       Menu?    @relation("MenuToMenu", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Menu[]   @relation("MenuToMenu")
+  permission   Permission? @relation(fields: [permissionId], references: [id], onDelete: SetNull)
+  roles        RoleMenu[]
+
+  @@map("menus")
+}
+
+model RoleMenu {
+  id        BigInt   @id @default(autoincrement())
+  roleId    BigInt   @map("role_id")
+  menuId    BigInt   @map("menu_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  menu      Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, menuId])
+  @@map("role_menu")
+}
+
+// --- MASTER DATA: CUSTOMERS ---
+
+model Customer {
+  id                BigInt          @id @default(autoincrement())
+  code              String          @unique @db.VarChar(255)
+  name              String          @db.VarChar(255)
+  bankName          String?         @map("bank_name") @db.VarChar(255)
+  bankAccountNumber String?         @map("bank_account_number") @db.VarChar(255)
+  bankAccountName   String?         @map("bank_account_name") @db.VarChar(255)
+  status            CustomerStatus  @default(Active)
+  notes             String?         @db.Text
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  deletedAt         DateTime?       @map("deleted_at")
+
+  billingOptions    BillingOption[]
+  pics              CustomerPic[]
+
+  @@index([name])
+  @@index([status])
+  @@map("customers")
+}
+
+enum CustomerStatus {
+  Active
+  Inactive
+}
+
+model BillingOption {
+  id             BigInt    @id @default(autoincrement())
+  customerId     BigInt    @map("customer_id")
+  cpName         String?   @map("cp_name") @db.VarChar(255)
+  cpTitleDivision String?  @map("cp_title_division") @db.VarChar(255)
+  cpEmail        String?   @map("cp_email") @db.VarChar(255)
+  cpOfficeNumber String?   @map("cp_office_number") @db.VarChar(255)
+  cpMobileNumber String?   @map("cp_mobile_number") @db.VarChar(255)
+  isOverseas     Boolean   @default(false) @map("is_overseas")
+  address        String?   @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  customer       Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("billing_options")
+}
+
+model CustomerPic {
+  id         BigInt         @id @default(autoincrement())
+  customerId BigInt         @map("customer_id")
+  name       String         @db.VarChar(255)
+  email      String?        @db.VarChar(255)
+  phone      String?        @db.VarChar(255)
+  position   String?        @db.VarChar(255)
+  status     PicStatus      @default(active)
+  notes      String?        @db.Text
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+  deletedAt  DateTime?      @map("deleted_at")
+
+  customer   Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([name])
+  @@index([status])
+  @@map("customer_pics")
+}
+
+enum PicStatus {
+  active
+  inactive
+}
+
+// --- MASTER DATA: SUPPLIERS ---
+
+model Supplier {
+  id                BigInt          @id @default(autoincrement())
+  code              String          @unique @db.VarChar(255)
+  name              String          @db.VarChar(255)
+  address           String?         @db.Text
+  contactPerson     String?         @map("contact_person") @db.VarChar(255)
+  phone             String?         @db.VarChar(255)
+  email             String?         @db.VarChar(255)
+  taxNumber         String?         @map("tax_number") @db.VarChar(255)
+  bankName          String?         @map("bank_name") @db.VarChar(255)
+  bankAccountNumber String?         @map("bank_account_number") @db.VarChar(255)
+  bankAccountName   String?         @map("bank_account_name") @db.VarChar(255)
+  status            SupplierStatus  @default(Active)
+  notes             String?         @db.Text
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  deletedAt         DateTime?       @map("deleted_at")
+
+  pics              SupplierPic[]
+  products          Product[]
+
+  @@index([name])
+  @@index([status])
+  @@map("suppliers")
+}
+
+enum SupplierStatus {
+  Active
+  Inactive
+}
+
+model SupplierPic {
+  id         BigInt         @id @default(autoincrement())
+  supplierId BigInt         @map("supplier_id")
+  name       String         @db.VarChar(255)
+  email      String?        @db.VarChar(255)
+  phone      String?        @db.VarChar(255)
+  position   String?        @db.VarChar(255)
+  status     PicStatus      @default(active)
+  notes      String?        @db.Text
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+  deletedAt  DateTime?      @map("deleted_at")
+
+  supplier   Supplier       @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+  @@index([name])
+  @@index([status])
+  @@map("supplier_pics")
+}
+
+// --- MASTER DATA: PRODUCTS ---
+
+model ProductCategory {
+  id          BigInt    @id @default(autoincrement())
+  name        String    @unique @db.VarChar(255)
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  products    Product[]
+
+  @@map("product_categories")
+}
+
+model Product {
+  id          BigInt          @id @default(autoincrement())
+  code        String          @unique @db.VarChar(255)
+  name        String          @db.VarChar(255)
+  description String?         @db.Text
+  unit        String          @db.VarChar(50)
+  categoryId  BigInt?         @map("category_id")
+  supplierId  BigInt?         @map("supplier_id")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  deletedAt   DateTime?       @map("deleted_at")
+
+  category    ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  supplier    Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  @@index([name])
+  @@index([code])
+  @@map("products")
+}
+
+// --- MASTER DATA: BANKS ---
+
+model Bank {
+  id          BigInt            @id @default(autoincrement())
+  bankCode    String            @unique @map("bank_code") @db.Char(3)
+  bankName    String            @map("bank_name") @db.VarChar(255)
+  bankBrand   String?           @map("bank_brand") @db.VarChar(50)
+  bankAddress String?           @map("bank_address") @db.Text
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  internalAccounts InternalAccount[]
+
+  @@index([bankName])
+  @@map("banks")
+}
+
+model InternalAccount {
+  id          BigInt               @id @default(autoincrement())
+  bankId      BigInt               @map("bank_id")
+  userId      BigInt?              @map("user_id") // Links to owner/responsible user
+  type        InternalAccountType  @default(Bank)
+  accountNo   String               @map("account_no") @db.VarChar(50)
+  branch      String?              @db.VarChar(255)
+  swiftCode   String?              @map("swift_code") @db.VarChar(20)
+  holderName  String               @map("holder_name") @db.VarChar(255)
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+
+  bank        Bank                 @relation(fields: [bankId], references: [id], onDelete: Restrict)
+
+  @@map("internal_accounts")
+}
+
+enum InternalAccountType {
+  Bank
+  CreditCard @map("Credit Card")
+}
+
