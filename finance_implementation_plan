@@ -1,0 +1,195 @@
+# Rebuild Financial Tables — 1 Table per Sheet, Exact Excel Mapping
+
+## Problem
+The current DB tables for Sales, AR, AP, Deprec, PL, Balance Sheet, and Inter Accounts have incorrect column mappings that don't match the Excel file. Some columns are missing entirely, values are seeded as 0, and header-less columns are being ignored.
+
+## Excel Analysis Summary
+
+Based on deep analysis of `financial-report.xlsx`, here is the **exact column mapping per sheet**:
+
+---
+
+### 1. Sheet: `Sales` (Row 3 = header, data starts Row 4)
+| Index | Header | DB Column | Type |
+|-------|--------|-----------|------|
+| 0 | No | no | String (has "93a") |
+| 1 | Date | date | String (month name) |
+| 2 | Year | year | Int |
+| 3 | Billing To | billing_to | String |
+| 4 | Project | project | String |
+| 5 | Description | description | String |
+| 6 | Basic Price | basic_price | Decimal |
+| 7 | Management Fee | management_fee | Decimal |
+| 8 | PPN | ppn | Decimal |
+| 9 | *(no header, col 9 = total amount)* | total_amount | Decimal |
+| 10 | *(empty separator)* | — skip — | |
+| 11 | BCA | bca | Decimal |
+| 12 | Mandiri | mandiri | Decimal |
+| 13 | Danamon | danamon | Decimal |
+| 14 | BRI | bri | Decimal |
+| 15 | BTN | btn | Decimal |
+| 16 | Cash IDR | cash_idr | Decimal |
+| 17 | Non CB | non_cb | Decimal |
+| 18 | Outstanding | outstanding | Decimal |
+| 19 | *(empty separator)* | — skip — | |
+| 20 | PPh-23 | pph_23 | Decimal |
+| 21 | AP PPh-23 | ap_pph_23 | Decimal |
+| 22 | PPN (tax column) | ppn_tax | Decimal |
+| 23 | AP PPN | ap_ppn | Decimal |
+| 24 | *(empty separator)* | — skip — | |
+| 25 | *(no header, = net after tax)* | net_received | Decimal |
+
+> **Change from current**: Add col 9 (`totalAmount`) and col 25 (`netReceived`). Change `no` from Int to String (has values like "93a").
+
+---
+
+### 2. Sheet: `AR` (Row 2-3 = multi-row header, data starts Row 4)
+| Index | Header (Row 2+3) | DB Column | Type |
+|-------|------------------|-----------|------|
+| 0 | *(empty, unused)* | — skip — | |
+| 1 | *(AR Type, e.g. "AR Cash Advance")* | ar_type | String |
+| 2 | *(sub-category, e.g. "PPn")* | sub_category | String |
+| 3 | *(name/entity)* | entity_name | String |
+| 4 | DESCRIPTION | description | String |
+| 5 | END OF 2020 / IDR | end_of_2020_idr | Decimal |
+| 6 | END OF 2020 / USD | end_of_2020_usd | Decimal |
+| 7 | *(rate = 14500)* | rate | Decimal |
+| 8 | *(empty separator)* | — skip — | |
+| 9 | MUTASI 2021 / BCA | bca | Decimal |
+| 10 | MANDIRI | mandiri | Decimal |
+| 11 | BRI | bri | Decimal |
+| 12 | Cash IDR | cash_idr | Decimal |
+| 13 | Non CB | non_cb | Decimal |
+| 14 | CitiBank | citibank | Decimal |
+| 15 | Cash USD | cash_usd | Decimal |
+| 16 | *(empty separator)* | — skip — | |
+| 17 | OUTSTANDING / IDR | outstanding_idr | Decimal |
+| 18 | OUTSTANDING / USD | outstanding_usd | Decimal |
+| 19 | *(empty separator)* | — skip — | |
+| 20 | *(unlabeled, IDR from row 3)* | adjustment_idr | Decimal |
+| 21 | *(unlabeled, USD from row 3)* | adjustment_usd | Decimal |
+
+> **Change from current**: Add `ar_type` (col 1), `sub_category` (col 2), `entity_name` (col 3), `adjustment_idr` (col 20), `adjustment_usd` (col 21).
+
+---
+
+### 3. Sheet: `AP ` (Row 2 = header, data starts Row 3)
+| Index | Header | DB Column | Type |
+|-------|--------|-----------|------|
+| 0 | PAYABLE | payable | String |
+| 1 | YEAR | year | String |
+| 2 | VENDOR | vendor | String |
+| 3 | KETERANGAN | keterangan | String |
+| 4 | IDR | idr | Decimal |
+| 5 | USD | usd | Decimal |
+| 6 | *(rate = 14500)* | rate | Decimal |
+| 7 | *(unlabeled, e.g. "COGS")* | cost_category | String |
+| 8 | *(unlabeled, project desc)* | project_ref | String |
+| 9 | *(empty separator)* | — skip — | |
+| 10 | BCA (PAYMENT IN 2020) | bca | Decimal |
+| 11 | MANDIRI | mandiri | Decimal |
+| 12 | BTN | btn | Decimal |
+| 13 | BRI | bri | Decimal |
+| 14 | Cash IDR | cash_idr | Decimal |
+| 15 | Non CB | non_cb | Decimal |
+| 16 | CitiBank | citibank | Decimal |
+| 17 | Cash USD | cash_usd | Decimal |
+| 18 | *(empty separator)* | — skip — | |
+| 19 | OUTSTANDING / IDR | outstanding_idr | Decimal |
+| 20 | OUTSTANDING / USD | outstanding_usd | Decimal |
+| 21 | *(empty separator)* | — skip — | |
+| 22 | WA Yogi 21-Jan-22 | notes_yogi | String |
+| 23 | Koreksi Selisih | koreksi_selisih | String |
+
+> **Change from current**: Add `cost_category` (col 7), `project_ref` (col 8), `notes_yogi` (col 22), `koreksi_selisih` (col 23). Fix AP payment columns to start at col **10** not 8.
+
+---
+
+### 4. Sheet: `Deprec 2021` (Row 1 = header, data starts Row 4)
+| Index | Header | DB Column | Type |
+|-------|--------|-----------|------|
+| 0 | *(purchase date as Excel serial or "Unknown")* | purchase_date | String |
+| 1 | *(bank ref, e.g. "BCA")* | bank_ref | String |
+| 2 | *(asset name)* | asset_name | String |
+| 3 | Harga Beli | purchase_price | Decimal |
+| 4 | Bulan (useful life months) | useful_life_months | Int |
+| 5 | s/d 2020 (accumulated to 2020) | accumulated_2020 | Decimal |
+| 6-17 | Jan–Dec 2021 | jan–dec | Decimal (12 cols) |
+| 18 | 2 0 2 1 (total year) | total_2021 | Decimal |
+| 19 | S/D 2021 (accumulated to 2021) | accumulated_2021 | Decimal |
+| 20 | Nilai Buku (book value) | book_value | Decimal |
+
+> **Change from current**: Add `purchase_date` (col 0) as String, add `bank_ref` (col 1), rename `accumulatedDeprec` → `accumulated_2020`, add `accumulated_2021` (col 19).
+
+---
+
+### 5. Sheet: `PL` (Row 4 = header, data starts Row 5)
+| Index | Header | DB Column | Type |
+|-------|--------|-----------|------|
+| 0 | *(row number)* | no | Int |
+| 1 | SALES / account name | account_name | String |
+| 2 | Gross | gross | Decimal |
+| 3 | VAT | vat | Decimal |
+| 4 | AP VAT | ap_vat | Decimal |
+| 5 | Credit Note | credit_note | Decimal |
+| 6 | AP Credit Note | ap_credit_note | Decimal |
+| 7-9 | *(empty separators)* | — skip — | |
+| 10 | NET SALES | net_sales | Decimal |
+
+> **Change from current**: Completely different structure. Remove monthly jan-dec columns, add `no`, `gross`, `vat`, `ap_vat`, `credit_note`, `ap_credit_note`, `net_sales`.
+
+---
+
+### 6. Sheet: `Balance Sheet 2021` (Row 4 = header, data starts Row 5)
+| Index | Header | DB Column | Type |
+|-------|--------|-----------|------|
+| 0 | ASSETS / account name | account_name | String |
+| 1 | IDR | idr | Decimal |
+| 2 | USD | usd | Decimal |
+| 3 | *(rate or total IDR)* | total_idr | Decimal |
+
+> **Change from current**: Add `idr`, `usd`, `total_idr`. Remove old `balance`.
+
+---
+
+### 7. Sheet: `Inter Accounts` (Row 0 = header, data starts Row 1)
+| Index | Header | DB Column | Type |
+|-------|--------|-----------|------|
+| 0 | *(description, e.g. "BCA to Mandiri")* | description | String |
+| 1 | BCA | bca | Decimal |
+| 2 | Mandiri | mandiri | Decimal |
+| 3 | BRI | bri | Decimal |
+| 4 | BTN | btn | Decimal |
+| 5 | Cash IDR | cash_idr | Decimal |
+| 6 | Non Cash Bank | non_cash_bank | Decimal |
+| 7 | Checker | checker | Decimal |
+
+> **Change from current**: Completely different. Remove `date`, `fromAccount`, `toAccount`, `amount`, `notes`. Replace with exact Excel columns: `description`, `bca`, `mandiri`, `bri`, `btn`, `cash_idr`, `non_cash_bank`, `checker`.
+
+---
+
+## Proposed Changes
+
+### Backend
+
+#### [MODIFY] [schema.prisma](file:///d:/New%20folder%20(2)/new-cms/backend/prisma/schema.prisma)
+- Rewrite all 7 financial models (Sales, AR, AP, Deprec, PL, Balance Sheet, Inter Accounts) with exact column mapping per analysis above.
+
+#### [MODIFY] [migration.sql](file:///d:/New%20folder%20(2)/new-cms/backend/prisma/migrations/20260415164709_add_financial_reporting_models/migration.sql)
+- Rewrite all 7 CREATE TABLE statements to match the new schema exactly.
+
+#### [MODIFY] [finance.seeder.ts](file:///d:/New%20folder%20(2)/new-cms/backend/prisma/seeders/finance.seeder.ts)
+- Fix all column index mappings for every sheet to match the analysis.
+- Add proper filtering logic for each sheet.
+
+#### [MODIFY] [finance.service.ts](file:///d:/New%20folder%20(2)/new-cms/backend/src/finance/finance.service.ts)
+- Update all `formatDecimal` mappings in every endpoint to use the new field names.
+
+## Verification Plan
+
+### Automated Tests
+1. `npx prisma generate` — verify schema compiles
+2. `npx prisma migrate reset --force` — verify migration applies
+3. `npm run build` — verify TypeScript compiles with 0 errors
+4. Run seeder and verify non-zero counts for all tables
+5. Raw DB query to verify non-zero values in key financial columns

@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Customer, CreateCustomerInput } from "../types";
-import { cn } from "@/lib/utils";
 
 const billingOptionSchema = z.object({
   cpName: z.string().optional(),
@@ -78,7 +77,7 @@ export function CustomerDialog({
   isSubmitting,
 }: CustomerDialogProps) {
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       name: "",
       status: "Active",
@@ -110,23 +109,23 @@ export function CustomerDialog({
         bankAccountNumber: customer.bankAccountNumber || "",
         bankAccountName: customer.bankAccountName || "",
         notes: customer.notes || "",
-        billingOptions: customer.billingOptions?.map(o => ({
+        billingOptions: (customer.billingOptions || []).map(o => ({
           cpName: o.cpName || "",
           cpTitleDivision: o.cpTitleDivision || "",
           cpEmail: o.cpEmail || "",
           cpOfficeNumber: o.cpOfficeNumber || "",
           cpMobileNumber: o.cpMobileNumber || "",
-          isOverseas: o.isOverseas,
+          isOverseas: !!o.isOverseas,
           address: o.address || "",
-        })) || [],
-        pics: customer.pics?.map(p => ({
-          name: p.name,
+        })),
+        pics: (customer.pics || []).map(p => ({
+          name: p.name || "",
           email: p.email || "",
           phone: p.phone || "",
           position: p.position || "",
-          status: p.status,
+          status: (p.status?.toLowerCase() === "active" ? "active" : "inactive") as "active" | "inactive",
           notes: p.notes || "",
-        })) || [],
+        })),
       });
     } else if (open) {
       form.reset({

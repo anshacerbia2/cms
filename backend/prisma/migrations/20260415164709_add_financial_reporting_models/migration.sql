@@ -3,9 +3,9 @@ CREATE TABLE "financial_transactions" (
     "id" BIGSERIAL NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
     "description" TEXT NOT NULL,
-    "withdrawal" DECIMAL(18,2) NOT NULL DEFAULT 0,
-    "deposit" DECIMAL(18,2) NOT NULL DEFAULT 0,
-    "balance" DECIMAL(18,2) NOT NULL DEFAULT 0,
+    "withdrawal" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "deposit" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "balance" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "category" VARCHAR(100),
     "sub_category" VARCHAR(100),
     "reference" VARCHAR(255),
@@ -137,7 +137,7 @@ CREATE TABLE "asset_depreciations" (
 );
 
 -- CreateTable
-CREATE TABLE "profit_loss_accounts" (
+CREATE TABLE "profit_loss_sales" (
     "id" BIGSERIAL NOT NULL,
     "no" INTEGER,
     "account_name" VARCHAR(255) NOT NULL,
@@ -150,7 +150,27 @@ CREATE TABLE "profit_loss_accounts" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "profit_loss_accounts_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "profit_loss_sales_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "profit_loss_costs" (
+    "id" BIGSERIAL NOT NULL,
+    "no" INTEGER,
+    "account_name" VARCHAR(255) NOT NULL,
+    "category" VARCHAR(50) NOT NULL,
+    "bca" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "mandiri" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "bri" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "btn" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "cash_idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "non_cb" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "other" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "total" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "profit_loss_costs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -188,4 +208,3 @@ CREATE INDEX "financial_transactions_date_idx" ON "financial_transactions"("date
 
 -- CreateIndex
 CREATE INDEX "financial_transactions_source_idx" ON "financial_transactions"("source");
-

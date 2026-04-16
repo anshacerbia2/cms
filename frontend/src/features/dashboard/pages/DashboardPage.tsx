@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useAuthStore } from "@/store/authStore"
-import { Users, Briefcase, FileText, TrendingUp, ArrowUpRight, ArrowDownRight, Clock, MoreHorizontal } from "lucide-react"
+import { Users, Briefcase, FileText, TrendingUp, ArrowUpRight, ArrowDownRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function DashboardPage() {

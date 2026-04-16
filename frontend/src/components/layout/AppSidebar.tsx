@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
 import { useAuthStore } from "@/store/authStore";
-import { useNavigate, useLocation, NavLink } from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
@@ -91,7 +91,7 @@ function SidebarNavItem({ icon: Icon, label, to }: { icon: LucideIcon; label: st
 export function AppSidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { logout } = useAuthStore();
 
   return (
     <aside

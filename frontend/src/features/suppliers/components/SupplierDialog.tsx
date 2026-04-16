@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Supplier, CreateSupplierInput } from "../types";
-import { cn } from "@/lib/utils";
 
 const picSchema = z.object({
   name: z.string().min(1, "PIC name is required"),
@@ -72,7 +71,7 @@ export function SupplierDialog({
   isSubmitting,
 }: SupplierDialogProps) {
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       name: "",
       address: "",
@@ -108,14 +107,14 @@ export function SupplierDialog({
         bankAccountName: supplier.bankAccountName || "",
         status: supplier.status,
         notes: supplier.notes || "",
-        pics: supplier.pics?.map(p => ({
-          name: p.name,
+        pics: (supplier.pics || []).map(p => ({
+          name: p.name || "",
           email: p.email || "",
           phone: p.phone || "",
           position: p.position || "",
-          status: p.status,
+          status: (p.status?.toLowerCase() === "active" ? "active" : "inactive") as "active" | "inactive",
           notes: p.notes || "",
-        })) || [],
+        })),
       });
     } else if (open) {
       form.reset({

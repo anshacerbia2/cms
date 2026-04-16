@@ -1,0 +1,33 @@
+# Implementation Plan - Refine Sales Table UI
+
+Refine the Sales table in the `FinancePage.tsx` to exactly match the request for `No` and `Date` columns, and ensure all properties from the `SalesRecord` model are visible.
+
+## Proposed Changes
+
+### Frontend
+
+#### [MODIFY] [FinancePage.tsx](file:///d:/New%20folder%20(2)/new-cms/frontend/src/features/finance/pages/FinancePage.tsx)
+
+- Update the Sales table headers and row mapping:
+    - **No**: Only `row.no`.
+    - **Date**: Combined `row.date` and `row.year`.
+    - **Billing To**: Existing.
+    - **Project**: Existing.
+    - **Description**: Existing.
+    - **Basic Price**: Existing.
+    - **Management Fee**: [NEW] Add column.
+    - **VAT (PPN)**: Existing.
+    - **Total Amount**: Existing.
+    - **Payment Breakdown**: [NEW] Add columns for `BCA`, `Mandiri`, `Danamon`, `BRI`, `BTN`, `Cash IDR`, `Non CB`.
+    - **Outstanding**: Existing.
+    - **Taxes/Adjustments**: [NEW] Add columns for `PPH 23`, `AP PPH 23`, `PPN Tax`, `AP PPN`.
+    - **Net Received**: Existing.
+
+## Verification Plan
+
+### Manual Verification
+- View the Sales tab in the Finance Reporting page.
+- Verify that the `No` column only shows the number/string.
+- Verify that the `Date` column shows both month name and year.
+- Verify that the table is horizontally scrollable and shows all financial columns.
+- Ensure values match the Excel source (seeded data).

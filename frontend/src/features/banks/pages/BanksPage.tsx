@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Building2, CreditCard, MoreVertical, Edit2, Trash2, Landmark, MapPin, Hash, User } from "lucide-react";
+import { Plus, Building2, CreditCard, MoreVertical, Edit2, Trash2, Landmark, Search, MapPin } from "lucide-react";
 import { useBanks } from "../hooks/useBanks";
 import { 
   Table, 
@@ -25,7 +25,7 @@ import { CreateInternalAccountInput, CreateBankInput, InternalAccount } from "..
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { useDebounce } from "use-debounce";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+
 
 export default function BanksPage() {
   const [activeTab, setActiveTab] = useState("accounts");

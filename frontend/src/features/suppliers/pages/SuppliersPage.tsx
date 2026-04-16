@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Truck } from "lucide-react";
+import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Eye, Truck } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useSuppliers } from "../hooks/useSuppliers";
 import { 
