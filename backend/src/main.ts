@@ -6,10 +6,20 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
  
-// BigInt Serialization Fix
+// BigInt & Decimal Serialization Fix
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
+
+// Handle Prisma Decimal serialization
+try {
+  const Decimal = require('decimal.js');
+  Decimal.prototype.toJSON = function () {
+    return this.toNumber();
+  };
+} catch (e) {
+  // decimal.js might not be directly available, handled in interceptor
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -38,7 +48,9 @@ async function bootstrap() {
   app.enableCors();
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}/api`);
+  const host = process.env.APP_HOST || '0.0.0.0'; // Use 'localhost' locally if you want to restrict access
+  // await app.listen(port);
+  await app.listen(port, host);
+  console.log(`Application is running on: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}/api`);
 }
 bootstrap();

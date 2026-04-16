@@ -1,4 +1,19 @@
-/src/generated
 dist
 node_modules
 .env
+.env.production
+.DS_Store
+
+# Scratch & Dev Scripts
+*.txt
+*.log
+*.stackdump
+scratch_*.ts
+check_*.ts
+inspect_*.ts
+test_*.js
+test_*.ts
+scratch/
+finance_implementation_plan*
+hardened_seeder_output.txt
+seeder_output.txt

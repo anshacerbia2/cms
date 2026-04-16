@@ -34,6 +34,7 @@ const navigation = [
     { title: "Invoices", url: "/invoices", icon: FileText },
     { title: "Receive Vouchers", url: "/rvs", icon: CreditCard },
     { title: "Payment Vouchers", url: "/pvs", icon: Wallet },
+    { title: "Financial Reports", url: "/finance", icon: Landmark },
   ]},
   { group: "Operations", items: [
     { title: "Projects", url: "/projects", icon: Briefcase },

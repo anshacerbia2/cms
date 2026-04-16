@@ -47,10 +47,45 @@ export function PaginationControls({
         </Button>
 
         <div className="flex items-center gap-1 mx-2">
-           {/* Simple page indicator for now, can be expanded to show page numbers */}
-           <span className="h-8 min-w-8 px-2 flex items-center justify-center rounded-lg bg-primary text-white text-[10px] font-black">
-              {meta.page}
-           </span>
+          {(() => {
+            const pages = [];
+            const { page, lastPage } = meta;
+            const range = 1; // Number of neighbors to show
+
+            for (let i = 1; i <= lastPage; i++) {
+              if (
+                i === 1 || 
+                i === lastPage || 
+                (i >= page - range && i <= page + range)
+              ) {
+                // If there's a gap between the first page and the current range
+                if (pages.length > 0 && i > pages[pages.length - 1] + 1) {
+                  pages.push(-1); // Indicator for ellipsis
+                }
+                pages.push(i);
+              }
+            }
+
+            return pages.map((p, idx) => (
+              p === -1 ? (
+                <span key={`ellipsis-${idx}`} className="px-1 text-muted-foreground opacity-30 text-[10px] font-bold">...</span>
+              ) : (
+                <Button
+                  key={p}
+                  variant={p === page ? "default" : "outline"}
+                  className={`h-8 w-8 rounded-lg text-[10px] font-black transition-all ${
+                    p === page 
+                      ? "bg-primary text-white shadow-premium scale-110 z-10" 
+                      : "border-primary/5 hover:bg-primary/5 text-muted-foreground font-medium"
+                  }`}
+                  onClick={() => onPageChange(p)}
+                  disabled={isFetching}
+                >
+                  {p}
+                </Button>
+              )
+            ));
+          })()}
         </div>
 
         <Button

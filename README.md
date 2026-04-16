@@ -42,7 +42,7 @@ This project is a monorepo-style structure containing both backend and frontend 
 
 Use these credentials to access the system after seeding:
 - **Username**: `admin@pcmi.com`
-- **Password**: `pass123`
+- **Password**: `admin123`
 - **Role**: Super Admin
 
 > [!TIP]
