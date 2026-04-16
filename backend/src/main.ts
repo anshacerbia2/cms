@@ -48,9 +48,7 @@ async function bootstrap() {
   app.enableCors();
 
   const port = process.env.PORT || 3000;
-  const host = process.env.APP_HOST || '0.0.0.0'; // Use 'localhost' locally if you want to restrict access
-  // await app.listen(port);
-  await app.listen(port, host);
-  console.log(`Application is running on: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}/api`);
+  await app.listen(port);
+  console.log(`Application is running on port: ${port}`);
 }
 bootstrap();
