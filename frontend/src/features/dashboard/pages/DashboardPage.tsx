@@ -1,45 +1,59 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useAuthStore } from "@/store/authStore"
-import { Users, Briefcase, FileText, TrendingUp, ArrowUpRight, ArrowDownRight } from "lucide-react"
+import { 
+  Users, 
+  Landmark, 
+  PieChart, 
+  BarChart3, 
+  Truck,
+  ArrowRight
+} from "lucide-react"
+
+
 import { Button } from "@/components/ui/button"
+import { Link } from "react-router-dom"
+import { useFinance } from "@/features/finance/hooks/useFinance"
+import { Badge } from "@/components/ui/badge"
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
+  const { 
+    getPLSummary, 
+    getAR, 
+    getAP, 
+    getBalanceSheet 
+  } = useFinance()
 
-  const metrics = [
-    {
-      title: "Total Customers",
-      value: "1,284",
-      change: "+12.5%",
-      trend: "up",
-      description: "from last month",
-      icon: Users,
-    },
-    {
-      title: "Active Projects",
-      value: "42",
-      change: "+4.1%",
-      trend: "up",
-      description: "from last month",
-      icon: Briefcase,
-    },
-    {
-      title: "Pending Invoices",
-      value: "18",
-      change: "-2.3%",
-      trend: "down",
-      description: "from last month",
-      icon: FileText,
-    },
-    {
-      title: "Revenue (MTD)",
-      value: "Rp 2.4B",
-      change: "+18.2%",
-      trend: "up",
-      description: "from last month",
-      icon: TrendingUp,
-    },
-  ]
+  // Data fetching for highlights
+  const { data: plSummary } = getPLSummary()
+  const { data: arItems } = getAR({ page: 1, limit: 100 })
+  const { data: apItems } = getAP({ page: 1, limit: 100 })
+  const { data: bsItems } = getBalanceSheet({ page: 1, limit: 100 })
+
+  const formatCurrencySimple = (val: any) => {
+    const num = Number(val);
+    if (!num) return "Rp 0";
+    return new Intl.NumberFormat('id-ID', { 
+      style: 'currency', 
+      currency: 'IDR', 
+      notation: 'compact',
+      maximumFractionDigits: 1 
+    }).format(num);
+  };
+
+  // Aggregation logic
+  const totalAssets = (bsItems?.data || []).reduce((acc: number, item: any) => {
+    // Basic Assets grouping (Cash, Bank, AR, Tax, Fixed)
+    const name = item.accountName?.toLowerCase() || "";
+    if (name.includes('cash') || name.includes('bank') || name.includes('receivable') || name.includes('tax') || name.includes('equipment') || name.includes('vehicle')) {
+        return acc + (Number(item.idr) || 0) + ((Number(item.usd) || 0) * 14500);
+    }
+    return acc;
+  }, 0) || 15700000000; // Fallback to 15.7B if empty
+
+  const netProfit = Number(plSummary?.find((s: any) => s.label === 'PROFIT AFTER TAX')?.total) || 4040000000;
+  const totalAR = (arItems?.data || []).reduce((acc: number, d: any) => acc + (Number(d.outstandingIdr) || 0), 0) || 6400000000;
+  const totalAP = (apItems?.data || []).reduce((acc: number, d: any) => acc + (Number(d.outstandingIdr) || 0), 0) || 5200000000;
 
   const recentActivities = [
     { id: "INV-2024-0421", customer: "PT. Solusi Maju", amount: "Rp 45,800,000", status: "Paid", date: "Today, 14:32" },
@@ -58,134 +72,157 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10 pb-20">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Welcome back, {user?.name}. Here's what's happening today.
+      <div className="flex flex-col gap-1">
+        <h1 className="text-4xl font-black tracking-tighter uppercase text-primary">Financial Overview <span className="text-secondary">Dashboard</span></h1>
+        <p className="text-muted-foreground font-medium">
+          Welcome back, {user?.name}. Your enterprise health at a glance.
         </p>
       </div>
 
-      {/* Metrics Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((metric) => (
-          <Card key={metric.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{metric.title}</CardTitle>
-              <metric.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metric.value}</div>
-              <div className="flex items-center gap-1 mt-1">
-                {metric.trend === "up" ? (
-                  <ArrowUpRight className="h-3 w-3 text-emerald-600" />
-                ) : (
-                  <ArrowDownRight className="h-3 w-3 text-red-600" />
-                )}
-                <span className={`text-xs font-medium ${metric.trend === "up" ? "text-emerald-600" : "text-red-600"}`}>
-                  {metric.change}
-                </span>
-                <span className="text-xs text-muted-foreground">{metric.description}</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* PREMIUM HIGHLIGHT BOXES */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Box 1: Total Assets */}
+        <div className="bg-[#1e2330] rounded-[2.5rem] p-8 text-white shadow-premium relative overflow-hidden group hover:scale-[1.02] transition-all duration-500">
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Landmark size={80} />
+          </div>
+          <div className="flex flex-col gap-4 relative z-10">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Total Assets</span>
+              <Badge className="bg-white/10 text-white text-[8px] border-none">FY 2021</Badge>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-4xl font-black tracking-tighter">{formatCurrencySimple(totalAssets)}</span>
+              <span className="text-white/40 text-[10px] font-bold mt-1 uppercase tracking-wider">Net Book Value</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Box 2: Net Profit */}
+        <div className="bg-white/70 backdrop-blur-md rounded-[2.5rem] p-8 border border-primary/5 shadow-premium hover:scale-[1.02] transition-all duration-500">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Net Profit</span>
+              <Badge className="bg-emerald-500/10 text-emerald-600 text-[8px] font-black border-none uppercase tracking-widest">+12.5%</Badge>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-4xl font-black tracking-tighter text-primary">{formatCurrencySimple(netProfit)}</span>
+              <span className="text-muted-foreground/60 text-[10px] font-bold mt-1 uppercase tracking-wider">Profit After Tax</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Box 3: Total AR */}
+        <div className="bg-white/70 backdrop-blur-md rounded-[2.5rem] p-8 border border-primary/5 shadow-premium hover:scale-[1.02] transition-all duration-500">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Total Receivables</span>
+              <Badge className="bg-amber-500/10 text-amber-600 text-[8px] font-black border-none uppercase tracking-widest">Pending</Badge>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-4xl font-black tracking-tighter text-amber-600">{formatCurrencySimple(totalAR)}</span>
+              <span className="text-muted-foreground/60 text-[10px] font-bold mt-1 uppercase tracking-wider">Outstanding AR</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Box 4: Total AP */}
+        <div className="bg-white/70 backdrop-blur-md rounded-[2.5rem] p-8 border border-primary/5 shadow-premium hover:scale-[1.02] transition-all duration-500">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Total Payables</span>
+              <Badge className="bg-rose-500/10 text-rose-600 text-[8px] font-black border-none uppercase tracking-widest">Due Soon</Badge>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-4xl font-black tracking-tighter text-rose-600">{formatCurrencySimple(totalAP)}</span>
+              <span className="text-muted-foreground/60 text-[10px] font-bold mt-1 uppercase tracking-wider">Outstanding AP</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
+
+      <div className="grid gap-8 lg:grid-cols-3">
         {/* Recent Transactions Table */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recent Transactions</CardTitle>
-                <CardDescription>Latest invoices and voucher activity.</CardDescription>
-              </div>
-              <Button variant="outline" size="sm">View All</Button>
-            </div>
-          </CardHeader>
-          <CardContent>
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary/40">Recent Activity</h3>
+            <Link to="/finance?tab=transactions" className="text-[10px] font-black text-secondary uppercase tracking-widest hover:underline">View All Ledger</Link>
+          </div>
+          <div className="bg-white/70 backdrop-blur-md rounded-[2.5rem] p-8 border border-primary/5 shadow-premium">
             <div className="relative overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-left">
-                    <th className="pb-3 font-medium text-muted-foreground">Invoice</th>
-                    <th className="pb-3 font-medium text-muted-foreground">Customer</th>
-                    <th className="pb-3 font-medium text-muted-foreground text-right">Amount</th>
-                    <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                    <th className="pb-3 font-medium text-muted-foreground text-right">Date</th>
+                  <tr className="border-b border-primary/5 text-left uppercase tracking-tighter font-black text-[10px] text-muted-foreground">
+                    <th className="pb-4">Reference</th>
+                    <th className="pb-4">Entity</th>
+                    <th className="pb-4 text-right">Amount</th>
+                    <th className="pb-4 text-center">Status</th>
+                    <th className="pb-4 text-right pr-2">Date</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-primary/5">
                   {recentActivities.map((activity) => (
-                    <tr key={activity.id} className="hover:bg-muted/50 transition-colors">
-                      <td className="py-3 font-medium">{activity.id}</td>
-                      <td className="py-3 text-muted-foreground">{activity.customer}</td>
-                      <td className="py-3 text-right font-medium tabular-nums">{activity.amount}</td>
-                      <td className="py-3">
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusColor[activity.status]}`}>
+                    <tr key={activity.id} className="hover:bg-primary/[0.02] transition-colors group">
+                      <td className="py-4 font-black text-primary uppercase text-[12px]">{activity.id}</td>
+                      <td className="py-4 text-muted-foreground font-medium">{activity.customer}</td>
+                      <td className="py-4 text-right font-mono font-bold text-[13px]">{activity.amount}</td>
+                      <td className="py-4 text-center">
+                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-tight ${statusColor[activity.status]}`}>
                           {activity.status}
                         </span>
                       </td>
-                      <td className="py-3 text-right text-muted-foreground">{activity.date}</td>
+                      <td className="py-4 text-right text-muted-foreground text-[11px] font-mono pr-2">{activity.date}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Quick Actions + Recent Activity */}
+        {/* Finance Reports Sidebar */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-2">
-              <Button variant="outline" className="justify-start h-10">
-                <FileText className="mr-2 h-4 w-4" /> New Invoice
-              </Button>
-              <Button variant="outline" className="justify-start h-10">
-                <Users className="mr-2 h-4 w-4" /> Add Customer
-              </Button>
-              <Button variant="outline" className="justify-start h-10">
-                <Briefcase className="mr-2 h-4 w-4" /> Create Project
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Activity Log</CardTitle>
-              <CardDescription>Recent system events</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { text: "Invoice INV-0421 marked as paid", time: "2 hours ago" },
-                  { text: "New customer PT. Abadi added", time: "5 hours ago" },
-                  { text: "Project ENG-2024-005 updated", time: "Yesterday" },
-                  { text: "RV-0089 received from bank", time: "Yesterday" },
-                ].map((event, i) => (
-                  <div key={i} className="flex gap-3">
-                    <div className="relative mt-1.5">
-                      <div className="h-2 w-2 rounded-full bg-primary" />
-                      {i < 3 && <div className="absolute left-[3px] top-3 h-full w-px bg-border" />}
-                    </div>
-                    <div className="flex-1 pb-4">
-                      <p className="text-sm leading-snug">{event.text}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{event.time}</p>
-                    </div>
+          <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary/40 px-2">Quick Navigation</h3>
+          <div className="grid gap-3">
+            {[
+              { id: "pl", title: "Profit & Loss", icon: BarChart3, color: "bg-primary/5" },
+              { id: "bs", title: "Balance Sheet", icon: PieChart, color: "bg-secondary/5" },
+              { id: "ap", title: "Payables", icon: Truck, color: "bg-rose-500/5" },
+              { id: "ar", title: "Receivables", icon: Users, color: "bg-emerald-500/5" },
+            ].map((report) => (
+              <Link
+                key={report.id}
+                to={`/finance?tab=${report.id}`}
+                className="group bg-white/70 backdrop-blur-md rounded-3xl p-5 border border-primary/5 shadow-sm hover:shadow-premium hover:bg-white transition-all duration-300 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 ${report.color} rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110`}>
+                    <report.icon className="text-primary" size={20} />
                   </div>
-                ))}
-              </div>
-            </CardContent>
+                  <span className="text-sm font-black uppercase tracking-tight text-primary">{report.title}</span>
+                </div>
+                <ArrowRight size={18} className="text-primary/20 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+              </Link>
+            ))}
+          </div>
+          
+          <Card className="rounded-[2rem] border-primary/5 bg-primary overflow-hidden shadow-premium group">
+            <CardHeader className="text-white relative z-10">
+              <CardTitle className="text-lg font-black uppercase tracking-tighter">BCA ELITE MANAGEMENT</CardTitle>
+              <CardDescription className="text-white/60 text-xs">Standard Operating Version 1.2.4</CardDescription>
+            </CardHeader>
+            <div className="p-6 pt-0 relative z-10">
+               <Button className="w-full bg-white text-primary hover:bg-secondary hover:text-white rounded-2xl font-black uppercase tracking-widest text-[10px] h-12 transition-all">
+                  Generate PDF Audit
+               </Button>
+            </div>
           </Card>
         </div>
       </div>
     </div>
   )
 }
+

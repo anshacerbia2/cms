@@ -99,6 +99,15 @@ export function useFinance() {
       placeholderData: keepPreviousData,
     });
 
+  const getPLSummary = () =>
+    useQuery({
+      queryKey: ["finance", "pl-summary"],
+      queryFn: async () => {
+        const { data } = await api.get("/finance/pl-summary");
+        return data; // Returns array of summary items
+      },
+    });
+
   return {
     getTransactions,
     getSales,
@@ -107,7 +116,9 @@ export function useFinance() {
     getAssets,
     getPL,
     getPLCosts,
+    getPLSummary,
     getBalanceSheet,
     getInterAccountTransfers,
   };
+
 }

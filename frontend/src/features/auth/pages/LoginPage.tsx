@@ -151,12 +151,8 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        <div className="mt-8 text-center">
-            <p className="text-[9px] font-black text-muted-foreground/30 uppercase tracking-[0.4em]">
-              © 2026 ATI • SQ BCA ELITE MANAGEMENT VERSION 1.2.4
-            </p>
-        </div>
       </div>
     </div>
   );
 }
+

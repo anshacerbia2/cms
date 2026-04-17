@@ -58,7 +58,14 @@ export class FinanceController {
     return this.financeService.getPLCosts(query);
   }
 
+  @Get('pl-summary')
+  @Permissions('finance.index')
+  async getPLSummary() {
+    return this.financeService.getPLSummary();
+  }
+
   @Get('balance-sheet')
+
   @Permissions('finance.index')
   async getBalanceSheet(@Query() query: PaginationQueryDto) {
     return this.financeService.getBalanceSheet(query);

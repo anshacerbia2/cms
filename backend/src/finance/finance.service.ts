@@ -93,6 +93,7 @@ export class FinanceService {
       })),
       meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
     };
+
   }
 
   async getAR(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
@@ -108,8 +109,8 @@ export class FinanceService {
     return {
       data: data.map(item => ({
         ...item,
-        endOf2020Idr: formatDecimal(item.endOf2020Idr),
-        endOf2020Usd: formatDecimal(item.endOf2020Usd),
+        idr: formatDecimal(item.idr),
+        usd: formatDecimal(item.usd),
         rate: formatDecimal(item.rate),
         bca: formatDecimal(item.bca),
         mandiri: formatDecimal(item.mandiri),
@@ -121,10 +122,12 @@ export class FinanceService {
         outstandingIdr: formatDecimal(item.outstandingIdr),
         outstandingUsd: formatDecimal(item.outstandingUsd),
         adjustmentIdr: formatDecimal(item.adjustmentIdr),
+
         adjustmentUsd: formatDecimal(item.adjustmentUsd),
       })),
       meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
     };
+
   }
 
   async getAP(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
@@ -169,39 +172,34 @@ export class FinanceService {
     ]);
 
     return {
-      data: data.map(a => ({
-        ...a,
-        purchasePrice: formatDecimal(a.purchasePrice),
-        accumulated2020: formatDecimal(a.accumulated2020),
-        jan: formatDecimal(a.jan),
-        feb: formatDecimal(a.feb),
-        mar: formatDecimal(a.mar),
-        apr: formatDecimal(a.apr),
-        may: formatDecimal(a.may),
-        jun: formatDecimal(a.jun),
-        jul: formatDecimal(a.jul),
-        aug: formatDecimal(a.aug),
-        sep: formatDecimal(a.sep),
-        oct: formatDecimal(a.oct),
-        nov: formatDecimal(a.nov),
-        dec: formatDecimal(a.dec),
-        total2021: formatDecimal(a.total2021),
-        accumulated2021: formatDecimal(a.accumulated2021),
-        bookValue: formatDecimal(a.bookValue),
+      data: data.map(item => ({
+        ...item,
+        purchasePrice: formatDecimal(item.purchasePrice),
+        accumulated2020: formatDecimal(item.accumulated2020),
+        jan: formatDecimal(item.jan),
+        feb: formatDecimal(item.feb),
+        mar: formatDecimal(item.mar),
+        apr: formatDecimal(item.apr),
+        may: formatDecimal(item.may),
+        jun: formatDecimal(item.jun),
+        jul: formatDecimal(item.jul),
+        aug: formatDecimal(item.aug),
+        sep: formatDecimal(item.sep),
+        oct: formatDecimal(item.oct),
+        nov: formatDecimal(item.nov),
+        dec: formatDecimal(item.dec),
+        total2021: formatDecimal(item.total2021),
+        accumulated2021: formatDecimal(item.accumulated2021),
+        bookValue: formatDecimal(item.bookValue),
       })),
       meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
     };
+
   }
 
   async getPL(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    const [data, total] = await Promise.all([
-      this.prisma.profitLossSales.findMany({ skip, take: limit, orderBy: [{ id: 'asc' }] }),
-      this.prisma.profitLossSales.count(),
-    ]);
+    const data = await this.prisma.profitLossSales.findMany({ orderBy: [{ id: 'asc' }] });
+    const total = data.length;
 
     return {
       data: data.map(i => ({
@@ -213,27 +211,20 @@ export class FinanceService {
         apCreditNote: formatDecimal(i.apCreditNote),
         netSales: formatDecimal(i.netSales),
       })),
-      meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
+      meta: { total, page: 1, limit: total, lastPage: 1 },
     };
   }
 
-  async getPLCosts(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
-    const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
-      this.prisma.profitLossCost.findMany({ 
-        skip, 
-        take: limit, 
-        orderBy: [{ id: 'asc' }] 
-      }),
-      this.prisma.profitLossCost.count(),
-    ]);
+  async getPLCosts(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
+    const data = await this.prisma.profitLossCost.findMany({ orderBy: [{ id: 'asc' }] });
+    const total = data.length;
 
     return {
       data: data.map(i => ({
         ...i,
+        category: i.category,
+        subCategory: i.subCategory,
         bca: formatDecimal(i.bca),
         mandiri: formatDecimal(i.mandiri),
         bri: formatDecimal(i.bri),
@@ -243,30 +234,46 @@ export class FinanceService {
         other: formatDecimal(i.other),
         total: formatDecimal(i.total),
       })),
-      meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
+
+      meta: { total, page: 1, limit: total, lastPage: 1 },
     };
   }
+
 
   async getBalanceSheet(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    const [data, total] = await Promise.all([
-      this.prisma.balanceSheetItem.findMany({ skip, take: limit, orderBy: [{ id: 'asc' }] }),
-      this.prisma.balanceSheetItem.count(),
-    ]);
+    const data = await this.prisma.balanceSheetItem.findMany({ orderBy: [{ id: 'asc' }] });
+    const total = data.length;
 
     return {
-      data: data.map(i => ({
-        ...i,
-        idr: formatDecimal(i.idr),
-        usd: formatDecimal(i.usd),
-        totalIdr: formatDecimal(i.totalIdr),
+      data: data.map(item => ({
+        ...item,
+        idr: formatDecimal(item.idr),
+        usd: formatDecimal(item.usd),
+        rate: formatDecimal(item.rate),
       })),
-      meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
+      meta: { total, page: 1, limit: total, lastPage: 1 },
     };
   }
+
+
+  async getPLSummary(): Promise<any[]> {
+    const data = await this.prisma.profitLossSummary.findMany({
+      orderBy: [{ id: 'asc' }],
+    });
+
+    return data.map(item => ({
+      ...item,
+      bca: formatDecimal(item.bca),
+      mandiri: formatDecimal(item.mandiri),
+      bri: formatDecimal(item.bri),
+      btn: formatDecimal(item.btn),
+      cashIdr: formatDecimal(item.cashIdr),
+      nonCb: formatDecimal(item.nonCb),
+      other: formatDecimal(item.other),
+      total: formatDecimal(item.total),
+    }));
+  }
+
 
   async getInterAccountTransfers(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
