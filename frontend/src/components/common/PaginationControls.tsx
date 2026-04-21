@@ -18,7 +18,7 @@ export function PaginationControls({
   onPageChange, 
   isFetching 
 }: PaginationControlsProps) {
-  if (!meta || meta.lastPage <= 1) return null;
+  if (!meta || meta.total === 0) return null;
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-2 border-t border-primary/5 mt-auto">

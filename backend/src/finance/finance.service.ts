@@ -20,20 +20,20 @@ const formatDecimal = (val: any): string => {
 export class FinanceService {
   constructor(private prisma: PrismaService) {}
 
-  async getTransactions(query: PaginationQueryDto & { source?: string }): Promise<PaginatedResult<any>> {
+  async getTransactions(query: PaginationQueryDto & { name?: string }): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
     const search = query.search || '';
-    const sourceFilter = query.source;
+    const nameFilter = query.name;
 
     const where: any = {
       AND: [
-        sourceFilter ? { source: sourceFilter } : {},
+        nameFilter ? { name: nameFilter } : {},
         {
           OR: [
-            { description: { contains: search, mode: 'insensitive' } },
-            { source: { contains: search, mode: 'insensitive' } },
+            { colB: { contains: search, mode: 'insensitive' } }, // description
+            { name: { contains: search, mode: 'insensitive' } }, // source
           ],
         },
       ],
@@ -52,12 +52,35 @@ export class FinanceService {
     return {
       data: data.map(t => ({
         ...t,
-        withdrawal: formatDecimal(t.withdrawal),
-        deposit: formatDecimal(t.deposit),
-        balance: formatDecimal(t.balance),
+        id: Number(t.id),
+        colC: formatDecimal(t.colC),
+        colD: formatDecimal(t.colD),
+        colE: formatDecimal(t.colE),
       })),
       meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
     };
+  }
+
+  async getAllTransactions(name?: string): Promise<any[]> {
+    const where: any = {};
+    if (name && name !== 'undefined' && name !== 'null') {
+      where.name = { equals: name };
+    }
+    
+    console.log('Prisma Query Where:', JSON.stringify(where));
+    
+    const data = await this.prisma.financialTransaction.findMany({
+      where,
+      orderBy: [{ id: 'asc' }],
+    });
+
+    return data.map(t => ({
+      ...t,
+      id: Number(t.id),
+      colC: formatDecimal(t.colC),
+      colD: formatDecimal(t.colD),
+      colE: formatDecimal(t.colE),
+    }));
   }
 
   async getSales(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
@@ -73,27 +96,53 @@ export class FinanceService {
     return {
       data: data.map(item => ({
         ...item,
-        basicPrice: formatDecimal(item.basicPrice),
-        managementFee: formatDecimal(item.managementFee),
-        ppn: formatDecimal(item.ppn),
-        totalAmount: formatDecimal(item.totalAmount),
-        bca: formatDecimal(item.bca),
-        mandiri: formatDecimal(item.mandiri),
-        danamon: formatDecimal(item.danamon),
-        bri: formatDecimal(item.bri),
-        btn: formatDecimal(item.btn),
-        cashIdr: formatDecimal(item.cashIdr),
-        nonCb: formatDecimal(item.nonCb),
-        outstanding: formatDecimal(item.outstanding),
-        pph23: formatDecimal(item.pph23),
-        apPph23: formatDecimal(item.apPph23),
-        ppnTax: formatDecimal(item.ppnTax),
-        apPpn: formatDecimal(item.apPpn),
-        netReceived: formatDecimal(item.netReceived),
+        id: Number(item.id),
+        colG: formatDecimal(item.colG),
+        colH: formatDecimal(item.colH),
+        colI: formatDecimal(item.colI),
+        colJ: formatDecimal(item.colJ),
+        colL: formatDecimal(item.colL),
+        colM: formatDecimal(item.colM),
+        colN: formatDecimal(item.colN),
+        colO: formatDecimal(item.colO),
+        colP: formatDecimal(item.colP),
+        colQ: formatDecimal(item.colQ),
+        colR: formatDecimal(item.colR),
+        colS: formatDecimal(item.colS),
+        colU: formatDecimal(item.colU),
+        colV: formatDecimal(item.colV),
+        colW: formatDecimal(item.colW),
+        colX: formatDecimal(item.colX),
+        colZ: formatDecimal(item.colZ),
       })),
       meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
     };
 
+  }
+
+  async getAllSales(): Promise<any[]> {
+    const data = await this.prisma.salesRecord.findMany({ orderBy: [{ id: 'asc' }] });
+    return data.map(item => ({
+      ...item,
+      id: Number(item.id),
+      colG: formatDecimal(item.colG),
+      colH: formatDecimal(item.colH),
+      colI: formatDecimal(item.colI),
+      colJ: formatDecimal(item.colJ),
+      colL: formatDecimal(item.colL),
+      colM: formatDecimal(item.colM),
+      colN: formatDecimal(item.colN),
+      colO: formatDecimal(item.colO),
+      colP: formatDecimal(item.colP),
+      colQ: formatDecimal(item.colQ),
+      colR: formatDecimal(item.colR),
+      colS: formatDecimal(item.colS),
+      colU: formatDecimal(item.colU),
+      colV: formatDecimal(item.colV),
+      colW: formatDecimal(item.colW),
+      colX: formatDecimal(item.colX),
+      colZ: formatDecimal(item.colZ),
+    }));
   }
 
   async getAR(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
@@ -109,25 +158,47 @@ export class FinanceService {
     return {
       data: data.map(item => ({
         ...item,
-        idr: formatDecimal(item.idr),
-        usd: formatDecimal(item.usd),
-        rate: formatDecimal(item.rate),
-        bca: formatDecimal(item.bca),
-        mandiri: formatDecimal(item.mandiri),
-        bri: formatDecimal(item.bri),
-        cashIdr: formatDecimal(item.cashIdr),
-        nonCb: formatDecimal(item.nonCb),
-        citibank: formatDecimal(item.citibank),
-        cashUsd: formatDecimal(item.cashUsd),
-        outstandingIdr: formatDecimal(item.outstandingIdr),
-        outstandingUsd: formatDecimal(item.outstandingUsd),
-        adjustmentIdr: formatDecimal(item.adjustmentIdr),
-
-        adjustmentUsd: formatDecimal(item.adjustmentUsd),
+        id: Number(item.id),
+        colF: formatDecimal(item.colF),
+        colG: formatDecimal(item.colG),
+        colH: formatDecimal(item.colH),
+        colJ: formatDecimal(item.colJ),
+        colK: formatDecimal(item.colK),
+        colL: formatDecimal(item.colL),
+        colM: formatDecimal(item.colM),
+        colN: formatDecimal(item.colN),
+        colO: formatDecimal(item.colO),
+        colP: formatDecimal(item.colP),
+        colR: formatDecimal(item.colR),
+        colS: formatDecimal(item.colS),
+        colU: formatDecimal(item.colU),
+        colV: formatDecimal(item.colV),
       })),
       meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
     };
 
+  }
+
+  async getAllAR(): Promise<any[]> {
+    const data = await this.prisma.accountReceivable.findMany({ orderBy: [{ id: 'asc' }] });
+    return data.map(item => ({
+      ...item,
+      id: Number(item.id),
+      colF: formatDecimal(item.colF),
+      colG: formatDecimal(item.colG),
+      colH: formatDecimal(item.colH),
+      colJ: formatDecimal(item.colJ),
+      colK: formatDecimal(item.colK),
+      colL: formatDecimal(item.colL),
+      colM: formatDecimal(item.colM),
+      colN: formatDecimal(item.colN),
+      colO: formatDecimal(item.colO),
+      colP: formatDecimal(item.colP),
+      colR: formatDecimal(item.colR),
+      colS: formatDecimal(item.colS),
+      colU: formatDecimal(item.colU),
+      colV: formatDecimal(item.colV),
+    }));
   }
 
   async getAP(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
@@ -143,22 +214,49 @@ export class FinanceService {
     return {
       data: data.map(item => ({
         ...item,
-        idr: formatDecimal(item.idr),
-        usd: formatDecimal(item.usd),
-        rate: formatDecimal(item.rate),
-        bca: formatDecimal(item.bca),
-        mandiri: formatDecimal(item.mandiri),
-        btn: formatDecimal(item.btn),
-        bri: formatDecimal(item.bri),
-        cashIdr: formatDecimal(item.cashIdr),
-        nonCb: formatDecimal(item.nonCb),
-        citibank: formatDecimal(item.citibank),
-        cashUsd: formatDecimal(item.cashUsd),
-        outstandingIdr: formatDecimal(item.outstandingIdr),
-        outstandingUsd: formatDecimal(item.outstandingUsd),
+        id: Number(item.id),
+        colE: formatDecimal(item.colE),
+        colF: formatDecimal(item.colF),
+        colG: formatDecimal(item.colG),
+        colJ: formatDecimal(item.colJ),
+        colK: formatDecimal(item.colK),
+        colL: formatDecimal(item.colL),
+        colM: formatDecimal(item.colM),
+        colN: formatDecimal(item.colN),
+        colO: formatDecimal(item.colO),
+        colP: formatDecimal(item.colP),
+        colQ: formatDecimal(item.colQ),
+        colR: formatDecimal(item.colR),
+        colT: formatDecimal(item.colT),
+        colU: formatDecimal(item.colU),
+        colW: formatDecimal(item.colW),
+        colX: formatDecimal(item.colX),
       })),
       meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
     };
+  }
+
+  async getAllAP(): Promise<any[]> {
+    const data = await this.prisma.accountPayable.findMany({ orderBy: [{ id: 'asc' }] });
+    return data.map(item => ({
+      ...item,
+      id: Number(item.id),
+      colE: formatDecimal(item.colE),
+      colF: formatDecimal(item.colF),
+      colG: formatDecimal(item.colG),
+      colK: formatDecimal(item.colK),
+      colL: formatDecimal(item.colL),
+      colM: formatDecimal(item.colM),
+      colN: formatDecimal(item.colN),
+      colO: formatDecimal(item.colO),
+      colP: formatDecimal(item.colP),
+      colQ: formatDecimal(item.colQ),
+      colR: formatDecimal(item.colR),
+      colT: formatDecimal(item.colT),
+      colU: formatDecimal(item.colU),
+      colW: formatDecimal(item.colW),
+      colX: formatDecimal(item.colX),
+    }));
   }
 
   async getAssets(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
@@ -263,6 +361,7 @@ export class FinanceService {
 
     return data.map(item => ({
       ...item,
+      label: item.category, // Map category to label for frontend
       bca: formatDecimal(item.bca),
       mandiri: formatDecimal(item.mandiri),
       bri: formatDecimal(item.bri),

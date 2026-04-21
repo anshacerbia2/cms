@@ -1,16 +1,20 @@
 -- CreateTable
 CREATE TABLE "financial_transactions" (
     "id" BIGSERIAL NOT NULL,
-    "date" TIMESTAMP(3) NOT NULL,
-    "description" TEXT NOT NULL,
-    "withdrawal" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "deposit" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "balance" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "category" VARCHAR(100),
-    "sub_category" VARCHAR(100),
-    "reference" VARCHAR(255),
-    "extra_info" TEXT,
-    "source" VARCHAR(50) NOT NULL,
+    "name" VARCHAR(50) NOT NULL,
+    "col_a" TIMESTAMP(3),
+    "col_b" TEXT,
+    "col_c" DECIMAL(19,4) DEFAULT 0,
+    "col_d" DECIMAL(19,4) DEFAULT 0,
+    "col_e" DECIMAL(19,4) DEFAULT 0,
+    "col_f" TEXT,
+    "col_g" TEXT,
+    "col_h" TEXT,
+    "col_i" TEXT,
+    "col_j" TEXT,
+    "col_k" TEXT,
+    "col_l" TEXT,
+    "col_m" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -30,6 +34,7 @@ CREATE TABLE "sales_records" (
     "management_fee" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "ppn" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "total_amount" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "col11" VARCHAR(255),
     "bca" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "mandiri" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "danamon" DECIMAL(19,4) NOT NULL DEFAULT 0,
@@ -52,12 +57,12 @@ CREATE TABLE "sales_records" (
 -- CreateTable
 CREATE TABLE "accounts_receivable" (
     "id" BIGSERIAL NOT NULL,
-    "ar_type" VARCHAR(255),
-    "sub_category" VARCHAR(255),
+    "ar_type" VARCHAR(50),
+    "sub_category" VARCHAR(100),
     "entity_name" VARCHAR(255),
     "description" TEXT,
-    "end_of_2020_idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "end_of_2020_usd" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "usd" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "rate" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "bca" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "mandiri" DECIMAL(19,4) NOT NULL DEFAULT 0,
@@ -79,15 +84,13 @@ CREATE TABLE "accounts_receivable" (
 -- CreateTable
 CREATE TABLE "accounts_payable" (
     "id" BIGSERIAL NOT NULL,
-    "payable" VARCHAR(255),
-    "year" VARCHAR(50),
+    "payable" VARCHAR(100),
+    "year" INTEGER,
     "vendor" VARCHAR(255),
     "keterangan" TEXT,
     "idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "usd" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "rate" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "cost_category" VARCHAR(255),
-    "project_ref" TEXT,
     "bca" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "mandiri" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "btn" DECIMAL(19,4) NOT NULL DEFAULT 0,
@@ -96,10 +99,10 @@ CREATE TABLE "accounts_payable" (
     "non_cb" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "citibank" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "cash_usd" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "notes_yogi" TEXT,
+    "koreksi_selisih" VARCHAR(255),
     "outstanding_idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "outstanding_usd" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "notes_yogi" TEXT,
-    "koreksi_selisih" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -107,13 +110,13 @@ CREATE TABLE "accounts_payable" (
 );
 
 -- CreateTable
-CREATE TABLE "asset_depreciations" (
+CREATE TABLE "asset_depreciation" (
     "id" BIGSERIAL NOT NULL,
     "purchase_date" VARCHAR(50),
     "bank_ref" VARCHAR(100),
-    "asset_name" VARCHAR(255) NOT NULL,
+    "asset_name" VARCHAR(255),
     "purchase_price" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "useful_life_months" INTEGER NOT NULL DEFAULT 0,
+    "useful_life" INTEGER,
     "accumulated_2020" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "jan" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "feb" DECIMAL(19,4) NOT NULL DEFAULT 0,
@@ -133,14 +136,13 @@ CREATE TABLE "asset_depreciations" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "asset_depreciations_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "asset_depreciation_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "profit_loss_sales" (
     "id" BIGSERIAL NOT NULL,
-    "no" INTEGER,
-    "account_name" VARCHAR(255) NOT NULL,
+    "account_name" VARCHAR(255),
     "gross" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "vat" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "ap_vat" DECIMAL(19,4) NOT NULL DEFAULT 0,
@@ -156,9 +158,8 @@ CREATE TABLE "profit_loss_sales" (
 -- CreateTable
 CREATE TABLE "profit_loss_costs" (
     "id" BIGSERIAL NOT NULL,
-    "no" INTEGER,
-    "account_name" VARCHAR(255) NOT NULL,
-    "category" VARCHAR(50) NOT NULL,
+    "category" VARCHAR(100),
+    "sub_category" VARCHAR(100),
     "bca" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "mandiri" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "bri" DECIMAL(19,4) NOT NULL DEFAULT 0,
@@ -174,12 +175,31 @@ CREATE TABLE "profit_loss_costs" (
 );
 
 -- CreateTable
+CREATE TABLE "profit_loss_summary" (
+    "id" BIGSERIAL NOT NULL,
+    "category" VARCHAR(100),
+    "bca" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "mandiri" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "bri" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "btn" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "cash_idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "non_cb" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "other" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "total" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "profit_loss_summary_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "balance_sheet_items" (
     "id" BIGSERIAL NOT NULL,
-    "account_name" VARCHAR(255) NOT NULL,
+    "category" VARCHAR(100),
+    "account_name" VARCHAR(255),
     "idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "usd" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "total_idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "rate" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -189,7 +209,8 @@ CREATE TABLE "balance_sheet_items" (
 -- CreateTable
 CREATE TABLE "inter_account_transfers" (
     "id" BIGSERIAL NOT NULL,
-    "description" VARCHAR(255),
+    "date" VARCHAR(50),
+    "description" TEXT,
     "bca" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "mandiri" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "bri" DECIMAL(19,4) NOT NULL DEFAULT 0,
@@ -202,9 +223,3 @@ CREATE TABLE "inter_account_transfers" (
 
     CONSTRAINT "inter_account_transfers_pkey" PRIMARY KEY ("id")
 );
-
--- CreateIndex
-CREATE INDEX "financial_transactions_date_idx" ON "financial_transactions"("date");
-
--- CreateIndex
-CREATE INDEX "financial_transactions_source_idx" ON "financial_transactions"("source");

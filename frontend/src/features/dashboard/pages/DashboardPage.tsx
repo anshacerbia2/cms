@@ -51,7 +51,7 @@ export default function DashboardPage() {
     return acc;
   }, 0) || 15700000000; // Fallback to 15.7B if empty
 
-  const netProfit = Number(plSummary?.find((s: any) => s.label === 'PROFIT AFTER TAX')?.total) || 4040000000;
+  const netProfit = Number((plSummary as any[])?.find((s: any) => s.label === 'PROFIT AFTER TAX')?.total) || 4040000000;
   const totalAR = (arItems?.data || []).reduce((acc: number, d: any) => acc + (Number(d.outstandingIdr) || 0), 0) || 6400000000;
   const totalAP = (apItems?.data || []).reduce((acc: number, d: any) => acc + (Number(d.outstandingIdr) || 0), 0) || 5200000000;
 

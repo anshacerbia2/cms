@@ -95,7 +95,7 @@ function LayoutContent() {
 
         <main className="mt-20 py-6 md:py-10 flex-1 flex flex-col">
           <div className="flex-1 px-6 md:px-12">
-            <div className="mx-auto max-w-7xl">
+            <div className="w-full">
               <Outlet />
             </div>
           </div>

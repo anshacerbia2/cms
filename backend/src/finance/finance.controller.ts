@@ -17,9 +17,16 @@ export class FinanceController {
     if (result.data && result.data.length > 0) {
       const first = result.data[0];
       const last = result.data[result.data.length - 1];
-      console.log(`🛠️ [DEBUG API] Order Trace: First Date=${first.date}, ID=${first.id} | Last Date=${last.date}, ID=${last.id} | Result Count=${result.data.length}`);
+      console.log(`🛠️ [DEBUG API] Order Trace: First Date=${first.colA}, ID=${first.id} | Last Date=${last.colA}, ID=${last.id} | Result Count=${result.data.length}`);
     }
     return result;
+  }
+
+  @Get('transactions/all')
+  @Permissions('finance.index')
+  async getAllTransactions(@Query('name') name?: string) {
+    console.log('Fetching transactions for bank:', name);
+    return this.financeService.getAllTransactions(name);
   }
 
   @Get('sales')
@@ -28,16 +35,37 @@ export class FinanceController {
     return this.financeService.getSales(query);
   }
 
+  @Get('sales/all')
+  @Permissions('finance.index')
+  async getAllSales() {
+    console.log('--- DEBUG: Hit getAllSales endpoint ---');
+    return this.financeService.getAllSales();
+  }
+
   @Get('ar')
   @Permissions('finance.index')
   async getAR(@Query() query: PaginationQueryDto) {
     return this.financeService.getAR(query);
   }
 
+  @Get('ar/all')
+  @Permissions('finance.index')
+  async getAllAR() {
+    console.log('--- DEBUG: Hit getAllAR endpoint ---');
+    return this.financeService.getAllAR();
+  }
+
   @Get('ap')
   @Permissions('finance.index')
   async getAP(@Query() query: PaginationQueryDto) {
     return this.financeService.getAP(query);
+  }
+
+  @Get('ap/all')
+  @Permissions('finance.index')
+  async getAllAP() {
+    console.log('--- DEBUG: Hit getAllAP endpoint ---');
+    return this.financeService.getAllAP();
   }
 
   @Get('assets')
