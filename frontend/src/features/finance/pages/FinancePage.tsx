@@ -35,7 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { useFinance } from "../hooks/useFinance";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { ExcelColumnFilter } from "../components/ExcelColumnFilter";
-import { Landmark, TrendingUp, Users, Truck, Package, PieChart, BarChart3, Repeat, Filter, ArrowUpRight, Search, Loader2 } from "lucide-react";
+import { Landmark, TrendingUp, Users, Truck, Package, PieChart, BarChart3, Repeat, Filter, ArrowUpRight, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -67,13 +67,13 @@ export default function FinancePage() {
   const [arSearch, setArSearch] = useState("");
   const [arSort, setArSort] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
   const [arFilters, setArFilters] = useState<Record<string, Set<string> | null>>({});
-  const arLimit = 100; // Client-side filtering needs more data or full fetch
+  // const arLimit = 100; // Client-side filtering needs more data or full fetch
 
   const [apPage, setApPage] = useState(1);
   const [apSearch, setApSearch] = useState("");
   const [apSort, setApSort] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
   const [apFilters, setApFilters] = useState<Record<string, Set<string> | null>>({});
-  const apLimit = 100;
+  // const apLimit = 100;
 
   const [assetsPage, setAssetsPage] = useState(1);
   const [iaPage, setIaPage] = useState(1);
@@ -313,33 +313,6 @@ export default function FinancePage() {
     }, { colF:0, colG:0, colH:0, colJ:0, colK:0, colL:0, colM:0, colN:0, colO:0, colP:0, colR:0, colS:0, colT:0, convertedInitial: 0, convertedOutstanding: 0 });
   }, [filteredAndSortedAR, arPage]);
 
-  const arGrandTotals = useMemo(() => {
-    return filteredAndSortedAR.reduce((acc, curr) => {
-      const idrInitial = Number(curr.colF) || 0;
-      const usdInitial = Number(curr.colG) || 0;
-      const rateInitial = Number(curr.colH) || 1;
-      const idrOutstanding = Number(curr.colR) || 0;
-      const usdOutstanding = Number(curr.colS) || 0;
-      const rateOutstanding = Number(curr.colT) || 1;
-      return {
-        colF: acc.colF + idrInitial,
-        colG: acc.colG + usdInitial,
-        colH: acc.colH + (Number(curr.colH) || 0),
-        colJ: acc.colJ + (Number(curr.colJ) || 0),
-        colK: acc.colK + (Number(curr.colK) || 0),
-        colL: acc.colL + (Number(curr.colL) || 0),
-        colM: acc.colM + (Number(curr.colM) || 0),
-        colN: acc.colN + (Number(curr.colN) || 0),
-        colO: acc.colO + (Number(curr.colO) || 0),
-        colP: acc.colP + (Number(curr.colP) || 0),
-        colR: acc.colR + idrOutstanding,
-        colS: acc.colS + usdOutstanding,
-        colT: acc.colT + (Number(curr.colT) || 0),
-        convertedInitial: acc.convertedInitial + idrInitial + (usdInitial * rateInitial),
-        convertedOutstanding: acc.convertedOutstanding + idrOutstanding + (usdOutstanding * rateOutstanding)
-      };
-    }, { colF:0, colG:0, colH:0, colJ:0, colK:0, colL:0, colM:0, colN:0, colO:0, colP:0, colR:0, colS:0, colT:0, convertedInitial: 0, convertedOutstanding: 0 });
-  }, [filteredAndSortedAR]);
 
   // --- AP FILTERING & SORTING ENGINE ---
   const filteredAndSortedAP = useMemo(() => {
@@ -399,32 +372,6 @@ export default function FinancePage() {
     }, { colE:0, colF:0, colG:0, colK:0, colL:0, colM:0, colN:0, colO:0, colP:0, colQ:0, colR:0, colT:0, colU:0, colW:0, colX:0, convertedInitial: 0, convertedOutstanding: 0 });
   }, [filteredAndSortedAP, apPage]);
 
-  const apGrandTotals = useMemo(() => {
-    return filteredAndSortedAP.reduce((acc, curr) => {
-      const idr = Number(curr.colT) || 0;
-      const usd = Number(curr.colU) || 0;
-      const rate = Number(curr.colG) || 1;
-      return {
-        colE: acc.colE + (Number(curr.colE) || 0),
-        colF: acc.colF + (Number(curr.colF) || 0),
-        colG: acc.colG + (Number(curr.colG) || 0),
-        colK: acc.colK + (Number(curr.colK) || 0),
-        colL: acc.colL + (Number(curr.colL) || 0),
-        colM: acc.colM + (Number(curr.colM) || 0),
-        colN: acc.colN + (Number(curr.colN) || 0),
-        colO: acc.colO + (Number(curr.colO) || 0),
-        colP: acc.colP + (Number(curr.colP) || 0),
-        colQ: acc.colQ + (Number(curr.colQ) || 0),
-        colR: acc.colR + (Number(curr.colR) || 0),
-        colT: acc.colT + idr,
-        colU: acc.colU + usd,
-        colW: acc.colW + (Number(curr.colW) || 0),
-        colX: acc.colX + (Number(curr.colX) || 0),
-        convertedInitial: acc.convertedInitial + (Number(curr.colE) || 0) + ((Number(curr.colF) || 0) * (Number(curr.colG) || 0)),
-        convertedOutstanding: acc.convertedOutstanding + idr + (usd * rate)
-      };
-    }, { colE:0, colF:0, colG:0, colK:0, colL:0, colM:0, colN:0, colO:0, colP:0, colQ:0, colR:0, colT:0, colU:0, colW:0, colX:0, convertedInitial: 0, convertedOutstanding: 0 });
-  }, [filteredAndSortedAP]);
 
   // Paginated View
   const paginatedLedger = useMemo(() => {
