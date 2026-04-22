@@ -424,7 +424,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                           onPaste={(e) => handlePaste(e, index, 'colA')}
                           data-row={index}
                           data-col="colA"
-                          className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] rounded-none pl-2 pr-4 placeholder:text-primary/20 leading-none"
+                          className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none pl-2 pr-4 placeholder:text-primary/20 leading-none"
                         />
                       </div>
                     </TableCell>
@@ -437,7 +437,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colB')}
                         data-row={index}
                         data-col="colB"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent font-medium text-[12px] rounded-none px-4 placeholder:text-primary/20 leading-none"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent font-medium text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
@@ -450,7 +450,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colC')}
                         data-row={index}
                         data-col="colC"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] text-right text-red-500 rounded-none px-4 placeholder:text-primary/20 leading-none"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm text-right text-red-500 rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
@@ -463,7 +463,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colD')}
                         data-row={index}
                         data-col="colD"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] text-right text-emerald-600 rounded-none px-4 placeholder:text-primary/20 leading-none"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm text-right text-emerald-600 rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
@@ -475,7 +475,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colE')}
                         data-row={index}
                         data-col="colE"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] text-right rounded-none px-4 placeholder:text-primary/20 leading-none"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm text-right rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
@@ -487,7 +487,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colF')}
                         data-row={index}
                         data-col="colF"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] rounded-none px-4 placeholder:text-primary/20 leading-none"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
@@ -499,7 +499,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colG')}
                         data-row={index}
                         data-col="colG"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] rounded-none px-4 placeholder:text-primary/20 leading-none"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
@@ -511,7 +511,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colH')}
                         data-row={index}
                         data-col="colH"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] rounded-none px-4 placeholder:text-primary/20 leading-none"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
@@ -523,7 +523,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colI')}
                         data-row={index}
                         data-col="colI"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] rounded-none px-4 placeholder:text-primary/20 leading-none"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
@@ -535,7 +535,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colJ')}
                         data-row={index}
                         data-col="colJ"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] rounded-none px-4 placeholder:text-primary/20 leading-none"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 text-center pr-8">
@@ -559,13 +559,13 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                   const totalCredit = rows.reduce((acc, r) => acc + (Number(r.colD) || 0), 0);
 
                   return (
-                    <TableRow className="bg-primary/[0.03] border-t-2 border-primary/10 h-12">
-                      <TableCell className="pl-8 font-black text-[11px] tracking-widest text-primary/40 border-r border-primary/5 leading-none">Total</TableCell>
+                    <TableRow className="bg-primary/[0.03] border-t-2 border-primary/10 h-9">
+                      <TableCell className="pl-8 font-bold text-sm text-primary/60 border-r border-primary/5">Total</TableCell>
                       <TableCell className="border-r border-primary/5" />
-                      <TableCell className="text-right px-4 font-black text-[12px] text-red-500 border-r border-primary/5">
+                      <TableCell className="text-right px-4 font-bold text-sm text-red-500 border-r border-primary/5">
                         {formatDisplay(totalDebit)}
                       </TableCell>
-                      <TableCell className="text-right px-4 font-black text-[12px] text-emerald-600 border-r border-primary/5">
+                      <TableCell className="text-right px-4 font-bold text-sm text-emerald-600 border-r border-primary/5">
                         {formatDisplay(totalCredit)}
                       </TableCell>
                       <TableCell className="border-r border-primary/5" />
