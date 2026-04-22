@@ -398,4 +398,20 @@ export class FinanceService {
       meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
     };
   }
+
+  async createBulkTransactions(data: any[]) {
+    return this.prisma.financialTransaction.createMany({
+      data: data.map(item => ({
+        name: item.name,
+        colA: item.colA ? new Date(item.colA) : null,
+        colB: item.colB || "",
+        colC: item.colC || 0,
+        colD: item.colD || 0,
+        colE: item.colE || 0,
+        colF: item.colF || "",
+        colG: item.colG || "",
+        colH: item.colH || "",
+      })),
+    });
+  }
 }

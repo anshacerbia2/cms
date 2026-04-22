@@ -239,6 +239,250 @@ CREATE TABLE "internal_accounts" (
     CONSTRAINT "internal_accounts_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "financial_transactions" (
+    "id" BIGSERIAL NOT NULL,
+    "name" VARCHAR(50) NOT NULL,
+    "col_a" TIMESTAMP(3),
+    "col_b" TEXT,
+    "col_c" DECIMAL(19,4) DEFAULT 0,
+    "col_d" DECIMAL(19,4) DEFAULT 0,
+    "col_e" DECIMAL(19,4) DEFAULT 0,
+    "col_f" TEXT,
+    "col_g" TEXT,
+    "col_h" TEXT,
+    "col_i" TEXT,
+    "col_j" TEXT,
+    "col_k" TEXT,
+    "col_l" TEXT,
+    "col_m" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "financial_transactions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "sales_records" (
+    "id" BIGSERIAL NOT NULL,
+    "colA" VARCHAR(100),
+    "colB" VARCHAR(100),
+    "colC" INTEGER,
+    "colD" TEXT,
+    "colE" TEXT,
+    "colF" TEXT,
+    "colG" DECIMAL(19,4),
+    "colH" DECIMAL(19,4),
+    "colI" DECIMAL(19,4),
+    "colJ" DECIMAL(19,4),
+    "colK" DECIMAL(19,4),
+    "colL" DECIMAL(19,4),
+    "colM" DECIMAL(19,4),
+    "colN" DECIMAL(19,4),
+    "colO" DECIMAL(19,4),
+    "colP" DECIMAL(19,4),
+    "colQ" DECIMAL(19,4),
+    "colR" DECIMAL(19,4),
+    "colS" DECIMAL(19,4),
+    "colT" DECIMAL(19,4),
+    "colU" DECIMAL(19,4),
+    "colV" DECIMAL(19,4),
+    "colW" DECIMAL(19,4),
+    "colX" DECIMAL(19,4),
+    "colY" DECIMAL(19,4),
+    "colZ" DECIMAL(19,4),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "sales_records_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "account_receivables" (
+    "id" BIGSERIAL NOT NULL,
+    "colA" VARCHAR(100),
+    "colB" VARCHAR(100),
+    "colC" TEXT,
+    "colD" TEXT,
+    "colE" TEXT,
+    "colF" DECIMAL(19,4),
+    "colG" DECIMAL(19,4),
+    "colH" DECIMAL(19,4),
+    "colI" DECIMAL(19,4),
+    "colJ" DECIMAL(19,4),
+    "colK" DECIMAL(19,4),
+    "colL" DECIMAL(19,4),
+    "colM" DECIMAL(19,4),
+    "colN" DECIMAL(19,4),
+    "colO" DECIMAL(19,4),
+    "colP" DECIMAL(19,4),
+    "colQ" DECIMAL(19,4),
+    "colR" DECIMAL(19,4),
+    "colS" DECIMAL(19,4),
+    "colT" DECIMAL(19,4),
+    "colU" DECIMAL(19,4),
+    "colV" DECIMAL(19,4),
+    "colW" DECIMAL(19,4),
+    "colX" DECIMAL(19,4),
+    "colY" DECIMAL(19,4),
+    "colZ" DECIMAL(19,4),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "account_receivables_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "account_payables" (
+    "id" BIGSERIAL NOT NULL,
+    "colA" VARCHAR(100),
+    "colB" INTEGER,
+    "colC" TEXT,
+    "colD" TEXT,
+    "colE" DECIMAL(19,4),
+    "colF" DECIMAL(19,4),
+    "colG" DECIMAL(19,4),
+    "colH" TEXT,
+    "colI" TEXT,
+    "colJ" DECIMAL(19,4),
+    "colK" DECIMAL(19,4),
+    "colL" DECIMAL(19,4),
+    "colM" DECIMAL(19,4),
+    "colN" DECIMAL(19,4),
+    "colO" DECIMAL(19,4),
+    "colP" DECIMAL(19,4),
+    "colQ" DECIMAL(19,4),
+    "colR" DECIMAL(19,4),
+    "colS" DECIMAL(19,4),
+    "colT" DECIMAL(19,4),
+    "colU" DECIMAL(19,4),
+    "colV" TEXT,
+    "colW" DECIMAL(19,4),
+    "colX" DECIMAL(19,4),
+    "colY" DECIMAL(19,4),
+    "colZ" DECIMAL(19,4),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "account_payables_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "asset_depreciation" (
+    "id" BIGSERIAL NOT NULL,
+    "purchase_date" VARCHAR(50),
+    "bank_ref" VARCHAR(100),
+    "asset_name" VARCHAR(255),
+    "purchase_price" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "useful_life" INTEGER,
+    "accumulated_2020" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "jan" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "feb" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "mar" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "apr" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "may" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "jun" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "jul" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "aug" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "sep" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "oct" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "nov" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "dec" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "total_2021" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "accumulated_2021" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "book_value" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "asset_depreciation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "profit_loss_sales" (
+    "id" BIGSERIAL NOT NULL,
+    "account_name" VARCHAR(255),
+    "gross" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "vat" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "ap_vat" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "credit_note" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "ap_credit_note" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "net_sales" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "profit_loss_sales_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "profit_loss_costs" (
+    "id" BIGSERIAL NOT NULL,
+    "category" VARCHAR(100),
+    "sub_category" VARCHAR(100),
+    "account_name" VARCHAR(255),
+    "bca" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "mandiri" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "bri" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "btn" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "cash_idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "non_cb" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "other" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "total" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "profit_loss_costs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "profit_loss_summary" (
+    "id" BIGSERIAL NOT NULL,
+    "category" VARCHAR(100),
+    "bca" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "mandiri" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "bri" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "btn" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "cash_idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "non_cb" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "other" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "total" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "profit_loss_summary_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "balance_sheet_items" (
+    "id" BIGSERIAL NOT NULL,
+    "category" VARCHAR(100),
+    "account_name" VARCHAR(255),
+    "idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "usd" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "rate" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "balance_sheet_items_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "inter_account_transfers" (
+    "id" BIGSERIAL NOT NULL,
+    "date" VARCHAR(50),
+    "description" TEXT,
+    "bca" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "mandiri" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "bri" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "btn" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "cash_idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "non_cash_bank" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "checker" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "inter_account_transfers_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
 

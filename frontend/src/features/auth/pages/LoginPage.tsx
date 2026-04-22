@@ -71,16 +71,17 @@ export default function LoginPage() {
           <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center rotate-3 shadow-premium mb-4">
             <Command className="text-white h-7 w-7 -rotate-3" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tighter uppercase font-headline text-primary">
-            CMS <span className="opacity-40 font-bold">Panconvince</span>
+          <h1 className="text-2xl font-extrabold tracking-tighter uppercase font-headline text-primary text-center">
+            PANCONVINCE {" "} 
+            <span className="opacity-40 font-bold">ENTERPRISE OPERATIONS SYSTEM</span>
           </h1>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] mt-1">
-            Enterprise Management System
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] mt-1 text-center">
+            Internal platform for project, procurement, and finance workflows.
           </p>
         </div>
 
         <Card className="border-border/40 shadow-premium bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden">
-          <CardHeader className="space-y-1 pt-8 px-8">
+          <CardHeader className="space-y-1 pt-8 px-8 pb-0">
             <CardTitle className="text-xl font-extrabold tracking-tight font-headline">Welcome back</CardTitle>
             <CardDescription className="text-xs text-muted-foreground font-medium">
               Authorized access only. Please sign in to continue.
@@ -111,7 +112,7 @@ export default function LoginPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
-                      <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">Security Key</FormLabel>
+                      <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 px-1">Password</FormLabel>
                       <FormControl>
                         <Input 
                           type="password" 

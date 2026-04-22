@@ -48,6 +48,7 @@ export async function seedAuth(prisma: PrismaClient) {
     { name: 'Delete Internal Account', route: 'internal-accounts.delete' },
     // Finance Module Permissions
     { name: 'View Financial Reports', route: 'finance.index' },
+    { name: 'Create Financial Transactions', route: 'finance.create' },
   ];
 
   for (const p of permissions) {

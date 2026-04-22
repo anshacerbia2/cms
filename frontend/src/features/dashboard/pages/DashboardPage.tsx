@@ -208,18 +208,6 @@ export default function DashboardPage() {
               </Link>
             ))}
           </div>
-          
-          <Card className="rounded-[2rem] border-primary/5 bg-primary overflow-hidden shadow-premium group">
-            <CardHeader className="text-white relative z-10">
-              <CardTitle className="text-lg font-black uppercase tracking-tighter">BCA ELITE MANAGEMENT</CardTitle>
-              <CardDescription className="text-white/60 text-xs">Standard Operating Version 1.2.4</CardDescription>
-            </CardHeader>
-            <div className="p-6 pt-0 relative z-10">
-               <Button className="w-full bg-white text-primary hover:bg-secondary hover:text-white rounded-2xl font-black uppercase tracking-widest text-[10px] h-12 transition-all">
-                  Generate PDF Audit
-               </Button>
-            </div>
-          </Card>
         </div>
       </div>
     </div>

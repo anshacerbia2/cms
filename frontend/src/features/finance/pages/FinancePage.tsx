@@ -35,9 +35,11 @@ import { Badge } from "@/components/ui/badge";
 import { useFinance } from "../hooks/useFinance";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { ExcelColumnFilter } from "../components/ExcelColumnFilter";
-import { Landmark, TrendingUp, Users, Truck, Package, PieChart, BarChart3, Repeat, Filter, ArrowUpRight, Search } from "lucide-react";
+import { Landmark, TrendingUp, Users, Truck, Package, PieChart, BarChart3, Repeat, Filter, ArrowUpRight, Search, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import AddLedgerModal from "../components/AddLedgerModal";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function FinancePage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -89,9 +91,10 @@ export default function FinancePage() {
   const [selectedBank, setSelectedBank] = useState<string | null>(null);
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [bankPage, setBankPage] = useState(1);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const queryClient = useQueryClient();
 
-  const { 
-    getTransactions, 
+  const {    getTransactions, 
     getAllTransactions,
     getSales, 
     getAllSales,
@@ -509,10 +512,27 @@ export default function FinancePage() {
               )}
             </div>
 
-            <Badge variant="outline" className="h-11 px-6 w-full md:w-auto flex justify-center rounded-xl bg-primary/5 text-primary border-primary/10 font-black uppercase tracking-[0.2em] text-[11px]">
-              {filteredAndSortedLedger.length} Records
-            </Badge>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Badge variant="outline" className="h-11 px-6 flex-1 md:flex-none justify-center rounded-xl bg-primary/5 text-primary border-primary/10 font-black uppercase tracking-[0.2em] text-[11px]">
+                {filteredAndSortedLedger.length} Records
+              </Badge>
+              <Button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="h-11 px-6 rounded-xl bg-secondary hover:bg-secondary/90 text-white font-black uppercase tracking-widest text-[11px] gap-2 shadow-premium"
+              >
+                <Plus size={16} /> Add Entry
+              </Button>
+            </div>
           </div>
+
+          <AddLedgerModal 
+            open={isAddModalOpen} 
+            onOpenChange={setIsAddModalOpen}
+            currentSource={source}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["finance", "transactions"] });
+            }}
+          />
 
           <div className="bg-white rounded-[2.5rem] shadow-premium border border-primary/5 overflow-hidden transition-all">
             <div className="overflow-x-auto">
@@ -659,8 +679,12 @@ export default function FinancePage() {
                       <TableCell className="py-5 text-right border-r border-primary/5 pr-4 text-[12px] font-black text-primary">
                         {formatCurrency(row.colE)}
                       </TableCell>
-                      <TableCell className="py-5 text-left border-r border-primary/5 pl-4 text-[12px] font-black text-primary uppercase">
-                         {row.colF || "-"}
+                      <TableCell className="py-5 text-left border-r border-primary/5 pl-4 whitespace-nowrap align-middle">
+                         {row.colF ? (
+                           <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 font-black uppercase text-[10px] tracking-wider px-3 py-1.5 rounded-lg flex items-center justify-center w-fit leading-none">
+                             {row.colF}
+                           </Badge>
+                         ) : "-"}
                       </TableCell>
                       <TableCell className="py-5 text-left font-bold text-[12px] text-primary/60 uppercase truncate max-w-[150px] border-r border-primary/5 pl-4">{row.colG || "-"}</TableCell>
                       <TableCell className="pr-10 py-5 text-left font-bold text-[12px] text-primary/60 uppercase truncate max-w-[150px] pl-4">{row.colH || "-"}</TableCell>

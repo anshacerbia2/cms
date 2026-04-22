@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Query } from '@nestjs/common';
 import { FinanceService } from './finance.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
@@ -103,5 +103,10 @@ export class FinanceController {
   @Permissions('finance.index')
   async getInterAccountTransfers(@Query() query: PaginationQueryDto) {
     return this.financeService.getInterAccountTransfers(query);
+  }
+  @Post('transactions/bulk')
+  @Permissions('finance.index')
+  async createBulkTransactions(@Body() data: any[]) {
+    return this.financeService.createBulkTransactions(data);
   }
 }
