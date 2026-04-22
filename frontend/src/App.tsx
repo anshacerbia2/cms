@@ -11,6 +11,7 @@ import ProductsPage from './features/products/pages/ProductsPage';
 import BanksPage from './features/banks/pages/BanksPage';
 import StaffPage from './features/staff/pages/StaffPage';
 import FinancePage from './features/finance/pages/FinancePage';
+import BankMutationPage from './features/finance/pages/BankMutationPage';
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,7 @@ function App() {
             <Route path="banks" element={<BanksPage />} />
             <Route path="users" element={<StaffPage />} />
             <Route path="finance" element={<FinancePage />} />
+            <Route path="finance/bank-mutation" element={<BankMutationPage />} />
             {/* Add more routes here */}
           </Route>
         </Routes>

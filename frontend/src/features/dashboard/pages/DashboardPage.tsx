@@ -1,4 +1,3 @@
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useAuthStore } from "@/store/authStore"
 import { 
   Users, 
@@ -10,7 +9,6 @@ import {
 } from "lucide-react"
 
 
-import { Button } from "@/components/ui/button"
 import { Link } from "react-router-dom"
 import { useFinance } from "@/features/finance/hooks/useFinance"
 import { Badge } from "@/components/ui/badge"

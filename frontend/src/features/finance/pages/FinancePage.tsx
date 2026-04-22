@@ -24,26 +24,18 @@ import {
   TableRow 
 } from "@/components/ui/table";
 
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useFinance } from "../hooks/useFinance";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { ExcelColumnFilter } from "../components/ExcelColumnFilter";
-import { Landmark, TrendingUp, Users, Truck, Package, PieChart, BarChart3, Repeat, Filter, ArrowUpRight, Search, Plus } from "lucide-react";
+import { Landmark, TrendingUp, Users, Truck, Package, PieChart, BarChart3, Repeat, Filter, ArrowUpRight, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import AddLedgerModal from "../components/AddLedgerModal";
-import { useQueryClient } from "@tanstack/react-query";
+import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default function FinancePage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "transactions");
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "sales");
 
   // Sync state when URL changes
   useEffect(() => {
@@ -80,22 +72,12 @@ export default function FinancePage() {
   const [assetsPage, setAssetsPage] = useState(1);
   const [iaPage, setIaPage] = useState(1);
 
-  // --- LEDGER CLIENT-SIDE ENGINE STATES ---
-  const [source, setSource] = useState("BCA");
-  const [ledgerPage, setLedgerPage] = useState(1);
-  const [ledgerSearch, setLedgerSearch] = useState("");
-  const [ledgerSort, setLedgerSort] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
-  const [ledgerFilters, setLedgerFilters] = useState<Record<string, Set<string> | null>>({});
-  const ledgerLimit = 10;
-
   const [selectedBank, setSelectedBank] = useState<string | null>(null);
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [bankPage, setBankPage] = useState(1);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const queryClient = useQueryClient();
 
-  const {    getTransactions, 
-    getAllTransactions,
+  const {    
+    getTransactions, 
     getSales, 
     getAllSales,
     getAllAR,
@@ -109,7 +91,6 @@ export default function FinancePage() {
   } = useFinance();
 
   // --- LAZY FETCHING (Only fetch if tab is active) ---
-  const { data: allTrans, isLoading: transLoading } = getAllTransactions(source, { enabled: activeTab === 'transactions' });
   const { data: allSales, isLoading: salesLoading } = getAllSales({ enabled: activeTab === 'sales' });
   const { data: allAR, isLoading: arLoading } = getAllAR({ enabled: activeTab === 'ar' });
   const { data: allAP, isLoading: apLoading } = getAllAP({ enabled: activeTab === 'ap' });
@@ -129,52 +110,6 @@ export default function FinancePage() {
   }, { enabled: isBankModalOpen });
 
   const { data: salesLookup } = getSales({ page: 1, limit: 100 }, { enabled: activeTab === 'pl' });
-
-  // --- LEDGER FILTERING & SORTING ENGINE ---
-  const filteredAndSortedLedger = useMemo(() => {
-    if (!allTrans) return [];
-
-    let result = (allTrans as any[]).filter(item => (item.name || "").replace(/_$/, "") === source);
-
-    // 1. Column Filters (Excel Checkboxes)
-    Object.entries(ledgerFilters).forEach(([key, allowedValues]) => {
-      if (allowedValues) {
-        result = result.filter(item => allowedValues.has(String(item[key] || "")));
-      }
-    });
-
-    // 2. Global Search
-    if (ledgerSearch) {
-      const term = ledgerSearch.toLowerCase();
-      result = result.filter(item => 
-        String(item.colB || "").toLowerCase().includes(term) ||
-        String(item.colG || "").toLowerCase().includes( term)
-      );
-    }
-
-    // 3. Sorting
-    if (ledgerSort) {
-      const { key, direction } = ledgerSort;
-      result.sort((a, b) => {
-        const valA = (a as any)[key];
-        const valB = (b as any)[key];
-        
-        const numA = Number(valA);
-        const numB = Number(valB);
-        if (!isNaN(numA) && !isNaN(numB)) {
-          return direction === 'asc' ? numA - numB : numB - numA;
-        }
-        
-        const strA = String(valA || "").toLowerCase();
-        const strB = String(valB || "").toLowerCase();
-        return direction === 'asc' 
-          ? strA.localeCompare(strB, undefined, { numeric: true })
-          : strB.localeCompare(strA, undefined, { numeric: true });
-      });
-    }
-
-    return result;
-  }, [allTrans, ledgerFilters, ledgerSearch, ledgerSort, source]);
 
   // --- SALES CLIENT-SIDE ENGINE ---
   const filteredAndSortedSales = useMemo(() => {
@@ -376,57 +311,6 @@ export default function FinancePage() {
   }, [filteredAndSortedAP, apPage]);
 
 
-  // Paginated View
-  const paginatedLedger = useMemo(() => {
-    const start = (ledgerPage - 1) * ledgerLimit;
-    return (filteredAndSortedLedger as any[]).slice(start, start + ledgerLimit);
-  }, [filteredAndSortedLedger, ledgerPage]);
-
-  const ledgerMeta = {
-    total: filteredAndSortedLedger.length,
-    page: ledgerPage,
-    limit: ledgerLimit,
-    lastPage: Math.ceil(filteredAndSortedLedger.length / ledgerLimit)
-  };
-
-  const accumulatedTotals = useMemo(() => {
-    const subset = (filteredAndSortedLedger as any[]).slice(0, ledgerPage * ledgerLimit);
-    return subset.reduce((acc, curr) => ({
-      withdrawal: acc.withdrawal + (Number(curr.colC) || 0),
-      deposit: acc.deposit + (Number(curr.colD) || 0),
-    }), { withdrawal: 0, deposit: 0 });
-  }, [filteredAndSortedLedger, ledgerPage, ledgerLimit]);
-
-  const handleFilterChange = (key: string, values: Set<string> | null) => {
-    setLedgerFilters(prev => ({ ...prev, [key]: values }));
-    setLedgerPage(1);
-  };
-
-  const handleSortChange = (key: string, direction: 'asc' | 'desc') => {
-    setLedgerSort({ key, direction });
-    setLedgerPage(1);
-  };
-
-  // --- HELPERS ---
-  const formatCurrency = (val: any, currency = 'IDR') => {
-    const num = Number(val);
-    if (isNaN(num) || num === 0) return "-";
-    return new Intl.NumberFormat('id-ID', { 
-      style: 'currency', 
-      currency: currency, 
-      minimumFractionDigits: 2 
-    }).format(num);
-  };
-
-
-
-  const formatDate = (date: any) => {
-    if (!date) return "-";
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return "-";
-    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
-
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -443,7 +327,6 @@ export default function FinancePage() {
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 bg-transparent h-auto mb-8 p-0">
           {[
-            { id: "transactions", label: "Ledger", icon: Landmark },
             { id: "sales", label: "Sales", icon: TrendingUp },
             { id: "ar", label: "A/R", icon: Users },
             { id: "ap", label: "A/P", icon: Truck },
@@ -467,267 +350,10 @@ export default function FinancePage() {
 
 
 
-        {/* 1. LEDGER CONTENT */}
-        <TabsContent value="transactions" className="mt-0 space-y-4">
-          <div className="flex flex-col md:flex-row items-center gap-4 bg-white/50 p-4 rounded-3xl border border-primary/5 backdrop-blur-sm shadow-sm w-full">
-              <div className="flex items-center gap-2 pr-0 md:pr-4 border-b md:border-b-0 md:border-r border-primary/10 pb-2 md:pb-0 w-full md:w-auto">
-                <Landmark size={18} className="text-secondary" />
-                <span className="text-[11px] font-black uppercase tracking-widest text-primary">Source</span>
-              </div>
-              
-              <div className="flex flex-col md:flex-row items-center gap-4 flex-1 w-full">
-                <Select value={source} onValueChange={(v) => { setSource(v); setLedgerPage(1); }}>
-                  <SelectTrigger className="w-full md:w-[180px] h-11 rounded-xl bg-white border-primary/5 shadow-sm text-[11px] font-black uppercase tracking-tight ring-offset-background focus:ring-primary/20 transition-all">
-                    <SelectValue placeholder="Source" />
-                  </SelectTrigger>
-                <SelectContent className="rounded-2xl shadow-premium border-primary/5 p-1 animate-in zoom-in-95 duration-200">
-                  <SelectItem value="BCA" className="text-[11px] font-bold uppercase rounded-xl">BCA</SelectItem>
-                  <SelectItem value="MANDIRI" className="text-[11px] font-bold uppercase rounded-xl">Mandiri</SelectItem>
-                  <SelectItem value="BRI" className="text-[11px] font-bold uppercase rounded-xl">BRI</SelectItem>
-                  <SelectItem value="BTN" className="text-[11px] font-bold uppercase rounded-xl">BTN</SelectItem>
-                  <SelectItem value="CASH_IDR" className="text-[11px] font-bold uppercase rounded-xl">Cash IDR</SelectItem>
-                  <SelectItem value="NON_CB" className="text-[11px] font-bold uppercase rounded-xl">Non CB</SelectItem>
-                </SelectContent>
-              </Select>
 
-                <div className="relative flex-1 w-full md:max-w-sm">
-                  <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-primary" />
-                  <Input 
-                    placeholder="Universal Ledger Search..." 
-                    value={ledgerSearch}
-                    onChange={(e) => { setLedgerSearch(e.target.value); setLedgerPage(1); }}
-                    className="pl-10 h-11 w-full rounded-xl bg-white border-primary/5 shadow-sm text-[12px] font-bold text-primary transition-all focus-visible:ring-primary/20"
-                  />
-                </div>
 
-              {Object.keys(ledgerFilters).some(k => ledgerFilters[k] !== null) && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setLedgerFilters({})}
-                  className="h-11 px-4 w-full md:w-auto text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl"
-                >
-                  Clear All Filters
-                </Button>
-              )}
-            </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <Badge variant="outline" className="h-11 px-6 flex-1 md:flex-none justify-center rounded-xl bg-primary/5 text-primary border-primary/10 font-black uppercase tracking-[0.2em] text-[11px]">
-                {filteredAndSortedLedger.length} Records
-              </Badge>
-              <Button 
-                onClick={() => setIsAddModalOpen(true)}
-                className="h-11 px-6 rounded-xl bg-secondary hover:bg-secondary/90 text-white font-black uppercase tracking-widest text-[11px] gap-2 shadow-premium"
-              >
-                <Plus size={16} /> Add Entry
-              </Button>
-            </div>
-          </div>
 
-          <AddLedgerModal 
-            open={isAddModalOpen} 
-            onOpenChange={setIsAddModalOpen}
-            currentSource={source}
-            onSuccess={() => {
-              queryClient.invalidateQueries({ queryKey: ["finance", "transactions"] });
-            }}
-          />
-
-          <div className="bg-white rounded-[2.5rem] shadow-premium border border-primary/5 overflow-hidden transition-all">
-            <div className="overflow-x-auto">
-              <Table className="min-w-[1600px]">
-                <TableHeader className="bg-primary/[0.02]">
-                  <TableRow className="hover:bg-transparent border-primary/10 h-16">
-                    <TableHead className="pl-10 py-5 text-[11px] font-black uppercase tracking-[0.2em] text-primary w-32 border-r border-primary/5 whitespace-nowrap">
-                      <div className="flex items-center">
-                        TANGGAL
-                        <ExcelColumnFilter 
-                          columnKey="colA" 
-                          label="Tanggal" 
-                          data={allTrans || []} 
-                          activeFilters={ledgerFilters["colA"]} 
-                          onFilterChange={(v) => handleFilterChange("colA", v)}
-                          onSort={(d) => handleSortChange("colA", d)}
-                          valueFormatter={formatDate}
-                        />
-                      </div>
-                    </TableHead>
-                    <TableHead className="py-5 text-[11px] font-black uppercase tracking-[0.2em] text-primary min-w-[350px] border-r border-primary/5 pl-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        KETERANGAN TRANSAKSI
-                        <ExcelColumnFilter 
-                          columnKey="colB" 
-                          label="Keterangan" 
-                          data={allTrans || []} 
-                          activeFilters={ledgerFilters["colB"]} 
-                          onFilterChange={(v) => handleFilterChange("colB", v)}
-                          onSort={(d) => handleSortChange("colB", d)}
-                        />
-                      </div>
-                    </TableHead>
-                    <TableHead className="py-5 text-[11px] font-black uppercase tracking-[0.2em] text-primary text-right w-32 border-r border-primary/5 pr-4 whitespace-nowrap">
-                      <div className="flex items-center justify-end">
-                        DEBET
-                        <ExcelColumnFilter 
-                          columnKey="colC" 
-                          label="Debet" 
-                          data={allTrans || []} 
-                          activeFilters={ledgerFilters["colC"]} 
-                          onFilterChange={(v) => handleFilterChange("colC", v)}
-                          onSort={(d) => handleSortChange("colC", d)}
-                          valueFormatter={formatCurrency}
-                        />
-                      </div>
-                    </TableHead>
-                    <TableHead className="py-5 text-[11px] font-black uppercase tracking-[0.2em] text-primary text-right w-32 border-r border-primary/5 pr-4 whitespace-nowrap">
-                      <div className="flex items-center justify-end">
-                        KREDIT
-                        <ExcelColumnFilter 
-                          columnKey="colD" 
-                          label="Kredit" 
-                          data={allTrans || []} 
-                          activeFilters={ledgerFilters["colD"]} 
-                          onFilterChange={(v) => handleFilterChange("colD", v)}
-                          onSort={(d) => handleSortChange("colD", d)}
-                          valueFormatter={formatCurrency}
-                        />
-                      </div>
-                    </TableHead>
-                    <TableHead className="py-5 text-[11px] font-black uppercase tracking-[0.2em] text-primary text-right w-40 border-r border-primary/5 pr-4 whitespace-nowrap">
-                      <div className="flex items-center justify-end">
-                        LEDGER
-                        <ExcelColumnFilter 
-                          columnKey="colE" 
-                          label="Ledger" 
-                          data={allTrans || []} 
-                          activeFilters={ledgerFilters["colE"]} 
-                          onFilterChange={(v) => handleFilterChange("colE", v)}
-                          onSort={(d) => handleSortChange("colE", d)}
-                          valueFormatter={formatCurrency}
-                        />
-                      </div>
-                    </TableHead>
-                    <TableHead className="py-5 text-[11px] font-black uppercase tracking-[0.2em] text-primary w-48 border-r border-primary/5 pl-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        SUB LEDGER - 1
-                        <ExcelColumnFilter 
-                          columnKey="colF" 
-                          label="Sub Ledger 1" 
-                          data={allTrans || []} 
-                          activeFilters={ledgerFilters["colF"]} 
-                          onFilterChange={(v) => handleFilterChange("colF", v)}
-                          onSort={(d) => handleSortChange("colF", d)}
-                        />
-                      </div>
-                    </TableHead>
-                    <TableHead className="py-5 text-[11px] font-black uppercase tracking-[0.2em] text-primary w-48 border-r border-primary/5 pl-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        SUB LEDGER - 2
-                        <ExcelColumnFilter 
-                          columnKey="colG" 
-                          label="Sub Ledger 2" 
-                          data={allTrans || []} 
-                          activeFilters={ledgerFilters["colG"]} 
-                          onFilterChange={(v) => handleFilterChange("colG", v)}
-                          onSort={(d) => handleSortChange("colG", d)}
-                        />
-                      </div>
-                    </TableHead>
-                    <TableHead className="pr-10 py-5 text-[11px] font-black uppercase tracking-[0.2em] text-primary w-48 pl-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        SUB LEDGER - 3
-                        <ExcelColumnFilter 
-                          columnKey="colH" 
-                          label="Sub Ledger 3" 
-                          data={allTrans || []} 
-                          activeFilters={ledgerFilters["colH"]} 
-                          onFilterChange={(v) => handleFilterChange("colH", v)}
-                          onSort={(d) => handleSortChange("colH", d)}
-                        />
-                      </div>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transLoading ? (
-                    <TableRow><TableCell colSpan={8} className="h-64 text-center">
-                      <div className="flex flex-col items-center justify-center gap-4">
-                        <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin"></div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 animate-pulse">Processing Financial Ledger Data...</p>
-                      </div>
-                    </TableCell></TableRow>
-                  ) : paginatedLedger.length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="h-64 text-center">
-                      <div className="flex flex-col items-center justify-center gap-2 opacity-20">
-                        <Filter size={48} />
-                        <p className="text-xs font-black uppercase tracking-widest mt-4">No matching transactions found</p>
-                      </div>
-                    </TableCell></TableRow>
-                  ) : paginatedLedger.map((row: any) => (
-                    <TableRow key={row.id} className="border-primary/5 hover:bg-primary/[0.01] transition-all duration-300 group">
-                      <TableCell className="pl-10 py-5 font-bold text-[12px] text-primary border-r border-primary/5">{formatDate(row.colA)}</TableCell>
-                      <TableCell className="py-5 border-r border-primary/5 pl-4">
-                        <div className="text-[12px] font-bold text-primary/60 leading-snug max-w-xl line-clamp-2">{row.colB}</div>
-                      </TableCell>
-                      <TableCell className="py-5 text-right font-black text-red-500 text-[12px] border-r border-primary/5 pr-4">
-                         {formatCurrency(row.colC)}
-                      </TableCell>
-                      <TableCell className="py-5 text-right font-black text-emerald-600 text-[12px] border-r border-primary/5 pr-4">
-                        {formatCurrency(row.colD)}
-                      </TableCell>
-                      <TableCell className="py-5 text-right border-r border-primary/5 pr-4 text-[12px] font-black text-primary">
-                        {formatCurrency(row.colE)}
-                      </TableCell>
-                      <TableCell className="py-5 text-left border-r border-primary/5 pl-4 whitespace-nowrap align-middle">
-                         {row.colF ? (
-                           <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 font-black uppercase text-[10px] tracking-wider px-3 py-1.5 rounded-lg flex items-center justify-center w-fit leading-none">
-                             {row.colF}
-                           </Badge>
-                         ) : "-"}
-                      </TableCell>
-                      <TableCell className="py-5 text-left font-bold text-[12px] text-primary/60 uppercase truncate max-w-[150px] border-r border-primary/5 pl-4">{row.colG || "-"}</TableCell>
-                      <TableCell className="pr-10 py-5 text-left font-bold text-[12px] text-primary/60 uppercase truncate max-w-[150px] pl-4">{row.colH || "-"}</TableCell>
-                    </TableRow>
-                  ))}
-                  
-                  {paginatedLedger.length > 0 && (
-                    <>
-                      <TableRow className="bg-primary/5 border-t-2 border-primary/20">
-                        <TableCell colSpan={2} className="pl-10 py-5 font-black text-[12px] text-primary uppercase tracking-[0.2em]">
-                          Accumulated Balance (Page 1-{ledgerPage})
-                        </TableCell>
-                        <TableCell className="py-5 text-right font-black text-red-600 text-[12px] border-r border-primary/5 pr-4">
-                          {accumulatedTotals.withdrawal !== 0 ? formatCurrency(accumulatedTotals.withdrawal) : "-"}
-                        </TableCell>
-                        <TableCell className="py-5 text-right font-black text-emerald-700 text-[12px] border-r border-primary/5 pr-4">
-                          {accumulatedTotals.deposit !== 0 ? formatCurrency(accumulatedTotals.deposit) : "-"}
-                        </TableCell>
-                        <TableCell className="py-5 text-right border-r border-primary/5 pr-4 text-[12px] font-black text-primary">
-                          -
-                        </TableCell>
-                        <TableCell colSpan={3} className="bg-primary/[0.01]" />
-                      </TableRow>
-
-                      <TableRow className="bg-secondary/5 border-t border-secondary/20">
-                        <TableCell colSpan={4} className="pl-10 py-5 font-black text-[12px] text-secondary uppercase tracking-[0.2em]">
-                          Net Movement (Credit - Debet)
-                        </TableCell>
-                        <TableCell className="py-5 text-right border-r border-primary/5 pr-4 text-[13px] font-black bg-secondary/5">
-                          <span className={accumulatedTotals.deposit - accumulatedTotals.withdrawal >= 0 ? "text-emerald-700" : "text-red-600"}>
-                            {formatCurrency(accumulatedTotals.deposit - accumulatedTotals.withdrawal)}
-                          </span>
-                        </TableCell>
-                        <TableCell colSpan={3} className="bg-secondary/[0.01]" />
-                      </TableRow>
-                    </>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-          <PaginationControls meta={ledgerMeta} onPageChange={setLedgerPage} isFetching={transLoading} />
-        </TabsContent>
 
         {/* 2. SALES CONTENT */}
         <TabsContent value="sales" className="mt-0 space-y-4">

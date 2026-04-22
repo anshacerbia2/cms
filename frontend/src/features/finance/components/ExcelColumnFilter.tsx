@@ -98,10 +98,13 @@ export function ExcelColumnFilter({
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button className={cn(
-          "ml-1 p-1.5 rounded-md hover:bg-primary/10 transition-colors inline-flex items-center cursor-pointer",
-          activeFilters && "text-primary bg-primary/20 ring-1 ring-primary/30"
+          "ml-1.5 p-1 rounded-md hover:bg-primary/5 transition-all inline-flex items-center cursor-pointer opacity-40 hover:opacity-100 group",
+          activeFilters && "opacity-100 bg-secondary/10 text-secondary"
         )}>
-          <Filter className={cn("h-3 w-3", activeFilters ? "fill-primary/20" : "text-muted-foreground/50")} />
+          <Filter 
+            className={cn("h-3 w-3 transition-transform", activeFilters && "fill-secondary/20")} 
+            strokeWidth={1.5} 
+          />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-64 p-3 bg-white/95 backdrop-blur-xl border-primary/10 shadow-2xl rounded-2xl" align="start">
@@ -111,20 +114,20 @@ export function ExcelColumnFilter({
           {/* Sorting */}
           <div className="grid grid-cols-2 gap-2">
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="sm" 
-              className="h-8 text-[11px] font-bold border-primary/10 hover:bg-primary/5 justify-start px-2"
+              className="h-9 text-[10px] font-black uppercase tracking-tight bg-white border-0 hover:bg-primary/[0.03] justify-start px-2.5 rounded-xl shadow-sm transition-none"
               onClick={() => { onSort('asc'); setIsOpen(false); }}
             >
-              <ArrowUpAZ className="mr-2 h-3.5 w-3.5 text-primary" /> Sort A to Z
+              <ArrowUpAZ className="mr-1 h-3.5 w-3.5 text-primary/40" /> Sort A to Z
             </Button>
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="sm" 
-              className="h-8 text-[11px] font-bold border-primary/10 hover:bg-primary/5 justify-start px-2"
+              className="h-9 text-[10px] font-black uppercase tracking-tight bg-white border-0 hover:bg-primary/[0.03] justify-start px-2.5 rounded-xl shadow-sm transition-none"
               onClick={() => { onSort('desc'); setIsOpen(false); }}
             >
-              <ArrowDownZA className="mr-2 h-3.5 w-3.5 text-primary" /> Sort Z to A
+              <ArrowDownZA className="mr-1 h-3.5 w-3.5 text-primary/40" /> Sort Z to A
             </Button>
           </div>
 
@@ -132,12 +135,12 @@ export function ExcelColumnFilter({
 
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-3 w-3 text-primary" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-primary/30" />
             <Input
               placeholder="Search values..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-8 pl-8 text-[12px] font-bold bg-primary/[0.03] border-primary/10 focus-visible:ring-primary/20 text-primary"
+              className="h-9 pl-9 text-[11px] font-bold bg-white border-0 focus-visible:ring-0 text-primary rounded-xl shadow-sm placeholder:text-primary/20"
             />
           </div>
 

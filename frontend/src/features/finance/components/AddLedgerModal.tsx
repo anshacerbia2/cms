@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Save, X, ClipboardPaste, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Trash2, Save, ClipboardPaste, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { format, parseISO, isValid } from 'date-fns';
@@ -27,7 +27,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+
 
 interface AddLedgerModalProps {
   open: boolean;
@@ -41,16 +41,18 @@ interface LedgerRow {
   colB: string; // Description
   colC: string | number; // Debit
   colD: string | number; // Credit
-  colE: string; // Ledger
-  colF: string; // Sub Ledger 1
-  colG: string; // Sub Ledger 2
-  colH: string; // Sub Ledger 3
+  colE: string | number; // Saldo
+  colF: string; // Ledger
+  colG: string; // Sub Ledger 1
+  colH: string; // Sub Ledger 2
+  colI: string; // Sub Ledger 3
+  colJ: string; // Sub Ledger 4
 }
 
 export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentSource }: AddLedgerModalProps) {
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const colOrder: (keyof LedgerRow)[] = ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH'];
+  const colOrder: (keyof LedgerRow)[] = ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ'];
 
   // Initialize with some empty rows
   useEffect(() => {
@@ -60,10 +62,12 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
         colB: '',
         colC: 0,
         colD: 0,
-        colE: '',
+        colE: 0,
         colF: '',
         colG: '',
         colH: '',
+        colI: '',
+        colJ: '',
       })));
     }
   }, [open]);
@@ -74,10 +78,12 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
       colB: '',
       colC: 0,
       colD: 0,
-      colE: '',
+      colE: 0,
       colF: '',
       colG: '',
       colH: '',
+      colI: '',
+      colJ: '',
     }]);
   };
 
@@ -198,7 +204,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
       // Ensure we have a row in our state
       if (targetRowIndex >= newRows.length) {
         newRows.push({
-          colA: '', colB: '', colC: 0, colD: 0, colE: '', colF: '', colG: '', colH: ''
+          colA: '', colB: '', colC: 0, colD: 0, colE: 0, colF: '', colG: '', colH: '', colI: '', colJ: ''
         });
       }
 
@@ -364,21 +370,23 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
           <div className="rounded-2xl border border-primary/5 overflow-hidden shadow-sm bg-white">
             <Table>
               <TableHeader className="bg-primary/[0.03]">
-                  <TableRow className="hover:bg-transparent border-primary/10">
-                  <TableHead className="w-44 min-w-[176px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary pl-6">Tanggal</TableHead>
-                  <TableHead className="min-w-[400px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary">Keterangan</TableHead>
-                  <TableHead className="w-48 min-w-[192px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary text-right pr-4">Debet</TableHead>
-                  <TableHead className="w-48 min-w-[192px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary text-right pr-4">Kredit</TableHead>
-                  <TableHead className="w-48 min-w-[192px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary text-right pr-4">Ledger</TableHead>
-                  <TableHead className="w-48 min-w-[192px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary pl-4">Sub Ledger 1</TableHead>
-                  <TableHead className="w-48 min-w-[192px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary pl-4">Sub Ledger 2</TableHead>
-                  <TableHead className="w-48 min-w-[192px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary pl-4">Sub Ledger 3</TableHead>
-                  <TableHead className="w-16 shrink-0 text-center px-4"></TableHead>
+                <TableRow className="hover:bg-transparent border-primary/10">
+                  <TableHead className="w-44 min-w-[176px] shrink-0 text-[11px] font-black tracking-widest text-primary pl-8 border-r border-primary/5 leading-none">Tanggal</TableHead>
+                  <TableHead className="min-w-[300px] shrink-0 text-[11px] font-black tracking-widest text-primary px-4 border-r border-primary/5 leading-none">Keterangan</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary text-right px-4 border-r border-primary/5 leading-none">Debet</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary text-right px-4 border-r border-primary/5 leading-none">Kredit</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary text-right px-4 border-r border-primary/5 leading-none">Saldo</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary px-4 border-r border-primary/5 leading-none">Ledger</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary px-4 border-r border-primary/5 leading-none">Sub Ledger 1</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary px-4 border-r border-primary/5 leading-none">Sub Ledger 2</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary px-4 border-r border-primary/5 leading-none">Sub Ledger 3</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary px-4 border-r border-primary/5 leading-none">Sub Ledger 4</TableHead>
+                  <TableHead className="w-16 shrink-0 text-center pr-8"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((row, index) => (
-                  <TableRow key={index} className="hover:bg-primary/[0.02] border-primary/5 transition-colors group h-12">
+                  <TableRow key={index} className="hover:bg-primary/[0.02] border-primary/5 transition-colors group h-9">
                     <TableCell className="p-0 border-r border-primary/5 relative">
                       <div className="flex items-center w-full h-full">
                         <Popover>
@@ -416,7 +424,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                           onPaste={(e) => handlePaste(e, index, 'colA')}
                           data-row={index}
                           data-col="colA"
-                          className="w-full h-12 border-none shadow-none focus-visible:ring-0 bg-transparent font-medium text-[12px] rounded-none px-2 placeholder:text-primary/20"
+                          className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] rounded-none pl-2 pr-4 placeholder:text-primary/20 leading-none"
                         />
                       </div>
                     </TableCell>
@@ -429,7 +437,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colB')}
                         data-row={index}
                         data-col="colB"
-                        className="w-full h-12 border-none shadow-none focus-visible:ring-0 bg-transparent font-medium text-[12px] rounded-none px-4 placeholder:text-primary/20"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent font-medium text-[12px] rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
@@ -442,7 +450,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colC')}
                         data-row={index}
                         data-col="colC"
-                        className="w-full h-12 border-none shadow-none focus-visible:ring-0 bg-transparent font-medium text-[12px] text-right text-red-500 rounded-none px-4 placeholder:text-primary/20"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] text-right text-red-500 rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
@@ -455,7 +463,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colD')}
                         data-row={index}
                         data-col="colD"
-                        className="w-full h-12 border-none shadow-none focus-visible:ring-0 bg-transparent font-medium text-[12px] text-right text-emerald-600 rounded-none px-4 placeholder:text-primary/20"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] text-right text-emerald-600 rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
@@ -467,7 +475,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colE')}
                         data-row={index}
                         data-col="colE"
-                        className="w-full h-12 border-none shadow-none focus-visible:ring-0 bg-transparent font-medium text-[12px] text-right rounded-none px-4 placeholder:text-primary/20"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] text-right rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
@@ -479,35 +487,59 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                         onPaste={(e) => handlePaste(e, index, 'colF')}
                         data-row={index}
                         data-col="colF"
-                        className="w-full h-12 border-none shadow-none focus-visible:ring-0 bg-transparent font-medium text-[12px] uppercase rounded-none px-4 placeholder:text-primary/20"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
                       <Input 
-                        placeholder="SL 2" 
+                        placeholder="SL 1" 
                         value={row.colG} 
                         onChange={(e) => updateRow(index, 'colG', e.target.value)}
                         onKeyDown={(e) => handleKeyDown(e, index, 'colG')}
                         onPaste={(e) => handlePaste(e, index, 'colG')}
                         data-row={index}
                         data-col="colG"
-                        className="w-full h-12 border-none shadow-none focus-visible:ring-0 bg-transparent font-medium text-[12px] uppercase rounded-none px-4 placeholder:text-primary/20"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
                     <TableCell className="p-0 border-r border-primary/5">
                       <Input 
-                        placeholder="SL 3" 
+                        placeholder="SL 2" 
                         value={row.colH} 
                         onChange={(e) => updateRow(index, 'colH', e.target.value)}
                         onKeyDown={(e) => handleKeyDown(e, index, 'colH')}
                         onPaste={(e) => handlePaste(e, index, 'colH')}
                         data-row={index}
                         data-col="colH"
-                        className="w-full h-12 border-none shadow-none focus-visible:ring-0 bg-transparent font-medium text-[12px] uppercase rounded-none px-4 placeholder:text-primary/20"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] rounded-none px-4 placeholder:text-primary/20 leading-none"
                       />
                     </TableCell>
-                    <TableCell className="p-0 text-center px-4">
-                      <div className="flex items-center justify-center h-12">
+                    <TableCell className="p-0 border-r border-primary/5">
+                      <Input 
+                        placeholder="SL 3" 
+                        value={row.colI} 
+                        onChange={(e) => updateRow(index, 'colI', e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(e, index, 'colI')}
+                        onPaste={(e) => handlePaste(e, index, 'colI')}
+                        data-row={index}
+                        data-col="colI"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] rounded-none px-4 placeholder:text-primary/20 leading-none"
+                      />
+                    </TableCell>
+                    <TableCell className="p-0 border-r border-primary/5">
+                      <Input 
+                        placeholder="SL 4" 
+                        value={row.colJ} 
+                        onChange={(e) => updateRow(index, 'colJ', e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(e, index, 'colJ')}
+                        onPaste={(e) => handlePaste(e, index, 'colJ')}
+                        data-row={index}
+                        data-col="colJ"
+                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-[12px] rounded-none px-4 placeholder:text-primary/20 leading-none"
+                      />
+                    </TableCell>
+                    <TableCell className="p-0 text-center pr-8">
+                      <div className="flex items-center justify-center h-9">
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -525,11 +557,10 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                 {(() => {
                   const totalDebit = rows.reduce((acc, r) => acc + (Number(r.colC) || 0), 0);
                   const totalCredit = rows.reduce((acc, r) => acc + (Number(r.colD) || 0), 0);
-                  const netLedger = totalCredit - totalDebit;
 
                   return (
                     <TableRow className="bg-primary/[0.03] border-t-2 border-primary/10 h-12">
-                      <TableCell className="pl-10 font-black text-[10px] uppercase tracking-widest text-primary/40">Total</TableCell>
+                      <TableCell className="pl-8 font-black text-[11px] tracking-widest text-primary/40 border-r border-primary/5 leading-none">Total</TableCell>
                       <TableCell className="border-r border-primary/5" />
                       <TableCell className="text-right px-4 font-black text-[12px] text-red-500 border-r border-primary/5">
                         {formatDisplay(totalDebit)}
@@ -537,10 +568,8 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                       <TableCell className="text-right px-4 font-black text-[12px] text-emerald-600 border-r border-primary/5">
                         {formatDisplay(totalCredit)}
                       </TableCell>
-                      <TableCell className="text-right px-4 font-black text-[12px] border-r border-primary/5 text-primary">
-                        {formatDisplay(netLedger)}
-                      </TableCell>
-                      <TableCell colSpan={4} />
+                      <TableCell className="border-r border-primary/5" />
+                      <TableCell colSpan={6} className="pr-8" />
                     </TableRow>
                   );
                 })()}
