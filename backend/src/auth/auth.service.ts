@@ -57,7 +57,6 @@ export class AuthService {
         if (item.title === 'Account Ledger' || item.title === 'Bank Mutation') {
           item.title = 'Bank Mutation';
           item.url = '/finance/bank-mutation';
-          item.icon = 'ArrowRightLeft';
         }
         if (item.title === 'Customers') item.url = '/customers';
         if (item.title === 'Suppliers') item.url = '/suppliers';
@@ -65,11 +64,9 @@ export class AuthService {
         if (item.title === 'Staff') item.url = '/users';
         if (item.title === 'Accounts & Banks') {
           item.url = '/banks';
-          item.icon = 'Landmark';
         }
         if (item.title === 'Financial Reports') {
           item.url = '/finance';
-          item.icon = 'BarChart3';
         }
       });
     });

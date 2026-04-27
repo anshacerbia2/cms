@@ -16,8 +16,12 @@ import {
   ClipboardList,
   ArrowRightLeft,
   BarChart3,
+  ArrowDownUp,
+  FileBarChart,
   Repeat,
   PieChart,
+  History,
+  RefreshCw,
 } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
 import { useAuthStore } from "@/store/authStore";
@@ -40,8 +44,12 @@ const iconMap: Record<string, LucideIcon> = {
   ClipboardList,
   ArrowRightLeft,
   BarChart3,
+  ArrowDownUp,
+  FileBarChart,
   Repeat,
   PieChart,
+  History,
+  RefreshCw,
 };
 
 function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIcon; label: string; to: string; end?: boolean }) {
@@ -53,7 +61,7 @@ function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIco
       end={end}
       className={({ isActive }) =>
         cn(
-          "flex items-center rounded-xl transition-all duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] group overflow-hidden relative w-full text-left select-none py-3",
+          "flex items-center rounded-xl transition-all duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] group overflow-hidden relative w-full text-left select-none py-2",
           isActive
             ? "bg-slate-100 text-primary"
             : "text-muted-foreground hover:text-primary hover:bg-slate-100/50",
@@ -64,7 +72,7 @@ function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIco
         <>
           <div className="w-12 flex-shrink-0 flex justify-center items-center">
             <Icon
-              size={22}
+              size={18}
               className={cn(
                 "transition-all duration-300",
                 isActive ? "opacity-100 scale-110 text-primary" : "opacity-60 group-hover:opacity-100 scale-100",
@@ -73,7 +81,7 @@ function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIco
           </div>
           <span
             className={cn(
-              "font-extrabold text-[11px] tracking-[0.15em] uppercase transition-all duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] whitespace-nowrap overflow-hidden will-change-transform",
+              "font-bold text-[10px] tracking-[0.15em] uppercase transition-all duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] whitespace-nowrap overflow-hidden will-change-transform",
               isCollapsed
                 ? "opacity-0 translate-x-4 invisible"
                 : "opacity-100 translate-x-0 visible ml-0",
@@ -84,7 +92,7 @@ function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIco
           </span>
           {/* Active Indicator */}
           {isActive && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full group-hover:h-8 transition-all duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)]" />
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-r-full group-hover:h-6 transition-all duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)]" />
           )}
         </>
       )}
@@ -144,13 +152,13 @@ export function AppSidebar() {
             <div key={section.group}>
               <div
                 className={cn(
-                  "text-[9px] font-extrabold text-primary/50 uppercase tracking-[0.25em] mb-3 transition-opacity duration-300 px-3 whitespace-nowrap",
+                  "text-[9px] font-bold text-primary/50 uppercase tracking-[0.25em] mb-2 transition-opacity duration-300 px-3 whitespace-nowrap",
                   isCollapsed ? "opacity-0" : "opacity-100",
                 )}
               >
                 {section.group}
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-0.5">
                 {section.items.map((item) => (
                   <SidebarNavItem
                     key={`${section.group}-${item.title}`}
@@ -168,14 +176,14 @@ export function AppSidebar() {
         <div className="px-4 mt-4">
           <button
             onClick={() => { logout(); navigate("/login"); }}
-            className="flex items-center rounded-xl w-full py-3 text-muted-foreground hover:text-primary hover:bg-muted/50 transition-all duration-300 group"
+            className="flex items-center rounded-xl w-full py-2 text-muted-foreground hover:text-primary hover:bg-muted/50 transition-all duration-300 group"
           >
             <div className="w-12 flex-shrink-0 flex justify-center items-center">
-              <LogOut size={20} className="opacity-40 group-hover:opacity-100 transition-opacity" />
+              <LogOut size={18} className="opacity-40 group-hover:opacity-100 transition-opacity" />
             </div>
             <span
               className={cn(
-                "font-extrabold text-[11px] tracking-[0.15em] uppercase transition-all duration-300 whitespace-nowrap overflow-hidden",
+                "font-bold text-[10px] tracking-[0.15em] uppercase transition-all duration-300 whitespace-nowrap overflow-hidden",
                 isCollapsed ? "opacity-0 invisible" : "opacity-100 visible",
               )}
             >
