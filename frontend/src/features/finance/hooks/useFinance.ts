@@ -179,7 +179,7 @@ export function useFinance() {
     });
 
   const getAnchorBalance = (accountId: string, year: number, options?: any) =>
-    useQuery<{ balance: number | null, status: 'OPEN' | 'ONGOING' | 'CLOSED', isStale?: boolean, message?: string, referredYear?: number, canEdit?: boolean } | null>({
+    useQuery<{ balance: number | null, status: 'OPEN' | 'ONGOING' | 'CLOSED' | 'INITIAL', isStale?: boolean, message?: string, referredYear?: number, canEdit?: boolean } | null>({
       queryKey: ["finance", "bank-mutation", "anchor-balance", accountId, year],
       queryFn: async () => {
         const { data } = await api.get(`/bank-mutation/anchor-balance/${accountId}/${year}`);

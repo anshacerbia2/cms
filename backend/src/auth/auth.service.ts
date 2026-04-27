@@ -54,13 +54,23 @@ export class AuthService {
     parentMenus.forEach((group: any) => {
       group.items.forEach((item: any) => {
         if (item.title === 'Dashboard') item.url = '/dashboard';
-        if (item.title === 'Account Ledger') item.url = '/finance/bank-mutation';
+        if (item.title === 'Account Ledger' || item.title === 'Bank Mutation') {
+          item.title = 'Bank Mutation';
+          item.url = '/finance/bank-mutation';
+          item.icon = 'ArrowRightLeft';
+        }
         if (item.title === 'Customers') item.url = '/customers';
         if (item.title === 'Suppliers') item.url = '/suppliers';
         if (item.title === 'Products') item.url = '/products';
         if (item.title === 'Staff') item.url = '/users';
-        if (item.title === 'Accounts & Banks') item.url = '/banks';
-        if (item.title === 'Financial Reports') item.url = '/finance';
+        if (item.title === 'Accounts & Banks') {
+          item.url = '/banks';
+          item.icon = 'Landmark';
+        }
+        if (item.title === 'Financial Reports') {
+          item.url = '/finance';
+          item.icon = 'BarChart3';
+        }
       });
     });
 

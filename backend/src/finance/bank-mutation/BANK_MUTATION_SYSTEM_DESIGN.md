@@ -1,6 +1,6 @@
-# 🏛️ Account Ledger System Design (Financial Integrity)
+# 🏛️ Bank Mutation System Design (Financial Integrity)
 
-Dokumen ini menjelaskan arsitektur sistem **Account Ledger** (Mutasi Bank), mulai dari perolehan data di Frontend hingga logika sinkronisasi rekursif di Backend. Sistem ini dirancang dengan standar **Enterprise Grade** untuk menjamin presisi finansial dan integritas audit.
+Dokumen ini menjelaskan arsitektur sistem **Bank Mutation** (Mutasi Bank), mulai dari perolehan data di Frontend hingga logika sinkronisasi rekursif di Backend. Sistem ini dirancang dengan standar **Enterprise Grade** untuk menjamin presisi finansial dan integritas audit.
 
 ---
 
@@ -9,7 +9,7 @@ Dokumen ini menjelaskan arsitektur sistem **Account Ledger** (Mutasi Bank), mula
 Sistem menggunakan strategi **Hybrid Fetching** untuk menyeimbangkan performa UI dan akurasi data.
 
 ### A. Fetching Strategy: "Load Heavy, Interact Light"
-Berbeda dengan modul lain yang menggunakan *Server-side Pagination*, Account Ledger menggunakan **Full Fetch per Year** via `getAllTransactions`. 
+Berbeda dengan modul lain yang menggunakan *Server-side Pagination*, Bank Mutation menggunakan **Full Fetch per Year** via `getAllTransactions`. 
 *   **Alasan**: User membutuhkan pengalaman "Excel-like" di mana filtering, sorting, dan akumulasi total (Debet/Kredit/Saldo) harus terjadi instan tanpa *network latency*.
 *   **Implementasi**: Data satu tahun fiskal ditarik sekaligus, kemudian diproses di memori menggunakan `useMemo` untuk filtering dan sorting.
 
@@ -95,5 +95,5 @@ Mengingat volume data yang besar, stabilitas re-render sangat dijaga:
 *   **fiscal_periods**: Tabel index tahunan (Opening, Closing, Status).
 *   **financial_transactions**: Ledger detail (Debet, Kredit, Saldo/colE).
 
-**Last Updated:** 2026-04-26
+**Last Updated:** 2026-04-27
 **Architecture Grade:** 10/10 (High-Precision Financial Ledger)

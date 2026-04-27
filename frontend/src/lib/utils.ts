@@ -14,10 +14,9 @@ export function formatCurrency(val: any, currency = 'IDR') {
   if (isNaN(num)) return "-";
   if (num === 0) return "IDR 0,00"; // Show zero explicitly for financial records
 
-  return new Intl.NumberFormat('id-ID', { 
-    style: 'currency', 
-    currency: currency, 
-    minimumFractionDigits: 2 
+  return 'IDR ' + new Intl.NumberFormat('id-ID', { 
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(num);
 }
 

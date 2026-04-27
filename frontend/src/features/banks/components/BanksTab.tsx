@@ -82,7 +82,7 @@ export function BanksTab() {
           className="h-12 px-6 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 shrink-0 font-bold transition-all active:scale-95 cursor-pointer w-full lg:w-auto"
         >
           <Plus size={20} strokeWidth={3} />
-          <span className="text-[13px]">ADD BANK REF</span>
+          <span className="text-[13px]">Add Bank Ref</span>
         </Button>
       </div>
 

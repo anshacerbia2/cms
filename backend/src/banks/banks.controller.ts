@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
+import { FiscalPeriodQueryDto } from './dto/fiscal-period-query.dto';
 
 @Controller('banks')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -71,7 +72,7 @@ export class BanksController {
 
   @Get('fiscal-periods')
   @Permissions('internal-accounts.index')
-  findAllFiscalPeriods(@Query() query: PaginationQueryDto) {
+  findAllFiscalPeriods(@Query() query: FiscalPeriodQueryDto) {
     return this.banksService.findAllFiscalPeriods(query);
   }
 }

@@ -59,7 +59,7 @@ const BanksService = {
 export function useBanks(params: {
   banks?: PaginationParams & { enabled?: boolean };
   accounts?: PaginationParams & { enabled?: boolean };
-  fiscalPeriods?: PaginationParams & { enabled?: boolean };
+  fiscalPeriods?: PaginationParams & { enabled?: boolean; accountId?: string; year?: string };
 } = {}) {
   const queryClient = useQueryClient();
 

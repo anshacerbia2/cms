@@ -145,8 +145,8 @@ export async function seedAuth(prisma: PrismaClient) {
     ]},
     { id: 400, name: 'Finance', icon: 'Landmark', order: 4, forFinance: true, items: [
       { id: 4001, name: 'Accounts & Banks', icon: 'Landmark', route: 'internal-accounts.index', order: 1, forFinance: true },
-      { id: 4002, name: 'Account Ledger', icon: 'Landmark', route: 'finance.index', order: 2, forFinance: true },
-      { id: 4003, name: 'Financial Reports', icon: 'Landmark', route: 'finance.index', order: 3, forFinance: true },
+      { id: 4002, name: 'Bank Mutation', icon: 'ArrowRightLeft', route: 'finance.index', order: 2, forFinance: true },
+      { id: 4003, name: 'Financial Reports', icon: 'BarChart3', route: 'finance.index', order: 3, forFinance: true },
     ]},
     { id: 500, name: 'Operations', icon: 'Briefcase', order: 5, forFinance: false, items: [
       { id: 5001, name: 'Projects', icon: 'Briefcase', route: 'finance.index', order: 1, forFinance: false },

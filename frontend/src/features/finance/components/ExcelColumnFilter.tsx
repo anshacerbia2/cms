@@ -17,6 +17,7 @@ interface ExcelColumnFilterProps {
   activeFilters: Set<string> | null;
   onFilterChange: (values: Set<string> | null) => void;
   onSort: (direction: 'asc' | 'desc') => void;
+  currentSort?: { key: string, direction: 'asc' | 'desc' | null };
   valueFormatter?: (val: any) => string;
 }
 
@@ -27,6 +28,7 @@ export function ExcelColumnFilter({
   activeFilters, 
   onFilterChange,
   onSort,
+  currentSort,
   valueFormatter
 }: ExcelColumnFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -116,25 +118,37 @@ export function ExcelColumnFilter({
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-9 text-[10px] font-black uppercase tracking-tight bg-white border-0 hover:bg-primary/[0.03] justify-start px-2.5 rounded-xl shadow-sm transition-none"
+              className={cn(
+                "h-9 text-[10px] font-black uppercase tracking-tight bg-white border-0 hover:bg-primary/[0.03] justify-start px-2.5 rounded-xl shadow-sm transition-none",
+                currentSort?.key === columnKey && currentSort?.direction === 'asc' && "bg-secondary/10 text-secondary hover:bg-secondary/15"
+              )}
               onClick={() => { onSort('asc'); setIsOpen(false); }}
             >
-              <ArrowUpAZ className="mr-1 h-3.5 w-3.5 text-primary/40" /> Sort A to Z
+              <ArrowUpAZ className={cn(
+                "mr-1 h-3.5 w-3.5",
+                currentSort?.key === columnKey && currentSort?.direction === 'asc' ? "text-secondary" : "text-primary/40"
+              )} /> Sort A to Z
             </Button>
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-9 text-[10px] font-black uppercase tracking-tight bg-white border-0 hover:bg-primary/[0.03] justify-start px-2.5 rounded-xl shadow-sm transition-none"
+              className={cn(
+                "h-9 text-[10px] font-black uppercase tracking-tight bg-white border-0 hover:bg-primary/[0.03] justify-start px-2.5 rounded-xl shadow-sm transition-none",
+                currentSort?.key === columnKey && currentSort?.direction === 'desc' && "bg-secondary/10 text-secondary hover:bg-secondary/15"
+              )}
               onClick={() => { onSort('desc'); setIsOpen(false); }}
             >
-              <ArrowDownZA className="mr-1 h-3.5 w-3.5 text-primary/40" /> Sort Z to A
+              <ArrowDownZA className={cn(
+                "mr-1 h-3.5 w-3.5",
+                currentSort?.key === columnKey && currentSort?.direction === 'desc' ? "text-secondary" : "text-primary/40"
+              )} /> Sort Z to A
             </Button>
           </div>
 
           <DropdownMenuSeparator className="bg-primary/5" />
 
           {/* Search */}
-          <div className="relative">
+          <div className="relative mt-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-primary/30" />
             <Input
               placeholder="Search values..."

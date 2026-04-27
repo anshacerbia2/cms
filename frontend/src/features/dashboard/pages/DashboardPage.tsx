@@ -30,10 +30,8 @@ export default function DashboardPage() {
 
   const formatCurrencySimple = (val: any) => {
     const num = Number(val);
-    if (!num) return "Rp 0";
-    return new Intl.NumberFormat('id-ID', { 
-      style: 'currency', 
-      currency: 'IDR', 
+    if (!num) return "IDR 0";
+    return 'IDR ' + new Intl.NumberFormat('id-ID', { 
       notation: 'compact',
       maximumFractionDigits: 1 
     }).format(num);
@@ -54,11 +52,11 @@ export default function DashboardPage() {
   const totalAP = (apItems?.data || []).reduce((acc: number, d: any) => acc + (Number(d.outstandingIdr) || 0), 0) || 5200000000;
 
   const recentActivities = [
-    { id: "INV-2024-0421", customer: "PT. Solusi Maju", amount: "Rp 45,800,000", status: "Paid", date: "Today, 14:32" },
-    { id: "INV-2024-0420", customer: "CV. Karya Mandiri", amount: "Rp 12,500,000", status: "Pending", date: "Today, 11:08" },
-    { id: "RV-2024-0089", customer: "PT. Abadi Sentosa", amount: "Rp 28,000,000", status: "Received", date: "Yesterday" },
-    { id: "INV-2024-0419", customer: "PT. Global Teknik", amount: "Rp 67,200,000", status: "Overdue", date: "Apr 10" },
-    { id: "PV-2024-0032", customer: "UD. Berkah Jaya", amount: "Rp 8,400,000", status: "Processed", date: "Apr 10" },
+    { id: "INV-2024-0421", customer: "PT. Solusi Maju", amount: "IDR 45,800,000", status: "Paid", date: "Today, 14:32" },
+    { id: "INV-2024-0420", customer: "CV. Karya Mandiri", amount: "IDR 12,500,000", status: "Pending", date: "Today, 11:08" },
+    { id: "RV-2024-0089", customer: "PT. Abadi Sentosa", amount: "IDR 28,000,000", status: "Received", date: "Yesterday" },
+    { id: "INV-2024-0419", customer: "PT. Global Teknik", amount: "IDR 67,200,000", status: "Overdue", date: "Apr 10" },
+    { id: "PV-2024-0032", customer: "UD. Berkah Jaya", amount: "IDR 8,400,000", status: "Processed", date: "Apr 10" },
   ]
 
   const statusColor: Record<string, string> = {

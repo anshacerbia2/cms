@@ -1,4 +1,4 @@
-# Bank Mutation (Account Ledger) System
+# Bank Mutation System
 
 The Bank Mutation system is an enterprise-grade financial ledger designed for high data integrity, strict auditability, and optimized performance. It manages transaction records for various institutional accounts and maintains cascading balances across fiscal years.
 

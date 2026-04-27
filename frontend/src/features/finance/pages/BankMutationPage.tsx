@@ -11,7 +11,11 @@ import {
   Unlock,
   RefreshCw,
   AlertCircle,
-  Hash
+  Hash,
+  ArrowUp,
+  ArrowDown,
+  History,
+  ShieldCheck,
 } from "lucide-react";
 import { Decimal } from "decimal.js";
 import { useFinance } from "@/features/finance/hooks/useFinance";
@@ -144,6 +148,42 @@ export default function BankMutationPage() {
   }, []);
 
   const allTransactions = allTransactionsRaw || [];
+  const shouldShowData = !!fiscalData || allTransactions.length > 0;
+
+  // --- Wording & Display Logic ---
+  const openingBalanceLabel = useMemo(() => {
+    if (!shouldShowData || anchorLoading) return "";
+    if (!anchorData) return "No Fiscal Data";
+
+    const isCurrentYear = Number(anchorData.referredYear) === Number(ledgerYearFilter);
+
+    switch (anchorData.status) {
+      case 'CLOSED':
+        return isCurrentYear 
+          ? `Fiscal Opening ${anchorData.referredYear}` 
+          : `Fiscal Closing ${anchorData.referredYear}`;
+      case 'OPEN':
+        return `Fiscal Opening ${anchorData.referredYear}`;
+      case 'ONGOING':
+        return `Projected Opening ${anchorData.referredYear}`;
+      case 'INITIAL':
+        return 'Initial Migration';
+      default:
+        return 'No Fiscal Data';
+    }
+  }, [shouldShowData, anchorLoading, anchorData, ledgerYearFilter]);
+
+  const closingBalanceLabel = useMemo(() => {
+    if (!shouldShowData) return "";
+    
+    // Kalau sudah ada record fiscal dan statusnya CLOSED
+    if (fiscalData?.status === 'CLOSED') {
+      return `Fiscal Closing ${ledgerYearFilter}`;
+    }
+
+    // Default kalau belum closed atau record belum ada tapi ada mutasi
+    return `Projected Year-End ${ledgerYearFilter}`;
+  }, [shouldShowData, fiscalData, ledgerYearFilter]);
 
   const filteredAndSortedLedger = useMemo(() => {
     let result = [...allTransactions];
@@ -235,14 +275,14 @@ export default function BankMutationPage() {
 
   const isAnyFilterActive = ledgerSearch !== "" || Object.keys(ledgerFilters).length > 0;
 
-  const runningTotals = useMemo(() => {
-    const end = ledgerPage * ledgerLimit;
-    const viewUntilNow = filteredAndSortedLedger.slice(0, end);
-    return viewUntilNow.reduce((acc, row) => ({
-      withdrawal: acc.withdrawal.plus(new Decimal(row.colC || 0)),
-      deposit: acc.deposit.plus(new Decimal(row.colD || 0)),
-    }), { withdrawal: new Decimal(0), deposit: new Decimal(0) });
-  }, [filteredAndSortedLedger, ledgerPage, ledgerLimit]);
+  // const runningTotals = useMemo(() => {
+  //   const end = ledgerPage * ledgerLimit;
+  //   const viewUntilNow = filteredAndSortedLedger.slice(0, end);
+  //   return viewUntilNow.reduce((acc, row) => ({
+  //     withdrawal: acc.withdrawal.plus(new Decimal(row.colC || 0)),
+  //     deposit: acc.deposit.plus(new Decimal(row.colD || 0)),
+  //   }), { withdrawal: new Decimal(0), deposit: new Decimal(0) });
+  // }, [filteredAndSortedLedger, ledgerPage, ledgerLimit]);
 
   // 7. Global Summary Stats
   const summaryStats = useMemo(() => {
@@ -295,22 +335,29 @@ export default function BankMutationPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-primary uppercase flex items-center gap-2 sm:gap-3">
+            <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-primary flex items-center gap-2 sm:gap-3">
               <Landmark className="text-secondary shrink-0 w-6 h-6 sm:w-8 sm:h-8" />
-              Account Ledger
+              Bank Mutation
             </h1>
             
-            {/* Status Badge */}
-            {!fiscalLoading && (
-              <div className={`px-3 py-1 rounded-full flex items-center gap-1.5 border ${
-                isPeriodClosed 
-                ? "bg-amber-50 border-amber-200 text-amber-700" 
-                : "bg-emerald-50 border-emerald-200 text-emerald-700"
+            {/* Status Badge - Only show if a fiscal record exists for this year */}
+            {!fiscalLoading && shouldShowData && (
+              <div className={`px-3 py-1 rounded-full flex items-center gap-1.5 border shadow-sm ${
+                fiscalData?.status === 'CLOSED' 
+                  ? "bg-red-50 border-red-200 text-red-700" 
+                  : (fiscalData?.status === 'ONGOING' || (!fiscalData && shouldShowData))
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  : "bg-sky-50 border-sky-200 text-sky-700"
               }`}>
-                {isPeriodClosed ? (
+                {fiscalData?.status === 'CLOSED' ? (
                   <>
                     <Lock size={12} className="shrink-0" />
                     <span className="text-[10px] font-black uppercase tracking-wider">Closed</span>
+                  </>
+                ) : (fiscalData?.status === 'ONGOING' || (!fiscalData && shouldShowData)) ? (
+                  <>
+                    <RefreshCw size={12} className={fiscalData?.status === 'ONGOING' ? "animate-spin-slow" : "shrink-0"} />
+                    <span className="text-[10px] font-black uppercase tracking-wider">Ongoing</span>
                   </>
                 ) : (
                   <>
@@ -326,33 +373,31 @@ export default function BankMutationPage() {
 
         {/* Fiscal Actions */}
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRecalculate}
-            disabled={isProcessing || (isPeriodClosed && !anchorData?.isStale)}
-            className={`h-10 px-4 rounded-xl border-primary/10 hover:bg-slate-50 flex items-center gap-2 text-xs font-bold transition-all relative ${
-              anchorData?.isStale ? "text-red-600 bg-red-50 border-red-200" : "text-slate-600"
-            }`}
-          >
-            <RefreshCw size={14} className={isProcessing ? "animate-spin" : ""} />
-            {anchorData?.isStale ? "Sync Required" : "Recalculate Balance"}
-            {anchorData?.isStale && (
+          {anchorData?.isStale && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRecalculate}
+              disabled={isProcessing}
+              className="h-10 px-4 rounded-xl border-red-200 bg-red-50 hover:bg-red-100 flex items-center gap-2 text-xs font-bold transition-all relative text-red-600"
+            >
+              <RefreshCw size={14} className={isProcessing ? "animate-spin" : ""} />
+              Sync Required
               <span className="absolute -top-1 -right-1 flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
               </span>
-            )}
-          </Button>
+            </Button>
+          )}
 
-          {!isPeriodClosed && (
+          {!isPeriodClosed && shouldShowData && (
             <Dialog>
               <DialogTrigger asChild>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   disabled={isProcessing}
-                  className="h-10 px-4 rounded-xl border-amber-200 bg-amber-50/30 hover:bg-amber-50 text-amber-700 flex items-center gap-2 text-xs font-bold"
+                  className="h-10 px-4 rounded-xl border border-red-200 bg-red-50/50 hover:bg-red-50 text-red-600 hover:text-red-700 flex items-center gap-2 text-xs font-bold transition-all active:scale-95 shadow-sm"
                 >
                   <Lock size={14} />
                   Close Period
@@ -390,60 +435,64 @@ export default function BankMutationPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
         {/* Opening Balance */}
         <div className="bg-white/60 backdrop-blur-sm p-4 lg:p-5 rounded-2xl lg:rounded-3xl shadow-sm min-w-0">
           <div className="flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
             <div className="p-2 bg-slate-100 rounded-lg lg:rounded-xl text-slate-500">
-              <Landmark size={14} className="lg:w-4 lg:h-4" />
+              <History size={14} className="lg:w-4 lg:h-4" />
             </div>
-            <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 truncate">Fiscal Opening</span>
+            <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 truncate">Opening Balance</span>
           </div>
           <div className="pl-0.5 overflow-hidden">
             <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold tracking-tighter text-slate-700 leading-none truncate">
                 {fiscalLoading || anchorLoading ? (
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-300 animate-pulse">Syncing...</span>
-                ) : summaryStats.opening !== null ? (
+                ) : (shouldShowData && summaryStats.opening !== null) ? (
                   formatCurrency(summaryStats.opening)
                 ) : (
                   "-"
                 )}
               </p>
               <p className="text-[8px] lg:text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1 truncate">
-                {fiscalData ? `${fiscalData.status} Period` : "No Fiscal Data"}
+                {openingBalanceLabel}
               </p>
           </div>
         </div>
 
-        {/* Total Credit */}
-        <div className="bg-white/60 backdrop-blur-sm p-4 lg:p-5 rounded-2xl lg:rounded-3xl shadow-sm min-w-0">
-          <div className="flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
-            <div className="p-2 bg-emerald-50 rounded-lg lg:rounded-xl text-emerald-600">
-              <Plus size={14} strokeWidth={3} className="lg:w-4 lg:h-4" />
-            </div>
-            <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400 truncate">Annual Inflow</span>
-          </div>
-          <div className="pl-0.5 overflow-hidden">
-            <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold tracking-tighter text-emerald-600 leading-none truncate">
-              {summaryStats.credit !== null ? formatCurrency(summaryStats.credit) : "-"}
-            </p>
-            <p className="text-[8px] lg:text-[9px] font-bold text-emerald-400 uppercase tracking-wider mt-1 truncate">Credit Accumulation</p>
-          </div>
-        </div>
-
-        {/* Total Debit */}
+        {/* Total Debit (Outflow) */}
         <div className="bg-white/60 backdrop-blur-sm p-4 lg:p-5 rounded-2xl lg:rounded-3xl shadow-sm min-w-0">
           <div className="flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
             <div className="p-2 bg-rose-50 rounded-lg lg:rounded-xl text-rose-600">
-              <Minus size={14} strokeWidth={3} className="lg:w-4 lg:h-4" />
+              <ArrowDown size={14} strokeWidth={3} className="lg:w-4 lg:h-4" />
             </div>
-            <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.2em] text-rose-400 truncate">Annual Outflow</span>
+            <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.2em] text-rose-400 truncate">Total Debit</span>
           </div>
           <div className="pl-0.5 overflow-hidden">
             <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold tracking-tighter text-rose-600 leading-none truncate">
-              {summaryStats.debit !== null ? formatCurrency(summaryStats.debit) : "-"}
+              {shouldShowData && summaryStats.debit !== null ? formatCurrency(summaryStats.debit) : "-"}
             </p>
-            <p className="text-[8px] lg:text-[9px] font-bold text-rose-400 uppercase tracking-wider mt-1 truncate">Debit Accumulation</p>
+            <p className="text-[8px] lg:text-[9px] font-bold text-rose-400 uppercase tracking-wider mt-1 truncate">
+              Annual Accumulation
+            </p>
+          </div>
+        </div>
+
+        {/* Total Credit (Inflow) */}
+        <div className="bg-white/60 backdrop-blur-sm p-4 lg:p-5 rounded-2xl lg:rounded-3xl shadow-sm min-w-0">
+          <div className="flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
+            <div className="p-2 bg-emerald-50 rounded-lg lg:rounded-xl text-emerald-600">
+              <ArrowUp size={14} strokeWidth={3} className="lg:w-4 lg:h-4" />
+            </div>
+            <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400 truncate">Total Credit</span>
+          </div>
+          <div className="pl-0.5 overflow-hidden">
+            <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold tracking-tighter text-emerald-600 leading-none truncate">
+              {shouldShowData && summaryStats.credit !== null ? formatCurrency(summaryStats.credit) : "-"}
+            </p>
+            <p className="text-[8px] lg:text-[9px] font-bold text-emerald-400 uppercase tracking-wider mt-1 truncate">
+              Annual Accumulation
+            </p>
           </div>
         </div>
 
@@ -451,20 +500,24 @@ export default function BankMutationPage() {
         <div className="bg-primary/[0.03] backdrop-blur-sm p-4 lg:p-5 rounded-2xl lg:rounded-3xl shadow-sm min-w-0 border border-primary/5">
           <div className="flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
             <div className="p-2 bg-primary text-white rounded-lg lg:rounded-xl shadow-sm shadow-primary/5">
-              <Flag size={14} className="lg:w-4 lg:h-4" />
+              <ShieldCheck size={14} className="lg:w-4 lg:h-4" />
             </div>
             <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.2em] text-primary/40 truncate">
-              {summaryStats.closing !== null ? "Fiscal Closing" : "Projected Closing"}
+              Closing Balance
             </span>
           </div>
           <div className="pl-0.5 overflow-hidden">
             <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold tracking-tighter text-primary leading-none truncate">
-              {summaryStats.closing !== null 
-                ? formatCurrency(summaryStats.closing) 
-                : (summaryStats.projected !== null ? formatCurrency(summaryStats.projected) : "-")}
+              {shouldShowData 
+                ? (summaryStats.closing !== null 
+                  ? formatCurrency(summaryStats.closing) 
+                  : (summaryStats.projected !== null ? formatCurrency(summaryStats.projected) : "-"))
+                : "-"}
             </p>
             <div className="flex items-center gap-1.5 mt-1 truncate">
-              <p className="text-[8px] lg:text-[9px] font-bold text-primary/40 uppercase tracking-wider">Fiscal Year End</p>
+              <p className="text-[8px] lg:text-[9px] font-bold text-primary/40 uppercase tracking-wider">
+                {closingBalanceLabel}
+              </p>
             </div>
           </div>
         </div>
@@ -496,10 +549,10 @@ export default function BankMutationPage() {
                  <Landmark size={18} className="text-secondary shrink-0" />
                  <div className="flex flex-col items-start gap-0 overflow-hidden whitespace-nowrap">
                    <div className="flex items-center gap-2">
-                     <span className="text-[8px] font-black uppercase tracking-widest border border-primary/20 px-1.5 py-0.5 rounded bg-primary/5 text-primary/60 shrink-0">
+                     <span className="text-[8px] font-black uppercase tracking-widest border border-slate-200 px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 shrink-0">
                        {selectedAccount?.type || "TYPE"}
-                     </span>
-                     <span className="text-[12px] font-extrabold text-primary truncate text-left">
+                        </span>
+                     <span className="text-[12px] font-extrabold text-muted-foreground truncate text-left">
                        {selectedAccount?.bank?.bankBrand || selectedAccount?.holderName || "Select Account"}
                      </span>
                    </div>
@@ -516,7 +569,7 @@ export default function BankMutationPage() {
                 <SelectItem 
                   key={acc.id} 
                   value={acc.id} 
-                  className="py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 whitespace-nowrap"
+                  className="py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 whitespace-nowrap text-muted-foreground transition-colors"
                 >
                   <div className="flex flex-col items-start gap-1 w-full">
                     <div className="flex items-center gap-2">
@@ -555,7 +608,7 @@ export default function BankMutationPage() {
             </SelectTrigger>
             <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden">
               {availableYears.map(year => (
-                <SelectItem key={year} value={year} className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer">
+                <SelectItem key={year} value={year} className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">
                   {year}
                 </SelectItem>
               ))}
@@ -574,7 +627,7 @@ export default function BankMutationPage() {
 
           <Button 
             onClick={() => setIsAddModalOpen(true)}
-            className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 disabled:grayscale transition-all"
+            className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 disabled:grayscale transition-all active:scale-95"
           >
             <Plus size={20} strokeWidth={3} />
             <span className="text-[13px]">Add Mutation</span>
@@ -586,9 +639,9 @@ export default function BankMutationPage() {
       <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-premium border border-primary/5 overflow-hidden">
         <div className="overflow-x-auto">
           <Table className="min-w-[1600px]">
-            <TableHeader className="bg-primary/5">
+            <TableHeader className="bg-slate-50/50">
               <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
-                <TableHead className="pl-8 py-3 text-[11px] font-black uppercase tracking-widest text-primary w-32 text-left border-r border-primary/5">
+                <TableHead className="pl-8 py-3 text-[10px] font-black uppercase tracking-widest text-primary/40 w-32 text-left border-r border-primary/5">
                   <div className="flex items-center justify-start gap-1">
                     Tanggal
                     <ExcelColumnFilter 
@@ -596,10 +649,11 @@ export default function BankMutationPage() {
                       activeFilters={ledgerFilters["colA"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colA: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colA", direction: d})}
+                      currentSort={ledgerSort}
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-[11px] font-black uppercase tracking-widest text-primary border-r border-primary/5 px-4">
+                <TableHead className="py-3 text-[10px] font-black uppercase tracking-widest text-primary/40 border-r border-primary/5 px-4">
                   <div className="flex items-center gap-1">
                     Keterangan Transaksi
                     <ExcelColumnFilter 
@@ -607,10 +661,11 @@ export default function BankMutationPage() {
                       activeFilters={ledgerFilters["colB"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colB: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colB", direction: d})}
+                      currentSort={ledgerSort}
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-right text-[11px] font-black uppercase tracking-widest text-primary w-40 border-r border-primary/5 pr-4">
+                <TableHead className="py-3 text-right text-[10px] font-black uppercase tracking-widest text-primary/40 w-40 border-r border-primary/5 pr-4">
                   <div className="flex items-center justify-end gap-1">
                     Debet
                     <ExcelColumnFilter 
@@ -618,11 +673,12 @@ export default function BankMutationPage() {
                       activeFilters={ledgerFilters["colC"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colC: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colC", direction: d})}
+                      currentSort={ledgerSort}
                       valueFormatter={formatCurrency}
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-right text-[11px] font-black uppercase tracking-widest text-primary w-40 border-r border-primary/5 pr-4">
+                <TableHead className="py-3 text-right text-[10px] font-black uppercase tracking-widest text-primary/40 w-40 border-r border-primary/5 pr-4">
                   <div className="flex items-center justify-end gap-1">
                     Kredit
                     <ExcelColumnFilter 
@@ -630,11 +686,12 @@ export default function BankMutationPage() {
                       activeFilters={ledgerFilters["colD"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colD: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colD", direction: d})}
+                      currentSort={ledgerSort}
                       valueFormatter={formatCurrency}
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-right text-[11px] font-black uppercase tracking-widest text-primary w-44 border-r border-primary/5 pr-4">
+                <TableHead className="py-3 text-right text-[10px] font-black uppercase tracking-widest text-primary/40 w-44 border-r border-primary/5 pr-4">
                   <div className="flex items-center justify-end gap-1">
                     Saldo
                     <ExcelColumnFilter 
@@ -644,11 +701,12 @@ export default function BankMutationPage() {
                       activeFilters={ledgerFilters["colE"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colE: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colE", direction: d})}
+                      currentSort={ledgerSort}
                       valueFormatter={formatCurrency}
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-left text-[11px] font-black uppercase tracking-widest text-primary w-48 border-r border-primary/5 pl-4">
+                <TableHead className="py-3 text-left text-[10px] font-black uppercase tracking-widest text-primary/40 w-48 border-r border-primary/5 pl-4">
                   <div className="flex items-center gap-1">
                     Ledger
                     <ExcelColumnFilter 
@@ -661,7 +719,7 @@ export default function BankMutationPage() {
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-left text-[11px] font-black uppercase tracking-widest text-primary w-48 border-r border-primary/5 pl-4">
+                <TableHead className="py-3 text-left text-[10px] font-black uppercase tracking-widest text-primary/40 w-48 border-r border-primary/5 pl-4">
                   <div className="flex items-center gap-1">
                     Sub Ledger - 1
                     <ExcelColumnFilter 
@@ -674,7 +732,7 @@ export default function BankMutationPage() {
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-left text-[11px] font-black uppercase tracking-widest text-primary w-48 border-r border-primary/5 pl-4">
+                <TableHead className="py-3 text-left text-[10px] font-black uppercase tracking-widest text-primary/40 w-48 border-r border-primary/5 pl-4">
                   <div className="flex items-center gap-1">
                     Sub Ledger - 2
                     <ExcelColumnFilter 
@@ -687,7 +745,7 @@ export default function BankMutationPage() {
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-left text-[11px] font-black uppercase tracking-widest text-primary w-48 border-r border-primary/5 pl-4">
+                <TableHead className="py-3 text-left text-[10px] font-black uppercase tracking-widest text-primary/40 w-48 border-r border-primary/5 pl-4">
                   <div className="flex items-center gap-1">
                     Sub Ledger - 3
                     <ExcelColumnFilter 
@@ -700,7 +758,7 @@ export default function BankMutationPage() {
                     />
                   </div>
                 </TableHead>
-                <TableHead className="pr-8 py-3 text-left text-[11px] font-black uppercase tracking-widest text-primary w-48 border-r border-primary/5 pl-4">
+                <TableHead className="pr-8 py-3 text-left text-[10px] font-black uppercase tracking-widest text-primary/40 w-48 border-r border-primary/5 pl-4">
                   <div className="flex items-center gap-1">
                     Sub Ledger - 4
                     <ExcelColumnFilter 
@@ -771,7 +829,7 @@ export default function BankMutationPage() {
                   {/* Subtotal (Current Page) */}
                   <TableRow className="bg-secondary/5 border-t-2 border-secondary/30 hover:bg-secondary/5 transition-none font-bold">
                     <TableCell colSpan={2} className="pl-8 py-3 text-[11px] text-secondary/80 uppercase tracking-[0.2em]">
-                      Subtotal (Current Page)
+                      Subtotal (Page {ledgerPage})
                     </TableCell>
                     <TableCell className="py-3 text-right text-red-600/90 text-[12px] border-r border-secondary/20 pr-4 whitespace-nowrap">
                       {accumulatedTotals.withdrawal !== 0 ? formatCurrency(accumulatedTotals.withdrawal) : "-"}
@@ -782,16 +840,16 @@ export default function BankMutationPage() {
                     <TableCell colSpan={6} className="bg-secondary/[0.02]" />
                   </TableRow>
 
-                  {/* Total (Running Accumulation) */}
+                  {/* Grand Total (All Pages) */}
                   <TableRow className="bg-secondary/10 border-t border-secondary/30 hover:bg-secondary/10 transition-none font-bold">
                     <TableCell colSpan={2} className="pl-8 py-3 text-[11px] text-secondary uppercase tracking-[0.2em]">
-                      Total
+                      Period Totals ({ledgerMeta?.total || 0} rows)
                     </TableCell>
                     <TableCell className="py-3 text-right text-red-600 text-[12px] border-r border-secondary/20 pr-4 whitespace-nowrap">
-                      {runningTotals.withdrawal !== 0 ? formatCurrency(runningTotals.withdrawal) : "-"}
+                      {shouldShowData && summaryStats.credit !== null ? formatCurrency(summaryStats.credit) : "-"}
                     </TableCell>
                     <TableCell className="py-3 text-right text-emerald-700 text-[12px] border-r border-secondary/20 pr-4 whitespace-nowrap">
-                      {runningTotals.deposit !== 0 ? formatCurrency(runningTotals.deposit) : "-"}
+                      {shouldShowData && summaryStats.debit !== null ? formatCurrency(summaryStats.debit) : "-"}
                     </TableCell>
                     <TableCell colSpan={6} className="bg-secondary/[0.03]" />
                   </TableRow>

@@ -13,7 +13,7 @@ export default function BanksPage() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-primary uppercase flex items-center gap-2 sm:gap-3">
+          <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-primary flex items-center gap-2 sm:gap-3">
              <Landmark className="text-secondary shrink-0 w-6 h-6 sm:w-8 sm:h-8" />
              Accounts & Banks
           </h1>

@@ -394,15 +394,6 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
         startingBalance: anchorData?.canEdit ? startingBalance.toString() : undefined
       });
       toast.success(`Successfully saved ${validRows.length} transactions and synchronized balances.`);
-      
-      // If saving to a CLOSED period, remind to sync
-      if (anchorData?.status === 'CLOSED') {
-        toast.warning("Backdated entry saved. Please click 'Recalculate' to sync future balances.", {
-          duration: 6000,
-          icon: <RefreshCw className="animate-spin" size={16} />
-        });
-      }
-
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
@@ -420,7 +411,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
         <DialogHeader className="p-4 md:p-8 pb-4 bg-primary/[0.02] border-b border-primary/5 text-left items-start sm:text-left sm:items-start">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full text-left items-start">
             <div className="space-y-1">
-              <DialogTitle className="text-lg md:text-2xl font-black uppercase tracking-tight text-primary flex items-center gap-3">
+              <DialogTitle className="text-lg md:text-2xl font-black tracking-tight text-primary flex items-center gap-3">
                 <ClipboardPaste className="text-secondary shrink-0" size={20} />
                 Bulk Add Ledger Entries
               </DialogTitle>
@@ -440,7 +431,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
         <div className="flex-1 overflow-auto p-8 pt-4">
           {/* Refined Minimalist Starting Balance Bar */}
           <div className="flex flex-col gap-3 mb-6">
-            <div className="flex items-center justify-between px-2">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-primary/[0.03] flex items-center justify-center border border-primary/5 shadow-inner">
                    <Wallet size={20} className="text-primary/40" />
@@ -497,9 +488,13 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
 
             {/* Warning Banners based on Status & Reason */}
             {!isBalanceLoading && anchorData && (
-              <div className="px-2">
-                <div className="flex items-center gap-3 p-3 rounded-xl border bg-blue-50 border-blue-100 text-blue-700">
-                  {anchorData.canEdit === false ? <RefreshCw size={14} className="shrink-0" /> : <AlertCircle size={14} className="shrink-0" />}
+              <div>
+                <div className={`flex items-center gap-3 p-3 rounded-xl border ${
+                  (anchorData.status === 'CLOSED' && anchorData.referredYear === year)
+                    ? 'bg-red-50 border-red-100 text-red-700' 
+                    : 'bg-blue-50 border-blue-100 text-blue-700'
+                }`}>
+                  {(anchorData.status === 'CLOSED' && anchorData.referredYear === year) ? <AlertCircle size={14} className="shrink-0" /> : <RefreshCw size={14} className="shrink-0" />}
                   <p className="text-[11px] font-bold leading-tight">
                     {anchorData.message} 
                   </p>
@@ -510,18 +505,18 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
 
           <div className="rounded-2xl border border-primary/5 overflow-hidden shadow-sm bg-white">
             <Table>
-              <TableHeader className="bg-primary/[0.03]">
-                <TableRow className="hover:bg-transparent border-primary/10">
-                  <TableHead className="w-44 min-w-[176px] shrink-0 text-[11px] font-black tracking-widest text-primary pl-8 border-r border-primary/5 leading-none">Tanggal</TableHead>
-                  <TableHead className="min-w-[300px] shrink-0 text-[11px] font-black tracking-widest text-primary px-4 border-r border-primary/5 leading-none">Keterangan</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary text-right px-4 border-r border-primary/5 leading-none">Debet</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary text-right px-4 border-r border-primary/5 leading-none">Kredit</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary text-right px-4 border-r border-primary/5 leading-none">Saldo</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary px-4 border-r border-primary/5 leading-none">Ledger</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary px-4 border-r border-primary/5 leading-none">Sub Ledger 1</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary px-4 border-r border-primary/5 leading-none">Sub Ledger 2</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary px-4 border-r border-primary/5 leading-none">Sub Ledger 3</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[11px] font-black tracking-widest text-primary px-4 border-r border-primary/5 leading-none">Sub Ledger 4</TableHead>
+              <TableHeader className="bg-slate-50/50">
+                <TableRow className="hover:bg-transparent border-primary/5">
+                  <TableHead className="w-44 min-w-[176px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 pl-8 border-r border-primary/5 leading-none">Tanggal</TableHead>
+                  <TableHead className="min-w-[300px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Keterangan</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 text-right px-4 border-r border-primary/5 leading-none">Debet</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 text-right px-4 border-r border-primary/5 leading-none">Kredit</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 text-right px-4 border-r border-primary/5 leading-none">Saldo</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Ledger</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Sub Ledger 1</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Sub Ledger 2</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Sub Ledger 3</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Sub Ledger 4</TableHead>
                   <TableHead className="w-16 shrink-0 text-center pr-8"></TableHead>
                 </TableRow>
               </TableHeader>

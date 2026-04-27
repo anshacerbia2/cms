@@ -14,6 +14,10 @@ import {
   Landmark,
   Database,
   ClipboardList,
+  ArrowRightLeft,
+  BarChart3,
+  Repeat,
+  PieChart,
 } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
 import { useAuthStore } from "@/store/authStore";
@@ -34,6 +38,10 @@ const iconMap: Record<string, LucideIcon> = {
   Landmark,
   Database,
   ClipboardList,
+  ArrowRightLeft,
+  BarChart3,
+  Repeat,
+  PieChart,
 };
 
 function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIcon; label: string; to: string; end?: boolean }) {
@@ -56,10 +64,10 @@ function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIco
         <>
           <div className="w-12 flex-shrink-0 flex justify-center items-center">
             <Icon
-              size={20}
+              size={22}
               className={cn(
                 "transition-all duration-300",
-                isActive ? "opacity-100" : "opacity-60 group-hover:opacity-100",
+                isActive ? "opacity-100 scale-110 text-primary" : "opacity-60 group-hover:opacity-100 scale-100",
               )}
             />
           </div>

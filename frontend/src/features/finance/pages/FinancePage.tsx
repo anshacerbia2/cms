@@ -403,6 +403,7 @@ export default function FinancePage() {
                         columnKey="colA" label="No" data={allSales || []} 
                         activeFilters={salesFilters["colA"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colA: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colA", direction: d}); setSalesPage(1); }}
                       />
                     </div>
@@ -416,6 +417,7 @@ export default function FinancePage() {
                         data={allSales || []} 
                         activeFilters={salesFilters["colB"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colB: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colB", direction: d}); setSalesPage(1); }}
                       />
                     </div>
@@ -429,6 +431,7 @@ export default function FinancePage() {
                         data={allSales || []} 
                         activeFilters={salesFilters["colC"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colC: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colC", direction: d}); setSalesPage(1); }}
                       />
                     </div>
@@ -442,6 +445,7 @@ export default function FinancePage() {
                         data={allSales || []} 
                         activeFilters={salesFilters["colD"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colD: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colD", direction: d}); setSalesPage(1); }}
                       />
                     </div>
@@ -455,6 +459,7 @@ export default function FinancePage() {
                         data={allSales || []} 
                         activeFilters={salesFilters["colE"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colE: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colE", direction: d}); setSalesPage(1); }}
                       />
                     </div>
@@ -468,6 +473,7 @@ export default function FinancePage() {
                         data={allSales || []} 
                         activeFilters={salesFilters["colF"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colF: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colF", direction: d}); setSalesPage(1); }}
                       />
                     </div>
@@ -479,6 +485,7 @@ export default function FinancePage() {
                         columnKey="colG" label="Basic Price" data={allSales || []} 
                         activeFilters={salesFilters["colG"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colG: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colG", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -491,6 +498,7 @@ export default function FinancePage() {
                         columnKey="colH" label="Mgmt Fee" data={allSales || []} 
                         activeFilters={salesFilters["colH"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colH: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colH", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -503,6 +511,7 @@ export default function FinancePage() {
                         columnKey="colI" label="PPN" data={allSales || []} 
                         activeFilters={salesFilters["colI"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colI: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colI", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -515,6 +524,7 @@ export default function FinancePage() {
                         columnKey="colJ" label="Total Amount" data={allSales || []} 
                         activeFilters={salesFilters["colJ"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colJ: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colJ", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -528,6 +538,7 @@ export default function FinancePage() {
                         columnKey="colS" label="Outstanding" data={allSales || []} 
                         activeFilters={salesFilters["colS"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colS: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colS", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -541,6 +552,7 @@ export default function FinancePage() {
                         columnKey="colZ" label="Net Received" data={allSales || []} 
                         activeFilters={salesFilters["colZ"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colZ: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colZ", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -555,6 +567,7 @@ export default function FinancePage() {
                         columnKey="colL" label="BCA" data={allSales || []} 
                         activeFilters={salesFilters["colL"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colL: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colL", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -567,6 +580,7 @@ export default function FinancePage() {
                         columnKey="colM" label="Mandiri" data={allSales || []} 
                         activeFilters={salesFilters["colM"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colM: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colM", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -579,6 +593,7 @@ export default function FinancePage() {
                         columnKey="colN" label="Danamon" data={allSales || []} 
                         activeFilters={salesFilters["colN"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colN: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colN", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -591,6 +606,7 @@ export default function FinancePage() {
                         columnKey="colO" label="BRI" data={allSales || []} 
                         activeFilters={salesFilters["colO"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colO: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colO", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -603,6 +619,7 @@ export default function FinancePage() {
                         columnKey="colP" label="BTN" data={allSales || []} 
                         activeFilters={salesFilters["colP"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colP: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colP", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -615,6 +632,7 @@ export default function FinancePage() {
                         columnKey="colQ" label="Cash IDR" data={allSales || []} 
                         activeFilters={salesFilters["colQ"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colQ: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colQ", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -627,6 +645,7 @@ export default function FinancePage() {
                         columnKey="colR" label="Non CB" data={allSales || []} 
                         activeFilters={salesFilters["colR"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colR: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colR", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -639,6 +658,7 @@ export default function FinancePage() {
                         columnKey="colU" label="PPh-23" data={allSales || []} 
                         activeFilters={salesFilters["colU"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colU: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colU", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -651,6 +671,7 @@ export default function FinancePage() {
                         columnKey="colV" label="A/P PPh-23" data={allSales || []} 
                         activeFilters={salesFilters["colV"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colV: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colV", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -663,6 +684,7 @@ export default function FinancePage() {
                         columnKey="colW" label="PPN TAX" data={allSales || []} 
                         activeFilters={salesFilters["colW"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colW: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colW", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -675,6 +697,7 @@ export default function FinancePage() {
                         columnKey="colX" label="A/P PPN" data={allSales || []} 
                         activeFilters={salesFilters["colX"]} 
                         onFilterChange={(v) => { setSalesFilters(p => ({...p, colX: v})); setSalesPage(1); }}
+                        currentSort={salesSort}
                         onSort={(d) => { setSalesSort({key: "colX", direction: d}); setSalesPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -834,6 +857,7 @@ export default function FinancePage() {
                         columnKey="colB" label="Type" data={allAR || []} 
                         activeFilters={arFilters["colB"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colB: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colB", direction: d}); setArPage(1); }}
                       />
                     </div>
@@ -845,6 +869,7 @@ export default function FinancePage() {
                         columnKey="colC" label="Sub Category" data={allAR || []} 
                         activeFilters={arFilters["colC"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colC: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colC", direction: d}); setArPage(1); }}
                       />
                     </div>
@@ -856,6 +881,7 @@ export default function FinancePage() {
                         columnKey="colD" label="Entity Name" data={allAR || []} 
                         activeFilters={arFilters["colD"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colD: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colD", direction: d}); setArPage(1); }}
                       />
                     </div>
@@ -867,6 +893,7 @@ export default function FinancePage() {
                         columnKey="colE" label="Description" data={allAR || []} 
                         activeFilters={arFilters["colE"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colE: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colE", direction: d}); setArPage(1); }}
                       />
                     </div>
@@ -883,6 +910,7 @@ export default function FinancePage() {
                         columnKey="colF" label="IDR (2020)" data={allAR || []} 
                         activeFilters={arFilters["colF"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colF: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colF", direction: d}); setArPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -895,6 +923,7 @@ export default function FinancePage() {
                         columnKey="colG" label="USD (2020)" data={allAR || []} 
                         activeFilters={arFilters["colG"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colG: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colG", direction: d}); setArPage(1); }}
                         valueFormatter={(v) => formatCurrency(v, 'USD')}
                       />
@@ -907,6 +936,7 @@ export default function FinancePage() {
                         columnKey="colH" label="Rate" data={allAR || []} 
                         activeFilters={arFilters["colH"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colH: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colH", direction: d}); setArPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -919,6 +949,7 @@ export default function FinancePage() {
                         columnKey="colJ" label="BCA" data={allAR || []} 
                         activeFilters={arFilters["colJ"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colJ: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colJ", direction: d}); setArPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -931,6 +962,7 @@ export default function FinancePage() {
                         columnKey="colK" label="Mandiri" data={allAR || []} 
                         activeFilters={arFilters["colK"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colK: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colK", direction: d}); setArPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -943,6 +975,7 @@ export default function FinancePage() {
                         columnKey="colL" label="BNI" data={allAR || []} 
                         activeFilters={arFilters["colL"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colL: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colL", direction: d}); setArPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -955,6 +988,7 @@ export default function FinancePage() {
                         columnKey="colM" label="Cash IDR" data={allAR || []} 
                         activeFilters={arFilters["colM"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colM: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colM", direction: d}); setArPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -967,6 +1001,7 @@ export default function FinancePage() {
                         columnKey="colN" label="Non CB" data={allAR || []} 
                         activeFilters={arFilters["colN"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colN: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colN", direction: d}); setArPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -979,6 +1014,7 @@ export default function FinancePage() {
                         columnKey="colO" label="Cek Bank" data={allAR || []} 
                         activeFilters={arFilters["colO"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colO: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colO", direction: d}); setArPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -991,6 +1027,7 @@ export default function FinancePage() {
                         columnKey="colP" label="Cash USD" data={allAR || []} 
                         activeFilters={arFilters["colP"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colP: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colP", direction: d}); setArPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1003,6 +1040,7 @@ export default function FinancePage() {
                         columnKey="colR" label="IDR Outstanding" data={allAR || []} 
                         activeFilters={arFilters["colR"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colR: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colR", direction: d}); setArPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1015,6 +1053,7 @@ export default function FinancePage() {
                         columnKey="colS" label="USD Outstanding" data={allAR || []} 
                         activeFilters={arFilters["colS"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colS: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colS", direction: d}); setArPage(1); }}
                         valueFormatter={(v) => formatCurrency(v, 'USD')}
                       />
@@ -1027,6 +1066,7 @@ export default function FinancePage() {
                         columnKey="colT" label="Rate Outstanding" data={allAR || []} 
                         activeFilters={arFilters["colT"]} 
                         onFilterChange={(v) => { setArFilters(p => ({...p, colT: v})); setArPage(1); }}
+                        currentSort={arSort}
                         onSort={(d) => { setArSort({key: "colT", direction: d}); setArPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1198,6 +1238,7 @@ export default function FinancePage() {
                         columnKey="colA" label="Payable" data={allAP || []} 
                         activeFilters={apFilters["colA"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colA: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colA", direction: d}); setApPage(1); }}
                       />
                     </div>
@@ -1209,6 +1250,7 @@ export default function FinancePage() {
                         columnKey="colB" label="Year" data={allAP || []} 
                         activeFilters={apFilters["colB"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colB: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colB", direction: d}); setApPage(1); }}
                       />
                     </div>
@@ -1220,6 +1262,7 @@ export default function FinancePage() {
                         columnKey="colC" label="Vendor" data={allAP || []} 
                         activeFilters={apFilters["colC"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colC: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colC", direction: d}); setApPage(1); }}
                       />
                     </div>
@@ -1231,6 +1274,7 @@ export default function FinancePage() {
                         columnKey="colD" label="Keterangan" data={allAP || []} 
                         activeFilters={apFilters["colD"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colD: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colD", direction: d}); setApPage(1); }}
                       />
                     </div>
@@ -1243,6 +1287,7 @@ export default function FinancePage() {
                         columnKey="colH" label="COL-H" data={allAP || []} 
                         activeFilters={apFilters["colH"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colH: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colH", direction: d}); setApPage(1); }}
                       />
                     </div>
@@ -1254,6 +1299,7 @@ export default function FinancePage() {
                         columnKey="colI" label="COL-I" data={allAP || []} 
                         activeFilters={apFilters["colI"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colI: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colI", direction: d}); setApPage(1); }}
                       />
                     </div>
@@ -1267,6 +1313,7 @@ export default function FinancePage() {
                         columnKey="colW" label="Wa Yogi" data={allAP || []} 
                         activeFilters={apFilters["colW"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colW: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colW", direction: d}); setApPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1279,6 +1326,7 @@ export default function FinancePage() {
                         columnKey="colX" label="Koreksi Selisih" data={allAP || []} 
                         activeFilters={apFilters["colX"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colX: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colX", direction: d}); setApPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1293,6 +1341,7 @@ export default function FinancePage() {
                         columnKey="colE" label="IDR (Initial)" data={allAP || []} 
                         activeFilters={apFilters["colE"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colE: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colE", direction: d}); setApPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1305,6 +1354,7 @@ export default function FinancePage() {
                         columnKey="colF" label="USD (Initial)" data={allAP || []} 
                         activeFilters={apFilters["colF"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colF: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colF", direction: d}); setApPage(1); }}
                         valueFormatter={(v) => formatCurrency(v, 'USD')}
                       />
@@ -1317,6 +1367,7 @@ export default function FinancePage() {
                         columnKey="colG" label="Rate" data={allAP || []} 
                         activeFilters={apFilters["colG"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colG: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colG", direction: d}); setApPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1329,6 +1380,7 @@ export default function FinancePage() {
                         columnKey="colK" label="BCA" data={allAP || []} 
                         activeFilters={apFilters["colK"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colK: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colK", direction: d}); setApPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1341,6 +1393,7 @@ export default function FinancePage() {
                         columnKey="colL" label="Mandiri" data={allAP || []} 
                         activeFilters={apFilters["colL"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colL: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colL", direction: d}); setApPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1353,6 +1406,7 @@ export default function FinancePage() {
                         columnKey="colM" label="BTN" data={allAP || []} 
                         activeFilters={apFilters["colM"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colM: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colM", direction: d}); setApPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1365,6 +1419,7 @@ export default function FinancePage() {
                         columnKey="colN" label="BRI" data={allAP || []} 
                         activeFilters={apFilters["colN"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colN: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colN", direction: d}); setApPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1377,6 +1432,7 @@ export default function FinancePage() {
                         columnKey="colO" label="Cash IDR" data={allAP || []} 
                         activeFilters={apFilters["colO"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colO: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colO", direction: d}); setApPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1389,6 +1445,7 @@ export default function FinancePage() {
                         columnKey="colP" label="Non CB" data={allAP || []} 
                         activeFilters={apFilters["colP"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colP: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colP", direction: d}); setApPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1401,6 +1458,7 @@ export default function FinancePage() {
                         columnKey="colQ" label="Citibank" data={allAP || []} 
                         activeFilters={apFilters["colQ"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colQ: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colQ", direction: d}); setApPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1413,6 +1471,7 @@ export default function FinancePage() {
                         columnKey="colR" label="Cash USD" data={allAP || []} 
                         activeFilters={apFilters["colR"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colR: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colR", direction: d}); setApPage(1); }}
                         valueFormatter={(v) => formatCurrency(v, 'USD')}
                       />
@@ -1425,6 +1484,7 @@ export default function FinancePage() {
                         columnKey="colT" label="IDR Outstanding" data={allAP || []} 
                         activeFilters={apFilters["colT"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colT: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colT", direction: d}); setApPage(1); }}
                         valueFormatter={formatCurrency}
                       />
@@ -1437,6 +1497,7 @@ export default function FinancePage() {
                         columnKey="colU" label="USD Outstanding" data={allAP || []} 
                         activeFilters={apFilters["colU"]} 
                         onFilterChange={(v) => { setApFilters(p => ({...p, colU: v})); setApPage(1); }}
+                        currentSort={apSort}
                         onSort={(d) => { setApSort({key: "colU", direction: d}); setApPage(1); }}
                         valueFormatter={(v) => formatCurrency(v, 'USD')}
                       />
@@ -1911,7 +1972,7 @@ export default function FinancePage() {
                   <TableHead className="pl-10 text-[11px] font-black uppercase tracking-tight text-primary w-2/5">ASSETS</TableHead>
                   <TableHead className="text-right text-[11px] font-black uppercase tracking-tight text-primary w-1/5">IDR</TableHead>
                   <TableHead className="text-right text-[11px] font-black uppercase tracking-tight text-primary w-1/5">USD</TableHead>
-                  <TableHead className="pr-10 text-right text-[11px] font-black uppercase tracking-tight text-secondary w-1/5">Total (Rp)</TableHead>
+                  <TableHead className="pr-10 text-right text-[11px] font-black uppercase tracking-tight text-secondary w-1/5">Total (IDR)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -2053,7 +2114,7 @@ export default function FinancePage() {
                         <TableHead className="pl-10 text-[11px] font-black uppercase text-primary">LIABILITIES & EQUITY</TableHead>
                         <TableHead className="text-right text-primary text-[10px]">IDR</TableHead>
                         <TableHead className="text-right text-primary text-[10px]">USD</TableHead>
-                        <TableHead className="pr-10 text-right text-secondary text-[10px]">TOTAL (Rp)</TableHead>
+                        <TableHead className="pr-10 text-right text-secondary text-[10px]">TOTAL (IDR)</TableHead>
                       </TableRow>
                       {renderRow('Current Liabilities', null, null, null, 'header')}
                       {renderRow('ACCOUNT PAYABLE', findVal('AP Expense') + findVal('AP Trade') + findVal('AP Tax'), 0, null, 'group')}

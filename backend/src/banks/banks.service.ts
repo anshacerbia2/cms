@@ -157,13 +157,30 @@ export class BanksService {
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
     const search = query.search || '';
+    const accountId = query.accountId ? BigInt(query.accountId) : undefined;
+    const year = query.year ? Number(query.year) : undefined;
 
-    const where: any = search ? {
-      OR: [
-        { internalAccount: { holderName: { contains: search, mode: 'insensitive' as const } } },
-        { internalAccount: { accountNo: { contains: search, mode: 'insensitive' as const } } },
-      ],
-    } : {};
+    const where: any = { AND: [] };
+
+    if (accountId) {
+      where.AND.push({ internalAccountId: accountId });
+    }
+
+    if (year) {
+      where.AND.push({ year });
+    }
+
+    if (search) {
+      where.AND.push({
+        OR: [
+          { internalAccount: { holderName: { contains: search, mode: 'insensitive' as const } } },
+          { internalAccount: { accountNo: { contains: search, mode: 'insensitive' as const } } },
+        ],
+      });
+    }
+
+    // Clean up empty AND
+    if (where.AND.length === 0) delete where.AND;
 
     const [data, total] = await Promise.all([
       this.prisma.fiscalPeriod.findMany({

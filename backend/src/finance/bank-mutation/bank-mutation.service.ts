@@ -105,12 +105,9 @@ export class BankMutationService {
   async createBulkTransactions(data: any[], accountId: string, year: number, startingBalance?: string) {
     // 1. Find Account & Audit Protection
     const accountIdBig = BigInt(accountId);
-    const [account, currentFiscal] = await Promise.all([
+    const [account] = await Promise.all([
       this.prisma.internalAccount.findUnique({
         where: { id: accountIdBig }
-      }),
-      this.prisma.fiscalPeriod.findUnique({
-        where: { internalAccountId_year: { internalAccountId: accountIdBig, year } }
       })
     ]);
 
@@ -131,6 +128,10 @@ export class BankMutationService {
       await this.updateOpeningBalance(accountId, year, startingBalance);
     }
 
+    const currentFiscal = await this.prisma.fiscalPeriod.findUnique({
+      where: { internalAccountId_year: { internalAccountId: accountIdBig, year } }
+    });
+
     // 4. Insert transactions with LINKING to internalAccountId
     await this.prisma.financialTransaction.createMany({
       data: data.map(item => ({
@@ -148,7 +149,7 @@ export class BankMutationService {
       })),
     });
 
-    // 5. If saving to an OPEN period, change status to ONGOING
+    // 5. If saving to an OPEN period, change status to ONGOING because transactions now exist
     if (currentFiscal && currentFiscal.status === 'OPEN' && data.length > 0) {
       await this.prisma.fiscalPeriod.update({
         where: { id: currentFiscal.id },
@@ -156,19 +157,17 @@ export class BankMutationService {
       });
     }
 
-    // 6. Mark current and future years as STALE if we are modifying a CLOSED period OR changing Starting Balance
-    if (currentFiscal?.status === 'CLOSED' || startingBalance) {
-      await this.prisma.fiscalPeriod.updateMany({
-        where: {
-          internalAccountId: account.id,
-          year: { gte: year }
-        },
-        data: { isStale: true }
-      });
-    }
+    // 6. Mark current and future years as STALE (Chain reaction: current changes affect all futures)
+    await this.prisma.fiscalPeriod.updateMany({
+      where: {
+        internalAccountId: accountIdBig,
+        year: { gte: year }
+      },
+      data: { isStale: true }
+    });
 
-    // 7. Trigger Cascading Recalculation
-    await this.recalculateLedger(accountId, year);
+    // 7. Trigger Cascading Recalculation (FORCE recursion for bulk imports to auto-heal future years)
+    await this.recalculateLedger(accountId, year, true);
 
     return { success: true, count: data.length };
   }
@@ -187,10 +186,11 @@ export class BankMutationService {
       if (currentFiscal.status === 'CLOSED') {
         return { 
           status: currentFiscal.status, 
-          balance: currentFiscal.closingBalance?.toString() || "0", 
+          balance: currentFiscal.openingBalance.toString(), // Use openingBalance for the "Opening Balance" card
           canEdit: false,
+          referredYear: year,
           isStale: currentFiscal.isStale,
-          message: `Fiscal year ${year} is already ${currentFiscal.status}.`
+          message: `Fiscal year ${year} is already ${currentFiscal.status.toLowerCase()}. will automatically synchronize balances for all subsequent years.`
         };
       }
 
@@ -199,8 +199,9 @@ export class BankMutationService {
           status: currentFiscal.status,
           balance: currentFiscal.openingBalance.toString(),
           canEdit: true,
+          referredYear: year,
           isStale: currentFiscal.isStale,
-          message: `Fiscal year ${year} is ${currentFiscal.status} with no transactions yet.`
+          message: `Fiscal year ${year} is ${currentFiscal.status.toLowerCase()} with no transactions yet.`
         };
       }
       
@@ -216,10 +217,11 @@ export class BankMutationService {
         status: currentFiscal.status, 
         balance, 
         canEdit: false,
+        referredYear: year,
         isStale: currentFiscal.isStale,
         message: lastTrans 
-          ? `Using current running balance of ${year} (${currentFiscal.status}).`
-          : `Warning: Period is ONGOING but no transactions found for ${year}.`
+          ? `Using current running balance of ${year} (${currentFiscal.status.toLowerCase()}).`
+          : `Warning: Period is ongoing but no transactions found for ${year}.`
       };
     }
 
@@ -285,11 +287,12 @@ export class BankMutationService {
       }
     }
 
-    // 3. No previous record found at all
+    // 3. No previous record found at all (First time setup)
     return { 
-      status: 'OPEN', 
+      status: 'INITIAL', 
       balance: "0", 
       canEdit: true,
+      referredYear: year,
       message: "First Period Migration" 
     };
   }
@@ -330,15 +333,9 @@ export class BankMutationService {
   private async updateOpeningBalance(accountId: string, year: number, amount: string) {
     const accountIdBig = BigInt(accountId);
  
-    return this.prisma.fiscalPeriod.upsert({
-      where: {
-        internalAccountId_year: {
-          internalAccountId: accountIdBig,
-          year: year
-        }
-      },
-      update: { openingBalance: amount },
-      create: {
+    // Create new fiscal record with OPEN status for initial setup
+    return this.prisma.fiscalPeriod.create({
+      data: {
         internalAccountId: accountIdBig,
         year: year,
         openingBalance: amount,
@@ -358,6 +355,10 @@ export class BankMutationService {
     const recalc = await this.recalculateLedger(accountId, year);
     const closingBalance = recalc.finalBalance;
 
+    // 1. Fetch correct opening balance if we need to create the record
+    const anchor = await this.getLatestAnchor(accountId, year);
+    const openingBalance = anchor?.balance || "0";
+
     // 2. Snapshot the current year as CLOSED
     await this.prisma.fiscalPeriod.upsert({
       where: { internalAccountId_year: { internalAccountId: accountIdBig, year } },
@@ -365,38 +366,29 @@ export class BankMutationService {
         status: 'CLOSED',
         closingBalance: closingBalance,
         closedAt: new Date(),
-        closedById: BigInt(userId)
+        closedById: BigInt(userId),
+        isStale: false // Freshly recalculated and closed
       },
       create: {
         internalAccountId: accountIdBig,
         year,
-        openingBalance: 0,
+        openingBalance: openingBalance,
         status: 'CLOSED',
         closingBalance: closingBalance,
         closedAt: new Date(),
-        closedById: BigInt(userId)
+        closedById: BigInt(userId),
+        isStale: false
       }
     });
 
-    // 3. Automatically carry forward to next year's OPENING balance
-    await this.prisma.fiscalPeriod.upsert({
-      where: { internalAccountId_year: { internalAccountId: accountIdBig, year: year + 1 } },
-      update: { openingBalance: closingBalance },
-      create: {
-        internalAccountId: accountIdBig,
-        year: year + 1,
-        openingBalance: closingBalance,
-        status: 'OPEN'
-      }
-    });
-
-    // 4. Trigger cascading recalculation for the next year to ensure continuity
-    await this.recalculateLedger(accountId, year + 1);
+    // 3. Trigger recursive cascading recalculation for all years following the closed one
+    // This will automatically handle opening balance updates and transaction re-syncs
+    await this.recalculateLedger(accountId, year + 1, true);
 
     return { success: true, closingBalance: formatDecimal(closingBalance) };
   }
 
-  async recalculateLedger(accountId: string, year: number) {
+  async recalculateLedger(accountId: string, year: number, forceRecursion = false) {
     const accountIdBig = BigInt(accountId);
  
     // 1. Get Starting Point (Discovery)
@@ -449,7 +441,10 @@ export class BankMutationService {
     if (period) {
       await this.prisma.fiscalPeriod.update({
         where: { id: period.id },
-        data: { closingBalance: runningBalance }
+        data: { 
+          closingBalance: runningBalance,
+          isStale: false // Normalize after success
+        }
       });
     }
 
@@ -484,8 +479,9 @@ export class BankMutationService {
  
       // ONLY Recurse if the CURRENT period being recalculated is CLOSED (Historical Correction)
       // Otherwise, we stop here to save performance and let the 'isStale' flag handle the rest
-      if (period?.status === 'CLOSED') {
-        await this.recalculateLedger(accountId, nextDataYear);
+      // Recurse if the CURRENT period is CLOSED OR if we are forcing recursion (e.g. during bulk import)
+      if (period?.status === 'CLOSED' || forceRecursion) {
+        await this.recalculateLedger(accountId, nextDataYear, forceRecursion);
       }
     }
 

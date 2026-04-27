@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, MoreVertical, Edit2, Trash2, Search, Building2, Coins, Wallet, QrCode } from "lucide-react";
+import { Plus, MoreVertical, Edit2, Trash2, Search, Building2, Banknote, CreditCard, QrCode } from "lucide-react";
 import { useBanks } from "../hooks/useBanks";
 import { QRDialog } from "./QRDialog";
 import { Button } from "@/components/ui/button";
@@ -141,9 +141,9 @@ export function AccountsTab() {
               <SelectItem 
                 key={type} 
                 value={type} 
-                className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary cursor-pointer rounded-none"
+                className="text-[11px] font-bold py-3 px-5 focus:bg-slate-100 focus:text-primary cursor-pointer rounded-none border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors"
               >
-                {type}
+                {type === 'CASH' ? 'Cash - Non Bank' : type === 'BANK' ? 'Bank' : 'Other'}
               </SelectItem>
             ))}
           </SelectContent>
@@ -154,7 +154,7 @@ export function AccountsTab() {
           className="h-12 px-6 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 shrink-0 font-bold transition-all active:scale-95 cursor-pointer w-full lg:w-auto"
         >
           <Plus size={20} strokeWidth={3} />
-          <span className="text-[13px]">NEW ACCOUNT</span>
+          <span className="text-[13px]">New Account</span>
         </Button>
       </div>
 
@@ -231,15 +231,19 @@ export function AccountsTab() {
             <div key={account.id} className={`group bg-white/70 backdrop-blur-md p-6 rounded-xl shadow-premium border border-primary/5 hover:border-primary/20 transition-all flex flex-col justify-between relative overflow-hidden ${account.type === 'BANK' ? 'min-h-[240px]' : 'min-h-0'}`}>
                <div>
                   <div className="flex items-start justify-between mb-4 gap-2">
-                    <div className="flex items-center gap-3">
+                    <div className={`flex ${account.type === 'BANK' ? 'items-start' : 'items-center'} gap-3`}>
                        <div className="h-9 w-9 rounded-xl bg-primary/5 flex items-center justify-center shrink-0">
-                          {account.type === 'CASH' ? <Coins className="w-5 h-5 text-primary" /> :
-                           account.type === 'OTHER' ? <Wallet className="w-5 h-5 text-primary" /> :
+                          {account.type === 'CASH' ? <Banknote className="w-5 h-5 text-primary" /> :
+                           account.type === 'OTHER' ? <CreditCard className="w-5 h-5 text-primary" /> :
                            <Building2 className="w-5 h-5 text-primary" />}
                        </div>
                        <div className="space-y-1">
-                          <h4 className="font-extrabold text-primary text-[11px] uppercase tracking-tight">{account.holderName}</h4>
-                          <p className="text-[10px] text-muted-foreground font-bold tracking-widest uppercase opacity-60 italic">{account.bank?.bankName || account.bank?.name}</p>
+                          <h4 className="font-extrabold text-primary text-[11px] uppercase tracking-tight">
+                            {account.type === 'BANK' ? (account.bank?.bankName || account.bank?.name) : account.holderName}
+                          </h4>
+                          <p className="text-[10px] text-muted-foreground font-bold tracking-widest uppercase opacity-60 italic">
+                            {account.type === 'BANK' ? account.holderName : (account.bank?.bankName || account.bank?.name || '')}
+                          </p>
                        </div>
                     </div>
 
