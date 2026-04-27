@@ -17,7 +17,7 @@ interface ExcelColumnFilterProps {
   activeFilters: Set<string> | null;
   onFilterChange: (values: Set<string> | null) => void;
   onSort: (direction: 'asc' | 'desc') => void;
-  currentSort?: { key: string, direction: 'asc' | 'desc' | null };
+  currentSort?: { key: string, direction: 'asc' | 'desc' | null } | null;
   valueFormatter?: (val: any) => string;
 }
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Search, Calendar, Landmark, Lock, Unlock, AlertCircle, Hash } from "lucide-react";
 import { useBanks } from "../hooks/useBanks";
 import { PaginationControls } from "@/components/common/PaginationControls";

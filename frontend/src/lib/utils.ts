@@ -12,12 +12,14 @@ export function formatCurrency(val: any, currency = 'IDR') {
   const num = typeof val.toNumber === 'function' ? val.toNumber() : Number(val);
   
   if (isNaN(num)) return "-";
-  if (num === 0) return "IDR 0,00"; // Show zero explicitly for financial records
+  if (num === 0) return `${currency} 0,00`; 
 
-  return 'IDR ' + new Intl.NumberFormat('id-ID', { 
+  return new Intl.NumberFormat('id-ID', { 
+    style: 'currency',
+    currency: currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(num);
+  }).format(num).replace(/\u00A0/, ' '); // Ensure space after currency symbol
 }
 
 export function formatDate(date: any) {

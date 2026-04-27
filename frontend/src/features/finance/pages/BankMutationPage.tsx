@@ -3,8 +3,6 @@ import {
   Search, 
   Landmark,
   Plus,
-  Minus,
-  Flag,
   FilterX,
   Calendar as CalendarIcon,
   Lock,
