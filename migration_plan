@@ -1,0 +1,75 @@
+# 🚀 Ledger Performance Migration Plan (Scale: 100k+ Rows)
+
+## Overview
+As the ledger grows to thousands of rows, client-side processing (filtering, sorting, and summing) becomes a performance bottleneck. This plan outlines the migration from "Load All" to "Server-Driven" architecture.
+
+---
+
+## 🛠️ Phase 1: Backend Optimization (Aggregation & Pagination)
+
+### 1.1 Summary Aggregation Endpoint
+Instead of calculating Inflow/Outflow in the browser, the Backend will provide a dedicated summary using Prisma's optimized aggregation.
+
+**Implementation:**
+- Add `@Get('summary')` to `BankMutationController`.
+- Logic:
+  ```typescript
+  const summary = await this.prisma.financialTransaction.aggregate({
+    where: { internalAccountId, year },
+    _sum: { debit: true, credit: true }
+  });
+  ```
+
+### 1.2 Enhanced Pagination
+Modify the transaction list to strictly use server-side pagination, sorting, and filtering.
+
+**Key Changes:**
+- `getTransactions` in BE will handle dynamic `where` clauses for Excel-style filtering.
+- Move sorting logic (`orderBy`) to the database query.
+
+### 1.3 Recalculation Performance
+Updating the `saldo` chain for 10,000+ rows in a single request can cause timeouts.
+- **Strategy**: Use `Prisma.$executeRaw` for batch balance updates or move recalculation to a background worker (BullMQ).
+
+---
+
+## 🎨 Phase 2: Frontend Transformation
+
+### 2.1 Decoupling Summary from List
+- Replace `useMemo` calculation with a new hook `useLedgerSummary`.
+- The summary cards will now have their own loading state, independent of the transaction table.
+
+### 2.2 Server-Side Filtering & Sorting
+- Update `BankMutationPage.tsx` to send filter/sort state as query parameters to the API.
+- Use `useDebounce` for the search bar to prevent excessive API calls.
+
+---
+
+## 📈 Phase 3: Performance Hardening (Optional but Recommended)
+
+### 3.1 Database Indexing
+Add composite indexes to the `financial_transactions` table to speed up year + account lookups.
+```prisma
+@@index([internalAccountId, year, createdAt])
+```
+
+### 3.2 Result Caching
+Cache the `summary` result in **Redis**. Invalidate the cache only when a new mutation is added or a recalculation is triggered.
+
+---
+
+## 🚦 Migration Impact Matrix
+
+| Feature | Current (Client-Side) | Future (Server-Side) | Benefit |
+| :--- | :--- | :--- | :--- |
+| **Initial Load** | Slow (Downloads all data) | Fast (Downloads 20 rows) | Reduced Time to Interactive (TTI) |
+| **Filtering** | Instant (In-memory) | Small Delay (Network) | Unlimited data capacity |
+| **Integrity** | High (Calculated from list) | Supreme (Calculated from DB) | Guaranteed audit trail |
+| **Memory Usage** | High (MBs of JSON) | Zero Waste (KBs of JSON) | Low-end device support |
+
+---
+
+## 🧪 Verification Plan
+1. **Load Test**: Verify page load time with 50,000 dummy transactions.
+2. **Concurrency Test**: Ensure multiple users adding mutations simultaneously don't lock the `saldo` chain.
+3. **Audit Check**: Compare FE calculated sums with BE aggregated sums to ensure 1:1 match.

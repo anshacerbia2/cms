@@ -17,9 +17,8 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Save, ClipboardPaste, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Trash2, Save, ClipboardPaste, Calendar as CalendarIcon, Wallet, RefreshCw, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import api from '@/lib/api';
 import { format, parseISO, isValid } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -27,13 +26,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { useFinance } from '../hooks/useFinance';
+import { Loader2 } from 'lucide-react';
+import Decimal from 'decimal.js';
 
 
 interface AddLedgerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-  currentSource: string;
+  selectedAccount: any;
+  year: number;
+  isPeriodClosed?: boolean;
 }
 
 interface LedgerRow {
@@ -49,20 +53,41 @@ interface LedgerRow {
   colJ: string; // Sub Ledger 4
 }
 
-export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentSource }: AddLedgerModalProps) {
+export default function AddLedgerModal({ open, onOpenChange, onSuccess, selectedAccount, year }: AddLedgerModalProps) {
+  const { getAnchorBalance, createBulkTransactions } = useFinance();
+  const [startingBalance, setStartingBalance] = useState<string>('0');
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Fetch the smart anchor balance (Last Transaction OR Opening Balance)
+  const { data: anchorData, isLoading: isBalanceLoading } = getAnchorBalance(selectedAccount?.id, year, {
+    enabled: open && !!selectedAccount?.id
+  });
+
+  useEffect(() => {
+    if (anchorData) {
+      // Use "at least 2 decimals" logic: 
+      // If it has fewer than 2 decimals, force 2 (e.g. 100 -> 100.00)
+      // If it has 2 or more, keep all of them (don't truncate)
+      const val = new Decimal(anchorData.balance ?? 0);
+      const initialValue = val.decimalPlaces() < 2 ? val.toFixed(2) : val.toString();
+      setStartingBalance(initialValue);
+    }
+  }, [anchorData]);
+
+  // Saldo (colE) is now calculated during render (Derived State) to avoid state sync issues.
+
   const colOrder: (keyof LedgerRow)[] = ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ'];
 
   // Initialize with some empty rows
   useEffect(() => {
     if (open) {
       setRows(Array(5).fill(null).map(() => ({
-        colA: new Date().toISOString().split('T')[0],
+        colA: '',
         colB: '',
-        colC: 0,
-        colD: 0,
-        colE: 0,
+        colC: '',
+        colD: '',
+        colE: '',
         colF: '',
         colG: '',
         colH: '',
@@ -74,11 +99,11 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
 
   const addRow = () => {
     setRows([...rows, {
-      colA: new Date().toISOString().split('T')[0],
+      colA: '',
       colB: '',
-      colC: 0,
-      colD: 0,
-      colE: 0,
+      colC: '',
+      colD: '',
+      colE: '',
       colF: '',
       colG: '',
       colH: '',
@@ -159,12 +184,27 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
     return cleaned.replace(/[^0-9.]/g, ''); // Final safety strip
   };
 
-  const formatDisplay = (val: string | number) => {
+  // FOR INPUTS: Clean thousands separator but NO forced decimals (so user can type easily)
+  const formatInput = (val: string | number) => {
     if (val === undefined || val === null || val === '') return '';
     const str = val.toString();
     const [int, dec] = str.split('.');
     const formattedInt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     return dec !== undefined ? `${formattedInt},${dec}` : formattedInt;
+  };
+
+  // FOR DISPLAY: Force at least 2 decimals for a clean accounting look
+  const formatAccounting = (val: string | number) => {
+    if (val === undefined || val === null || val === '') return '';
+    const str = val.toString();
+    const [int, dec] = str.split('.');
+    const formattedInt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    
+    if (dec === undefined) {
+      return `${formattedInt},00`;
+    }
+    const paddedDec = dec.length < 2 ? dec.padEnd(2, '0') : dec;
+    return `${formattedInt},${paddedDec}`;
   };
 
   const parseDisplay = (val: string) => {
@@ -317,27 +357,58 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
   };
 
   const handleSave = async () => {
-    const validRows = rows.filter(r => r.colB.trim() !== '' || Number(r.colC) > 0 || Number(r.colD) > 0);
+    // Only rows with valid Date, Description, and some Amount (Debit/Credit)
+    const validRows = rows.filter(r => 
+      r.colA !== "" && 
+      r.colB.trim() !== "" && 
+      (new Decimal(r.colC || 0).gt(0) || new Decimal(r.colD || 0).gt(0))
+    );
+
     if (validRows.length === 0) {
-      toast.error("Please fill at least one row");
+      toast.error("Please fill at least one valid row (Date, Description, and Amount required)");
+      return;
+    }
+
+    const targetYear = Number(year);
+    const invalidYearRow = validRows.find(r => {
+      const d = parseISO(r.colA);
+      return isValid(d) && d.getFullYear() !== targetYear;
+    });
+
+    if (invalidYearRow) {
+      toast.error(`Some transactions are not in the year ${year}. Please check your dates.`);
       return;
     }
 
     setLoading(true);
     try {
-      const payload = validRows.map(r => ({
-        ...r,
-        name: currentSource,
-        colE: 0, // Ledger balance can be calculated or set to 0
-      }));
+      // 1. If it's initial load (INITIAL status), save the starting balance first
+      // 2. Save bulk transactions with optional startingBalance for INITIAL state
+      // 2. Save bulk transactions with startingBalance to ensure FiscalPeriod is established
+      await createBulkTransactions()({
+        data: validRows,
+        accountId: selectedAccount.id,
+        year: Number(year),
+        // CRITICAL: Only send startingBalance if the user is allowed to edit it (Initial Migration/Setup).
+        // If not editable, we rely on backend's carry-forward calculation.
+        startingBalance: anchorData?.canEdit ? startingBalance.toString() : undefined
+      });
+      toast.success(`Successfully saved ${validRows.length} transactions and synchronized balances.`);
+      
+      // If saving to a CLOSED period, remind to sync
+      if (anchorData?.status === 'CLOSED') {
+        toast.warning("Backdated entry saved. Please click 'Recalculate' to sync future balances.", {
+          duration: 6000,
+          icon: <RefreshCw className="animate-spin" size={16} />
+        });
+      }
 
-      await api.post('/finance/transactions/bulk', payload);
-      toast.success(`Successfully saved ${validRows.length} transactions to ${currentSource}`);
       onSuccess();
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Failed to save transactions");
+      const message = error.response?.data?.message || "Failed to save transactions";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -354,8 +425,8 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                 Bulk Add Ledger Entries
               </DialogTitle>
               <div className="text-muted-foreground text-xs md:text-sm font-medium">
-                Input multiple transactions for <Badge variant="outline" className="ml-1 bg-secondary/10 text-secondary border-secondary/20 font-black px-1.5 py-0">{currentSource}</Badge>. 
-                <span className="hidden sm:inline"> You can copy-paste directly from Excel.</span>
+                Input multiple transactions for <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20 font-semibold px-1.5 py-0 inline-flex align-middle mx-1">{selectedAccount?.bank?.bankBrand || selectedAccount?.holderName}</Badge>
+                in fiscal year <span className="text-primary font-semibold ml-1">{year}</span>
               </div>
             </div>
             <div className="flex items-center gap-2 w-full md:w-auto">
@@ -367,6 +438,76 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
         </DialogHeader>
 
         <div className="flex-1 overflow-auto p-8 pt-4">
+          {/* Refined Minimalist Starting Balance Bar */}
+          <div className="flex flex-col gap-3 mb-6">
+            <div className="flex items-center justify-between px-2">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/[0.03] flex items-center justify-center border border-primary/5 shadow-inner">
+                   <Wallet size={20} className="text-primary/40" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/30 block leading-none mb-1">Period Balance Anchor</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black text-primary capitalize">{selectedAccount?.bank?.bankBrand || selectedAccount?.holderName}</span>
+                    <span className="text-xs font-medium text-muted-foreground/50">
+                      — {anchorData?.referredYear ? `Referred from ${anchorData.referredYear}` : `Fiscal Year ${year}`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-6">
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary/40">Balance</span>
+                  <div className="flex items-center gap-3">
+                     {isBalanceLoading ? (
+                      <Loader2 size={16} className="animate-spin text-primary/30" />
+                    ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold text-slate-400">IDR</span>
+                      <Input 
+                        type="text"
+                        disabled={anchorData?.canEdit === false}
+                        value={formatInput(startingBalance)}
+                        onChange={(e) => setStartingBalance(parseDisplay(e.target.value))}
+                        className={`w-40 h-8 border-none shadow-none focus-visible:ring-0 text-base font-bold p-0 text-right transition-all rounded-sm px-2 ${
+                          anchorData?.canEdit !== false
+                            ? 'bg-slate-100 text-slate-900 ring-1 ring-slate-200' 
+                            : 'bg-slate-200/60 text-slate-700 ring-1 ring-transparent'
+                        }`}
+                      />
+                      <div className="flex items-center gap-2 ml-2">
+                        <div className={`h-2 w-2 rounded-full shadow-sm ${
+                          anchorData?.status === 'CLOSED' ? 'bg-red-500 animate-pulse' :
+                          anchorData?.status === 'ONGOING' ? 'bg-emerald-500' : 'bg-amber-500'
+                        }`} />
+                        <span className={`text-[10px] font-bold uppercase tracking-tight ${
+                          anchorData?.status === 'CLOSED' ? 'text-red-600' :
+                          anchorData?.status === 'ONGOING' ? 'text-emerald-600' : 'text-amber-600'
+                        }`}>
+                          {anchorData?.status || 'OPEN'}
+                        </span>
+                      </div>
+                    </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Warning Banners based on Status & Reason */}
+            {!isBalanceLoading && anchorData && (
+              <div className="px-2">
+                <div className="flex items-center gap-3 p-3 rounded-xl border bg-blue-50 border-blue-100 text-blue-700">
+                  {anchorData.canEdit === false ? <RefreshCw size={14} className="shrink-0" /> : <AlertCircle size={14} className="shrink-0" />}
+                  <p className="text-[11px] font-bold leading-tight">
+                    {anchorData.message} 
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="rounded-2xl border border-primary/5 overflow-hidden shadow-sm bg-white">
             <Table>
               <TableHeader className="bg-primary/[0.03]">
@@ -385,192 +526,201 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row, index) => (
-                  <TableRow key={index} className="hover:bg-primary/[0.02] border-primary/5 transition-colors group h-9">
-                    <TableCell className="p-0 border-r border-primary/5 relative">
-                      <div className="flex items-center w-full h-full">
-                        <Popover>
-                          <PopoverTrigger asChild>
+                {(() => {
+                  let runningBalance = new Decimal(startingBalance || '0');
+                  let totalDebit = new Decimal(0);
+                  let totalCredit = new Decimal(0);
+                  
+                  const renderedRows = rows.map((row, index) => {
+                    const debit = new Decimal(row.colC || 0);
+                    const credit = new Decimal(row.colD || 0);
+                    const rowSaldo = runningBalance.minus(debit).plus(credit);
+                    
+                    totalDebit = totalDebit.plus(debit);
+                    totalCredit = totalCredit.plus(credit);
+                    runningBalance = rowSaldo;
+
+                    return (
+                      <TableRow key={index} className="hover:bg-primary/[0.02] border-primary/5 transition-colors group h-9">
+                        <TableCell className="p-0 border-r border-primary/5 relative">
+                          <div className="flex items-center w-full h-full">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-full w-8 shrink-0 bg-transparent hover:bg-transparent text-primary/30 hover:text-primary transition-colors rounded-none cursor-pointer"
+                                >
+                                  <CalendarIcon size={14} />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={row.colA ? parseISO(row.colA) : undefined}
+                                  onSelect={(date) => {
+                                    if (date) {
+                                      updateRow(index, 'colA', format(date, 'yyyy-MM-dd'));
+                                    }
+                                  }}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <Input 
+                              placeholder="YYYY-MM-DD"
+                              value={row.colA} 
+                              onChange={(e) => updateRow(index, 'colA', e.target.value)}
+                              onBlur={(e) => {
+                                const formatted = parseSmartDate(e.target.value);
+                                updateRow(index, 'colA', formatted);
+                              }}
+                              onKeyDown={(e) => handleKeyDown(e, index, 'colA')}
+                              onPaste={(e) => handlePaste(e, index, 'colA')}
+                              data-row={index}
+                              data-col="colA"
+                              className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none pl-0 pr-4 placeholder:text-primary/20 leading-none"
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="p-0 border-r border-primary/5">
+                          <Input 
+                            placeholder="Transaction description..." 
+                            value={row.colB} 
+                            onChange={(e) => updateRow(index, 'colB', e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'colB')}
+                            onPaste={(e) => handlePaste(e, index, 'colB')}
+                            data-row={index}
+                            data-col="colB"
+                            className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent font-medium text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
+                          />
+                        </TableCell>
+                        <TableCell className="p-0 border-r border-primary/5">
+                          <Input 
+                            type="text" 
+                            placeholder="0"
+                            value={formatInput(row.colC)} 
+                            onChange={(e) => updateRow(index, 'colC', parseDisplay(e.target.value))}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'colC')}
+                            onPaste={(e) => handlePaste(e, index, 'colC')}
+                            data-row={index}
+                            data-col="colC"
+                            className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm text-right text-red-500 rounded-none px-4 placeholder:text-primary/20 leading-none"
+                          />
+                        </TableCell>
+                        <TableCell className="p-0 border-r border-primary/5">
+                          <Input 
+                            type="text" 
+                            placeholder="0"
+                            value={formatInput(row.colD)} 
+                            onChange={(e) => updateRow(index, 'colD', parseDisplay(e.target.value))}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'colD')}
+                            onPaste={(e) => handlePaste(e, index, 'colD')}
+                            data-row={index}
+                            data-col="colD"
+                            className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm text-right text-emerald-600 rounded-none px-4 placeholder:text-primary/20 leading-none"
+                          />
+                        </TableCell>
+                        <TableCell className="p-0 border-r border-primary/5 bg-primary/[0.01]">
+                          <Input 
+                            placeholder="0" 
+                            value={formatAccounting(rowSaldo.toString())} 
+                            readOnly
+                            tabIndex={-1}
+                            className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm text-right font-bold text-primary/40 rounded-none px-4 leading-none select-none"
+                          />
+                        </TableCell>
+                        <TableCell className="p-0 border-r border-primary/5">
+                          <Input 
+                            placeholder="Ledger..." 
+                            value={row.colF} 
+                            onChange={(e) => updateRow(index, 'colF', e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'colF')}
+                            onPaste={(e) => handlePaste(e, index, 'colF')}
+                            data-row={index}
+                            data-col="colF"
+                            className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
+                          />
+                        </TableCell>
+                        <TableCell className="p-0 border-r border-primary/5">
+                          <Input 
+                            placeholder="SL 1" 
+                            value={row.colG} 
+                            onChange={(e) => updateRow(index, 'colG', e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'colG')}
+                            onPaste={(e) => handlePaste(e, index, 'colG')}
+                            data-row={index}
+                            data-col="colG"
+                            className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
+                          />
+                        </TableCell>
+                        <TableCell className="p-0 border-r border-primary/5">
+                          <Input 
+                            placeholder="SL 2" 
+                            value={row.colH} 
+                            onChange={(e) => updateRow(index, 'colH', e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'colH')}
+                            onPaste={(e) => handlePaste(e, index, 'colH')}
+                            data-row={index}
+                            data-col="colH"
+                            className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
+                          />
+                        </TableCell>
+                        <TableCell className="p-0 border-r border-primary/5">
+                          <Input 
+                            placeholder="SL 3" 
+                            value={row.colI} 
+                            onChange={(e) => updateRow(index, 'colI', e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'colI')}
+                            onPaste={(e) => handlePaste(e, index, 'colI')}
+                            data-row={index}
+                            data-col="colI"
+                            className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
+                          />
+                        </TableCell>
+                        <TableCell className="p-0 border-r border-primary/5">
+                          <Input 
+                            placeholder="SL 4" 
+                            value={row.colJ} 
+                            onChange={(e) => updateRow(index, 'colJ', e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'colJ')}
+                            onPaste={(e) => handlePaste(e, index, 'colJ')}
+                            data-row={index}
+                            data-col="colJ"
+                            className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
+                          />
+                        </TableCell>
+                        <TableCell className="p-0 text-center pr-8">
+                          <div className="flex items-center justify-center h-9">
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="h-full w-8 shrink-0 bg-transparent hover:bg-transparent text-primary/30 hover:text-primary transition-colors rounded-none cursor-pointer"
+                              onClick={() => removeRow(index)}
+                              className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-sm opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
                             >
-                              <CalendarIcon size={14} />
+                              <Trash2 size={14} />
                             </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={row.colA ? parseISO(row.colA) : undefined}
-                              onSelect={(date) => {
-                                if (date) {
-                                  updateRow(index, 'colA', format(date, 'yyyy-MM-dd'));
-                                }
-                              }}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <Input 
-                          placeholder="YYYY-MM-DD"
-                          value={row.colA} 
-                          onChange={(e) => updateRow(index, 'colA', e.target.value)}
-                          onBlur={(e) => {
-                            const formatted = parseSmartDate(e.target.value);
-                            updateRow(index, 'colA', formatted);
-                          }}
-                          onKeyDown={(e) => handleKeyDown(e, index, 'colA')}
-                          onPaste={(e) => handlePaste(e, index, 'colA')}
-                          data-row={index}
-                          data-col="colA"
-                          className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none pl-2 pr-4 placeholder:text-primary/20 leading-none"
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell className="p-0 border-r border-primary/5">
-                      <Input 
-                        placeholder="Transaction description..." 
-                        value={row.colB} 
-                        onChange={(e) => updateRow(index, 'colB', e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(e, index, 'colB')}
-                        onPaste={(e) => handlePaste(e, index, 'colB')}
-                        data-row={index}
-                        data-col="colB"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent font-medium text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
-                      />
-                    </TableCell>
-                    <TableCell className="p-0 border-r border-primary/5">
-                      <Input 
-                        type="text" 
-                        placeholder="0"
-                        value={formatDisplay(row.colC)} 
-                        onChange={(e) => updateRow(index, 'colC', parseDisplay(e.target.value))}
-                        onKeyDown={(e) => handleKeyDown(e, index, 'colC')}
-                        onPaste={(e) => handlePaste(e, index, 'colC')}
-                        data-row={index}
-                        data-col="colC"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm text-right text-red-500 rounded-none px-4 placeholder:text-primary/20 leading-none"
-                      />
-                    </TableCell>
-                    <TableCell className="p-0 border-r border-primary/5">
-                      <Input 
-                        type="text" 
-                        placeholder="0"
-                        value={formatDisplay(row.colD)} 
-                        onChange={(e) => updateRow(index, 'colD', parseDisplay(e.target.value))}
-                        onKeyDown={(e) => handleKeyDown(e, index, 'colD')}
-                        onPaste={(e) => handlePaste(e, index, 'colD')}
-                        data-row={index}
-                        data-col="colD"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm text-right text-emerald-600 rounded-none px-4 placeholder:text-primary/20 leading-none"
-                      />
-                    </TableCell>
-                    <TableCell className="p-0 border-r border-primary/5">
-                      <Input 
-                        placeholder="0" 
-                        value={formatDisplay(row.colE)} 
-                        onChange={(e) => updateRow(index, 'colE', parseDisplay(e.target.value))}
-                        onKeyDown={(e) => handleKeyDown(e, index, 'colE')}
-                        onPaste={(e) => handlePaste(e, index, 'colE')}
-                        data-row={index}
-                        data-col="colE"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm text-right rounded-none px-4 placeholder:text-primary/20 leading-none"
-                      />
-                    </TableCell>
-                    <TableCell className="p-0 border-r border-primary/5">
-                      <Input 
-                        placeholder="SL 1" 
-                        value={row.colF} 
-                        onChange={(e) => updateRow(index, 'colF', e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(e, index, 'colF')}
-                        onPaste={(e) => handlePaste(e, index, 'colF')}
-                        data-row={index}
-                        data-col="colF"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
-                      />
-                    </TableCell>
-                    <TableCell className="p-0 border-r border-primary/5">
-                      <Input 
-                        placeholder="SL 1" 
-                        value={row.colG} 
-                        onChange={(e) => updateRow(index, 'colG', e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(e, index, 'colG')}
-                        onPaste={(e) => handlePaste(e, index, 'colG')}
-                        data-row={index}
-                        data-col="colG"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
-                      />
-                    </TableCell>
-                    <TableCell className="p-0 border-r border-primary/5">
-                      <Input 
-                        placeholder="SL 2" 
-                        value={row.colH} 
-                        onChange={(e) => updateRow(index, 'colH', e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(e, index, 'colH')}
-                        onPaste={(e) => handlePaste(e, index, 'colH')}
-                        data-row={index}
-                        data-col="colH"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
-                      />
-                    </TableCell>
-                    <TableCell className="p-0 border-r border-primary/5">
-                      <Input 
-                        placeholder="SL 3" 
-                        value={row.colI} 
-                        onChange={(e) => updateRow(index, 'colI', e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(e, index, 'colI')}
-                        onPaste={(e) => handlePaste(e, index, 'colI')}
-                        data-row={index}
-                        data-col="colI"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
-                      />
-                    </TableCell>
-                    <TableCell className="p-0 border-r border-primary/5">
-                      <Input 
-                        placeholder="SL 4" 
-                        value={row.colJ} 
-                        onChange={(e) => updateRow(index, 'colJ', e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(e, index, 'colJ')}
-                        onPaste={(e) => handlePaste(e, index, 'colJ')}
-                        data-row={index}
-                        data-col="colJ"
-                        className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
-                      />
-                    </TableCell>
-                    <TableCell className="p-0 text-center pr-8">
-                      <div className="flex items-center justify-center h-9">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => removeRow(index)}
-                          className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-
-                {/* Accumulation Row */}
-                {(() => {
-                  const totalDebit = rows.reduce((acc, r) => acc + (Number(r.colC) || 0), 0);
-                  const totalCredit = rows.reduce((acc, r) => acc + (Number(r.colD) || 0), 0);
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  });
 
                   return (
-                    <TableRow className="bg-primary/[0.03] border-t-2 border-primary/10 h-9">
-                      <TableCell className="pl-8 font-bold text-sm text-primary/60 border-r border-primary/5">Total</TableCell>
-                      <TableCell className="border-r border-primary/5" />
-                      <TableCell className="text-right px-4 font-bold text-sm text-red-500 border-r border-primary/5">
-                        {formatDisplay(totalDebit)}
-                      </TableCell>
-                      <TableCell className="text-right px-4 font-bold text-sm text-emerald-600 border-r border-primary/5">
-                        {formatDisplay(totalCredit)}
-                      </TableCell>
-                      <TableCell className="border-r border-primary/5" />
-                      <TableCell colSpan={6} className="pr-8" />
-                    </TableRow>
+                    <>
+                      {renderedRows}
+                      <TableRow className="bg-secondary/10 border-t-2 border-secondary/30 hover:bg-secondary/10 transition-none h-9 font-bold">
+                        <TableCell className="pl-8 text-[11px] text-secondary uppercase tracking-[0.2em] border-r border-secondary/20">Total</TableCell>
+                        <TableCell className="border-r border-secondary/20" />
+                        <TableCell className="text-right px-4 text-sm text-red-500 border-r border-secondary/20 whitespace-nowrap">
+                          {formatAccounting(totalDebit.toString())}
+                        </TableCell>
+                        <TableCell className="text-right px-4 text-sm text-emerald-600 border-r border-secondary/20 whitespace-nowrap">
+                          {formatAccounting(totalCredit.toString())}
+                        </TableCell>
+                        <TableCell colSpan={7} className="pr-8 bg-secondary/[0.03]" />
+                      </TableRow>
+                    </>
                   );
                 })()}
               </TableBody>
@@ -625,7 +775,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, currentS
           </div>
 
           {/* Action Buttons */}
-          <div className="p-8 flex items-center justify-end w-full gap-3">
+          <div className="px-8 py-4 flex items-center justify-end w-full gap-3">
             <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl font-bold uppercase tracking-widest text-[11px] cursor-pointer">
               Cancel
             </Button>

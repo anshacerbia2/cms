@@ -24,7 +24,7 @@ export async function seedSuppliers(prisma: PrismaClient) {
       create: { 
         ...s, 
         code: derivedCode,
-        status: 'Active'
+        status: 'ACTIVE'
       } as any,
     });
   }

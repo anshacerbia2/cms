@@ -10,7 +10,7 @@ export async function seedCustomers(prisma: PrismaClient) {
       bankName: 'BCA',
       bankAccountNumber: '1234567890',
       bankAccountName: 'PT SOLUSI MAJU UTAMA',
-      status: 'Active',
+      status: 'ACTIVE',
       notes: 'High priority client for project delta.',
     },
     {
@@ -19,7 +19,7 @@ export async function seedCustomers(prisma: PrismaClient) {
       bankName: 'Mandiri',
       bankAccountNumber: '0987654321',
       bankAccountName: 'KARYA MANDIRI SEJAHTERA',
-      status: 'Active',
+      status: 'ACTIVE',
       notes: 'Regular maintenance client.',
     },
   ];

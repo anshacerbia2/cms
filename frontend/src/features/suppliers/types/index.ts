@@ -5,7 +5,7 @@ export interface SupplierPic {
   email?: string;
   phone?: string;
   position?: string;
-  status: 'active' | 'inactive';
+  status: 'ACTIVE' | 'INACTIVE';
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -23,7 +23,7 @@ export interface Supplier {
   bankName?: string;
   bankAccountNumber?: string;
   bankAccountName?: string;
-  status: 'Active' | 'Inactive';
+  status: 'ACTIVE' | 'INACTIVE';
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -59,7 +59,7 @@ export interface CreateSupplierInput {
   bankName?: string;
   bankAccountNumber?: string;
   bankAccountName?: string;
-  status?: 'Active' | 'Inactive';
+  status?: 'ACTIVE' | 'INACTIVE';
   notes?: string;
   pics?: Partial<Omit<SupplierPic, 'id' | 'supplierId' | 'createdAt' | 'updatedAt'>>[];
 }

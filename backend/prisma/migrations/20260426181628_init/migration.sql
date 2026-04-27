@@ -1,17 +1,20 @@
 -- CreateEnum
-CREATE TYPE "UserStatus" AS ENUM ('Active', 'Inactive', 'Suspended');
+CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'SUSPENDED');
 
 -- CreateEnum
-CREATE TYPE "CustomerStatus" AS ENUM ('Active', 'Inactive');
+CREATE TYPE "CustomerStatus" AS ENUM ('ACTIVE', 'INACTIVE');
 
 -- CreateEnum
-CREATE TYPE "PicStatus" AS ENUM ('active', 'inactive');
+CREATE TYPE "PicStatus" AS ENUM ('ACTIVE', 'INACTIVE');
 
 -- CreateEnum
-CREATE TYPE "SupplierStatus" AS ENUM ('Active', 'Inactive');
+CREATE TYPE "SupplierStatus" AS ENUM ('ACTIVE', 'INACTIVE');
 
 -- CreateEnum
-CREATE TYPE "InternalAccountType" AS ENUM ('Bank', 'Credit Card');
+CREATE TYPE "FiscalStatus" AS ENUM ('OPEN', 'ONGOING', 'CLOSED');
+
+-- CreateEnum
+CREATE TYPE "InternalAccountType" AS ENUM ('BANK', 'CASH', 'OTHER');
 
 -- CreateTable
 CREATE TABLE "roles" (
@@ -57,7 +60,7 @@ CREATE TABLE "users" (
     "password" VARCHAR(255) NOT NULL,
     "phone" VARCHAR(255),
     "location" VARCHAR(255),
-    "status" "UserStatus" NOT NULL DEFAULT 'Active',
+    "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
     "role_id" BIGINT,
     "remember_token" VARCHAR(100),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -100,7 +103,7 @@ CREATE TABLE "customers" (
     "bank_name" VARCHAR(255),
     "bank_account_number" VARCHAR(255),
     "bank_account_name" VARCHAR(255),
-    "status" "CustomerStatus" NOT NULL DEFAULT 'Active',
+    "status" "CustomerStatus" NOT NULL DEFAULT 'ACTIVE',
     "notes" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -135,7 +138,7 @@ CREATE TABLE "customer_pics" (
     "email" VARCHAR(255),
     "phone" VARCHAR(255),
     "position" VARCHAR(255),
-    "status" "PicStatus" NOT NULL DEFAULT 'active',
+    "status" "PicStatus" NOT NULL DEFAULT 'ACTIVE',
     "notes" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -157,7 +160,7 @@ CREATE TABLE "suppliers" (
     "bank_name" VARCHAR(255),
     "bank_account_number" VARCHAR(255),
     "bank_account_name" VARCHAR(255),
-    "status" "SupplierStatus" NOT NULL DEFAULT 'Active',
+    "status" "SupplierStatus" NOT NULL DEFAULT 'ACTIVE',
     "notes" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -174,7 +177,7 @@ CREATE TABLE "supplier_pics" (
     "email" VARCHAR(255),
     "phone" VARCHAR(255),
     "position" VARCHAR(255),
-    "status" "PicStatus" NOT NULL DEFAULT 'active',
+    "status" "PicStatus" NOT NULL DEFAULT 'ACTIVE',
     "notes" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -215,7 +218,7 @@ CREATE TABLE "banks" (
     "id" BIGSERIAL NOT NULL,
     "bank_code" CHAR(3) NOT NULL,
     "bank_name" VARCHAR(255) NOT NULL,
-    "bank_brand" VARCHAR(50),
+    "bank_brand" VARCHAR(50) NOT NULL,
     "bank_address" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -226,10 +229,10 @@ CREATE TABLE "banks" (
 -- CreateTable
 CREATE TABLE "internal_accounts" (
     "id" BIGSERIAL NOT NULL,
-    "bank_id" BIGINT NOT NULL,
+    "bank_id" BIGINT,
     "user_id" BIGINT,
-    "type" "InternalAccountType" NOT NULL DEFAULT 'Bank',
-    "account_no" VARCHAR(50) NOT NULL,
+    "type" "InternalAccountType" NOT NULL DEFAULT 'BANK',
+    "account_no" VARCHAR(50),
     "branch" VARCHAR(255),
     "swift_code" VARCHAR(20),
     "holder_name" VARCHAR(255) NOT NULL,
@@ -240,9 +243,26 @@ CREATE TABLE "internal_accounts" (
 );
 
 -- CreateTable
+CREATE TABLE "fiscal_periods" (
+    "id" BIGSERIAL NOT NULL,
+    "internal_account_id" BIGINT NOT NULL,
+    "year" INTEGER NOT NULL,
+    "opening_balance" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "closing_balance" DECIMAL(19,4),
+    "status" "FiscalStatus" NOT NULL DEFAULT 'OPEN',
+    "is_stale" BOOLEAN NOT NULL DEFAULT false,
+    "closed_at" TIMESTAMP(3),
+    "closed_by_id" BIGINT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "fiscal_periods_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "financial_transactions" (
     "id" BIGSERIAL NOT NULL,
-    "name" VARCHAR(50) NOT NULL,
+    "internal_account_id" BIGINT,
     "col_a" TIMESTAMP(3),
     "col_b" TEXT,
     "col_c" DECIMAL(19,4) DEFAULT 0,
@@ -553,7 +573,13 @@ CREATE INDEX "products_code_idx" ON "products"("code");
 CREATE UNIQUE INDEX "banks_bank_code_key" ON "banks"("bank_code");
 
 -- CreateIndex
-CREATE INDEX "banks_bank_name_idx" ON "banks"("bank_name");
+CREATE INDEX "banks_bank_brand_idx" ON "banks"("bank_brand");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "internal_accounts_account_no_type_holder_name_branch_key" ON "internal_accounts"("account_no", "type", "holder_name", "branch");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "fiscal_periods_internal_account_id_year_key" ON "fiscal_periods"("internal_account_id", "year");
 
 -- AddForeignKey
 ALTER TABLE "role_permission" ADD CONSTRAINT "role_permission_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -593,3 +619,12 @@ ALTER TABLE "products" ADD CONSTRAINT "products_supplier_id_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "internal_accounts" ADD CONSTRAINT "internal_accounts_bank_id_fkey" FOREIGN KEY ("bank_id") REFERENCES "banks"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "fiscal_periods" ADD CONSTRAINT "fiscal_periods_internal_account_id_fkey" FOREIGN KEY ("internal_account_id") REFERENCES "internal_accounts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "fiscal_periods" ADD CONSTRAINT "fiscal_periods_closed_by_id_fkey" FOREIGN KEY ("closed_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "financial_transactions" ADD CONSTRAINT "financial_transactions_internal_account_id_fkey" FOREIGN KEY ("internal_account_id") REFERENCES "internal_accounts"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -2,16 +2,19 @@ export interface Bank {
   id: string;
   bankCode: string;
   bankName: string;
+  name?: string;
+  slug?: string;
+  description?: string;
   bankBrand?: string;
   bankAddress?: string;
 }
 
 export interface InternalAccount {
   id: string;
-  bankId: string;
+  bankId?: string;
   userId?: string;
-  type: 'Bank' | 'Credit Card';
-  accountNo: string;
+  type: 'BANK' | 'CASH' | 'OTHER';
+  accountNo?: string;
   branch?: string;
   swiftCode?: string;
   holderName: string;
@@ -28,10 +31,10 @@ export interface CreateBankInput {
 }
 
 export interface CreateInternalAccountInput {
-  bankId: string;
+  bankId?: string;
   userId?: string;
-  type: 'Bank' | 'Credit Card';
-  accountNo: string;
+  type: 'BANK' | 'CASH' | 'OTHER';
+  accountNo?: string;
   branch?: string;
   swiftCode?: string;
   holderName: string;

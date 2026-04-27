@@ -164,13 +164,13 @@ export default function CustomersPage() {
                     </TableCell>
                     <TableCell className="py-4">
                       <Badge className={
-                        customer.status === 'Active' 
+                        customer.status === 'ACTIVE' 
                           ? "bg-green-50 text-green-600 border-green-100 hover:bg-green-100" 
                           : "bg-muted text-muted-foreground border-transparent"
                         }
                         variant="outline"
                       >
-                        <div className={`w-1 h-1 rounded-full mr-1.5 ${customer.status === 'Active' ? 'bg-green-500' : 'bg-muted-foreground'}`} />
+                        <div className={`w-1 h-1 rounded-full mr-1.5 ${customer.status === 'ACTIVE' ? 'bg-green-500' : 'bg-muted-foreground'}`} />
                         <span className="text-[10px] font-extrabold uppercase tracking-widest">{customer.status}</span>
                       </Badge>
                     </TableCell>

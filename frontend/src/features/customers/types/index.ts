@@ -19,7 +19,7 @@ export interface CustomerPic {
   email?: string;
   phone?: string;
   position?: string;
-  status: 'active' | 'inactive';
+  status: 'ACTIVE' | 'INACTIVE';
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -32,7 +32,7 @@ export interface Customer {
   bankName?: string;
   bankAccountNumber?: string;
   bankAccountName?: string;
-  status: 'Active' | 'Inactive';
+  status: 'ACTIVE' | 'INACTIVE';
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -64,7 +64,7 @@ export interface CreateCustomerInput {
   bankName?: string;
   bankAccountNumber?: string;
   bankAccountName?: string;
-  status?: 'Active' | 'Inactive';
+  status?: 'ACTIVE' | 'INACTIVE';
   notes?: string;
   billingOptions?: Partial<Omit<BillingOption, 'id' | 'customerId' | 'createdAt' | 'updatedAt'>>[];
   pics?: Partial<Omit<CustomerPic, 'id' | 'customerId' | 'createdAt' | 'updatedAt'>>[];

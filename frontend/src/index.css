@@ -94,15 +94,15 @@
     --input: 214 32% 91%;
     --ring: 43 74% 49%;
 
-    /* Sidebar: Midnight Blue base */
-    --sidebar: 222 47% 6%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 43 74% 49%;
+    /* Sidebar: Clean White */
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 222 47% 10%;
+    --sidebar-primary: 222 47% 6%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 47% 12%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 222 47% 12%;
-    --sidebar-ring: 43 74% 49%;
+    --sidebar-accent: 210 20% 96%;
+    --sidebar-accent-foreground: 222 47% 10%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 222 47% 6%;
 
     --sidebar-width: 260px;
   }
@@ -149,6 +149,14 @@
 @layer utilities {
   .sidebar-gradient {
     background: linear-gradient(180deg, hsl(222 47% 6%) 0%, hsl(222 47% 4%) 100%);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 

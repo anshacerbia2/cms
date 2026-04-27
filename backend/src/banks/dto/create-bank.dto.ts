@@ -1,5 +1,6 @@
 import { IsString, IsOptional, IsNotEmpty, IsEnum, Length } from 'class-validator';
 import { InternalAccountType } from '@prisma/client';
+import { PartialType } from '@nestjs/mapped-types';
 
 export class CreateBankDto {
   @IsString()
@@ -11,14 +12,16 @@ export class CreateBankDto {
   @IsNotEmpty()
   bankName: string;
 
-  @IsOptional()
   @IsString()
-  bankBrand?: string;
+  @IsNotEmpty()
+  bankBrand: string;
 
   @IsOptional()
   @IsString()
   bankAddress?: string;
 }
+
+export class UpdateBankDto extends PartialType(CreateBankDto) {}
 
 
 export class CreateInternalAccountDto {
@@ -49,3 +52,5 @@ export class CreateInternalAccountDto {
   @IsNotEmpty()
   holderName: string;
 }
+
+export class UpdateInternalAccountDto extends PartialType(CreateInternalAccountDto) {}

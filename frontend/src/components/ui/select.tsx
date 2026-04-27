@@ -86,7 +86,8 @@ const SelectContent = React.forwardRef<
         className={cn(
           "p-1",
           position === "popper" &&
-            "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
+            "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]",
+          className?.includes("p-") && className.match(/p-\d+/)?.[0] // Allow override if p- is present
         )}
       >
         {children}

@@ -6,8 +6,14 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(val: any, currency = 'IDR') {
-  const num = Number(val);
-  if (isNaN(num) || num === 0) return "-";
+  if (val === undefined || val === null) return "-";
+  
+  // Convert to number for Intl.NumberFormat, but handle Decimal if present
+  const num = typeof val.toNumber === 'function' ? val.toNumber() : Number(val);
+  
+  if (isNaN(num)) return "-";
+  if (num === 0) return "IDR 0,00"; // Show zero explicitly for financial records
+
   return new Intl.NumberFormat('id-ID', { 
     style: 'currency', 
     currency: currency, 

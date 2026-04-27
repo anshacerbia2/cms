@@ -20,68 +20,6 @@ const formatDecimal = (val: any): string => {
 export class FinanceService {
   constructor(private prisma: PrismaService) {}
 
-  async getTransactions(query: PaginationQueryDto & { name?: string }): Promise<PaginatedResult<any>> {
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
-    const skip = (page - 1) * limit;
-    const search = query.search || '';
-    const nameFilter = query.name;
-
-    const where: any = {
-      AND: [
-        nameFilter ? { name: nameFilter } : {},
-        {
-          OR: [
-            { colB: { contains: search, mode: 'insensitive' } }, // description
-            { name: { contains: search, mode: 'insensitive' } }, // source
-          ],
-        },
-      ],
-    };
-
-    const [data, total] = await Promise.all([
-      this.prisma.financialTransaction.findMany({
-        skip,
-        take: limit,
-        where,
-        orderBy: [{ id: 'asc' }],
-      }),
-      this.prisma.financialTransaction.count({ where }),
-    ]);
-
-    return {
-      data: data.map(t => ({
-        ...t,
-        id: Number(t.id),
-        colC: formatDecimal(t.colC),
-        colD: formatDecimal(t.colD),
-        colE: formatDecimal(t.colE),
-      })),
-      meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
-    };
-  }
-
-  async getAllTransactions(name?: string): Promise<any[]> {
-    const where: any = {};
-    if (name && name !== 'undefined' && name !== 'null') {
-      where.name = { equals: name };
-    }
-    
-    console.log('Prisma Query Where:', JSON.stringify(where));
-    
-    const data = await this.prisma.financialTransaction.findMany({
-      where,
-      orderBy: [{ id: 'asc' }],
-    });
-
-    return data.map(t => ({
-      ...t,
-      id: Number(t.id),
-      colC: formatDecimal(t.colC),
-      colD: formatDecimal(t.colD),
-      colE: formatDecimal(t.colE),
-    }));
-  }
 
   async getSales(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
@@ -399,19 +337,4 @@ export class FinanceService {
     };
   }
 
-  async createBulkTransactions(data: any[]) {
-    return this.prisma.financialTransaction.createMany({
-      data: data.map(item => ({
-        name: item.name,
-        colA: item.colA ? new Date(item.colA) : null,
-        colB: item.colB || "",
-        colC: item.colC || 0,
-        colD: item.colD || 0,
-        colE: item.colE || 0,
-        colF: item.colF || "",
-        colG: item.colG || "",
-        colH: item.colH || "",
-      })),
-    });
-  }
 }

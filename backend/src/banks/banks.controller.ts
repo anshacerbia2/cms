@@ -10,7 +10,7 @@ import {
   Query 
 } from '@nestjs/common';
 import { BanksService } from './banks.service';
-import { CreateBankDto, CreateInternalAccountDto } from './dto/create-bank.dto';
+import { CreateBankDto, CreateInternalAccountDto, UpdateInternalAccountDto } from './dto/create-bank.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
@@ -57,7 +57,7 @@ export class BanksController {
 
   @Patch('internal-accounts/:id')
   @Permissions('internal-accounts.update')
-  updateInternalAccount(@Param('id') id: string, @Body() dto: any) {
+  updateInternalAccount(@Param('id') id: string, @Body() dto: UpdateInternalAccountDto) {
     return this.banksService.updateInternalAccount(+id, dto);
   }
 
@@ -65,5 +65,13 @@ export class BanksController {
   @Permissions('internal-accounts.delete')
   removeInternalAccount(@Param('id') id: string) {
     return this.banksService.removeInternalAccount(+id);
+  }
+
+  // --- FISCAL PERIODS ---
+
+  @Get('fiscal-periods')
+  @Permissions('internal-accounts.index')
+  findAllFiscalPeriods(@Query() query: PaginationQueryDto) {
+    return this.banksService.findAllFiscalPeriods(query);
   }
 }

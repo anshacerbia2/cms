@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { CreditCard, Landmark, Hash, User, MapPin, Globe } from "lucide-react";
+import { Landmark, Hash, User, MapPin, Globe } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -30,9 +30,9 @@ import {
 import { InternalAccount, CreateInternalAccountInput, Bank } from "../types";
 
 const formSchema = z.object({
-  bankId: z.string().min(1, "Bank selection is required"),
-  type: z.enum(["Bank", "Credit Card"]),
-  accountNo: z.string().min(1, "Account number is required"),
+  bankId: z.string().optional(),
+  type: z.enum(["BANK", "CASH", "OTHER"]),
+  accountNo: z.string().optional(),
   branch: z.string().optional(),
   swiftCode: z.string().optional(),
   holderName: z.string().min(1, "Account holder name is required"),
@@ -45,6 +45,7 @@ interface InternalAccountDialogProps {
   banks: Bank[];
   account?: InternalAccount | null;
   isSubmitting?: boolean;
+  isLoadingBanks?: boolean;
 }
 
 export function InternalAccountDialog({
@@ -54,12 +55,13 @@ export function InternalAccountDialog({
   banks,
   account,
   isSubmitting,
+  isLoadingBanks,
 }: InternalAccountDialogProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       bankId: "",
-      type: "Bank",
+      type: "BANK",
       accountNo: "",
       branch: "",
       swiftCode: "",
@@ -70,9 +72,9 @@ export function InternalAccountDialog({
   useEffect(() => {
     if (account && open) {
       form.reset({
-        bankId: account.bankId,
+        bankId: account.bankId ? String(account.bankId) : "",
         type: account.type,
-        accountNo: account.accountNo,
+        accountNo: account.accountNo || "",
         branch: account.branch || "",
         swiftCode: account.swiftCode || "",
         holderName: account.holderName,
@@ -80,7 +82,7 @@ export function InternalAccountDialog({
     } else if (open) {
       form.reset({
         bankId: "",
-        type: "Bank",
+        type: "BANK",
         accountNo: "",
         branch: "",
         swiftCode: "",
@@ -95,7 +97,7 @@ export function InternalAccountDialog({
         <div className="bg-primary/5 px-8 pt-8 pb-6 border-b border-primary/5">
           <DialogHeader>
             <DialogTitle className="text-2xl font-extrabold text-primary tracking-tight uppercase flex items-center gap-3">
-              <CreditCard className="w-8 h-8" strokeWidth={2.5} />
+              <Landmark className="w-8 h-8" strokeWidth={2.5} />
               {account ? "Modify Corporate Account" : "Register Company Account"}
             </DialogTitle>
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em] mt-2 opacity-70">
@@ -110,22 +112,42 @@ export function InternalAccountDialog({
               control={form.control}
               name="bankId"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className={form.watch("type") === "CASH" || form.watch("type") === "OTHER" ? "opacity-50 pointer-events-none" : ""}>
                   <FormLabel className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                     <Landmark size={12} className="text-secondary" /> Banking Institution
                   </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value}
+                    disabled={form.watch("type") === "CASH" || form.watch("type") === "OTHER"}
+                  >
                     <FormControl>
                       <SelectTrigger className="h-11 rounded-xl bg-muted/20 border-primary/5 font-bold text-xs uppercase">
-                        <SelectValue placeholder="Select Parent Bank" />
+                        <SelectValue placeholder={form.watch("type") === "CASH" || form.watch("type") === "OTHER" ? "N/A FOR CASH/OTHER" : "Select Parent Bank"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="rounded-xl border-primary/5 shadow-premium">
-                      {banks.map((bank) => (
-                        <SelectItem key={bank.id} value={bank.id} className="font-bold uppercase text-[10px]">
-                          {bank.bankName} ({bank.bankCode})
-                        </SelectItem>
-                      ))}
+                      {isLoadingBanks ? (
+                        <div className="p-1 space-y-1">
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="px-2 py-1.5">
+                              <span className="font-bold uppercase text-[10px] bg-primary/10 animate-pulse text-transparent select-none rounded-md block w-full">
+                                LOADING BANK MASTER REFERENCE...
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : banks.length === 0 ? (
+                        <div className="p-4 text-center">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-40 italic">No banks available</p>
+                        </div>
+                      ) : (
+                        banks.map((bank) => (
+                          <SelectItem key={bank.id} value={String(bank.id)} className="font-bold uppercase text-[10px]">
+                            {bank.name || bank.bankName} {bank.bankCode ? `(${bank.bankCode})` : ""}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage className="text-[10px] uppercase font-bold text-destructive" />
@@ -149,8 +171,9 @@ export function InternalAccountDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="rounded-xl border-primary/5 shadow-premium">
-                        <SelectItem value="Bank" className="font-bold uppercase text-[10px]">CASH/SAVINGS</SelectItem>
-                        <SelectItem value="Credit Card" className="font-bold uppercase text-[10px]">LIABILITY/CARD</SelectItem>
+                        <SelectItem value="BANK" className="font-bold uppercase text-[10px]">BANK ACCOUNT</SelectItem>
+                        <SelectItem value="CASH" className="font-bold uppercase text-[10px]">CASH/PETTY CASH</SelectItem>
+                        <SelectItem value="OTHER" className="font-bold uppercase text-[10px]">OTHER/EQUITY</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormItem>

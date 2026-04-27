@@ -30,7 +30,7 @@ export function PaginationControls({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 rounded-lg border-primary/5 hover:bg-primary/5 text-primary"
+          className="h-8 w-8 rounded-lg border-primary/5 hover:bg-primary/5 text-primary cursor-pointer shadow-none"
           onClick={() => onPageChange(1)}
           disabled={meta.page === 1 || isFetching}
         >
@@ -39,7 +39,7 @@ export function PaginationControls({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 rounded-lg border-primary/5 hover:bg-primary/5 text-primary"
+          className="h-8 w-8 rounded-lg border-primary/5 hover:bg-primary/5 text-primary cursor-pointer shadow-none"
           onClick={() => onPageChange(meta.page - 1)}
           disabled={meta.page === 1 || isFetching}
         >
@@ -73,10 +73,10 @@ export function PaginationControls({
                 <Button
                   key={p}
                   variant={p === page ? "default" : "outline"}
-                  className={`h-8 w-8 rounded-lg text-[10px] font-black transition-all ${
+                  className={`h-8 w-8 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
                     p === page 
-                      ? "bg-primary text-white shadow-premium scale-110 z-10" 
-                      : "border-primary/5 hover:bg-primary/5 text-muted-foreground font-medium"
+                      ? "bg-primary text-white z-10 shadow-none" 
+                      : "border-primary/5 hover:bg-primary/5 text-muted-foreground font-medium shadow-none"
                   }`}
                   onClick={() => onPageChange(p)}
                   disabled={isFetching}
@@ -91,7 +91,7 @@ export function PaginationControls({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 rounded-lg border-primary/5 hover:bg-primary/5 text-primary"
+          className="h-8 w-8 rounded-lg border-primary/5 hover:bg-primary/5 text-primary cursor-pointer shadow-none"
           onClick={() => onPageChange(meta.page + 1)}
           disabled={meta.page === meta.lastPage || isFetching}
         >
@@ -100,7 +100,7 @@ export function PaginationControls({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 rounded-lg border-primary/5 hover:bg-primary/5 text-primary"
+          className="h-8 w-8 rounded-lg border-primary/5 hover:bg-primary/5 text-primary cursor-pointer shadow-none"
           onClick={() => onPageChange(meta.lastPage)}
           disabled={meta.page === meta.lastPage || isFetching}
         >

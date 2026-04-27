@@ -173,22 +173,35 @@ export function ExcelColumnFilter({
           <DropdownMenuSeparator className="bg-primary/5" />
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-1">
+          <div className="flex justify-between items-center pt-1">
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-8 px-3 text-[11px] font-bold text-primary hover:bg-primary/5"
-              onClick={() => setIsOpen(false)}
+              className="h-8 px-2 text-[10px] font-black uppercase text-red-500 hover:text-red-600 hover:bg-red-50"
+              onClick={() => {
+                onFilterChange(null);
+                setIsOpen(false);
+              }}
             >
-              Cancel
+              Clear
             </Button>
-            <Button 
-              size="sm" 
-              className="h-8 px-5 text-[11px] font-bold bg-primary hover:bg-primary/90 text-white rounded-lg shadow-lg shadow-primary/20"
-              onClick={handleApply}
-            >
-              OK
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 px-3 text-[11px] font-bold text-primary hover:bg-primary/5"
+                onClick={() => setIsOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                size="sm" 
+                className="h-8 px-5 text-[11px] font-bold bg-primary hover:bg-primary/90 text-white rounded-lg shadow-lg shadow-primary/20"
+                onClick={handleApply}
+              >
+                OK
+              </Button>
+            </div>
           </div>
         </div>
       </DropdownMenuContent>

@@ -47,14 +47,44 @@ export class UsersService {
   async findByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
-      include: { role: { include: { permissions: { include: { permission: true } } } } },
+      include: { 
+        role: { 
+          include: { 
+            permissions: { include: { permission: true } },
+            menus: { 
+              include: { 
+                menu: { 
+                  include: { 
+                    permission: true 
+                  } 
+                } 
+              } 
+            } 
+          } 
+        } 
+      },
     });
   }
 
   async findById(id: number) {
     return this.prisma.user.findUnique({
       where: { id: BigInt(id) },
-      include: { role: { include: { permissions: { include: { permission: true } } } } },
+      include: { 
+        role: { 
+          include: { 
+            permissions: { include: { permission: true } },
+            menus: { 
+              include: { 
+                menu: { 
+                  include: { 
+                    permission: true 
+                  } 
+                } 
+              } 
+            } 
+          } 
+        } 
+      },
     });
   }
 }

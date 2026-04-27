@@ -12,6 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Landmark,
+  Database,
+  ClipboardList,
 } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
 import { useAuthStore } from "@/store/authStore";
@@ -19,41 +21,34 @@ import { useNavigate, NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
-const navigation = [
-  { group: "Overview", items: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  ]},
-  { group: "Master Data", items: [
-    { title: "Customers", url: "/customers", icon: Users },
-    { title: "Suppliers", url: "/suppliers", icon: Truck },
-    { title: "Products", url: "/products", icon: Package },
-    { title: "Bank Settings", url: "/banks", icon: Landmark },
-    { title: "Staff", url: "/users", icon: UserCog },
-  ]},
-  { group: "Finance", items: [
-    { title: "Invoices", url: "/invoices", icon: FileText },
-    { title: "Receive Vouchers", url: "/rvs", icon: CreditCard },
-    { title: "Payment Vouchers", url: "/pvs", icon: Wallet },
-    { title: "Bank Mutation", url: "/finance/bank-mutation", icon: Landmark },
-    { title: "Financial Reports", url: "/finance", icon: Landmark },
-  ]},
-  { group: "Operations", items: [
-    { title: "Projects", url: "/projects", icon: Briefcase },
-  ]},
-];
+const iconMap: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  Users,
+  Package,
+  Truck,
+  UserCog,
+  Briefcase,
+  FileText,
+  CreditCard,
+  Wallet,
+  Landmark,
+  Database,
+  ClipboardList,
+};
 
-function SidebarNavItem({ icon: Icon, label, to }: { icon: LucideIcon; label: string; to: string }) {
+function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIcon; label: string; to: string; end?: boolean }) {
   const { isCollapsed } = useSidebar();
 
   return (
     <NavLink
       to={to}
+      end={end}
       className={({ isActive }) =>
         cn(
           "flex items-center rounded-xl transition-all duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] group overflow-hidden relative w-full text-left select-none py-3",
           isActive
-            ? "bg-white/10 text-white shadow-sm"
-            : "text-white/40 hover:text-white hover:bg-white/5",
+            ? "bg-slate-100 text-primary"
+            : "text-muted-foreground hover:text-primary hover:bg-slate-100/50",
         )
       }
     >
@@ -64,7 +59,7 @@ function SidebarNavItem({ icon: Icon, label, to }: { icon: LucideIcon; label: st
               size={20}
               className={cn(
                 "transition-all duration-300",
-                isActive ? "opacity-100" : "opacity-50 group-hover:opacity-100",
+                isActive ? "opacity-100" : "opacity-60 group-hover:opacity-100",
               )}
             />
           </div>
@@ -74,14 +69,14 @@ function SidebarNavItem({ icon: Icon, label, to }: { icon: LucideIcon; label: st
               isCollapsed
                 ? "opacity-0 translate-x-4 invisible"
                 : "opacity-100 translate-x-0 visible ml-0",
-              isActive ? "text-white" : "",
+              isActive ? "text-primary" : "",
             )}
           >
             {label}
           </span>
           {/* Active Indicator */}
           {isActive && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-sidebar-primary rounded-r-full group-hover:h-8 transition-all duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)]" />
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full group-hover:h-8 transition-all duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)]" />
           )}
         </>
       )}
@@ -92,12 +87,14 @@ function SidebarNavItem({ icon: Icon, label, to }: { icon: LucideIcon; label: st
 export function AppSidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const navigate = useNavigate();
-  const { logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
+
+  console.log('Sidebar User Menus:', user?.menus);
 
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 h-screen sidebar-gradient flex flex-col py-8 z-50 shadow-premium transition-all duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] select-none will-change-[width,transform]",
+        "fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col py-8 z-50 transition-all duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] select-none will-change-[width,transform]",
         isCollapsed
           ? "w-[240px] -translate-x-full lg:translate-x-0 lg:w-20"
           : "w-[240px] translate-x-0 lg:w-[240px] xl:w-[280px]",
@@ -108,7 +105,7 @@ export function AppSidebar() {
         {/* Brand Logo */}
         <div
           className={cn(
-            "mb-14 flex items-center transition-all duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] select-none px-4",
+            "mb-10 flex items-center transition-all duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] select-none px-4",
             isCollapsed ? "justify-center" : "justify-start",
           )}
         >
@@ -120,13 +117,13 @@ export function AppSidebar() {
                 <img 
                   src="/images/logo-icon.png" 
                   alt="Icon" 
-                  className="h-[calc(var(--spacing)*10)] w-auto animate-in fade-in zoom-in-75 duration-500"
+                  className="h-[calc(var(--spacing)*10)] w-auto animate-in fade-in zoom-in-75 duration-500 brightness-0"
                 />
               ) : (
                 <img 
                   src="/images/logo.png" 
                   alt="Logo" 
-                  className="h-[calc(var(--spacing)*10)] w-auto object-contain animate-in fade-in slide-in-from-left-4 duration-500"
+                  className="h-[calc(var(--spacing)*10)] w-auto object-contain animate-in fade-in slide-in-from-left-4 duration-500 brightness-0"
                 />
               )}
             </div>
@@ -134,12 +131,12 @@ export function AppSidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-6 px-4 overflow-y-auto overflow-x-hidden">
-          {navigation.map((section) => (
+        <nav className="flex-1 space-y-6 px-4 overflow-y-auto overflow-x-hidden no-scrollbar">
+          {(user?.menus || []).map((section) => (
             <div key={section.group}>
               <div
                 className={cn(
-                  "text-[9px] font-extrabold text-white/20 uppercase tracking-[0.25em] mb-3 transition-opacity duration-300 px-3 whitespace-nowrap",
+                  "text-[9px] font-extrabold text-primary/50 uppercase tracking-[0.25em] mb-3 transition-opacity duration-300 px-3 whitespace-nowrap",
                   isCollapsed ? "opacity-0" : "opacity-100",
                 )}
               >
@@ -148,8 +145,8 @@ export function AppSidebar() {
               <div className="space-y-1.5">
                 {section.items.map((item) => (
                   <SidebarNavItem
-                    key={item.url}
-                    icon={item.icon}
+                    key={`${section.group}-${item.title}`}
+                    icon={iconMap[item.icon] || Landmark}
                     label={item.title}
                     to={item.url}
                   />
@@ -163,10 +160,10 @@ export function AppSidebar() {
         <div className="px-4 mt-4">
           <button
             onClick={() => { logout(); navigate("/login"); }}
-            className="flex items-center rounded-xl w-full py-3 text-white/30 hover:text-white hover:bg-white/5 transition-all duration-300 group"
+            className="flex items-center rounded-xl w-full py-3 text-muted-foreground hover:text-primary hover:bg-muted/50 transition-all duration-300 group"
           >
             <div className="w-12 flex-shrink-0 flex justify-center items-center">
-              <LogOut size={20} className="opacity-50 group-hover:opacity-100 transition-opacity" />
+              <LogOut size={20} className="opacity-40 group-hover:opacity-100 transition-opacity" />
             </div>
             <span
               className={cn(
@@ -184,7 +181,7 @@ export function AppSidebar() {
       <button
         onClick={toggleSidebar}
         className={cn(
-          "absolute -right-3.5 top-1/2 -translate-y-1/2 w-8 h-8 bg-sidebar rounded-full flex items-center justify-center text-white shadow-premium border border-white/10 transition-all duration-300 z-[60] group cursor-pointer",
+          "absolute -right-3.5 top-1/2 -translate-y-1/2 w-8 h-8 bg-sidebar rounded-full flex items-center justify-center text-primary shadow-premium border border-sidebar-border transition-all duration-300 z-[60] group cursor-pointer",
           isCollapsed ? "max-lg:hidden" : "flex",
         )}
       >

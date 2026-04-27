@@ -60,21 +60,22 @@ model User {
   password        String     @db.VarChar(255)
   phone           String?    @db.VarChar(255)
   location        String?    @db.VarChar(255)
-  status          UserStatus @default(Active)
+  status          UserStatus @default(ACTIVE)
   roleId          BigInt?    @map("role_id")
   rememberToken   String?    @map("remember_token") @db.VarChar(100)
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
   role            Role?      @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  fiscalPeriods   FiscalPeriod[] @relation("ClosedBy")
 
   @@map("users")
 }
 
 enum UserStatus {
-  Active
-  Inactive
-  Suspended
+  ACTIVE
+  INACTIVE
+  SUSPENDED
 }
 
 model Menu {
@@ -119,7 +120,7 @@ model Customer {
   bankName          String?         @map("bank_name") @db.VarChar(255)
   bankAccountNumber String?         @map("bank_account_number") @db.VarChar(255)
   bankAccountName   String?         @map("bank_account_name") @db.VarChar(255)
-  status            CustomerStatus  @default(Active)
+  status            CustomerStatus  @default(ACTIVE)
   notes             String?         @db.Text
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
@@ -134,8 +135,8 @@ model Customer {
 }
 
 enum CustomerStatus {
-  Active
-  Inactive
+  ACTIVE
+  INACTIVE
 }
 
 model BillingOption {
@@ -165,7 +166,7 @@ model CustomerPic {
   email      String?        @db.VarChar(255)
   phone      String?        @db.VarChar(255)
   position   String?        @db.VarChar(255)
-  status     PicStatus      @default(active)
+  status     PicStatus      @default(ACTIVE)
   notes      String?        @db.Text
   createdAt  DateTime       @default(now()) @map("created_at")
   updatedAt  DateTime       @updatedAt @map("updated_at")
@@ -180,8 +181,8 @@ model CustomerPic {
 }
 
 enum PicStatus {
-  active
-  inactive
+  ACTIVE
+  INACTIVE
 }
 
 // --- MASTER DATA: SUPPLIERS ---
@@ -198,7 +199,7 @@ model Supplier {
   bankName          String?         @map("bank_name") @db.VarChar(255)
   bankAccountNumber String?         @map("bank_account_number") @db.VarChar(255)
   bankAccountName   String?         @map("bank_account_name") @db.VarChar(255)
-  status            SupplierStatus  @default(Active)
+  status            SupplierStatus  @default(ACTIVE)
   notes             String?         @db.Text
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
@@ -213,8 +214,8 @@ model Supplier {
 }
 
 enum SupplierStatus {
-  Active
-  Inactive
+  ACTIVE
+  INACTIVE
 }
 
 model SupplierPic {
@@ -224,7 +225,7 @@ model SupplierPic {
   email      String?        @db.VarChar(255)
   phone      String?        @db.VarChar(255)
   position   String?        @db.VarChar(255)
-  status     PicStatus      @default(active)
+  status     PicStatus      @default(ACTIVE)
   notes      String?        @db.Text
   createdAt  DateTime       @default(now()) @map("created_at")
   updatedAt  DateTime       @updatedAt @map("updated_at")
@@ -278,60 +279,92 @@ model Bank {
   id          BigInt            @id @default(autoincrement())
   bankCode    String            @unique @map("bank_code") @db.Char(3)
   bankName    String            @map("bank_name") @db.VarChar(255)
-  bankBrand   String?           @map("bank_brand") @db.VarChar(50)
+  bankBrand   String            @map("bank_brand") @db.VarChar(50)
   bankAddress String?           @map("bank_address") @db.Text
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
 
   internalAccounts InternalAccount[]
 
-  @@index([bankName])
+  @@index([bankBrand])
   @@map("banks")
 }
 
 model InternalAccount {
   id          BigInt               @id @default(autoincrement())
-  bankId      BigInt               @map("bank_id")
+  bankId      BigInt?              @map("bank_id")
   userId      BigInt?              @map("user_id") // Links to owner/responsible user
-  type        InternalAccountType  @default(Bank)
-  accountNo   String               @map("account_no") @db.VarChar(50)
+  type        InternalAccountType  @default(BANK)
+  accountNo   String?              @map("account_no") @db.VarChar(50)
   branch      String?              @db.VarChar(255)
   swiftCode   String?              @map("swift_code") @db.VarChar(20)
   holderName  String               @map("holder_name") @db.VarChar(255)
   createdAt   DateTime             @default(now()) @map("created_at")
   updatedAt   DateTime             @updatedAt @map("updated_at")
 
-  bank        Bank                 @relation(fields: [bankId], references: [id], onDelete: Restrict)
+  bank        Bank?                @relation(fields: [bankId], references: [id], onDelete: Restrict)
+  fiscalPeriods   FiscalPeriod[]
+  transactions    FinancialTransaction[]
 
+  @@unique([accountNo, type, holderName, branch])
   @@map("internal_accounts")
 }
 
+model FiscalPeriod {
+  id                BigInt          @id @default(autoincrement())
+  internalAccountId BigInt          @map("internal_account_id")
+  year              Int
+  openingBalance    Decimal         @default(0) @db.Decimal(19, 4) @map("opening_balance")
+  closingBalance    Decimal?        @db.Decimal(19, 4) @map("closing_balance") // Audited Snapshot
+  status            FiscalStatus    @default(OPEN)
+  isStale           Boolean         @default(false) @map("is_stale")
+  closedAt          DateTime?       @map("closed_at")
+  closedById        BigInt?         @map("closed_by_id")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  internalAccount   InternalAccount @relation(fields: [internalAccountId], references: [id], onDelete: Cascade)
+  closedBy          User?           @relation("ClosedBy", fields: [closedById], references: [id])
+
+  @@unique([internalAccountId, year])
+  @@map("fiscal_periods")
+}
+
+enum FiscalStatus {
+  OPEN
+  ONGOING
+  CLOSED
+}
+
 enum InternalAccountType {
-  Bank
-  CreditCard @map("Credit Card")
+  BANK
+  CASH
+  OTHER
 }
 
 
 // --- FINANCIAL DATA: CONSOLIDATED BANK LEDGER ---
 
 model FinancialTransaction {
-  id          BigInt   @id @default(autoincrement())
-  name        String   @db.VarChar(50) // e.g., "BCA", "MANDIRI", "CASH_IDR"
-  colA        DateTime? @map("col_a")
-  colB        String?   @map("col_b") @db.Text
-  colC        Decimal?  @default(0) @map("col_c") @db.Decimal(19, 4)
-  colD        Decimal?  @default(0) @map("col_d") @db.Decimal(19, 4)
-  colE        Decimal?  @default(0) @map("col_e") @db.Decimal(19, 4)
-  colF        String?   @map("col_f") @db.Text
-  colG        String?   @map("col_g") @db.Text
-  colH        String?   @map("col_h") @db.Text
-  colI        String?   @map("col_i") @db.Text
-  colJ        String?   @map("col_j") @db.Text
-  colK        String?   @map("col_k") @db.Text
-  colL        String?   @map("col_l") @db.Text
-  colM        String?   @map("col_m") @db.Text
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id                BigInt   @id @default(autoincrement())
+  internalAccountId BigInt?  @map("internal_account_id")
+  colA              DateTime? @map("col_a")
+  colB              String?   @map("col_b") @db.Text
+  colC              Decimal?  @default(0) @map("col_c") @db.Decimal(19, 4)
+  colD              Decimal?  @default(0) @map("col_d") @db.Decimal(19, 4)
+  colE              Decimal?  @default(0) @map("col_e") @db.Decimal(19, 4)
+  colF              String?   @map("col_f") @db.Text
+  colG              String?   @map("col_g") @db.Text
+  colH              String?   @map("col_h") @db.Text
+  colI              String?   @map("col_i") @db.Text
+  colJ              String?   @map("col_j") @db.Text
+  colK              String?   @map("col_k") @db.Text
+  colL              String?   @map("col_l") @db.Text
+  colM              String?   @map("col_m") @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  internalAccount   InternalAccount? @relation(fields: [internalAccountId], references: [id])
 
   @@map("financial_transactions")
 }

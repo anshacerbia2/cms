@@ -8,6 +8,7 @@ import { SuppliersModule } from './suppliers/suppliers.module';
 import { ProductsModule } from './products/products.module';
 import { BanksModule } from './banks/banks.module';
 import { FinanceModule } from './finance/finance.module';
+import { BankMutationModule } from './finance/bank-mutation/bank-mutation.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { FinanceModule } from './finance/finance.module';
     ProductsModule,
     BanksModule,
     FinanceModule,
+    BankMutationModule,
   ],
   controllers: [],
   providers: [],

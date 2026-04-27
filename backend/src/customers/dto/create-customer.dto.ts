@@ -2,8 +2,8 @@ import { IsString, IsNotEmpty, IsOptional, IsEnum, IsArray, ValidateNested } fro
 import { Type } from 'class-transformer';
 
 export enum CustomerStatus {
-  Active = 'Active',
-  Inactive = 'Inactive',
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
 }
 
 export class CreateBillingOptionDto {
@@ -52,9 +52,9 @@ export class CreateCustomerPicDto {
   @IsOptional()
   position?: string;
 
-  @IsEnum(['active', 'inactive'])
+  @IsEnum(['ACTIVE', 'INACTIVE'])
   @IsOptional()
-  status?: 'active' | 'inactive';
+  status?: 'ACTIVE' | 'INACTIVE';
 
   @IsString()
   @IsOptional()

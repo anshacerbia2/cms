@@ -46,13 +46,13 @@ const picSchema = z.object({
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   phone: z.string().optional(),
   position: z.string().optional(),
-  status: z.enum(["active", "inactive"]).default("active"),
+  status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
   notes: z.string().optional(),
 });
 
 const formSchema = z.object({
   name: z.string().min(1, "Customer name is required"),
-  status: z.enum(["Active", "Inactive"]),
+  status: z.enum(["ACTIVE", "INACTIVE"]),
   bankName: z.string().optional(),
   bankAccountNumber: z.string().optional(),
   bankAccountName: z.string().optional(),
@@ -80,7 +80,7 @@ export function CustomerDialog({
     resolver: zodResolver(formSchema) as any,
     defaultValues: {
       name: "",
-      status: "Active",
+      status: "ACTIVE",
       bankName: "",
       bankAccountNumber: "",
       bankAccountName: "",
@@ -123,14 +123,14 @@ export function CustomerDialog({
           email: p.email || "",
           phone: p.phone || "",
           position: p.position || "",
-          status: (p.status?.toLowerCase() === "active" ? "active" : "inactive") as "active" | "inactive",
+          status: (p.status?.toUpperCase() === "ACTIVE" ? "ACTIVE" : "INACTIVE") as "ACTIVE" | "INACTIVE",
           notes: p.notes || "",
         })),
       });
     } else if (open) {
       form.reset({
         name: "",
-        status: "Active",
+        status: "ACTIVE",
         bankName: "",
         bankAccountNumber: "",
         bankAccountName: "",
@@ -213,8 +213,8 @@ export function CustomerDialog({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rounded-xl border-primary/5 shadow-premium bg-white">
-                              <SelectItem value="Active" className="font-bold uppercase tracking-tight text-xs py-3">Active</SelectItem>
-                              <SelectItem value="Inactive" className="font-bold uppercase tracking-tight text-xs py-3">Inactive</SelectItem>
+                              <SelectItem value="ACTIVE" className="font-bold uppercase tracking-tight text-xs py-3">ACTIVE</SelectItem>
+                              <SelectItem value="INACTIVE" className="font-bold uppercase tracking-tight text-xs py-3">INACTIVE</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -376,7 +376,7 @@ export function CustomerDialog({
                       type="button" 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => appendPic({ name: "", status: "active" })}
+                      onClick={() => appendPic({ name: "", status: "ACTIVE" })}
                       className="bg-primary/5 border-primary/10 hover:bg-primary/10 text-primary font-bold rounded-xl h-9 px-4 gap-2"
                     >
                       <Plus size={14} strokeWidth={3} />

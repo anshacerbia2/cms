@@ -6,7 +6,7 @@ import { seedAuth } from './auth.seeder';
 import { seedCustomers } from './customers.seeder';
 import { seedSuppliers } from './suppliers.seeder';
 import { seedProducts } from './products.seeder';
-import { seedBanks } from './banks.seeder';
+import { seedBankMutation, seedBanks } from './banks.seeder';
 import { seedFinance } from './finance.seeder';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -27,6 +27,7 @@ async function main() {
     
     // Bank Master & Internal Accounts
     await seedBanks(prisma);
+    await seedBankMutation(prisma);
 
     // Comprehensive Financial Data (from Excel)
     await seedFinance(prisma);

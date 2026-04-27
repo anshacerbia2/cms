@@ -26,6 +26,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { useFinance } from "../hooks/useFinance";
+import { useBanks } from "@/features/banks/hooks/useBanks";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { ExcelColumnFilter } from "../components/ExcelColumnFilter";
 import { Landmark, TrendingUp, Users, Truck, Package, PieChart, BarChart3, Repeat, Filter, ArrowUpRight, Search } from "lucide-react";
@@ -72,7 +73,8 @@ export default function FinancePage() {
   const [assetsPage, setAssetsPage] = useState(1);
   const [iaPage, setIaPage] = useState(1);
 
-  const [selectedBank, setSelectedBank] = useState<string | null>(null);
+  const [selectedBankId, setSelectedBankId] = useState<string | null>(null);
+  const [selectedBankLabel, setSelectedBankLabel] = useState<string | null>(null);
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [bankPage, setBankPage] = useState(1);
 
@@ -89,6 +91,10 @@ export default function FinancePage() {
     getBalanceSheet, 
     getInterAccountTransfers 
   } = useFinance();
+ 
+  // Fetch accounts for mapping labels to IDs
+  const { internalAccountsQuery } = useBanks({ accounts: { limit: 100, enabled: activeTab === 'bs' || isBankModalOpen } });
+  const internalAccounts = useMemo(() => internalAccountsQuery.data?.data || [], [internalAccountsQuery.data?.data]);
 
   // --- LAZY FETCHING (Only fetch if tab is active) ---
   const { data: allSales, isLoading: salesLoading } = getAllSales({ enabled: activeTab === 'sales' });
@@ -106,8 +112,8 @@ export default function FinancePage() {
   const { data: bankTxsResponse, isLoading: bankTxsLoading } = getTransactions({ 
     page: bankPage, 
     limit: 10, 
-    name: selectedBank?.toUpperCase().replace(/\s+/g, '_') 
-  }, { enabled: isBankModalOpen });
+    accountId: selectedBankId || undefined
+  }, { enabled: isBankModalOpen && !!selectedBankId });
 
   const { data: salesLookup } = getSales({ page: 1, limit: 100 }, { enabled: activeTab === 'pl' });
 
@@ -1938,9 +1944,17 @@ export default function FinancePage() {
                         className={`border-primary/5 transition-colors ${isSum ? 'bg-primary/5' : ''} ${canDrillDown ? 'hover:bg-secondary/5 cursor-pointer group' : 'hover:bg-primary/5'}`}
                         onClick={() => {
                           if (canDrillDown) {
-                            setSelectedBank(label);
-                            setBankPage(1);
-                            setIsBankModalOpen(true);
+                            const account = internalAccounts.find((a: any) => 
+                              (a.bank?.bankBrand || a.holderName || "").toUpperCase() === label.toUpperCase()
+                            );
+                            if (account) {
+                              setSelectedBankId(account.id);
+                              setSelectedBankLabel(label);
+                              setBankPage(1);
+                              setIsBankModalOpen(true);
+                            } else {
+                              console.warn(`Could not find internal account for label: ${label}`);
+                            }
                           }
                         }}
                       >
@@ -2127,8 +2141,8 @@ export default function FinancePage() {
                      <Landmark size={24} className="group-hover:scale-110 transition-transform" />
                   </div>
                   <div>
-                     <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{selectedBank} LEDGER</DialogTitle>
-                     <p className="text-[11px] font-bold text-primary uppercase tracking-[0.2em] mt-1">Audit Drill-down: Transactional Fidelity for <span className="text-secondary">{selectedBank}</span></p>
+                     <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-primary">{selectedBankLabel} LEDGER</DialogTitle>
+                     <p className="text-[11px] font-bold text-primary uppercase tracking-[0.2em] mt-1">Audit Drill-down: Transactional Fidelity for <span className="text-secondary">{selectedBankLabel}</span></p>
                   </div>
                </div>
                <Badge variant="outline" className="h-8 px-4 rounded-full bg-secondary/10 text-secondary border-secondary/20 font-black uppercase tracking-widest text-[10px]">REAL-TIME RECONCILIATION</Badge>
@@ -2161,7 +2175,7 @@ export default function FinancePage() {
                         </TableCell>
                       </TableRow>
                     ) : (bankTxsResponse?.data || []).length === 0 ? (
-                      <TableRow><TableCell colSpan={8} className="h-48 text-center text-primary font-bold uppercase text-[10px]">No transaction history found for {selectedBank}</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="h-48 text-center text-primary font-bold uppercase text-[10px]">No transaction history found for {selectedBankLabel}</TableCell></TableRow>
                     ) : (bankTxsResponse?.data || []).map((row: any) => (
                       <TableRow key={row.id} className="border-primary/5 hover:bg-primary/5 transition-colors whitespace-nowrap">
                         <TableCell className="pl-8 py-4 font-bold text-[12px] text-primary">{formatDate(row.date)}</TableCell>

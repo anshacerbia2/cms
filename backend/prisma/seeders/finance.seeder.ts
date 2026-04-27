@@ -1,10 +1,16 @@
 import { PrismaClient } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import * as path from 'path';
+import { 
+  excelDateToJSDate, 
+  cleanCurrency, 
+  cleanString, 
+  isRowEmpty,
+  formatExcelDate
+} from './utils/excel';
 
 export async function seedFinance(prisma: PrismaClient) {
-  // Clear existing data to prevent duplicates
-  await prisma.financialTransaction.deleteMany();
+  // Clear existing data to prevent duplicates (Bank Transaction handled in seedBankMutation)
   await prisma.salesRecord.deleteMany();
   await prisma.accountReceivable.deleteMany();
   await prisma.accountPayable.deleteMany();
@@ -15,84 +21,11 @@ export async function seedFinance(prisma: PrismaClient) {
   await prisma.balanceSheetItem.deleteMany();
   await prisma.interAccountTransfer.deleteMany();
 
-  function excelDateToJSDate(excelDate: any) {
-    if (!excelDate) return null;
-    if (excelDate instanceof Date) return excelDate;
-    if (typeof excelDate === 'number') {
-      const date = new Date((excelDate - 25569) * 86400 * 1000);
-      return date;
-    }
-    const d = new Date(excelDate);
-    return isNaN(d.getTime()) ? null : d;
-  }
-
-  function cleanCurrency(val: any): number {
-    if (val === undefined || val === null || val === '') return 0;
-    if (typeof val === 'number') return val;
-    const cleaned = String(val).replace(/[Rp.\s]/g, '').replace(/,/g, '.');
-    const num = parseFloat(cleaned);
-    return isNaN(num) ? 0 : num;
-  }
-
-  function cleanString(val: any): string {
-    if (val === undefined || val === null) return '';
-    return String(val).trim();
-  }
-
-  function formatExcelDate(val: any): string {
-    if (val === undefined || val === null || val === '') return '';
-    // If it's a number that looks like an Excel serial date
-    if (typeof val === 'number' && val > 30000 && val < 60000) {
-      const date = new Date((val - 25569) * 86400 * 1000);
-      return date.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }).replace(' ', '-');
-    }
-    return String(val).trim();
-  }
-
-  function isRowEmpty(row: any[]): boolean {
-    if (!row || row.length === 0) return true;
-    return row.every(cell => cell === null || cell === undefined || cell === '');
-  }
-
   const filePath = path.join(process.cwd(), 'prisma', 'seed-data', 'financial-report.xlsx');
   const workbook = XLSX.readFile(filePath);
 
   // --- 1. BANK SHEETS ---
-  const bankSheets = ['BCA', 'Mandiri', 'BRI', 'BTN', 'Cash IDR', 'Non CB'];
-  for (const sheetName of bankSheets) {
-    const sheet = workbook.Sheets[sheetName];
-    if (!sheet) continue;
-
-    const data: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    const txs = [];
-
-    for (let i = 4; i < data.length; i++) {
-      const row = data[i];
-      if (isRowEmpty(row)) break;
-
-      txs.push({
-        name: sheetName.trim().toUpperCase().replace(/\s+/g, '_'),
-        colA: excelDateToJSDate(row[0]),
-        colB: cleanString(row[1]),
-        colC: cleanCurrency(row[2]),
-        colD: cleanCurrency(row[3]),
-        colE: cleanCurrency(row[4]),
-        colF: cleanString(row[5]),
-        colG: cleanString(row[6]),
-        colH: cleanString(row[7]),
-        colI: cleanString(row[8]),
-        colJ: cleanString(row[9]),
-        colK: cleanString(row[10]),
-        colL: cleanString(row[11]),
-        colM: cleanString(row[12]),
-      });
-    }
-
-    if (txs.length > 0) {
-      await prisma.financialTransaction.createMany({ data: txs });
-      console.log(`✅ Seeded ${txs.length} transactions from ${sheetName}`);
-    }
-  }
+  // MIGRATED: Logic moved to seedBankMutation in banks.seeder.ts
 
   // --- 2. SALES SHEET ---
   const salesSheet = workbook.Sheets['Sales'];

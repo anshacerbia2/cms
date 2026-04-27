@@ -1,12 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateBankDto, CreateInternalAccountDto } from './dto/create-bank.dto';
-import { PartialType } from '@nestjs/mapped-types';
+import { CreateBankDto, CreateInternalAccountDto, UpdateBankDto, UpdateInternalAccountDto } from './dto/create-bank.dto';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 
-class UpdateBankDto extends PartialType(CreateBankDto) {}
-class UpdateInternalAccountDto extends PartialType(CreateInternalAccountDto) {}
+const formatDecimal = (val: any): string => {
+  if (val == null) return "0.0000";
+  if (typeof val.toFixed === 'function') {
+    try {
+      const formatted = val.toFixed(4);
+      if (formatted !== 'NaN') return formatted;
+    } catch (e) {}
+  }
+  const num = Number(val.toString());
+  if (isNaN(num)) return "0.0000";
+  return num.toFixed(4);
+};
 
 @Injectable()
 export class BanksService {
@@ -139,5 +148,54 @@ export class BanksService {
     return this.prisma.internalAccount.delete({
       where: { id: BigInt(id) }
     });
+  }
+
+  // --- FISCAL PERIODS ---
+
+  async findAllFiscalPeriods(query: any) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const search = query.search || '';
+
+    const where: any = search ? {
+      OR: [
+        { internalAccount: { holderName: { contains: search, mode: 'insensitive' as const } } },
+        { internalAccount: { accountNo: { contains: search, mode: 'insensitive' as const } } },
+      ],
+    } : {};
+
+    const [data, total] = await Promise.all([
+      this.prisma.fiscalPeriod.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          internalAccount: {
+            include: {
+              bank: true,
+            }
+          },
+        },
+        orderBy: [{ year: 'desc' }, { internalAccount: { holderName: 'asc' } }],
+      }),
+      this.prisma.fiscalPeriod.count({ where }),
+    ]);
+
+    return {
+      data: data.map(p => ({
+        ...p,
+        id: p.id.toString(),
+        internalAccountId: p.internalAccountId.toString(),
+        openingBalance: formatDecimal(p.openingBalance),
+        closingBalance: p.closingBalance ? formatDecimal(p.closingBalance) : null,
+      })),
+      meta: {
+        total,
+        page,
+        limit,
+        lastPage: Math.ceil(total / limit),
+      },
+    };
   }
 }

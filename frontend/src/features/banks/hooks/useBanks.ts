@@ -21,6 +21,15 @@ const BanksService = {
     return response.data;
   },
 
+  updateBank: async ({ id, ...data }: { id: string } & Partial<CreateBankInput>): Promise<Bank> => {
+    const response = await api.patch(`/banks/${id}`, data);
+    return response.data;
+  },
+
+  removeBank: async (id: string): Promise<void> => {
+    await api.delete(`/banks/${id}`);
+  },
+
   // Internal Accounts
   findAllInternalAccounts: async (params: PaginationParams = {}): Promise<PaginatedResponse<InternalAccount>> => {
     const response = await api.get("/banks/internal-accounts", { params });
@@ -40,22 +49,45 @@ const BanksService = {
   removeInternalAccount: async (id: string): Promise<void> => {
     await api.delete(`/banks/internal-accounts/${id}`);
   },
+  // Fiscal Periods
+  findAllFiscalPeriods: async (params: PaginationParams = {}): Promise<PaginatedResponse<any>> => {
+    const response = await api.get("/banks/fiscal-periods", { params });
+    return response.data;
+  },
 };
 
 export function useBanks(params: {
-  banks?: PaginationParams;
-  accounts?: PaginationParams;
+  banks?: PaginationParams & { enabled?: boolean };
+  accounts?: PaginationParams & { enabled?: boolean };
+  fiscalPeriods?: PaginationParams & { enabled?: boolean };
 } = {}) {
   const queryClient = useQueryClient();
 
   const banksQuery = useQuery({
     queryKey: ["banks", params.banks],
-    queryFn: () => BanksService.findAllBanks(params.banks),
+    queryFn: () => {
+      const { enabled, ...apiParams } = params.banks || {};
+      return BanksService.findAllBanks(apiParams);
+    },
+    enabled: Boolean(params.banks?.enabled),
   });
 
   const internalAccountsQuery = useQuery({
     queryKey: ["internal-accounts", params.accounts],
-    queryFn: () => BanksService.findAllInternalAccounts(params.accounts),
+    queryFn: () => {
+      const { enabled, ...apiParams } = params.accounts || {};
+      return BanksService.findAllInternalAccounts(apiParams);
+    },
+    enabled: Boolean(params.accounts?.enabled),
+  });
+
+  const fiscalPeriodsQuery = useQuery({
+    queryKey: ["fiscal-periods", params.fiscalPeriods],
+    queryFn: () => {
+      const { enabled, ...apiParams } = params.fiscalPeriods || {};
+      return BanksService.findAllFiscalPeriods(apiParams);
+    },
+    enabled: Boolean(params.fiscalPeriods?.enabled),
   });
 
   const createBank = useMutation({
@@ -86,10 +118,27 @@ export function useBanks(params: {
     },
   });
 
+  const updateBank = useMutation({
+    mutationFn: BanksService.updateBank,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["banks"] });
+    },
+  });
+
+  const deleteBank = useMutation({
+    mutationFn: BanksService.removeBank,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["banks"] });
+    },
+  });
+
   return {
     banksQuery,
     internalAccountsQuery,
+    fiscalPeriodsQuery,
     createBank,
+    updateBank,
+    deleteBank,
     createInternalAccount,
     updateInternalAccount,
     deleteInternalAccount,

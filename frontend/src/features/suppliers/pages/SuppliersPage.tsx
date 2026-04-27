@@ -164,13 +164,13 @@ export default function SuppliersPage() {
                     </TableCell>
                     <TableCell className="py-4">
                       <Badge className={
-                        supplier.status === 'Active' 
+                        supplier.status === 'ACTIVE' 
                           ? "bg-green-50 text-green-600 border-green-100/50 hover:bg-green-100" 
                           : "bg-muted text-muted-foreground border-transparent"
                         }
                         variant="outline"
                       >
-                        <div className={`w-1 h-1 rounded-full mr-1.5 ${supplier.status === 'Active' ? 'bg-green-500' : 'bg-muted-foreground'}`} />
+                        <div className={`w-1 h-1 rounded-full mr-1.5 ${supplier.status === 'ACTIVE' ? 'bg-green-500' : 'bg-muted-foreground'}`} />
                         <span className="text-[10px] font-extrabold uppercase tracking-widest">{supplier.status}</span>
                       </Badge>
                     </TableCell>

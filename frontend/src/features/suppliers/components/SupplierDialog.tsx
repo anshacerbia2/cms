@@ -36,7 +36,7 @@ const picSchema = z.object({
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   phone: z.string().optional(),
   position: z.string().optional(),
-  status: z.enum(["active", "inactive"]).default("active"),
+  status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
   notes: z.string().optional(),
 });
 
@@ -50,7 +50,7 @@ const formSchema = z.object({
   bankName: z.string().optional(),
   bankAccountNumber: z.string().optional(),
   bankAccountName: z.string().optional(),
-  status: z.enum(["Active", "Inactive"]),
+  status: z.enum(["ACTIVE", "INACTIVE"]),
   notes: z.string().optional(),
   pics: z.array(picSchema).optional(),
 });
@@ -82,7 +82,7 @@ export function SupplierDialog({
       bankName: "",
       bankAccountNumber: "",
       bankAccountName: "",
-      status: "Active",
+      status: "ACTIVE",
       notes: "",
       pics: [],
     },
@@ -112,7 +112,7 @@ export function SupplierDialog({
           email: p.email || "",
           phone: p.phone || "",
           position: p.position || "",
-          status: (p.status?.toLowerCase() === "active" ? "active" : "inactive") as "active" | "inactive",
+          status: (p.status?.toUpperCase() === "ACTIVE" ? "ACTIVE" : "INACTIVE") as "ACTIVE" | "INACTIVE",
           notes: p.notes || "",
         })),
       });
@@ -127,7 +127,7 @@ export function SupplierDialog({
         bankName: "",
         bankAccountNumber: "",
         bankAccountName: "",
-        status: "Active",
+        status: "ACTIVE",
         notes: "",
         pics: [],
       });
@@ -249,8 +249,8 @@ export function SupplierDialog({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rounded-xl border-primary/5 shadow-premium">
-                              <SelectItem value="Active" className="font-bold text-green-600">ACTIVE</SelectItem>
-                              <SelectItem value="Inactive" className="font-bold text-muted-foreground">INACTIVE</SelectItem>
+                              <SelectItem value="ACTIVE" className="font-bold text-green-600">ACTIVE</SelectItem>
+                              <SelectItem value="INACTIVE" className="font-bold text-muted-foreground">INACTIVE</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormItem>
@@ -352,7 +352,7 @@ export function SupplierDialog({
                       type="button" 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => appendPic({ name: "", status: "active" })}
+                      onClick={() => appendPic({ name: "", status: "ACTIVE" })}
                       className="bg-primary/5 border-primary/10 hover:bg-primary/10 text-primary font-bold rounded-xl h-9 px-4 gap-2"
                     >
                       <Plus size={14} strokeWidth={3} />

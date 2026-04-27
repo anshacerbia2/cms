@@ -6,6 +6,16 @@ interface User {
   name: string;
   email: string;
   role: string;
+  permissions: string[];
+  menus: {
+    group: string;
+    icon: string;
+    items: {
+      title: string;
+      icon: string;
+      url: string;
+    }[];
+  }[];
 }
 
 interface AuthState {

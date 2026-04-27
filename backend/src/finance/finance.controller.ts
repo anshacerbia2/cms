@@ -10,24 +10,7 @@ import { PaginationQueryDto } from '../common/dto/pagination.dto';
 export class FinanceController {
   constructor(private readonly financeService: FinanceService) {}
 
-  @Get('transactions')
-  @Permissions('finance.index')
-  async getTransactions(@Query() query: PaginationQueryDto) {
-    const result = await this.financeService.getTransactions(query);
-    if (result.data && result.data.length > 0) {
-      const first = result.data[0];
-      const last = result.data[result.data.length - 1];
-      console.log(`🛠️ [DEBUG API] Order Trace: First Date=${first.colA}, ID=${first.id} | Last Date=${last.colA}, ID=${last.id} | Result Count=${result.data.length}`);
-    }
-    return result;
-  }
 
-  @Get('transactions/all')
-  @Permissions('finance.index')
-  async getAllTransactions(@Query('name') name?: string) {
-    console.log('Fetching transactions for bank:', name);
-    return this.financeService.getAllTransactions(name);
-  }
 
   @Get('sales')
   @Permissions('finance.index')
@@ -103,10 +86,5 @@ export class FinanceController {
   @Permissions('finance.index')
   async getInterAccountTransfers(@Query() query: PaginationQueryDto) {
     return this.financeService.getInterAccountTransfers(query);
-  }
-  @Post('transactions/bulk')
-  @Permissions('finance.index')
-  async createBulkTransactions(@Body() data: any[]) {
-    return this.financeService.createBulkTransactions(data);
   }
 }

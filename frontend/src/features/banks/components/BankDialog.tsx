@@ -1,7 +1,11 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Landmark, Hash, Building2, MapPin } from "lucide-react";
+import { toast } from "sonner";
+import { useBanks } from "../hooks/useBanks";
+import { Bank } from "../types";
 import {
   Dialog,
   DialogContent,
@@ -31,16 +35,16 @@ const formSchema = z.object({
 interface BankDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: z.infer<typeof formSchema>) => void;
-  isSubmitting?: boolean;
+  bank?: Bank | null;
 }
 
 export function BankDialog({
   open,
   onOpenChange,
-  onSubmit,
-  isSubmitting,
+  bank,
 }: BankDialogProps) {
+  const { createBank, updateBank } = useBanks();
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -50,6 +54,43 @@ export function BankDialog({
       bankAddress: "",
     },
   });
+
+  useEffect(() => {
+    if (open) {
+      if (bank) {
+        form.reset({
+          bankCode: bank.bankCode || "",
+          bankName: bank.bankName || "",
+          bankBrand: bank.bankBrand || "",
+          bankAddress: bank.bankAddress || "",
+        });
+      } else {
+        form.reset({
+          bankCode: "",
+          bankName: "",
+          bankBrand: "",
+          bankAddress: "",
+        });
+      }
+    }
+  }, [bank, form, open]);
+
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    try {
+      if (bank) {
+        await updateBank.mutateAsync({ id: bank.id, ...data });
+        toast.success("Bank reference updated successfully");
+      } else {
+        await createBank.mutateAsync(data);
+        toast.success("Bank reference registered successfully");
+      }
+      onOpenChange(false);
+    } catch (error) {
+      toast.error("An error occurred. Please try again.");
+    }
+  };
+
+  const isSubmitting = createBank.isPending || updateBank.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

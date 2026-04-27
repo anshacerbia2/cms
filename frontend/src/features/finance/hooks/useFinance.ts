@@ -1,11 +1,12 @@
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 
 export interface PaginationParams {
   page?: number;
   limit?: number;
   search?: string;
-  name?: string;
+  accountId?: string;
+  year?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -19,22 +20,24 @@ export interface PaginatedResponse<T> {
 }
 
 export function useFinance() {
+  const queryClient = useQueryClient();
+
   const getTransactions = (params: PaginationParams, options?: any) => 
     useQuery<PaginatedResponse<any>>({
       queryKey: ["finance", "transactions", params],
       queryFn: async () => {
-        const { data } = await api.get("/finance/transactions", { params });
+        const { data } = await api.get("/bank-mutation/transactions", { params });
         return data;
       },
       placeholderData: keepPreviousData,
       ...options,
     });
 
-  const getAllTransactions = (name?: string, options?: any) =>
+  const getAllTransactions = (accountId?: string, year?: string, options?: any) =>
     useQuery<any[]>({
-      queryKey: ["finance", "transactions", "all", name],
+      queryKey: ["finance", "transactions", "all", accountId, year],
       queryFn: async () => {
-        const { data } = await api.get("/finance/transactions/all", { params: { name } });
+        const { data } = await api.get("/bank-mutation/transactions/all", { params: { accountId, year } });
         return Array.isArray(data) ? data : (data as any).data || [];
       },
       ...options,
@@ -83,6 +86,13 @@ export function useFinance() {
       placeholderData: keepPreviousData,
       ...options,
     });
+
+  const createBulkTransactions = () => {
+    return async (payload: { data: any[]; accountId: string; year: number; startingBalance?: string }) => {
+      const response = await api.post("/bank-mutation/transactions/bulk", payload);
+      return response.data;
+    };
+  };
 
   const getPL = (params: PaginationParams, options?: any) =>
     useQuery<PaginatedResponse<any>>({
@@ -168,6 +178,48 @@ export function useFinance() {
       ...options,
     });
 
+  const getAnchorBalance = (accountId: string, year: number, options?: any) =>
+    useQuery<{ balance: number | null, status: 'OPEN' | 'ONGOING' | 'CLOSED', isStale?: boolean, message?: string, referredYear?: number, canEdit?: boolean } | null>({
+      queryKey: ["finance", "bank-mutation", "anchor-balance", accountId, year],
+      queryFn: async () => {
+        const { data } = await api.get(`/bank-mutation/anchor-balance/${accountId}/${year}`);
+        return data;
+      },
+      enabled: !!accountId && !!year,
+      ...options,
+    });
+
+
+  const getFiscalPeriods = (accountId: string, year?: number, options?: any) =>
+    useQuery<any | null>({
+      queryKey: ["finance", "bank-mutation", "fiscal-periods", accountId, year],
+      queryFn: async () => {
+        const { data } = await api.get("/bank-mutation/fiscal-periods", { 
+          params: { accountId, year } 
+        });
+        return data;
+      },
+      enabled: !!accountId,
+      ...options,
+    });
+
+
+  const recalculateLedger = () => {
+    return async (payload: { accountId: string; year: number }) => {
+      const { data } = await api.post("/bank-mutation/recalculate", payload);
+      queryClient.invalidateQueries({ queryKey: ["finance", "bank-mutation"] });
+      return data;
+    };
+  };
+
+  const closeYear = () => {
+    return async (payload: { accountId: string; year: number; userId: string }) => {
+      const { data } = await api.post("/bank-mutation/close-year", payload);
+      queryClient.invalidateQueries({ queryKey: ["finance", "bank-mutation"] });
+      return data;
+    };
+  };
+
   return {
     getTransactions,
     getAllTransactions,
@@ -183,6 +235,11 @@ export function useFinance() {
     getPLSummary,
     getBalanceSheet,
     getInterAccountTransfers,
+    getFiscalPeriods,
+    getAnchorBalance,
+    createBulkTransactions,
+    recalculateLedger,
+    closeYear,
   };
 
 }

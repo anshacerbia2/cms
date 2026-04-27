@@ -2,8 +2,8 @@ import { IsString, IsOptional, IsEmail, IsEnum, IsArray, ValidateNested } from '
 import { Type } from 'class-transformer';
 
 export enum SupplierStatus {
-  Active = 'Active',
-  Inactive = 'Inactive',
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
 }
 
 class CreateSupplierPicDto {
@@ -27,7 +27,7 @@ class CreateSupplierPicDto {
   notes?: string;
 
   @IsOptional()
-  status?: 'active' | 'inactive';
+  status?: 'ACTIVE' | 'INACTIVE';
 }
 
 export class CreateSupplierDto {

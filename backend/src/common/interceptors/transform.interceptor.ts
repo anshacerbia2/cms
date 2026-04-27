@@ -4,6 +4,7 @@ import {
   ExecutionContext,
   CallHandler,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
