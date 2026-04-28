@@ -8,12 +8,12 @@ import {
   isRowEmpty,
   formatExcelDate
 } from './utils/excel';
+import { seedAccountPayable } from './account-payable.seeder';
 
 export async function seedFinance(prisma: PrismaClient) {
   // Clear existing data to prevent duplicates (Bank Transaction handled in seedBankMutation)
   await prisma.salesRecord.deleteMany();
   await prisma.accountReceivable.deleteMany();
-  await prisma.accountPayable.deleteMany();
   await prisma.assetDepreciation.deleteMany();
   await prisma.profitLossSales.deleteMany();
   await prisma.profitLossCost.deleteMany();
@@ -23,6 +23,9 @@ export async function seedFinance(prisma: PrismaClient) {
 
   const filePath = path.join(process.cwd(), 'prisma', 'seed-data', 'financial-report.xlsx');
   const workbook = XLSX.readFile(filePath);
+
+  // Modularized seeders
+  await seedAccountPayable(prisma);
 
   // --- 1. BANK SHEETS ---
   // MIGRATED: Logic moved to seedBankMutation in banks.seeder.ts
@@ -171,43 +174,8 @@ export async function seedFinance(prisma: PrismaClient) {
     console.log(`✅ Seeded ${ar.length} records for AR Module`);
   }
 
-  // --- 5. AP SHEET ---
-  const apSheet = workbook.Sheets['AP ']; // Trailing space!
-  if (apSheet) {
-    const rows: any[][] = XLSX.utils.sheet_to_json(apSheet, { header: 1 });
-    const ap = [];
-    for (let i = 3; i < rows.length; i++) {
-      const row = rows[i];
-      if (isRowEmpty(row)) break;
-      
-      ap.push({
-        colA: cleanString(row[0]),
-        colB: parseInt(String(row[1] || '0')),
-        colC: cleanString(row[2]),
-        colD: cleanString(row[3]),
-        colE: cleanCurrency(row[4]),
-        colF: cleanCurrency(row[5]),
-        colG: cleanCurrency(row[6]),
-        colH: cleanString(row[7]),
-        colI: cleanString(row[8]),
-        colK: cleanCurrency(row[10]),
-        colL: cleanCurrency(row[11]),
-        colM: cleanCurrency(row[12]),
-        colN: cleanCurrency(row[13]),
-        colO: cleanCurrency(row[14]),
-        colP: cleanCurrency(row[15]),
-        colQ: cleanCurrency(row[16]),
-        colR: cleanCurrency(row[17]),
-        colT: cleanCurrency(row[19]),
-        colU: cleanCurrency(row[20]),
-        colV: cleanString(row[21]),
-        colW: cleanCurrency(row[22]),
-        colX: cleanCurrency(row[23]),
-      });
-    }
-    await prisma.accountPayable.createMany({ data: ap });
-    console.log(`✅ Seeded ${ap.length} records for AP Module`);
-  }
+  // AP module seeding has been moved to ap.seeder.ts
+
 
   // --- 6. ASSETS SHEET ---
   const assetSheet = workbook.Sheets['Deprec 2021'];

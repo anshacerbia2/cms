@@ -446,10 +446,10 @@ model AccountPayable {
   colC            String?  @db.Text
   colD            String?  @db.Text
   colE            Decimal? @db.Decimal(19, 4)
-  colF            Decimal? @db.Decimal(19, 4)
-  colG            Decimal? @db.Decimal(19, 4)
+  colF            String?  @db.Text
+  colG            String?  @db.Text
   colH            String?  @db.Text
-  colI            String?  @db.Text
+  colI            Decimal? @db.Decimal(19, 4)
   colJ            Decimal? @db.Decimal(19, 4)
   colK            Decimal? @db.Decimal(19, 4)
   colL            Decimal? @db.Decimal(19, 4)
@@ -458,15 +458,10 @@ model AccountPayable {
   colO            Decimal? @db.Decimal(19, 4)
   colP            Decimal? @db.Decimal(19, 4)
   colQ            Decimal? @db.Decimal(19, 4)
-  colR            Decimal? @db.Decimal(19, 4)
+  colR            String?  @db.Text
   colS            Decimal? @db.Decimal(19, 4)
   colT            Decimal? @db.Decimal(19, 4)
   colU            Decimal? @db.Decimal(19, 4)
-  colV            String?  @db.Text
-  colW            Decimal? @db.Decimal(19, 4)
-  colX            Decimal? @db.Decimal(19, 4)
-  colY            Decimal? @db.Decimal(19, 4)
-  colZ            Decimal? @db.Decimal(19, 4)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 

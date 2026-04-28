@@ -3,19 +3,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../common/interfaces/paginated-result.interface';
+import { formatDecimal } from '../../common/utils/format.utils';
 
-const formatDecimal = (val: any): string => {
-  if (val == null) return "0.0000";
-  if (typeof val.toFixed === 'function') {
-    try {
-      const formatted = val.toFixed(4);
-      if (formatted !== 'NaN') return formatted;
-    } catch (e) {}
-  }
-  const num = Number(val.toString());
-  if (isNaN(num)) return "0.0000";
-  return num.toFixed(4);
-};
 
 @Injectable()
 export class BankMutationService {

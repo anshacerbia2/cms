@@ -17,6 +17,7 @@ export function formatCurrency(val: any, currency = 'IDR') {
   return new Intl.NumberFormat('id-ID', { 
     style: 'currency',
     currency: currency,
+    currencyDisplay: 'code',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(num).replace(/\u00A0/, ' '); // Ensure space after currency symbol

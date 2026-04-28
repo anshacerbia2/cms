@@ -38,18 +38,8 @@ export class FinanceController {
     return this.financeService.getAllAR();
   }
 
-  @Get('ap')
-  @Permissions('finance.index')
-  async getAP(@Query() query: PaginationQueryDto) {
-    return this.financeService.getAP(query);
-  }
+  // AP endpoints have been moved to AccountPayableController (finance/ap)
 
-  @Get('ap/all')
-  @Permissions('finance.index')
-  async getAllAP() {
-    console.log('--- DEBUG: Hit getAllAP endpoint ---');
-    return this.financeService.getAllAP();
-  }
 
   @Get('assets')
   @Permissions('finance.index')

@@ -1,6 +1,13 @@
 import { useState, useMemo } from "react";
-import { ArrowDownRight, Search } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowDownRight, Search, FilterX } from 'lucide-react';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,12 +15,14 @@ import { useFinance } from "../hooks/useFinance";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { ExcelColumnFilter } from "../components/ExcelColumnFilter";
 import { formatCurrency } from "@/lib/utils";
+import { Decimal } from "decimal.js";
 
 export default function AccountPayablePage() {
   const [apPage, setApPage] = useState(1);
   const [apSearch, setApSearch] = useState("");
   const [apSort, setApSort] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
   const [apFilters, setApFilters] = useState<Record<string, Set<string> | null>>({});
+  const apLimit = 10;
 
   const { getAllAP } = useFinance();
   const { data: allAP, isLoading: apLoading } = getAllAP();
@@ -22,61 +31,142 @@ export default function AccountPayablePage() {
     if (!allAP) return [];
     let result = [...allAP];
 
+    // 1. Column Filters
     Object.entries(apFilters).forEach(([key, allowedValues]) => {
       if (allowedValues && allowedValues.size > 0) {
         result = result.filter(item => allowedValues.has(String(item[key] || "")));
       }
     });
 
+    // 2. Global Search
     if (apSearch) {
       const term = apSearch.toLowerCase();
       result = result.filter(item => 
-        String(item.colC || "").toLowerCase().includes(term) ||
-        String(item.colD || "").toLowerCase().includes(term)
+        String(item.colC || "").toLowerCase().includes(term) || // Vendor
+        String(item.colD || "").toLowerCase().includes(term) || // Keterangan
+        String(item.colA || "").toLowerCase().includes(term)    // Payable No
       );
     }
 
+    // 3. Sorting
     if (apSort) {
       const { key, direction } = apSort;
       result.sort((a, b) => {
         const valA = a[key], valB = b[key];
-        if (!isNaN(Number(valA)) && !isNaN(Number(valB))) return direction === 'asc' ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
-        return direction === 'asc' ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+        const stringCols = ['colA', 'colC', 'colD', 'colF', 'colG', 'colH', 'colR'];
+        if (!isNaN(Number(valA)) && !isNaN(Number(valB)) && !stringCols.includes(key)) {
+           return direction === 'asc' ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+        }
+        return direction === 'asc' 
+          ? String(valA || "").localeCompare(String(valB || "")) 
+          : String(valB || "").localeCompare(String(valA || ""));
       });
     }
     return result;
   }, [allAP, apFilters, apSearch, apSort]);
 
-  const apAccumulatedTotals = useMemo(() => {
-    const subset = filteredAndSortedAP.slice(0, apPage * 10);
-    return subset.reduce((acc, curr) => {
-      const idr = Number(curr.colT) || 0;
-      const usd = Number(curr.colU) || 0;
-      const rate = Number(curr.colG) || 1;
+  // Helper for Cascading (Excel-like) Filters
+  const getCascadingData = (excludeKey: string) => {
+    if (!allAP) return [];
+    let result = [...allAP];
+    
+    // 1. Apply Global Search first
+    if (apSearch) {
+      const term = apSearch.toLowerCase();
+      result = result.filter(item => 
+        String(item.colC || "").toLowerCase().includes(term) ||
+        String(item.colD || "").toLowerCase().includes(term) ||
+        String(item.colA || "").toLowerCase().includes(term)
+      );
+    }
+    
+    // 2. Apply all OTHER column filters
+    Object.entries(apFilters).forEach(([key, values]) => {
+      if (key !== excludeKey && values && values.size > 0) {
+        result = result.filter(item => values.has(String(item[key as keyof typeof item] || "")));
+      }
+    });
+    
+    return result;
+  };
+
+  const paginatedAP = useMemo(() => {
+    const start = (apPage - 1) * apLimit;
+    return filteredAndSortedAP.slice(start, start + apLimit);
+  }, [filteredAndSortedAP, apPage, apLimit]);
+
+  const apMeta = { 
+    total: filteredAndSortedAP.length, 
+    page: apPage, 
+    limit: apLimit, 
+    lastPage: Math.ceil(filteredAndSortedAP.length / apLimit) || 1 
+  };
+
+  const subtotalTotals = useMemo(() => {
+    return paginatedAP.reduce((acc, curr) => {
       return {
-        colE: acc.colE + (Number(curr.colE) || 0),
-        colF: acc.colF + (Number(curr.colF) || 0),
-        colG: acc.colG + (Number(curr.colG) || 0),
-        colK: acc.colK + (Number(curr.colK) || 0),
-        colL: acc.colL + (Number(curr.colL) || 0),
-        colM: acc.colM + (Number(curr.colM) || 0),
-        colN: acc.colN + (Number(curr.colN) || 0),
-        colO: acc.colO + (Number(curr.colO) || 0),
-        colP: acc.colP + (Number(curr.colP) || 0),
-        colQ: acc.colQ + (Number(curr.colQ) || 0),
-        colR: acc.colR + (Number(curr.colR) || 0),
-        colT: acc.colT + idr,
-        colU: acc.colU + usd,
-        colW: acc.colW + (Number(curr.colW) || 0),
-        colX: acc.colX + (Number(curr.colX) || 0),
-        convertedInitial: acc.convertedInitial + (Number(curr.colE) || 0) + ((Number(curr.colF) || 0) * (Number(curr.colG) || 0)),
-        convertedOutstanding: acc.convertedOutstanding + idr + (usd * rate)
+        colE: acc.colE.plus(new Decimal(curr.colE || 0)),
+        colI: acc.colI.plus(new Decimal(curr.colI || 0)),
+        colJ: acc.colJ.plus(new Decimal(curr.colJ || 0)),
+        colK: acc.colK.plus(new Decimal(curr.colK || 0)),
+        colL: acc.colL.plus(new Decimal(curr.colL || 0)),
+        colM: acc.colM.plus(new Decimal(curr.colM || 0)),
+        colN: acc.colN.plus(new Decimal(curr.colN || 0)),
+        colO: acc.colO.plus(new Decimal(curr.colO || 0)),
+        colP: acc.colP.plus(new Decimal(curr.colP || 0)),
+        colQ: acc.colQ.plus(new Decimal(curr.colQ || 0)),
+        colS: acc.colS.plus(new Decimal(curr.colS || 0)),
       };
-    }, { colE:0, colF:0, colG:0, colK:0, colL:0, colM:0, colN:0, colO:0, colP:0, colQ:0, colR:0, colT:0, colU:0, colW:0, colX:0, convertedInitial: 0, convertedOutstanding: 0 });
-  }, [filteredAndSortedAP, apPage]);
+    }, { 
+      colE: new Decimal(0), colI: new Decimal(0), colJ: new Decimal(0), 
+      colK: new Decimal(0), colL: new Decimal(0), colM: new Decimal(0), 
+      colN: new Decimal(0), colO: new Decimal(0), colP: new Decimal(0),
+      colQ: new Decimal(0), colS: new Decimal(0)
+    });
+  }, [paginatedAP]);
+
+  const grandTotals = useMemo(() => {
+    return filteredAndSortedAP.reduce((acc, curr) => {
+      return {
+        colE: acc.colE.plus(new Decimal(curr.colE || 0)),
+        colI: acc.colI.plus(new Decimal(curr.colI || 0)),
+        colJ: acc.colJ.plus(new Decimal(curr.colJ || 0)),
+        colK: acc.colK.plus(new Decimal(curr.colK || 0)),
+        colL: acc.colL.plus(new Decimal(curr.colL || 0)),
+        colM: acc.colM.plus(new Decimal(curr.colM || 0)),
+        colN: acc.colN.plus(new Decimal(curr.colN || 0)),
+        colO: acc.colO.plus(new Decimal(curr.colO || 0)),
+        colP: acc.colP.plus(new Decimal(curr.colP || 0)),
+        colQ: acc.colQ.plus(new Decimal(curr.colQ || 0)),
+        colS: acc.colS.plus(new Decimal(curr.colS || 0)),
+      };
+    }, { 
+      colE: new Decimal(0), colI: new Decimal(0), colJ: new Decimal(0), 
+      colK: new Decimal(0), colL: new Decimal(0), colM: new Decimal(0), 
+      colN: new Decimal(0), colO: new Decimal(0), colP: new Decimal(0),
+      colQ: new Decimal(0), colS: new Decimal(0)
+    });
+  }, [filteredAndSortedAP]);
+
+  const handleClearFilters = () => {
+    setApSearch("");
+    setApFilters({});
+    setApPage(1);
+  };
+
+  const isAnyFilterActive = apSearch !== "" || Object.keys(apFilters).length > 0;
+
+  // Helper to get color based on value
+  const getValueColor = (val: any) => {
+    const num = Number(val || 0);
+    if (num > 0) return "text-emerald-600";
+    if (num < 0) return "text-rose-600";
+    return "text-primary/60";
+  };
 
   return (
     <div className="w-full space-y-8 animate-in fade-in duration-700 pb-10">
+      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-3 mb-1">
@@ -85,249 +175,210 @@ export default function AccountPayablePage() {
               Account Payable
             </h1>
           </div>
-          <p className="text-muted-foreground text-xs sm:text-sm font-medium">Manage and track your account payables.</p>
+          <p className="text-muted-foreground text-sm font-medium ml-8 sm:ml-11">Modular management and tracking for payables.</p>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center gap-4 bg-white/50 p-4 rounded-[2rem] border border-primary/5 backdrop-blur-sm shadow-sm w-full">
-        <div className="flex flex-col md:flex-row items-center gap-3 flex-1 w-full">
-          <div className="relative flex-1 w-full md:max-w-md group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/30 group-focus-within:text-primary transition-colors" size={18} />
-            <Input 
-              placeholder="Universal AP Search (Vendor, Keterangan)..." 
-              value={apSearch}
-              onChange={(e) => { setApSearch(e.target.value); setApPage(1); }}
-              className="pl-12 h-11 bg-white border-primary/5 rounded-xl shadow-sm text-[12px] font-bold text-primary transition-all focus-visible:ring-primary/20"
-            />
-          </div>
-          {Object.keys(apFilters).some(k => (apFilters[k]?.size || 0) > 0) && (
-            <Button variant="ghost" size="sm" onClick={() => setApFilters({})} className="h-11 px-4 w-full md:w-auto text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl">
-              Clear All Filters
+      {/* Filters & Actions */}
+      <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-4 bg-white/50 p-2 rounded-2xl border border-primary/5 backdrop-blur-sm">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+          <Input 
+            placeholder="Search payables (Vendor, Keterangan)..." 
+            className="pl-11 h-12 bg-white border-0 rounded-xl shadow-sm focus-visible:ring-primary/10 text-[13px] font-medium"
+            value={apSearch}
+            onChange={(e) => { setApSearch(e.target.value); setApPage(1); }}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+           {isAnyFilterActive && (
+            <Button 
+              onClick={handleClearFilters}
+              className="h-12 w-12 bg-white border-0 text-muted-foreground hover:text-red-500 hover:bg-red-50/50 rounded-xl shadow-sm flex items-center justify-center shrink-0 transition-all"
+            >
+              <FilterX size={20} />
             </Button>
           )}
+          <Badge variant="outline" className="h-12 px-6 flex justify-center rounded-xl bg-white border-0 shadow-sm text-primary font-black uppercase tracking-widest text-[10px]">
+            {filteredAndSortedAP.length} Records
+          </Badge>
         </div>
-        <Badge variant="outline" className="h-11 px-6 w-full md:w-auto flex justify-center rounded-xl bg-primary/5 text-primary border-primary/10 font-black uppercase tracking-[0.2em] text-[11px]">
-          {filteredAndSortedAP.length} Records
-        </Badge>
       </div>
 
-      <div className="bg-white/70 backdrop-blur-md rounded-[2.5rem] shadow-premium border border-primary/5 overflow-x-auto overflow-hidden">
-        <Table className="min-w-[2600px]">
-          <TableHeader className="bg-primary/5">
-            <TableRow className="hover:bg-transparent border-primary/5 h-12 whitespace-nowrap">
-              <TableHead rowSpan={2} className="pl-8 text-[11px] font-black uppercase tracking-tight text-primary w-24 border-r border-primary/10">
-                <div className="flex items-center">
-                  PAYABLE
-                  <ExcelColumnFilter columnKey="colA" label="Payable" data={allAP || []} activeFilters={apFilters["colA"]} onFilterChange={(v) => { setApFilters(p => ({...p, colA: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colA", direction: d}); setApPage(1); }} />
-                </div>
-              </TableHead>
-              <TableHead rowSpan={2} className="text-[11px] font-black uppercase tracking-tight text-primary w-16 border-r border-primary/10">
-                <div className="flex items-center">
-                  YEAR
-                  <ExcelColumnFilter columnKey="colB" label="Year" data={allAP || []} activeFilters={apFilters["colB"]} onFilterChange={(v) => { setApFilters(p => ({...p, colB: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colB", direction: d}); setApPage(1); }} />
-                </div>
-              </TableHead>
-              <TableHead rowSpan={2} className="text-[11px] font-black uppercase tracking-tight text-primary w-48 border-r border-primary/10">
-                <div className="flex items-center">
-                  VENDOR
-                  <ExcelColumnFilter columnKey="colC" label="Vendor" data={allAP || []} activeFilters={apFilters["colC"]} onFilterChange={(v) => { setApFilters(p => ({...p, colC: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colC", direction: d}); setApPage(1); }} />
-                </div>
-              </TableHead>
-              <TableHead rowSpan={2} className="text-[11px] font-black uppercase tracking-tight text-primary w-64 border-r border-primary/10">
-                <div className="flex items-center">
-                  KETERANGAN
-                  <ExcelColumnFilter columnKey="colD" label="Keterangan" data={allAP || []} activeFilters={apFilters["colD"]} onFilterChange={(v) => { setApFilters(p => ({...p, colD: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colD", direction: d}); setApPage(1); }} />
-                </div>
-              </TableHead>
-              <TableHead colSpan={3} className="bg-transparent border-r border-primary/10 border-b border-primary/10" />
-              <TableHead rowSpan={2} className="text-[11px] font-bold text-primary text-right w-32 border-r border-primary/10">
-                <div className="flex items-center justify-end gap-1">
-                  COL-H
-                  <ExcelColumnFilter columnKey="colH" label="COL-H" data={allAP || []} activeFilters={apFilters["colH"]} onFilterChange={(v) => { setApFilters(p => ({...p, colH: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colH", direction: d}); setApPage(1); }} />
-                </div>
-              </TableHead>
-              <TableHead rowSpan={2} className="text-[11px] font-bold text-primary text-right w-32 border-r border-primary/10">
-                <div className="flex items-center justify-end gap-1">
-                  COL-I
-                  <ExcelColumnFilter columnKey="colI" label="COL-I" data={allAP || []} activeFilters={apFilters["colI"]} onFilterChange={(v) => { setApFilters(p => ({...p, colI: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colI", direction: d}); setApPage(1); }} />
-                </div>
-              </TableHead>
-              <TableHead colSpan={8} className="text-center text-[11px] font-black uppercase tracking-[0.2em] text-secondary bg-secondary/5 border-r border-primary/10 border-b border-primary/10 whitespace-nowrap">PAYMENT IN 2020</TableHead>
-              <TableHead colSpan={2} className="text-center text-[11px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 border-b border-primary/10 border-r border-primary/10 whitespace-nowrap">OUTSTANDING</TableHead>
-              <TableHead rowSpan={2} className="text-[11px] font-bold text-primary text-right w-32 border-r border-primary/10">
-                <div className="flex items-center justify-end gap-1">
-                  WA YOGI 21-JAN-22
-                  <ExcelColumnFilter columnKey="colW" label="Wa Yogi" data={allAP || []} activeFilters={apFilters["colW"]} onFilterChange={(v) => { setApFilters(p => ({...p, colW: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colW", direction: d}); setApPage(1); }} valueFormatter={formatCurrency} />
-                </div>
-              </TableHead>
-              <TableHead rowSpan={2} className="text-[11px] font-bold text-primary text-right w-32 border-r border-primary/10">
-                <div className="flex items-center justify-end gap-1">
-                  KOREKSI SELISIH
-                  <ExcelColumnFilter columnKey="colX" label="Koreksi Selisih" data={allAP || []} activeFilters={apFilters["colX"]} onFilterChange={(v) => { setApFilters(p => ({...p, colX: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colX", direction: d}); setApPage(1); }} valueFormatter={formatCurrency} />
-                </div>
-              </TableHead>
-            </TableRow>
-            <TableRow className="hover:bg-transparent border-primary/5 h-12 bg-primary/5 whitespace-nowrap">
-              <TableHead className="text-[11px] font-bold text-primary text-right">
-                <div className="flex items-center justify-end gap-1">
-                  IDR
-                  <ExcelColumnFilter columnKey="colE" label="IDR (Initial)" data={allAP || []} activeFilters={apFilters["colE"]} onFilterChange={(v) => { setApFilters(p => ({...p, colE: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colE", direction: d}); setApPage(1); }} valueFormatter={formatCurrency} />
-                </div>
-              </TableHead>
-              <TableHead className="text-[11px] font-bold text-primary text-right">
-                <div className="flex items-center justify-end gap-1">
-                  USD
-                  <ExcelColumnFilter columnKey="colF" label="USD (Initial)" data={allAP || []} activeFilters={apFilters["colF"]} onFilterChange={(v) => { setApFilters(p => ({...p, colF: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colF", direction: d}); setApPage(1); }} valueFormatter={(v) => formatCurrency(v, 'USD')} />
-                </div>
-              </TableHead>
-              <TableHead className="text-[11px] font-bold text-primary text-right italic border-r border-primary/10">
-                <div className="flex items-center justify-end gap-1">
-                  RATE
-                  <ExcelColumnFilter columnKey="colG" label="Rate" data={allAP || []} activeFilters={apFilters["colG"]} onFilterChange={(v) => { setApFilters(p => ({...p, colG: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colG", direction: d}); setApPage(1); }} valueFormatter={formatCurrency} />
-                </div>
-              </TableHead>
-              <TableHead className="text-[11px] font-bold text-secondary text-right">
-                <div className="flex items-center justify-end gap-1">
-                  BCA
-                  <ExcelColumnFilter columnKey="colK" label="BCA" data={allAP || []} activeFilters={apFilters["colK"]} onFilterChange={(v) => { setApFilters(p => ({...p, colK: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colK", direction: d}); setApPage(1); }} valueFormatter={formatCurrency} />
-                </div>
-              </TableHead>
-              <TableHead className="text-[11px] font-bold text-secondary text-right">
-                <div className="flex items-center justify-end gap-1">
-                  MANDIRI
-                  <ExcelColumnFilter columnKey="colL" label="Mandiri" data={allAP || []} activeFilters={apFilters["colL"]} onFilterChange={(v) => { setApFilters(p => ({...p, colL: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colL", direction: d}); setApPage(1); }} valueFormatter={formatCurrency} />
-                </div>
-              </TableHead>
-              <TableHead className="text-[11px] font-bold text-secondary text-right">
-                <div className="flex items-center justify-end gap-1">
-                  BTN
-                  <ExcelColumnFilter columnKey="colM" label="BTN" data={allAP || []} activeFilters={apFilters["colM"]} onFilterChange={(v) => { setApFilters(p => ({...p, colM: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colM", direction: d}); setApPage(1); }} valueFormatter={formatCurrency} />
-                </div>
-              </TableHead>
-              <TableHead className="text-[11px] font-bold text-secondary text-right">
-                <div className="flex items-center justify-end gap-1">
-                  BRI
-                  <ExcelColumnFilter columnKey="colN" label="BRI" data={allAP || []} activeFilters={apFilters["colN"]} onFilterChange={(v) => { setApFilters(p => ({...p, colN: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colN", direction: d}); setApPage(1); }} valueFormatter={formatCurrency} />
-                </div>
-              </TableHead>
-              <TableHead className="text-[11px] font-bold text-secondary text-right">
-                <div className="flex items-center justify-end gap-1">
-                  CASH IDR
-                  <ExcelColumnFilter columnKey="colO" label="Cash IDR" data={allAP || []} activeFilters={apFilters["colO"]} onFilterChange={(v) => { setApFilters(p => ({...p, colO: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colO", direction: d}); setApPage(1); }} valueFormatter={formatCurrency} />
-                </div>
-              </TableHead>
-              <TableHead className="text-[11px] font-bold text-secondary text-right">
-                <div className="flex items-center justify-end gap-1">
-                  NON CB
-                  <ExcelColumnFilter columnKey="colP" label="Non CB" data={allAP || []} activeFilters={apFilters["colP"]} onFilterChange={(v) => { setApFilters(p => ({...p, colP: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colP", direction: d}); setApPage(1); }} valueFormatter={formatCurrency} />
-                </div>
-              </TableHead>
-              <TableHead className="text-[11px] font-bold text-secondary text-right">
-                <div className="flex items-center justify-end gap-1">
-                  CITIBANK
-                  <ExcelColumnFilter columnKey="colQ" label="Citibank" data={allAP || []} activeFilters={apFilters["colQ"]} onFilterChange={(v) => { setApFilters(p => ({...p, colQ: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colQ", direction: d}); setApPage(1); }} valueFormatter={formatCurrency} />
-                </div>
-              </TableHead>
-              <TableHead className="text-[11px] font-bold text-secondary text-right border-r border-primary/10">
-                <div className="flex items-center justify-end gap-1">
-                  CASH USD
-                  <ExcelColumnFilter columnKey="colR" label="Cash USD" data={allAP || []} activeFilters={apFilters["colR"]} onFilterChange={(v) => { setApFilters(p => ({...p, colR: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colR", direction: d}); setApPage(1); }} valueFormatter={(v) => formatCurrency(v, 'USD')} />
-                </div>
-              </TableHead>
-              <TableHead className="text-[11px] font-bold text-emerald-600 text-right bg-emerald-50/30">
-                <div className="flex items-center justify-end gap-1">
-                  IDR
-                  <ExcelColumnFilter columnKey="colT" label="IDR Outstanding" data={allAP || []} activeFilters={apFilters["colT"]} onFilterChange={(v) => { setApFilters(p => ({...p, colT: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colT", direction: d}); setApPage(1); }} valueFormatter={formatCurrency} />
-                </div>
-              </TableHead>
-              <TableHead className="text-[11px] font-bold text-emerald-600 text-right bg-emerald-50/30 border-r border-primary/10">
-                <div className="flex items-center justify-end gap-1">
-                  USD
-                  <ExcelColumnFilter columnKey="colU" label="USD Outstanding" data={allAP || []} activeFilters={apFilters["colU"]} onFilterChange={(v) => { setApFilters(p => ({...p, colU: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => { setApSort({key: "colU", direction: d}); setApPage(1); }} valueFormatter={(v) => formatCurrency(v, 'USD')} />
-                </div>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {apLoading ? (
-              <TableRow>
-                <TableCell colSpan={21} className="h-64 text-center">
-                  <div className="flex flex-col items-center justify-center gap-4">
-                    <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin"></div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 animate-pulse">Processing Accounts Payable Data...</p>
+      {/* Table */}
+      <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-premium border border-primary/5 overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table className="min-w-[2600px]">
+            <TableHeader className="bg-slate-50/50">
+              <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
+                <TableHead className="pl-8 py-3 text-[10px] font-black uppercase tracking-widest text-primary/40 w-32 text-left border-r border-primary/5">
+                  <div className="flex items-center justify-start gap-1">
+                    Payable
+                    <ExcelColumnFilter columnKey="colA" label="Payable" data={getCascadingData("colA")} activeFilters={apFilters["colA"]} onFilterChange={(v) => { setApFilters(p => ({...p, colA: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colA", direction: d})} />
                   </div>
-                </TableCell>
-              </TableRow>
-            ) : filteredAndSortedAP.length === 0 ? (
-              <TableRow><TableCell colSpan={21} className="h-64 text-center opacity-20"><Search size={48} className="mx-auto" /><p className="mt-4 font-black uppercase tracking-widest">No matching AP found</p></TableCell></TableRow>
-            ) : (
-              <>
-                {filteredAndSortedAP.slice((apPage - 1) * 10, apPage * 10).map((row: any) => (
-                  <TableRow key={row.id} className="border-primary/5 hover:bg-primary/5 transition-colors whitespace-nowrap">
-                    <TableCell className="pl-8 py-4 border-r border-primary/5">
-                        <Badge variant="outline" className="bg-secondary/5 text-secondary border-secondary/10 text-[11px] font-black uppercase tracking-tight ">{row.colA}</Badge>
-                    </TableCell>
-                    <TableCell className="py-4 text-[12px] font-medium text-primary border-r border-primary/5">{row.colB}</TableCell>
-                    <TableCell className="py-4 font-black text-primary text-[12px] uppercase truncate border-r border-primary/5">{row.colC}</TableCell>
-                    <TableCell className="py-4 text-[12px] font-medium text-primary/60 truncate border-r border-primary/5 max-w-[200px]">{row.colD}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary">{formatCurrency(row.colE)}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary">{formatCurrency(row.colF, 'USD')}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary italic border-r border-primary/5">{row.colG ? formatCurrency(row.colG) : '-'}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary w-32 border-r border-primary/5">{row.colH || '-'}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary w-32 border-r border-primary/5">{row.colI || '-'}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary">{formatCurrency(row.colK)}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary">{formatCurrency(row.colL)}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary">{formatCurrency(row.colM)}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary">{formatCurrency(row.colN)}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary">{formatCurrency(row.colO)}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary">{formatCurrency(row.colP)}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary">{formatCurrency(row.colQ)}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary border-r border-primary/5">{formatCurrency(row.colR)}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-black text-emerald-600 bg-emerald-500/5">{formatCurrency(row.colT)}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-black text-emerald-600 bg-emerald-500/5 border-r border-primary/10">{formatCurrency(row.colU, 'USD')}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary w-32 border-r border-primary/10">{formatCurrency(row.colW)}</TableCell>
-                    <TableCell className="py-4 text-right text-[12px] font-bold text-primary w-32 border-r border-primary/10">{Number(row.colX) !== 0 ? formatCurrency(row.colX) : '-'}</TableCell>
-                  </TableRow>
+                </TableHead>
+                <TableHead className="py-3 text-[10px] font-black uppercase tracking-widest text-primary/40 w-20 border-r border-primary/5 px-4">
+                  <div className="flex items-center gap-1">
+                    Year
+                    <ExcelColumnFilter columnKey="colB" label="Year" data={getCascadingData("colB")} activeFilters={apFilters["colB"]} onFilterChange={(v) => { setApFilters(p => ({...p, colB: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colB", direction: d})} />
+                  </div>
+                </TableHead>
+                <TableHead className="py-3 text-[10px] font-black uppercase tracking-widest text-primary/40 w-48 border-r border-primary/5 px-4">
+                  <div className="flex items-center gap-1">
+                    Vendor
+                    <ExcelColumnFilter columnKey="colC" label="Vendor" data={getCascadingData("colC")} activeFilters={apFilters["colC"]} onFilterChange={(v) => { setApFilters(p => ({...p, colC: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colC", direction: d})} />
+                  </div>
+                </TableHead>
+                <TableHead className="py-3 text-[10px] font-black uppercase tracking-widest text-primary/40 w-64 border-r border-primary/5 px-4">
+                  <div className="flex items-center gap-1">
+                    Keterangan
+                    <ExcelColumnFilter columnKey="colD" label="Keterangan" data={getCascadingData("colD")} activeFilters={apFilters["colD"]} onFilterChange={(v) => { setApFilters(p => ({...p, colD: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colD", direction: d})} />
+                  </div>
+                </TableHead>
+                <TableHead className="py-3 text-right text-[10px] font-black uppercase tracking-widest text-primary/40 w-40 border-r border-primary/5 pr-4 whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-1">
+                    EOY IDR
+                    <ExcelColumnFilter columnKey="colE" label="EOY IDR" data={getCascadingData("colE")} activeFilters={apFilters["colE"]} onFilterChange={(v) => { setApFilters(p => ({...p, colE: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colE", direction: d})} valueFormatter={formatCurrency} />
+                  </div>
+                </TableHead>
+
+                <TableHead className="py-3 text-[10px] font-black uppercase tracking-widest text-primary/40 w-56 border-r border-primary/5 px-4">
+                    <div className="flex items-center gap-1">
+                    Col F
+                    <ExcelColumnFilter columnKey="colF" label="Col F" data={getCascadingData("colF")} activeFilters={apFilters["colF"]} onFilterChange={(v) => { setApFilters(p => ({...p, colF: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colF", direction: d})} />
+                  </div>
+                </TableHead>
+                <TableHead className="py-3 text-[10px] font-black uppercase tracking-widest text-primary/40 w-56 border-r border-primary/5 px-4">
+                    <div className="flex items-center gap-1">
+                    Col G
+                    <ExcelColumnFilter columnKey="colG" label="Col G" data={getCascadingData("colG")} activeFilters={apFilters["colG"]} onFilterChange={(v) => { setApFilters(p => ({...p, colG: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colG", direction: d})} />
+                  </div>
+                </TableHead>
+
+                {[
+                  { key: 'colI', label: 'BCA Sahardjo' },
+                  { key: 'colJ', label: 'BCA Juanda' },
+                  { key: 'colK', label: 'MANDIRI Mid Plaza' },
+                  { key: 'colL', label: 'BTN' },
+                  { key: 'colM', label: 'BRI Sahardjo' },
+                  { key: 'colN', label: 'BRI Tebet' },
+                  { key: 'colO', label: 'Cash IDR' },
+                  { key: 'colP', label: 'Non CB' }
+                ].map((col) => (
+                  <TableHead key={col.key} className="py-3 text-right text-[10px] font-black uppercase tracking-widest text-primary/40 w-36 border-r border-primary/5 pr-4 whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-1">
+                      {col.label}
+                      <ExcelColumnFilter columnKey={col.key} label={col.label} data={getCascadingData(col.key)} activeFilters={apFilters[col.key]} onFilterChange={(v) => { setApFilters(p => ({...p, [col.key]: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: col.key, direction: d})} valueFormatter={formatCurrency} />
+                    </div>
+                  </TableHead>
                 ))}
 
-                {filteredAndSortedAP.length > 0 && (
-                  <>
-                    <TableRow className="bg-primary/5 border-t-2 border-primary/20 whitespace-nowrap">
-                      <TableCell colSpan={4} className="pl-10 py-5 font-black text-[12px] text-primary uppercase tracking-[0.2em]">Accumulated Balance (Page 1-{apPage})</TableCell>
-                      <TableCell className="py-5 text-right font-black text-primary text-[12px] whitespace-nowrap">{apAccumulatedTotals.colE !== 0 ? formatCurrency(apAccumulatedTotals.colE) : "-"}</TableCell>
-                      <TableCell className="py-5 text-right font-black text-primary text-[12px] whitespace-nowrap">{formatCurrency(apAccumulatedTotals.colF, 'USD')}</TableCell>
-                      <TableCell className="py-5 text-right font-black text-primary text-[12px] bg-primary/5 border-r border-primary/10 whitespace-nowrap">{apAccumulatedTotals.colG !== 0 ? formatCurrency(apAccumulatedTotals.colG) : "-"}</TableCell>
-                      <TableCell className="py-5 text-right font-black text-primary text-[12px] w-32 whitespace-nowrap" />
-                      <TableCell className="py-5 text-right font-black text-primary text-[12px] w-32 border-r border-primary/10 whitespace-nowrap" />
-                      <TableCell className="py-5 text-right font-black text-primary text-[12px] whitespace-nowrap">{apAccumulatedTotals.colK !== 0 ? formatCurrency(apAccumulatedTotals.colK) : "-"}</TableCell>
-                      <TableCell className="py-5 text-right font-black text-primary text-[12px] whitespace-nowrap">{apAccumulatedTotals.colL !== 0 ? formatCurrency(apAccumulatedTotals.colL) : "-"}</TableCell>
-                      <TableCell className="py-5 text-right font-black text-primary text-[12px] whitespace-nowrap">{apAccumulatedTotals.colM !== 0 ? formatCurrency(apAccumulatedTotals.colM) : "-"}</TableCell>
-                      <TableCell className="py-5 text-right font-black text-primary text-[12px] whitespace-nowrap">{apAccumulatedTotals.colN !== 0 ? formatCurrency(apAccumulatedTotals.colN) : "-"}</TableCell>
-                      <TableCell className="py-5 text-right font-black text-primary text-[12px] whitespace-nowrap">{apAccumulatedTotals.colO !== 0 ? formatCurrency(apAccumulatedTotals.colO) : "-"}</TableCell>
-                      <TableCell className="py-5 text-right font-black text-primary text-[12px] whitespace-nowrap">{apAccumulatedTotals.colP !== 0 ? formatCurrency(apAccumulatedTotals.colP) : "-"}</TableCell>
-                      <TableCell className="py-5 text-right font-black text-primary text-[12px] whitespace-nowrap">{apAccumulatedTotals.colQ !== 0 ? formatCurrency(apAccumulatedTotals.colQ) : "-"}</TableCell>
-                      <TableCell className="py-5 text-right font-black text-primary text-[12px] border-r border-primary/10 whitespace-nowrap">{apAccumulatedTotals.colR !== 0 ? formatCurrency(apAccumulatedTotals.colR, 'USD') : "-"}</TableCell>
-                      <TableCell className="py-5 text-right font-black text-emerald-600 text-[12px] bg-emerald-500/10 border-l border-emerald-500/20 whitespace-nowrap">{apAccumulatedTotals.colT !== 0 ? formatCurrency(apAccumulatedTotals.colT) : "-"}</TableCell>
-                      <TableCell className="py-5 text-right font-black text-emerald-600 text-[12px] bg-emerald-500/10 border-r border-primary/10 whitespace-nowrap">{formatCurrency(apAccumulatedTotals.colU, 'USD')}</TableCell>
-                      <TableCell className="bg-transparent" />
-                      <TableCell className="bg-transparent" />
-                    </TableRow>
+                <TableHead className="py-3 text-right text-[10px] font-black uppercase tracking-widest text-primary/40 w-40 border-r border-primary/5 pr-4 whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-1">
+                    AP PPN
+                    <ExcelColumnFilter columnKey="colQ" label="AP PPN" data={getCascadingData("colQ")} activeFilters={apFilters["colQ"]} onFilterChange={(v) => { setApFilters(p => ({...p, colQ: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colQ", direction: d})} valueFormatter={formatCurrency} />
+                  </div>
+                </TableHead>
 
-                    <TableRow className="bg-primary/10 border-t-2 border-primary/30">
-                      <TableCell colSpan={4} className="pl-10 py-5 font-black text-[12px] text-primary uppercase tracking-[0.2em]">Total IDR Summary (Converted)</TableCell>
-                      <TableCell colSpan={3} className="py-5 text-right font-black text-primary text-[14px] bg-primary/10 border-r border-primary/20">{formatCurrency(apAccumulatedTotals.convertedInitial)}</TableCell>
-                      <TableCell colSpan={10} className="bg-transparent" />
-                      <TableCell colSpan={2} className="py-5 text-right font-black text-emerald-700 text-[14px] bg-emerald-500/10 border-l border-emerald-500/20">{formatCurrency(apAccumulatedTotals.convertedOutstanding)}</TableCell>
-                      <TableCell colSpan={2} className="bg-transparent" />
+                <TableHead className="py-3 text-right text-[10px] font-black uppercase tracking-widest text-primary/40 w-36 pr-8 pl-4 whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-1">
+                    Outstanding IDR
+                    <ExcelColumnFilter columnKey="colS" label="Outstanding IDR" data={getCascadingData("colS")} activeFilters={apFilters["colS"]} onFilterChange={(v) => { setApFilters(p => ({...p, colS: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colS", direction: d})} valueFormatter={formatCurrency} />
+                  </div>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody>
+              {apLoading ? (
+                <TableRow>
+                  <TableCell colSpan={20} className="h-96 text-center">
+                    <div className="flex flex-col items-center justify-center gap-4">
+                      <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin" />
+                      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/40 animate-pulse">Synchronizing Accounts Payable...</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : paginatedAP.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={20} className="h-64 text-center opacity-20">
+                    <p className="mt-4 font-black uppercase tracking-widest">No match found</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                <>
+                  {paginatedAP.map((row: any) => (
+                    <TableRow key={row.id} className="border-primary/5 hover:bg-transparent transition-none whitespace-nowrap group">
+                      <TableCell className="pl-8 py-3 border-r border-primary/5 text-left">
+                         <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 text-[10px] font-black uppercase tracking-tight px-1.5 py-0.5">{row.colA}</Badge>
+                      </TableCell>
+                      <TableCell className="py-3 px-4 text-[12px] text-primary/60 border-r border-primary/5">{row.colB}</TableCell>
+                      <TableCell className="py-3 px-4 font-bold text-primary text-[12px] border-r border-primary/5 uppercase truncate max-w-[150px]">{row.colC}</TableCell>
+                      <TableCell className="py-3 px-4 text-[12px] text-primary/60 border-r border-primary/5 truncate max-w-[200px]" title={row.colD}>{row.colD || '-'}</TableCell>
+                      <TableCell className="py-3 pr-4 text-right text-[12px] font-medium text-primary border-r border-primary/5 whitespace-nowrap">{formatCurrency(row.colE)}</TableCell>
+                      <TableCell className="py-3 px-4 text-[12px] text-primary/60 border-r border-primary/5 truncate max-w-[200px]" title={row.colF}>{row.colF || '-'}</TableCell>
+                      <TableCell className="py-3 px-4 text-[12px] text-primary/60 border-r border-primary/5 truncate max-w-[200px]" title={row.colG}>{row.colG || '-'}</TableCell>
+
+                      {['colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP'].map(col => (
+                        <TableCell key={col} className={`py-3 pr-4 text-right text-[12px] font-bold border-r border-primary/5 whitespace-nowrap ${getValueColor(row[col])}`}>
+                          {Number(row[col]) !== 0 ? formatCurrency(row[col]) : "-"}
+                        </TableCell>
+                      ))}
+
+                      <TableCell className={`py-3 pr-4 text-right text-[12px] font-bold border-r border-primary/5 whitespace-nowrap ${getValueColor(row.colQ)}`}>
+                        {Number(row.colQ) !== 0 ? formatCurrency(row.colQ) : "-"}
+                      </TableCell>
+                      
+                      <TableCell className="py-3 pr-8 text-right text-[12px] font-medium text-primary whitespace-nowrap">
+                        {Number(row.colS) !== 0 ? formatCurrency(row.colS) : "-"}
+                      </TableCell>
                     </TableRow>
-                  </>
-                )}
-              </>
-            )}
-          </TableBody>
-        </Table>
+                  ))}
+
+                  {/* Summary Rows */}
+                  <TableRow className="bg-secondary/5 border-t-2 border-secondary/30 hover:bg-secondary/5 transition-none font-bold whitespace-nowrap">
+                    <TableCell colSpan={4} className="pl-8 py-3 text-[11px] text-secondary/80 uppercase tracking-[0.2em]">
+                      Subtotal (Page {apPage})
+                    </TableCell>
+                    <TableCell className="py-3 pr-4 text-right text-[12px] text-primary border-r border-secondary/20 whitespace-nowrap">{formatCurrency(subtotalTotals.colE.toString())}</TableCell>
+                    <TableCell colSpan={2} className="bg-secondary/[0.02] border-r border-secondary/20" />
+                    
+                    {['colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP'].map(col => (
+                      <TableCell key={col} className={`py-3 pr-4 text-right text-[12px] border-r border-secondary/20 whitespace-nowrap ${getValueColor(subtotalTotals[col as keyof typeof subtotalTotals].toString())}`}>
+                        {formatCurrency(subtotalTotals[col as keyof typeof subtotalTotals].toString())}
+                      </TableCell>
+                    ))}
+
+                    <TableCell className={`py-3 pr-4 text-right text-[12px] border-r border-secondary/20 whitespace-nowrap ${getValueColor(subtotalTotals.colQ.toString())}`}>{formatCurrency(subtotalTotals.colQ.toString())}</TableCell>
+                    
+                    <TableCell className="py-3 pr-8 text-right text-[12px] text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colS.toString())}</TableCell>
+                  </TableRow>
+
+                  <TableRow className="bg-secondary/10 border-t border-secondary/30 hover:bg-secondary/10 transition-none font-bold whitespace-nowrap">
+                    <TableCell colSpan={4} className="pl-8 py-3 text-[11px] text-secondary uppercase tracking-[0.2em]">
+                      Period Totals ({filteredAndSortedAP.length} records)
+                    </TableCell>
+                    <TableCell className="py-3 pr-4 text-right text-[12px] text-primary border-r border-secondary/20 whitespace-nowrap">{formatCurrency(grandTotals.colE.toString())}</TableCell>
+                    <TableCell colSpan={2} className="bg-secondary/[0.02] border-r border-secondary/20" />
+                    
+                    {['colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP'].map(col => (
+                      <TableCell key={col} className={`py-3 pr-4 text-right text-[12px] border-r border-secondary/20 whitespace-nowrap ${getValueColor(grandTotals[col as keyof typeof grandTotals].toString())}`}>
+                        {formatCurrency(grandTotals[col as keyof typeof grandTotals].toString())}
+                      </TableCell>
+                    ))}
+
+                    <TableCell className={`py-3 pr-4 text-right text-[12px] border-r border-secondary/20 whitespace-nowrap ${getValueColor(grandTotals.colQ.toString())}`}>{formatCurrency(grandTotals.colQ.toString())}</TableCell>
+                    
+                    <TableCell className="py-3 pr-8 text-right text-[12px] text-primary whitespace-nowrap">{formatCurrency(grandTotals.colS.toString())}</TableCell>
+                  </TableRow>
+                </>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-      <PaginationControls meta={{ total: filteredAndSortedAP.length, page: apPage, limit: 10, lastPage: Math.ceil(filteredAndSortedAP.length / 10) || 1 }} onPageChange={setApPage} isFetching={apLoading} />
+      
+      <PaginationControls meta={apMeta} onPageChange={setApPage} isFetching={apLoading} />
     </div>
   );
 }

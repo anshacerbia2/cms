@@ -2,19 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { formatDecimal } from '../common/utils/format.utils';
 
-const formatDecimal = (val: any): string => {
-  if (val == null) return "0.0000";
-  if (typeof val.toFixed === 'function') {
-    try {
-      const formatted = val.toFixed(4);
-      if (formatted !== 'NaN') return formatted;
-    } catch (e) {}
-  }
-  const num = Number(val.toString());
-  if (isNaN(num)) return "0.0000";
-  return num.toFixed(4);
-};
 
 @Injectable()
 export class FinanceService {
@@ -139,63 +128,8 @@ export class FinanceService {
     }));
   }
 
-  async getAP(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
-    const skip = (page - 1) * limit;
+  // AP methods have been moved to ApService
 
-    const [data, total] = await Promise.all([
-      this.prisma.accountPayable.findMany({ skip, take: limit, orderBy: [{ id: 'asc' }] }),
-      this.prisma.accountPayable.count(),
-    ]);
-
-    return {
-      data: data.map(item => ({
-        ...item,
-        id: Number(item.id),
-        colE: formatDecimal(item.colE),
-        colF: formatDecimal(item.colF),
-        colG: formatDecimal(item.colG),
-        colJ: formatDecimal(item.colJ),
-        colK: formatDecimal(item.colK),
-        colL: formatDecimal(item.colL),
-        colM: formatDecimal(item.colM),
-        colN: formatDecimal(item.colN),
-        colO: formatDecimal(item.colO),
-        colP: formatDecimal(item.colP),
-        colQ: formatDecimal(item.colQ),
-        colR: formatDecimal(item.colR),
-        colT: formatDecimal(item.colT),
-        colU: formatDecimal(item.colU),
-        colW: formatDecimal(item.colW),
-        colX: formatDecimal(item.colX),
-      })),
-      meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
-    };
-  }
-
-  async getAllAP(): Promise<any[]> {
-    const data = await this.prisma.accountPayable.findMany({ orderBy: [{ id: 'asc' }] });
-    return data.map(item => ({
-      ...item,
-      id: Number(item.id),
-      colE: formatDecimal(item.colE),
-      colF: formatDecimal(item.colF),
-      colG: formatDecimal(item.colG),
-      colK: formatDecimal(item.colK),
-      colL: formatDecimal(item.colL),
-      colM: formatDecimal(item.colM),
-      colN: formatDecimal(item.colN),
-      colO: formatDecimal(item.colO),
-      colP: formatDecimal(item.colP),
-      colQ: formatDecimal(item.colQ),
-      colR: formatDecimal(item.colR),
-      colT: formatDecimal(item.colT),
-      colU: formatDecimal(item.colU),
-      colW: formatDecimal(item.colW),
-      colX: formatDecimal(item.colX),
-    }));
-  }
 
   async getAssets(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
