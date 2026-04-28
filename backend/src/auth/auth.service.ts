@@ -46,7 +46,7 @@ export class AuthService {
           .map((child: any) => ({
             title: child.name,
             icon: child.icon,
-            url: `/${child.permissionRoute?.replace('.', '/')}`
+            url: `/${child.permissionRoute?.replace('.index', '').replace('.', '/')}`
           }))
       }));
 
