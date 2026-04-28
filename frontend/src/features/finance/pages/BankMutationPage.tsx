@@ -844,10 +844,10 @@ export default function BankMutationPage() {
                       Period Totals ({ledgerMeta?.total || 0} rows)
                     </TableCell>
                     <TableCell className="py-3 text-right text-red-600 text-[12px] border-r border-secondary/20 pr-4 whitespace-nowrap">
-                      {shouldShowData && summaryStats.credit !== null ? formatCurrency(summaryStats.credit) : "-"}
+                      {shouldShowData && summaryStats.debit !== null ? formatCurrency(summaryStats.debit) : "-"}
                     </TableCell>
                     <TableCell className="py-3 text-right text-emerald-700 text-[12px] border-r border-secondary/20 pr-4 whitespace-nowrap">
-                      {shouldShowData && summaryStats.debit !== null ? formatCurrency(summaryStats.debit) : "-"}
+                      {shouldShowData && summaryStats.credit !== null ? formatCurrency(summaryStats.credit) : "-"}
                     </TableCell>
                     <TableCell colSpan={6} className="bg-secondary/[0.03]" />
                   </TableRow>
