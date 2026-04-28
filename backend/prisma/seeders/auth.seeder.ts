@@ -62,6 +62,11 @@ export async function seedAuth(prisma: PrismaClient) {
     { name: 'View Anchor Balance', route: 'finance.anchor' },
     { name: 'Recalculate Balance', route: 'finance.recalculate' },
     { name: 'Close Fiscal Year', route: 'finance.close-year' },
+    { name: 'Account Payable', route: 'finance.account-payable' },
+    { name: 'Account Receivable', route: 'finance.account-receivable' },
+    { name: 'Depreciation', route: 'finance.depreciation' },
+    // Sales Module Permissions
+    { name: 'View Sales', route: 'sales.index' },
   ];
 
   // List of permissions for finance manager
@@ -77,7 +82,10 @@ export async function seedAuth(prisma: PrismaClient) {
     'finance.create',
     'finance.anchor',
     'finance.recalculate',
-    'finance.close-year'
+    'finance.close-year',
+    'finance.account-payable',
+    'finance.account-receivable',
+    'finance.depreciation'
   ];
 
   for (const p of permissions) {
