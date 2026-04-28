@@ -12,6 +12,10 @@ import BanksPage from './features/banks/pages/BanksPage';
 import StaffPage from './features/staff/pages/StaffPage';
 import FinancePage from './features/finance/pages/FinancePage';
 import BankMutationPage from './features/finance/pages/BankMutationPage';
+import AccountPayablePage from './features/finance/pages/AccountPayablePage';
+import AccountReceivablePage from './features/finance/pages/AccountReceivablePage';
+import DepreciationPage from './features/finance/pages/DepreciationPage';
+import SalesPage from './features/sales/pages/SalesPage';
 
 const queryClient = new QueryClient();
 
@@ -44,7 +48,10 @@ function App() {
             <Route path="users" element={<StaffPage />} />
             <Route path="finance" element={<FinancePage />} />
             <Route path="finance/bank-mutation" element={<BankMutationPage />} />
-            {/* Add more routes here */}
+            <Route path="finance/account-payable" element={<AccountPayablePage />} />
+            <Route path="finance/account-receivable" element={<AccountReceivablePage />} />
+            <Route path="finance/depreciation" element={<DepreciationPage />} />
+            <Route path="sales" element={<SalesPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

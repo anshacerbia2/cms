@@ -142,11 +142,15 @@ export async function seedAuth(prisma: PrismaClient) {
       { id: 3001, name: 'Invoices', icon: 'FileText', route: 'finance.index', order: 1, forFinance: false },
       { id: 3002, name: 'Receive Vouchers', icon: 'CreditCard', route: 'finance.index', order: 2, forFinance: false },
       { id: 3003, name: 'Payment Vouchers', icon: 'Wallet', route: 'finance.index', order: 3, forFinance: false },
+      { id: 3004, name: 'Sales', icon: 'ShoppingCart', route: 'sales.index', order: 4, forFinance: false },
     ]},
     { id: 400, name: 'Finance', icon: 'Landmark', order: 4, forFinance: true, items: [
       { id: 4001, name: 'Accounts & Banks', icon: 'Landmark', route: 'internal-accounts.index', order: 1, forFinance: true },
-      { id: 4002, name: 'Bank Mutation', icon: 'RefreshCw', route: 'finance.index', order: 2, forFinance: true },
-      { id: 4003, name: 'Financial Reports', icon: 'FileText', route: 'finance.index', order: 3, forFinance: true },
+      { id: 4002, name: 'Bank Mutation', icon: 'RefreshCw', route: 'finance.bank-mutation', order: 2, forFinance: true },
+      { id: 4003, name: 'Account Payable', icon: 'ArrowDownRight', route: 'finance.account-payable', order: 3, forFinance: true },
+      { id: 4004, name: 'Account Receiveable', icon: 'ArrowUpRight', route: 'finance.account-receivable', order: 4, forFinance: true },
+      { id: 4005, name: 'Depreciation', icon: 'TrendingDown', route: 'finance.depreciation', order: 5, forFinance: true },
+      { id: 4006, name: 'Financial Reports', icon: 'FileText', route: 'finance.index', order: 6, forFinance: true },
     ]},
     { id: 500, name: 'Operations', icon: 'Briefcase', order: 5, forFinance: false, items: [
       { id: 5001, name: 'Projects', icon: 'Briefcase', route: 'finance.index', order: 1, forFinance: false },
