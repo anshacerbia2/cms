@@ -28,9 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { useFinance } from "../hooks/useFinance";
 import { useBanks } from "@/features/banks/hooks/useBanks";
 import { PaginationControls } from "@/components/common/PaginationControls";
-import { Landmark, Package, PieChart, BarChart3, Repeat, Filter, ArrowUpRight, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Landmark, Package, PieChart, BarChart3, Repeat, Filter, ArrowUpRight } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default function FinancePage() {
