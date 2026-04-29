@@ -6,7 +6,6 @@ import {
   FilterX,
   Calendar as CalendarIcon,
   Lock,
-  Unlock,
   RefreshCw,
   AlertCircle,
   Hash,

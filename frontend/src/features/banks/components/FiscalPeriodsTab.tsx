@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, Calendar, Landmark, Lock, Unlock, AlertCircle, Hash } from "lucide-react";
+import { Search, Calendar, Landmark, Hash } from "lucide-react";
 import { useBanks } from "../hooks/useBanks";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { useDebounce } from "use-debounce";
@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 
 export function FiscalPeriodsTab() {
