@@ -339,7 +339,7 @@ export default function BankMutationPage() {
             </h1>
             
             {/* Status Badge - Only show if a fiscal record exists for this year */}
-            {!fiscalLoading && shouldShowData && (
+            {/* {!fiscalLoading && shouldShowData && (
               <div className={`px-3 py-1 rounded-full flex items-center gap-1.5 border shadow-sm ${
                 fiscalData?.status === 'CLOSED' 
                   ? "bg-red-50 border-red-200 text-red-700" 
@@ -364,7 +364,7 @@ export default function BankMutationPage() {
                   </>
                 )}
               </div>
-            )}
+            )} */}
           </div>
           <p className="text-muted-foreground text-xs sm:text-sm font-medium">Institutional financial ledger and audit trail for corporate accounts.</p>
         </div>
@@ -551,7 +551,9 @@ export default function BankMutationPage() {
                        {selectedAccount?.type || "TYPE"}
                         </span>
                      <span className="text-[12px] font-extrabold text-muted-foreground truncate text-left">
-                       {selectedAccount?.bank?.bankBrand || selectedAccount?.holderName || "Select Account"}
+                       {selectedAccount?.type === 'CASH' 
+                         ? "CASH" 
+                         : (selectedAccount?.bank?.bankBrand || selectedAccount?.holderName || "Select Account")}
                      </span>
                    </div>
                    {selectedAccount?.accountNo && selectedAccount.accountNo !== "" && (
@@ -575,7 +577,7 @@ export default function BankMutationPage() {
                         {acc.type}
                       </span>
                       <span className="font-bold text-[12px] tracking-tight">
-                        {acc.bank?.bankBrand || acc.holderName}
+                        {acc.type === 'CASH' ? "CASH" : (acc.bank?.bankBrand || acc.holderName)}
                       </span>
                     </div>
                     {acc.accountNo && acc.accountNo !== "" && (

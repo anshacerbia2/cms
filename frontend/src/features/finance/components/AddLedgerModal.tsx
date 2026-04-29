@@ -416,7 +416,9 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
                 Bulk Add Ledger Entries
               </DialogTitle>
               <div className="text-muted-foreground text-xs md:text-sm font-medium">
-                Input multiple transactions for <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20 font-semibold px-1.5 py-0 inline-flex align-middle mx-1">{selectedAccount?.bank?.bankBrand || selectedAccount?.holderName}</Badge>
+                Input multiple transactions for <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20 font-semibold px-1.5 py-0 inline-flex align-middle mx-1">
+                  {selectedAccount?.type === 'CASH' ? "CASH" : (selectedAccount?.bank?.bankBrand || selectedAccount?.holderName)}
+                </Badge>
                 in fiscal year <span className="text-primary font-semibold ml-1">{year}</span>
               </div>
             </div>
@@ -439,7 +441,9 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
                 <div>
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/30 block leading-none mb-1">Period Balance Anchor</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-primary capitalize">{selectedAccount?.bank?.bankBrand || selectedAccount?.holderName}</span>
+                    <span className="text-sm font-black text-primary capitalize">
+                      {selectedAccount?.type === 'CASH' ? "CASH" : (selectedAccount?.bank?.bankBrand || selectedAccount?.holderName)}
+                    </span>
                     <span className="text-xs font-medium text-muted-foreground/50">
                       — {anchorData?.referredYear ? `Referred from ${anchorData.referredYear}` : `Fiscal Year ${year}`}
                     </span>

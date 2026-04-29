@@ -167,8 +167,8 @@ export function FiscalPeriodsTab() {
               <TableHead className="text-[10px] font-black uppercase tracking-widest text-primary/40 py-3">Account & Bank</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest text-primary/40 py-3 text-right">Opening Balance</TableHead>
               <TableHead className="text-[10px] font-black uppercase tracking-widest text-primary/40 py-3 text-right">Closing Balance</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest text-primary/40 py-3 text-center">Status</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest text-primary/40 py-3 text-center pr-8">Audit</TableHead>
+              {/* <TableHead className="text-[10px] font-black uppercase tracking-widest text-primary/40 py-3 text-center">Status</TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest text-primary/40 py-3 text-center pr-8">Audit</TableHead> */}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -178,14 +178,14 @@ export function FiscalPeriodsTab() {
                   <TableCell className="py-3 pl-8 "><div className="h-4 w-12 bg-slate-200 rounded"></div></TableCell>
                   <TableCell className="py-3 "><div className="h-4 w-48 bg-slate-200 rounded"></div></TableCell>
                   <TableCell className="py-3 "><div className="h-4 w-24 bg-slate-200 rounded ml-auto"></div></TableCell>
-                  <TableCell className="py-3 "><div className="h-4 w-24 bg-slate-200 rounded ml-auto"></div></TableCell>
-                  <TableCell className="py-3 text-center "><div className="h-6 w-16 bg-slate-200 rounded-full mx-auto"></div></TableCell>
-                  <TableCell className="py-3 text-center pr-8 "><div className="h-4 w-4 bg-slate-200 rounded mx-auto"></div></TableCell>
+                  <TableCell className="py-3 text-right "><div className="h-4 w-24 bg-slate-200 rounded ml-auto"></div></TableCell>
+                  {/* <TableCell className="py-3 text-center "><div className="h-6 w-16 bg-slate-200 rounded-full mx-auto"></div></TableCell>
+                  <TableCell className="py-3 text-center pr-8 "><div className="h-4 w-4 bg-slate-200 rounded mx-auto"></div></TableCell> */}
                 </TableRow>
               ))
             ) : data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-20 text-center">
+                <TableCell colSpan={4} className="py-20 text-center">
                   <div className="flex flex-col items-center gap-3 opacity-20">
                     <Calendar size={48} />
                     <p className="text-xs font-black uppercase tracking-widest">No Fiscal Periods Found</p>
@@ -215,10 +215,10 @@ export function FiscalPeriodsTab() {
                   <TableCell className="py-3 text-right text-[12px] font-black text-primary border-r border-primary/5 pr-4 whitespace-nowrap tabular-nums ">
                     {item.openingBalance != null ? formatCurrency(item.openingBalance) : "-"}
                   </TableCell>
-                  <TableCell className="py-3 text-right text-[12px] font-black text-primary border-r border-primary/5 pr-4 whitespace-nowrap tabular-nums ">
+                  <TableCell className="py-3 text-right text-[12px] font-black text-primary pr-8 whitespace-nowrap tabular-nums ">
                     {item.closingBalance != null ? formatCurrency(item.closingBalance) : "-"}
                   </TableCell>
-                  <TableCell className="py-3 text-center ">
+                  {/* <TableCell className="py-3 text-center ">
                     <Badge 
                       variant="outline" 
                       className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg tracking-widest border-2 transition-all ${
@@ -242,7 +242,7 @@ export function FiscalPeriodsTab() {
                         <span className="text-[10px] font-black text-emerald-600/60 uppercase tracking-tighter">Verified</span>
                       </div>
                     )}
-                  </TableCell>
+                  </TableCell> */}
                 </TableRow>
               ))
             )}
