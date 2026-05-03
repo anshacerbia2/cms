@@ -11,13 +11,13 @@ export class BankMutationController {
   constructor(private readonly bankMutationService: BankMutationService) {}
 
   @Get('transactions')
-  @Permissions('finance.index')
+  @Permissions('bank-mutation.index')
   async getTransactions(@Query() query: PaginationQueryDto & { accountId?: string, year?: string }) {
     return this.bankMutationService.getTransactions(query);
   }
 
   @Get('transactions/all')
-  @Permissions('finance.index')
+  @Permissions('bank-mutation.index')
   async getAllTransactions(
     @Query('accountId') accountId?: string,
     @Query('year') year?: string
@@ -26,7 +26,7 @@ export class BankMutationController {
   }
 
   @Post('transactions/bulk')
-  @Permissions('finance.index')
+  @Permissions('bank-mutation.bulk')
   async createBulkTransactions(@Body() body: { data: any[]; accountId: string; year: number; startingBalance?: string }) {
     return this.bankMutationService.createBulkTransactions(body.data, body.accountId, body.year, body.startingBalance);
   }
@@ -41,7 +41,7 @@ export class BankMutationController {
   }
 
   @Get('fiscal-periods')
-  @Permissions('finance.index')
+  @Permissions('bank-mutation.index')
   async getFiscalPeriods(
     @Query('accountId') accountId: string,
     @Query('year') year?: string
@@ -56,7 +56,7 @@ export class BankMutationController {
   }
 
   @Post('close-year')
-  @Permissions('finance.close-year')
+  @Permissions('finance.year.close')
   async closeYear(
     @Body() body: { accountId: string; year: number; userId: string }
   ) {

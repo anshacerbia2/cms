@@ -50,6 +50,8 @@ import { PaginationControls } from "@/components/common/PaginationControls";
 import { ExcelColumnFilter } from "../components/ExcelColumnFilter";
 import { toast } from "sonner";
 import { useBankMutation } from "../hooks/useBankMutation";
+import { PageHeader } from "@/components/common/PageHeader";
+import { PageContainer } from "@/components/common/PageContainer";
 
 export default function BankMutationPage() {
   const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
@@ -69,7 +71,7 @@ export default function BankMutationPage() {
     }
   }, [internalAccounts, selectedAccount]);
 
-  const { user } = useAuthStore();
+  const { user, can } = useAuthStore();
   const { getAllTransactions, getFiscalPeriods, recalculateLedger, closeYear, getAnchorBalance } = useBankMutation();
   
   const yearNum = useMemo(() => Number(ledgerYearFilter), [ledgerYearFilter]);
@@ -265,81 +267,76 @@ export default function BankMutationPage() {
   }, [shouldShowData, fiscalData, ledgerYearFilter]);
 
   return (
-    <div className="w-full space-y-8 animate-in fade-in duration-700 pb-10">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-primary flex items-center gap-2 sm:gap-3">
-              <Landmark className="text-secondary shrink-0 w-6 h-6 sm:w-8 sm:h-8" />
-              Bank Mutation
-            </h1>
-          </div>
-          <p className="text-muted-foreground text-xs sm:text-sm font-medium">Institutional financial ledger and audit trail for corporate accounts.</p>
-        </div>
+    <PageContainer>
+      <PageHeader 
+        title="Bank Mutation"
+        description="Institutional financial ledger and audit trail for corporate accounts."
+        icon={Landmark}
+        actions={
+          <div className="flex items-center gap-2">
+            {anchorData?.isStale && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRecalculate}
+                disabled={isProcessing}
+                className="h-10 px-4 rounded-xl border-red-200 bg-red-50 hover:bg-red-100 flex items-center gap-2 text-xs font-bold transition-all relative text-red-600"
+              >
+                <RefreshCw size={14} className={isProcessing ? "animate-spin" : ""} />
+                Sync Required
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+              </Button>
+            )}
 
-        {/* Fiscal Actions */}
-        <div className="flex items-center gap-2">
-          {anchorData?.isStale && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRecalculate}
-              disabled={isProcessing}
-              className="h-10 px-4 rounded-xl border-red-200 bg-red-50 hover:bg-red-100 flex items-center gap-2 text-xs font-bold transition-all relative text-red-600"
-            >
-              <RefreshCw size={14} className={isProcessing ? "animate-spin" : ""} />
-              Sync Required
-              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-              </span>
-            </Button>
-          )}
-
-          {!isPeriodClosed && shouldShowData && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={isProcessing}
-                  className="h-10 px-4 rounded-xl border border-red-200 bg-red-50/50 hover:bg-red-50 text-red-600 hover:text-red-700 flex items-center gap-2 text-xs font-bold transition-all active:scale-95 shadow-sm"
-                >
-                  <Lock size={14} />
-                  Close Period
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="rounded-3xl border-0 shadow-premium">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-black text-slate-800 mb-4">Close Fiscal Year {ledgerYearFilter}?</DialogTitle>
-                  <DialogDescription className="text-slate-500 font-medium leading-relaxed">
-                    Closing fiscal year <span className="font-bold text-slate-900">{ledgerYearFilter}</span> is a critical audit operation.
-                    <span>
-                      This will permanently lock all transactions and <span className="font-bold text-amber-700 underline">automatically update opening/closing balances for ALL subsequent years</span>.
-                    </span>
-                    <span className="block mt-3 text-red-600 font-black flex items-center gap-2 uppercase text-[10px] tracking-widest bg-red-50 p-2 rounded-lg border border-red-100">
-                      <AlertCircle size={14} />
-                      Warning: This cascading action cannot be reversed.
-                    </span>
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="gap-3">
-                  <DialogTrigger asChild>
-                    <Button variant="ghost" className="rounded-sm border-0 bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">Cancel</Button>
-                  </DialogTrigger>
-                  <Button 
-                    onClick={handleCloseYear}
-                    className="rounded-sm bg-amber-600 hover:bg-amber-700 text-white font-bold"
+            {!isPeriodClosed && shouldShowData && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isProcessing}
+                    className="h-10 px-4 rounded-xl border border-red-200 bg-red-50/50 hover:bg-red-50 text-red-600 hover:text-red-700 flex items-center gap-2 text-xs font-bold transition-all active:scale-95 shadow-sm"
                   >
-                    Lock and Close
+                    <Lock size={14} />
+                    Close Period
                   </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-      </div>
+                </DialogTrigger>
+                <DialogContent className="rounded-3xl border-0 shadow-premium">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-black text-slate-800 mb-4">Close Fiscal Year {ledgerYearFilter}?</DialogTitle>
+                    <DialogDescription className="text-slate-500 font-medium leading-relaxed">
+                      Closing fiscal year <span className="font-bold text-slate-900">{ledgerYearFilter}</span> is a critical audit operation.
+                      <span>
+                        This will permanently lock all transactions and <span className="font-bold text-amber-700 underline">automatically update opening/closing balances for ALL subsequent years</span>.
+                      </span>
+                      <span className="block mt-3 text-red-600 font-black flex items-center gap-2 uppercase text-[10px] tracking-widest bg-red-50 p-2 rounded-lg border border-red-100">
+                        <AlertCircle size={14} />
+                        Warning: This cascading action cannot be reversed.
+                      </span>
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="gap-3">
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" className="rounded-sm border-0 bg-slate-100 hover:bg-slate-200 font-bold text-slate-600">Cancel</Button>
+                    </DialogTrigger>
+                    <Button 
+                      onClick={handleCloseYear}
+                      className="rounded-sm bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                    >
+                      Lock and Close
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        }
+      />
+
+      <div className="space-y-8 mt-8">
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
@@ -516,10 +513,12 @@ export default function BankMutationPage() {
             </Button>
           )}
 
-          <Button onClick={() => setIsAddModalOpen(true)} className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold transition-all active:scale-95">
-            <Plus size={20} strokeWidth={3} />
-            <span className="text-[13px]">Add Mutation</span>
-          </Button>
+          {can('bank-mutation.create') && (
+            <Button onClick={() => setIsAddModalOpen(true)} className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold transition-all active:scale-95">
+              <Plus size={20} strokeWidth={3} />
+              <span className="text-[13px]">Add Mutation</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -529,7 +528,7 @@ export default function BankMutationPage() {
           <Table className="min-w-[1600px]">
             <TableHeader className="bg-slate-50/50">
               <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
-                <TableHead className="py-3 w-32">
+                <TableHead className="w-32">
                   <div className="flex items-center justify-start gap-1">
                     Date
                     <ExcelColumnFilter 
@@ -733,6 +732,7 @@ export default function BankMutationPage() {
           refetchTransactions();
         }}
       />
-    </div>
+      </div>
+    </PageContainer>
   );
 }

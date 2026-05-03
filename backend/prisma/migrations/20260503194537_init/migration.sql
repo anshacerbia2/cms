@@ -16,6 +16,12 @@ CREATE TYPE "FiscalStatus" AS ENUM ('OPEN', 'ONGOING', 'CLOSED');
 -- CreateEnum
 CREATE TYPE "InternalAccountType" AS ENUM ('BANK', 'CASH', 'OTHER');
 
+-- CreateEnum
+CREATE TYPE "PpnType" AS ENUM ('WAPU', 'NON_WAPU');
+
+-- CreateEnum
+CREATE TYPE "DepreciationType" AS ENUM ('OFFICE_EQUIPMENT', 'VEHICLE', 'INTANGIBLE_ASSET');
+
 -- CreateTable
 CREATE TABLE "roles" (
     "id" BIGSERIAL NOT NULL,
@@ -287,16 +293,16 @@ CREATE TABLE "sales_records" (
     "id" BIGSERIAL NOT NULL,
     "colA" VARCHAR(100),
     "colB" VARCHAR(100),
-    "colC" INTEGER,
-    "colD" TEXT,
+    "colC" TIMESTAMP(3),
+    "colD" INTEGER,
     "colE" TEXT,
     "colF" TEXT,
-    "colG" DECIMAL(19,4),
+    "colG" TEXT,
     "colH" DECIMAL(19,4),
     "colI" DECIMAL(19,4),
     "colJ" DECIMAL(19,4),
     "colK" DECIMAL(19,4),
-    "colL" DECIMAL(19,4),
+    "colL" TIMESTAMP(3),
     "colM" DECIMAL(19,4),
     "colN" DECIMAL(19,4),
     "colO" DECIMAL(19,4),
@@ -309,8 +315,12 @@ CREATE TABLE "sales_records" (
     "colV" DECIMAL(19,4),
     "colW" DECIMAL(19,4),
     "colX" DECIMAL(19,4),
-    "colY" DECIMAL(19,4),
+    "colY" TEXT,
     "colZ" DECIMAL(19,4),
+    "colAA" DECIMAL(19,4),
+    "colAB" DECIMAL(19,4),
+    "colAC" DECIMAL(19,4),
+    "colAD" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -328,7 +338,7 @@ CREATE TABLE "account_receivables" (
     "colF" DECIMAL(19,4),
     "colG" DECIMAL(19,4),
     "colH" DECIMAL(19,4),
-    "colI" DECIMAL(19,4),
+    "colI" TEXT,
     "colJ" DECIMAL(19,4),
     "colK" DECIMAL(19,4),
     "colL" DECIMAL(19,4),
@@ -336,16 +346,8 @@ CREATE TABLE "account_receivables" (
     "colN" DECIMAL(19,4),
     "colO" DECIMAL(19,4),
     "colP" DECIMAL(19,4),
-    "colQ" DECIMAL(19,4),
+    "colQ" TEXT,
     "colR" DECIMAL(19,4),
-    "colS" DECIMAL(19,4),
-    "colT" DECIMAL(19,4),
-    "colU" DECIMAL(19,4),
-    "colV" DECIMAL(19,4),
-    "colW" DECIMAL(19,4),
-    "colX" DECIMAL(19,4),
-    "colY" DECIMAL(19,4),
-    "colZ" DECIMAL(19,4),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -383,69 +385,89 @@ CREATE TABLE "account_payables" (
 );
 
 -- CreateTable
-CREATE TABLE "asset_depreciation" (
+CREATE TABLE "tax_ledgers" (
     "id" BIGSERIAL NOT NULL,
-    "purchase_date" VARCHAR(50),
-    "bank_ref" VARCHAR(100),
-    "asset_name" VARCHAR(255),
-    "purchase_price" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "useful_life" INTEGER,
-    "accumulated_2020" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "jan" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "feb" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "mar" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "apr" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "may" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "jun" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "jul" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "aug" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "sep" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "oct" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "nov" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "dec" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "total_2021" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "accumulated_2021" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "book_value" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "type" "PpnType" NOT NULL,
+    "colA" DATE,
+    "colB" VARCHAR(100),
+    "colC" VARCHAR(100),
+    "colD" TEXT,
+    "colE" VARCHAR(255),
+    "colF" INTEGER,
+    "colG" VARCHAR(100),
+    "colH" DECIMAL(19,4),
+    "colI" DECIMAL(19,4),
+    "colJ" DECIMAL(19,4),
+    "colK" DECIMAL(19,4),
+    "colL" VARCHAR(255),
+    "colM" VARCHAR(255),
+    "colN" VARCHAR(255),
+    "colO" VARCHAR(255),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "asset_depreciation_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "tax_ledgers_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "profit_loss_sales" (
+CREATE TABLE "depreciation" (
     "id" BIGSERIAL NOT NULL,
-    "account_name" VARCHAR(255),
-    "gross" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "vat" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "ap_vat" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "credit_note" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "ap_credit_note" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "net_sales" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "col_a" TIMESTAMP(3),
+    "col_b" VARCHAR(100),
+    "col_c" TEXT,
+    "col_d" DECIMAL(19,4) DEFAULT 0,
+    "col_e" INTEGER,
+    "col_f" DECIMAL(19,4) DEFAULT 0,
+    "col_g" DECIMAL(19,4) DEFAULT 0,
+    "col_h" DECIMAL(19,4) DEFAULT 0,
+    "col_i" DECIMAL(19,4) DEFAULT 0,
+    "col_j" DECIMAL(19,4) DEFAULT 0,
+    "col_k" DECIMAL(19,4) DEFAULT 0,
+    "col_l" DECIMAL(19,4) DEFAULT 0,
+    "col_m" DECIMAL(19,4) DEFAULT 0,
+    "col_n" DECIMAL(19,4) DEFAULT 0,
+    "col_o" DECIMAL(19,4) DEFAULT 0,
+    "col_p" DECIMAL(19,4) DEFAULT 0,
+    "col_q" DECIMAL(19,4) DEFAULT 0,
+    "col_r" DECIMAL(19,4) DEFAULT 0,
+    "col_s" DECIMAL(19,4) DEFAULT 0,
+    "col_t" DECIMAL(19,4) DEFAULT 0,
+    "col_u" DECIMAL(19,4) DEFAULT 0,
+    "type" "DepreciationType" NOT NULL DEFAULT 'OFFICE_EQUIPMENT',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "profit_loss_sales_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "depreciation_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "profit_loss_costs" (
+CREATE TABLE "finance_revenue" (
     "id" BIGSERIAL NOT NULL,
-    "category" VARCHAR(100),
-    "sub_category" VARCHAR(100),
-    "account_name" VARCHAR(255),
-    "bca" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "mandiri" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "bri" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "btn" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "cash_idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "non_cb" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "other" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "total" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "colA" VARCHAR(50),
+    "colB" VARCHAR(100),
+    "colC" TEXT,
+    "colD" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "colE" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "colF" DECIMAL(19,4) NOT NULL DEFAULT 0,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "profit_loss_costs_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "finance_revenue_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "finance_expenses" (
+    "id" BIGSERIAL NOT NULL,
+    "colA" VARCHAR(100),
+    "colB" DATE,
+    "colC" TEXT,
+    "colD" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "colE" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "colF" DECIMAL(19,4) NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "finance_expenses_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable

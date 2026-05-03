@@ -188,7 +188,7 @@ export function AppSidebar() {
         <div className="px-4 mt-4">
           <button
             onClick={() => { logout(); navigate("/login"); }}
-            className="flex items-center rounded-xl w-full py-2 text-muted-foreground hover:text-primary hover:bg-muted/50 transition-all duration-300 group"
+            className="flex items-center rounded-xl w-full py-2 text-muted-foreground hover:text-primary hover:bg-muted/50 transition-all duration-300 group cursor-pointer"
           >
             <div className="w-12 flex-shrink-0 flex justify-center items-center">
               <LogOut size={18} className="opacity-40 group-hover:opacity-100 transition-opacity" />

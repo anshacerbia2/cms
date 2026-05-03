@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Eye, Truck } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useSuppliers } from "../hooks/useSuppliers";
+import { useAuthStore } from "@/store/authStore";
 import { 
   Table, 
   TableBody, 
@@ -28,6 +29,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
 
 export default function SuppliersPage() {
+  const { can } = useAuthStore();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 500);
@@ -77,13 +79,15 @@ export default function SuppliersPage() {
         description="Manage your enterprise supply chain and provider records."
         icon={Truck}
         actions={
-          <Button 
-            onClick={handleCreate}
-            className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
-          >
-            <Plus size={18} strokeWidth={3} />
-            <span>ADD SUPPLIER</span>
-          </Button>
+          can('suppliers.create') && (
+            <Button 
+              onClick={handleCreate}
+              className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
+            >
+              <Plus size={18} strokeWidth={3} />
+              <span>ADD SUPPLIER</span>
+            </Button>
+          )
         }
       />
 

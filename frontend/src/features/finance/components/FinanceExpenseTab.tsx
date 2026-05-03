@@ -78,8 +78,8 @@ export function FinanceExpenseTab({ currentView, onViewChange }: FinanceExpenseT
     <div className="space-y-12 animate-in fade-in duration-500">
       {/* Navigation Bar */}
       <div className="flex items-center justify-between bg-white/50 p-2 rounded-2xl border border-primary/5 backdrop-blur-sm">
-        <div className="flex items-center gap-3 pl-4">
-          <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-primary/60 border border-primary/5 shadow-inner">
+        <div className="flex items-center gap-3 pl-2">
+          <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-primary/60 border border-primary/5 shadow-inner shrink-0">
             <Landmark size={20} />
           </div>
           <div>
@@ -166,7 +166,7 @@ export function FinanceExpenseTab({ currentView, onViewChange }: FinanceExpenseT
                       <tr className="whitespace-nowrap">
                         <th 
                           style={{ position: 'sticky', top: 0, zIndex: 50 }}
-                          className="bg-slate-50 pl-8 text-left py-4 text-[11px] font-black text-primary/40 uppercase tracking-widest border-b border-primary/10"
+                          className="bg-slate-50 pl-8 text-left py-3 text-[11px] font-black text-primary/40 uppercase tracking-widest border-b border-primary/10"
                         >
                            <div className="flex items-center gap-1">
                              Date
@@ -175,7 +175,7 @@ export function FinanceExpenseTab({ currentView, onViewChange }: FinanceExpenseT
                         </th>
                         <th 
                           style={{ position: 'sticky', top: 0, zIndex: 50 }}
-                          className="bg-slate-50 text-left px-4 py-4 text-[11px] font-black text-primary/40 uppercase tracking-widest border-b border-primary/10"
+                          className="bg-slate-50 text-left px-4 py-3 text-[11px] font-black text-primary/40 uppercase tracking-widest border-b border-primary/10"
                         >
                            <div className="flex items-center gap-1">
                              Description
@@ -184,7 +184,7 @@ export function FinanceExpenseTab({ currentView, onViewChange }: FinanceExpenseT
                         </th>
                         <th 
                           style={{ position: 'sticky', top: 0, zIndex: 50 }}
-                          className="bg-slate-50 text-right px-4 py-4 text-[11px] font-black text-primary/40 uppercase tracking-widest border-b border-primary/10"
+                          className="bg-slate-50 text-right px-4 py-3 text-[11px] font-black text-primary/40 uppercase tracking-widest border-b border-primary/10"
                         >
                            <div className="flex items-center justify-end gap-1">
                              Debit
@@ -193,7 +193,7 @@ export function FinanceExpenseTab({ currentView, onViewChange }: FinanceExpenseT
                         </th>
                         <th 
                           style={{ position: 'sticky', top: 0, zIndex: 50 }}
-                          className="bg-slate-50 text-right px-4 py-4 text-[11px] font-black text-primary/40 uppercase tracking-widest border-b border-primary/10"
+                          className="bg-slate-50 text-right px-4 py-3 text-[11px] font-black text-primary/40 uppercase tracking-widest border-b border-primary/10"
                         >
                            <div className="flex items-center justify-end gap-1">
                              Credit
@@ -202,7 +202,7 @@ export function FinanceExpenseTab({ currentView, onViewChange }: FinanceExpenseT
                         </th>
                         <th 
                           style={{ position: 'sticky', top: 0, zIndex: 50 }}
-                          className="bg-slate-50 text-right pr-8 py-4 text-[11px] font-black text-primary/40 uppercase tracking-widest border-b border-primary/10"
+                          className="bg-slate-50 text-right pr-8 py-3 text-[11px] font-black text-primary/40 uppercase tracking-widest border-b border-primary/10"
                         >
                            <div className="flex items-center justify-end gap-1">
                              Balance

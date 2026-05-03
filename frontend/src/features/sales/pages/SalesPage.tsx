@@ -13,10 +13,12 @@ import { useExcelFilter } from "../../finance/hooks/useExcelFilter";
 import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
 import AddSalesModal from "../components/AddSalesModal";
+import { useAuthStore } from "@/store/authStore";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SalesPage() {
+  const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const salesLimit = 10;
 
@@ -178,13 +180,15 @@ export default function SalesPage() {
             </Button>
           )}
           
-          <Button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 disabled:grayscale transition-all active:scale-95 cursor-pointer"
-          >
-            <Plus size={20} strokeWidth={3} />
-            <span className="text-[13px]">Add Sales</span>
-          </Button>
+          {can('sales.create') && (
+            <Button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 disabled:grayscale transition-all active:scale-95 cursor-pointer"
+            >
+              <Plus size={20} strokeWidth={3} />
+              <span className="text-[13px]">Add Sales</span>
+            </Button>
+          )}
         </div>
       </div>
 

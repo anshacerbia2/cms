@@ -24,7 +24,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
 
 export default function AccountReceivablePage() {
-  const { user } = useAuthStore();
+  const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const limit = 10;
 
@@ -143,7 +143,7 @@ export default function AccountReceivablePage() {
             </Button>
           )}
           
-          {user?.permissions?.includes('account-receivable.create') && (
+          {can('account-receivable.create') && (
             <Button 
               onClick={() => setIsAddModalOpen(true)}
               className="h-12 px-6 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold transition-all active:scale-95"
@@ -159,7 +159,7 @@ export default function AccountReceivablePage() {
         <div className="overflow-x-auto custom-scrollbar">
           <Table className="min-w-[2400px]">
             <TableHeader className="bg-slate-50/50">
-              <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap h-16">
+              <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
                 <TableHead className="w-32 pl-8">
                   <div className="flex items-center gap-1">
                     Type

@@ -23,11 +23,12 @@ interface AuthState {
   token: string | null;
   setAuth: (user: User, token: string) => void;
   logout: () => void;
+  can: (permission: string) => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       setAuth: (user, token) => {
@@ -38,6 +39,12 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, token: null });
         localStorage.removeItem('token');
         localStorage.removeItem('auth-storage');
+      },
+      can: (permission: string) => {
+        const user = get().user;
+        if (!user) return false;
+        if (user.role === 'admin') return true;
+        return user.permissions.includes(permission);
       },
     }),
     {

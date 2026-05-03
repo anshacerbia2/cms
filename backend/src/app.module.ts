@@ -7,9 +7,12 @@ import { CustomersModule } from './customers/customers.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { ProductsModule } from './products/products.module';
 import { BanksModule } from './banks/banks.module';
-import { FinanceModule } from './finance/finance.module';
+import { FinanceReportModule } from './finance/finance-report/finance-report.module';
 import { BankMutationModule } from './finance/bank-mutation/bank-mutation.module';
-import { AccountPayableModule } from './finance/ap/account-payable.module';
+import { AccountPayableModule } from './finance/account-payable/account-payable.module';
+import { AccountReceivableModule } from './finance/account-receivable/account-receivable.module';
+import { DepreciationModule } from './finance/depreciation/depreciation.module';
+import { SalesModule } from './finance/sales/sales.module';
 
 @Module({
   imports: [
@@ -23,9 +26,12 @@ import { AccountPayableModule } from './finance/ap/account-payable.module';
     SuppliersModule,
     ProductsModule,
     BanksModule,
-    FinanceModule,
+    FinanceReportModule,
     BankMutationModule,
     AccountPayableModule,
+    AccountReceivableModule,
+    DepreciationModule,
+    SalesModule,
   ],
   controllers: [],
   providers: [],

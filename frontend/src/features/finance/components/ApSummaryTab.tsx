@@ -22,7 +22,7 @@ import { Decimal } from "decimal.js";
 import { useExcelFilter } from "../hooks/useExcelFilter";
 
 export function ApSummaryTab() {
-  const { user } = useAuthStore();
+  const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const apLimit = 10;
 
@@ -175,7 +175,7 @@ export function ApSummaryTab() {
             </Button>
           )}
           
-          {user?.permissions?.includes('account-payable.create') && (
+          {can('account-payable.create') && (
             <Button 
               onClick={() => setIsAddModalOpen(true)}
               className="h-12 px-6 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 transition-all active:scale-95"

@@ -22,7 +22,7 @@ import { Plus } from "lucide-react";
 import { Decimal } from "decimal.js";
 
 export function ApPpnNonWapuTab() {
-  const { user } = useAuthStore();
+  const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const limit = 10;
 
@@ -144,10 +144,10 @@ export function ApPpnNonWapuTab() {
             </Button>
           )}
           
-          {user?.permissions?.includes('account-payable.create') && (
+          {can('account-payable.create') && (
             <Button 
               onClick={() => setIsAddModalOpen(true)}
-              className="h-12 px-6 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 transition-all active:scale-95"
+              className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 disabled:grayscale transition-all active:scale-95 cursor-pointer"
             >
               <Plus size={20} strokeWidth={3} />
               <span className="text-[13px]">Add Record</span>

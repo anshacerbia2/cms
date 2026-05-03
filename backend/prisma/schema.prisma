@@ -375,16 +375,16 @@ model SalesRecord {
   id              BigInt   @id @default(autoincrement())
   colA            String?  @db.VarChar(100)
   colB            String?  @db.VarChar(100)
-  colC            Int?
-  colD            String?  @db.Text
+  colC            DateTime?
+  colD            Int?
   colE            String?  @db.Text
   colF            String?  @db.Text
-  colG            Decimal? @db.Decimal(19, 4)
+  colG            String?  @db.Text
   colH            Decimal? @db.Decimal(19, 4)
   colI            Decimal? @db.Decimal(19, 4)
   colJ            Decimal? @db.Decimal(19, 4)
   colK            Decimal? @db.Decimal(19, 4)
-  colL            Decimal? @db.Decimal(19, 4)
+  colL            DateTime?
   colM            Decimal? @db.Decimal(19, 4)
   colN            Decimal? @db.Decimal(19, 4)
   colO            Decimal? @db.Decimal(19, 4)
@@ -397,8 +397,12 @@ model SalesRecord {
   colV            Decimal? @db.Decimal(19, 4)
   colW            Decimal? @db.Decimal(19, 4)
   colX            Decimal? @db.Decimal(19, 4)
-  colY            Decimal? @db.Decimal(19, 4)
+  colY            String?  @db.Text
   colZ            Decimal? @db.Decimal(19, 4)
+  colAA           Decimal? @db.Decimal(19, 4)
+  colAB           Decimal? @db.Decimal(19, 4)
+  colAC           Decimal? @db.Decimal(19, 4)
+  colAD           String?  @db.Text
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -415,7 +419,7 @@ model AccountReceivable {
   colF            Decimal? @db.Decimal(19, 4)
   colG            Decimal? @db.Decimal(19, 4)
   colH            Decimal? @db.Decimal(19, 4)
-  colI            Decimal? @db.Decimal(19, 4)
+  colI            String?  @db.Text
   colJ            Decimal? @db.Decimal(19, 4)
   colK            Decimal? @db.Decimal(19, 4)
   colL            Decimal? @db.Decimal(19, 4)
@@ -423,16 +427,8 @@ model AccountReceivable {
   colN            Decimal? @db.Decimal(19, 4)
   colO            Decimal? @db.Decimal(19, 4)
   colP            Decimal? @db.Decimal(19, 4)
-  colQ            Decimal? @db.Decimal(19, 4)
+  colQ            String?  @db.Text
   colR            Decimal? @db.Decimal(19, 4)
-  colS            Decimal? @db.Decimal(19, 4)
-  colT            Decimal? @db.Decimal(19, 4)
-  colU            Decimal? @db.Decimal(19, 4)
-  colV            Decimal? @db.Decimal(19, 4)
-  colW            Decimal? @db.Decimal(19, 4)
-  colX            Decimal? @db.Decimal(19, 4)
-  colY            Decimal? @db.Decimal(19, 4)
-  colZ            Decimal? @db.Decimal(19, 4)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -468,71 +464,100 @@ model AccountPayable {
   @@map("account_payables")
 }
 
+enum PpnType {
+  WAPU
+  NON_WAPU
+}
+
+enum DepreciationType {
+  OFFICE_EQUIPMENT
+  VEHICLE
+  INTANGIBLE_ASSET
+}
+
+model TaxLedger {
+  id              BigInt      @id @default(autoincrement())
+  type            PpnType
+  colA            DateTime?   @db.Date        // Masa
+  colB            String?     @db.VarChar(100) // Faktur
+  colC            String?     @db.VarChar(100) // No Faktur
+  colD            String?     @db.Text         // Client / Supplier
+  colE            String?     @db.VarChar(255) // Reference
+  colF            Int?                         // Year
+  colG            String?     @db.VarChar(100) // STATUS
+  colH            Decimal?    @db.Decimal(19, 4) // PPN
+  colI            Decimal?    @db.Decimal(19, 4) // Amount (Wapu/Non-Wapu)
+  colJ            Decimal?    @db.Decimal(19, 4) // Masukan
+  colK            Decimal?    @db.Decimal(19, 4) // Kurang Bayar
+  colL            String?     @db.VarChar(255) // Account
+  colM            String?     @db.VarChar(255) // Sub Ledger 1
+  colN            String?     @db.VarChar(255) // Sub Ledger 2
+  colO            String?     @db.VarChar(255) // Sub Ledger 3
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@map("tax_ledgers")
+}
+
 // --- FINANCIAL DATA: ASSETS & DEPRECIATION ---
 
-model AssetDepreciation {
+model Depreciation {
   id              BigInt   @id @default(autoincrement())
-  purchaseDate    String?  @map("purchase_date") @db.VarChar(50)
-  bankRef         String?  @map("bank_ref") @db.VarChar(100)
-  assetName       String?  @map("asset_name") @db.VarChar(255)
-  purchasePrice   Decimal  @default(0) @map("purchase_price") @db.Decimal(19, 4)
-  usefulLife      Int?     @map("useful_life")
-  accumulated2020 Decimal  @default(0) @map("accumulated_2020") @db.Decimal(19, 4)
-  jan             Decimal  @default(0) @db.Decimal(19, 4)
-  feb             Decimal  @default(0) @db.Decimal(19, 4)
-  mar             Decimal  @default(0) @db.Decimal(19, 4)
-  apr             Decimal  @default(0) @db.Decimal(19, 4)
-  may              Decimal  @default(0) @db.Decimal(19, 4)
-  jun              Decimal  @default(0) @db.Decimal(19, 4)
-  jul              Decimal  @default(0) @db.Decimal(19, 4)
-  aug              Decimal  @default(0) @db.Decimal(19, 4)
-  sep              Decimal  @default(0) @db.Decimal(19, 4)
-  oct              Decimal  @default(0) @db.Decimal(19, 4)
-  nov              Decimal  @default(0) @db.Decimal(19, 4)
-  dec              Decimal  @default(0) @db.Decimal(19, 4)
-  total2021       Decimal  @default(0) @map("total_2021") @db.Decimal(19, 4)
-  accumulated2021 Decimal  @default(0) @map("accumulated_2021") @db.Decimal(19, 4)
-  bookValue       Decimal  @default(0) @map("book_value") @db.Decimal(19, 4)
+  colA            DateTime? @map("col_a")
+  colB            String?   @map("col_b") @db.VarChar(100)
+  colC            String?   @map("col_c") @db.Text
+  colD            Decimal?  @default(0) @map("col_d") @db.Decimal(19, 4)
+  colE            Int?      @map("col_e")
+  colF            Decimal?  @default(0) @map("col_f") @db.Decimal(19, 4)
+  colG            Decimal?  @default(0) @map("col_g") @db.Decimal(19, 4)
+  colH            Decimal?  @default(0) @map("col_h") @db.Decimal(19, 4)
+  colI            Decimal?  @default(0) @map("col_i") @db.Decimal(19, 4)
+  colJ            Decimal?  @default(0) @map("col_j") @db.Decimal(19, 4)
+  colK            Decimal?  @default(0) @map("col_k") @db.Decimal(19, 4)
+  colL            Decimal?  @default(0) @map("col_l") @db.Decimal(19, 4)
+  colM            Decimal?  @default(0) @map("col_m") @db.Decimal(19, 4)
+  colN            Decimal?  @default(0) @map("col_n") @db.Decimal(19, 4)
+  colO            Decimal?  @default(0) @map("col_o") @db.Decimal(19, 4)
+  colP            Decimal?  @default(0) @map("col_p") @db.Decimal(19, 4)
+  colQ            Decimal?  @default(0) @map("col_q") @db.Decimal(19, 4)
+  colR            Decimal?  @default(0) @map("col_r") @db.Decimal(19, 4)
+  colS            Decimal?  @default(0) @map("col_s") @db.Decimal(19, 4)
+  colT            Decimal?  @default(0) @map("col_t") @db.Decimal(19, 4)
+  colU            Decimal?  @default(0) @map("col_u") @db.Decimal(19, 4)
+  type            DepreciationType @default(OFFICE_EQUIPMENT)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  @@map("asset_depreciation")
+  @@map("depreciation")
 }
 
 // --- FINANCIAL DATA: PROFIT & LOSS ---
+model FinanceRevenue {
+  id        BigInt   @id @default(autoincrement())
+  colA      String?  @db.VarChar(50)
+  colB      String?  @db.VarChar(100)
+  colC      String?  @db.Text
+  colD      Decimal  @default(0) @db.Decimal(19, 4)
+  colE      Decimal  @default(0) @db.Decimal(19, 4)
+  colF      Decimal  @default(0) @db.Decimal(19, 4)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-model ProfitLossSales {
-  id          BigInt   @id @default(autoincrement())
-  accountName String?  @map("account_name") @db.VarChar(255)
-  gross       Decimal  @default(0) @db.Decimal(19, 4)
-  vat         Decimal  @default(0) @db.Decimal(19, 4)
-  apVat       Decimal  @default(0) @map("ap_vat") @db.Decimal(19, 4)
-  creditNote  Decimal  @default(0) @map("credit_note") @db.Decimal(19, 4)
-  apCreditNote Decimal  @default(0) @map("ap_credit_note") @db.Decimal(19, 4)
-  netSales    Decimal  @default(0) @map("net_sales") @db.Decimal(19, 4)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@map("profit_loss_sales")
+  @@map("finance_revenue")
 }
 
-model ProfitLossCost {
-  id          BigInt   @id @default(autoincrement())
-  category    String?  @db.VarChar(100)
-  subCategory String?  @map("sub_category") @db.VarChar(100)
-  accountName String?  @map("account_name") @db.VarChar(255)
-  bca         Decimal  @default(0) @db.Decimal(19, 4)
-  mandiri     Decimal  @default(0) @db.Decimal(19, 4)
-  bri         Decimal  @default(0) @db.Decimal(19, 4)
-  btn         Decimal  @default(0) @db.Decimal(19, 4)
-  cashIdr     Decimal  @default(0) @map("cash_idr") @db.Decimal(19, 4)
-  nonCb       Decimal  @default(0) @map("non_cb") @db.Decimal(19, 4)
-  other       Decimal  @default(0) @db.Decimal(19, 4)
-  total       Decimal  @default(0) @db.Decimal(19, 4)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+model FinanceExpense {
+  id        BigInt    @id @default(autoincrement())
+  colA      String?   @db.VarChar(100)
+  colB      DateTime? @db.Date
+  colC      String?   @db.Text
+  colD      Decimal   @default(0) @db.Decimal(19, 4)
+  colE      Decimal   @default(0) @db.Decimal(19, 4)
+  colF      Decimal   @default(0) @db.Decimal(19, 4)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
-  @@map("profit_loss_costs")
+  @@map("finance_expenses")
 }
 
 model ProfitLossSummary {

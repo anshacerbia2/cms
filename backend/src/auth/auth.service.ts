@@ -54,9 +54,14 @@ export class AuthService {
     parentMenus.forEach((group: any) => {
       group.items.forEach((item: any) => {
         if (item.title === 'Dashboard') item.url = '/dashboard';
-        if (item.title === 'Account Ledger' || item.title === 'Bank Mutation') {
-          item.title = 'Bank Mutation';
-          item.url = '/finance/bank-mutation';
+        if (item.title === 'Bank Mutation') {
+          item.url = '/bank-mutation';
+        }
+        if (item.title === 'Account Payable') {
+          item.url = '/account-payable';
+        }
+        if (item.title === 'Account Receivable') {
+          item.url = '/account-receivable';
         }
         if (item.title === 'Customers') item.url = '/customers';
         if (item.title === 'Suppliers') item.url = '/suppliers';
@@ -66,7 +71,7 @@ export class AuthService {
           item.url = '/banks';
         }
         if (item.title === 'Financial Reports') {
-          item.url = '/finance';
+          item.url = '/finance-reports';
         }
       });
     });

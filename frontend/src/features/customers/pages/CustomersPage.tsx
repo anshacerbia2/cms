@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Eye } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useCustomers } from "../hooks/useCustomers";
+import { useAuthStore } from "@/store/authStore";
 import { 
   Table, 
   TableBody, 
@@ -29,6 +30,7 @@ import { PageContainer } from "@/components/common/PageContainer";
 import { Users } from "lucide-react";
 
 export default function CustomersPage() {
+  const { can } = useAuthStore();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 500);
@@ -78,13 +80,15 @@ export default function CustomersPage() {
         description="Enterprise client directory and relationship management."
         icon={Users}
         actions={
-          <Button 
-            onClick={handleCreate}
-            className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
-          >
-            <Plus size={18} strokeWidth={3} />
-            <span>ADD CLIENT</span>
-          </Button>
+          can('customers.create') && (
+            <Button 
+              onClick={handleCreate}
+              className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
+            >
+              <Plus size={18} strokeWidth={3} />
+              <span>ADD CLIENT</span>
+            </Button>
+          )
         }
       />
 

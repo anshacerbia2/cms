@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Shield, Mail, User as UserIcon } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useStaff } from "../hooks/useStaff";
+import { useAuthStore } from "@/store/authStore";
 import { 
   Table, 
   TableBody, 
@@ -27,6 +28,7 @@ import { PageContainer } from "@/components/common/PageContainer";
 import { Users } from "lucide-react";
 
 export default function StaffPage() {
+  const { can } = useAuthStore();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 500);
@@ -59,13 +61,15 @@ export default function StaffPage() {
         description="Control system access levels and internal team credentials."
         icon={Users}
         actions={
-          <Button 
-            onClick={handleCreate}
-            className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
-          >
-            <Plus size={18} strokeWidth={3} />
-            <span>ADD STAFF</span>
-          </Button>
+          can('users.create') && (
+            <Button 
+              onClick={handleCreate}
+              className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
+            >
+              <Plus size={18} strokeWidth={3} />
+              <span>ADD STAFF</span>
+            </Button>
+          )
         }
       />
 

@@ -8,6 +8,7 @@ import { seedSuppliers } from './suppliers.seeder';
 import { seedProducts } from './products.seeder';
 import { seedBankMutation, seedBanks } from './banks.seeder';
 import { seedFinance } from './finance.seeder';
+import { seedAccountReceivable } from './account-receivable.seeder';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -31,6 +32,7 @@ async function main() {
 
     // Comprehensive Financial Data (from Excel)
     await seedFinance(prisma);
+    await seedAccountReceivable(prisma);
 
     console.log('🚀 Seeding completed successfully.');
   } catch (error) {

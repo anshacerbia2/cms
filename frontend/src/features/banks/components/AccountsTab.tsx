@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus, MoreVertical, Edit2, Trash2, Search, Building2, Banknote, CreditCard, QrCode } from "lucide-react";
 import { useBanks } from "../hooks/useBanks";
+import { useAuthStore } from "@/store/authStore";
 import { QRDialog } from "./QRDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +41,7 @@ export function AccountsTab() {
   const [selectedAccount, setSelectedAccount] = useState<InternalAccount | null>(null);
   const [qrData, setQrData] = useState<{ title: string, subtitle: string, data: string }>({ title: "", subtitle: "", data: "" });
 
-  // Fetch accounts and ALSO fetch banks for the dialog
+  const { can } = useAuthStore();
   const { 
     internalAccountsQuery, 
     banksQuery,
@@ -152,13 +153,15 @@ export function AccountsTab() {
           {filteredAccounts.length} Results
         </div>
 
-        <Button 
-          onClick={handleCreate}
-          className="h-12 px-6 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 shrink-0 font-bold transition-all active:scale-95 cursor-pointer w-full lg:w-auto"
-        >
-          <Plus size={20} strokeWidth={3} />
-          <span className="text-[13px]">New Account</span>
-        </Button>
+        {can('internal-accounts.create') && (
+          <Button 
+            onClick={handleCreate}
+            className="h-12 px-6 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 shrink-0 font-bold transition-all active:scale-95 cursor-pointer w-full lg:w-auto"
+          >
+            <Plus size={20} strokeWidth={3} />
+            <span className="text-[13px]">New Account</span>
+          </Button>
+        )}
       </div>
 
 

@@ -10,11 +10,13 @@ import { Input } from "@/components/ui/input";
 import { useExcelFilter } from "../hooks/useExcelFilter";
 import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
+import { useAuthStore } from "@/store/authStore";
 import { Decimal } from "decimal.js";
 import { Badge } from "@/components/ui/badge";
 import AddDepreciationModal from "../components/AddDepreciationModal";
 
 export default function DepreciationPage() {
+  const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const assetLimit = 10;
 
@@ -153,13 +155,15 @@ export default function DepreciationPage() {
             </Button>
           )}
           
-          <Button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 disabled:grayscale transition-all active:scale-95 cursor-pointer"
-          >
-            <Plus size={20} strokeWidth={3} />
-            <span className="text-[13px]">Add Depreciation</span>
-          </Button>
+          {can('depreciation.create') && (
+            <Button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 disabled:grayscale transition-all active:scale-95 cursor-pointer"
+            >
+              <Plus size={20} strokeWidth={3} />
+              <span className="text-[13px]">Add Depreciation</span>
+            </Button>
+          )}
         </div>
       </div>
 

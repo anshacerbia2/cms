@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Eye, Truck, Tag, Ruler } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useProducts } from "../hooks/useProducts";
+import { useAuthStore } from "@/store/authStore";
 import { useSuppliers } from "../../suppliers/hooks/useSuppliers";
 import { 
   Table, 
@@ -35,6 +36,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
 
 export default function ProductsPage() {
+  const { can } = useAuthStore();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState<string>("all");
@@ -90,13 +92,15 @@ export default function ProductsPage() {
         description="Unified management for all service inventory and SKU registries."
         icon={Tag}
         actions={
-          <Button 
-            onClick={handleCreate}
-            className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
-          >
-            <Plus size={18} strokeWidth={3} />
-            <span>ADD PRODUCT</span>
-          </Button>
+          can('products.create') && (
+            <Button 
+              onClick={handleCreate}
+              className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
+            >
+              <Plus size={18} strokeWidth={3} />
+              <span>ADD PRODUCT</span>
+            </Button>
+          )
         }
       />
 

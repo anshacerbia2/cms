@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, MoreVertical, Edit2, Trash2, Search, MapPin, Landmark, QrCode } from "lucide-react";
 import { useBanks } from "../hooks/useBanks";
+import { useAuthStore } from "@/store/authStore";
 import { QRDialog } from "./QRDialog";
 import { 
   Table, 
@@ -34,6 +35,7 @@ export function BanksTab() {
   const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
   const [qrData, setQrData] = useState<{ title: string, subtitle: string, data: string }>({ title: "", subtitle: "", data: "" });
 
+  const { can } = useAuthStore();
   const { 
     banksQuery, 
   } = useBanks({
@@ -77,13 +79,15 @@ export function BanksTab() {
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
-        <Button 
-          onClick={handleCreate}
-          className="h-12 px-6 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 shrink-0 font-bold transition-all active:scale-95 cursor-pointer w-full lg:w-auto"
-        >
-          <Plus size={20} strokeWidth={3} />
-          <span className="text-[13px]">Add Bank Ref</span>
-        </Button>
+        {can('banks.create') && (
+          <Button 
+            onClick={handleCreate}
+            className="h-12 px-6 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 shrink-0 font-bold transition-all active:scale-95 cursor-pointer w-full lg:w-auto"
+          >
+            <Plus size={20} strokeWidth={3} />
+            <span className="text-[13px]">Add Bank Ref</span>
+          </Button>
+        )}
       </div>
 
       <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-premium border border-primary/5 overflow-hidden">
