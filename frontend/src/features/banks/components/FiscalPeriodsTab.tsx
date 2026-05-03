@@ -76,7 +76,7 @@ export function FiscalPeriodsTab() {
             value={selectedAccountId} 
             onValueChange={(v) => { setSelectedAccountId(v); setPage(1); }}
           >
-            <SelectTrigger className="flex items-center justify-between whitespace-nowrap border-0 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 cursor-pointer flex-1 xl:w-[220px] h-12 px-5 bg-white rounded-xl shadow-sm gap-1.5 text-muted-foreground transition-all">
+            <SelectTrigger className="flex-1 xl:w-[220px]">
               <div className="flex items-center gap-3 overflow-hidden">
                 <Landmark size={18} className="text-secondary shrink-0" />
                 {selectedAccountId === "all" ? (
@@ -95,18 +95,14 @@ export function FiscalPeriodsTab() {
                 )}
               </div>
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden w-[var(--radix-select-trigger-width)] min-w-fit">
-              <SelectItem 
-                value="all" 
-                className="py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 whitespace-nowrap text-[11px] font-bold uppercase text-muted-foreground transition-colors"
-              >
+            <SelectContent className="w-[var(--radix-select-trigger-width)] min-w-fit">
+              <SelectItem value="all">
                 All Accounts
               </SelectItem>
               {internalAccounts.map((acc: any) => (
                 <SelectItem 
                   key={acc.id} 
-                  value={acc.id} 
-                  className="py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 whitespace-nowrap text-muted-foreground transition-colors"
+                  value={acc.id}
                 >
                   <div className="flex flex-col items-start gap-1 w-full">
                     <div className="flex items-center gap-2">
@@ -134,21 +130,20 @@ export function FiscalPeriodsTab() {
             value={selectedYear} 
             onValueChange={(v) => { setSelectedYear(v); setPage(1); }}
           >
-            <SelectTrigger className="flex-1 xl:w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all shrink-0 cursor-pointer">
+            <SelectTrigger className="flex-1 xl:w-[130px]">
               <div className="flex items-center gap-2">
                 <Calendar size={18} className="text-secondary" />
                 <SelectValue placeholder="Year" />
               </div>
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden">
-              <SelectItem value="all" className="text-[12px] font-bold py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 text-muted-foreground">
+            <SelectContent>
+              <SelectItem value="all">
                 All Years
               </SelectItem>
               {availableYears.map(year => (
                 <SelectItem 
                   key={year} 
-                  value={year} 
-                  className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground"
+                  value={year}
                 >
                   {year}
                 </SelectItem>
@@ -160,26 +155,22 @@ export function FiscalPeriodsTab() {
 
       <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-premium border border-primary/5 overflow-hidden">
         <Table>
-          <TableHeader className="bg-slate-50/50">
-            <TableRow className="hover:bg-transparent border-primary/5">
-              <TableHead className="w-[100px] text-[10px] font-black uppercase tracking-widest text-primary/40 py-3 pl-8">Year</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest text-primary/40 py-3">Account & Bank</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest text-primary/40 py-3 text-right">Opening Balance</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest text-primary/40 py-3 text-right">Closing Balance</TableHead>
-              {/* <TableHead className="text-[10px] font-black uppercase tracking-widest text-primary/40 py-3 text-center">Status</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-widest text-primary/40 py-3 text-center pr-8">Audit</TableHead> */}
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[100px] pl-8">Year</TableHead>
+              <TableHead>Account & Bank</TableHead>
+              <TableHead className="text-right">Opening Balance</TableHead>
+              <TableHead className="text-right pr-8">Closing Balance</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {fiscalPeriodsQuery.isPending ? (
               [...Array(5)].map((_, i) => (
                 <TableRow key={i} className="animate-pulse border-primary/5">
-                  <TableCell className="py-3 pl-8 "><div className="h-4 w-12 bg-slate-200 rounded"></div></TableCell>
-                  <TableCell className="py-3 "><div className="h-4 w-48 bg-slate-200 rounded"></div></TableCell>
-                  <TableCell className="py-3 "><div className="h-4 w-24 bg-slate-200 rounded ml-auto"></div></TableCell>
-                  <TableCell className="py-3 text-right "><div className="h-4 w-24 bg-slate-200 rounded ml-auto"></div></TableCell>
-                  {/* <TableCell className="py-3 text-center "><div className="h-6 w-16 bg-slate-200 rounded-full mx-auto"></div></TableCell>
-                  <TableCell className="py-3 text-center pr-8 "><div className="h-4 w-4 bg-slate-200 rounded mx-auto"></div></TableCell> */}
+                  <TableCell className="pl-8 "><div className="h-4 w-12 bg-slate-200 rounded"></div></TableCell>
+                  <TableCell><div className="h-4 w-48 bg-slate-200 rounded"></div></TableCell>
+                  <TableCell><div className="h-4 w-24 bg-slate-200 rounded ml-auto"></div></TableCell>
+                  <TableCell className="text-right "><div className="h-4 w-24 bg-slate-200 rounded ml-auto"></div></TableCell>
                 </TableRow>
               ))
             ) : data.length === 0 ? (
@@ -193,14 +184,14 @@ export function FiscalPeriodsTab() {
               </TableRow>
             ) : (
               data.map((item: any) => (
-                <TableRow key={item.id} className="group hover:bg-slate-50/50 transition-colors border-primary/5">
-                  <TableCell className="py-3 pl-8 ">
+                <TableRow key={item.id} className="group whitespace-nowrap">
+                  <TableCell className="pl-8">
                     <div className="flex items-center gap-2">
                        <Calendar size={14} className="text-secondary" />
                        <span className="font-black text-primary text-sm tracking-tight">{item.year}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="py-3 ">
+                  <TableCell>
                     <div className="flex flex-col gap-0.5">
                       <span className="text-[11px] font-extrabold text-primary uppercase leading-tight">{item.internalAccount?.holderName}</span>
                       <div className="flex items-center gap-1.5 opacity-60">
@@ -211,37 +202,12 @@ export function FiscalPeriodsTab() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="py-3 text-right text-[12px] font-black text-primary border-r border-primary/5 pr-4 whitespace-nowrap tabular-nums ">
+                  <TableCell className="text-right text-[12px] font-black text-primary whitespace-nowrap tabular-nums">
                     {item.openingBalance != null ? formatCurrency(item.openingBalance) : "-"}
                   </TableCell>
-                  <TableCell className="py-3 text-right text-[12px] font-black text-primary pr-8 whitespace-nowrap tabular-nums ">
+                  <TableCell className="text-right text-[12px] font-black text-primary pr-8 whitespace-nowrap tabular-nums">
                     {item.closingBalance != null ? formatCurrency(item.closingBalance) : "-"}
                   </TableCell>
-                  {/* <TableCell className="py-3 text-center ">
-                    <Badge 
-                      variant="outline" 
-                      className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg tracking-widest border-2 transition-all ${
-                        item.status === 'CLOSED' 
-                          ? 'bg-emerald-50 border-emerald-100 text-emerald-600 shadow-sm shadow-emerald-100/50' 
-                          : 'bg-amber-50 border-amber-100 text-amber-600 animate-pulse'
-                      }`}
-                    >
-                      {item.status === 'CLOSED' ? <Lock size={10} className="mr-1 inline" /> : <Unlock size={10} className="mr-1 inline" />}
-                      {item.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="py-3 text-center pr-8 ">
-                    {item.isStale ? (
-                      <div className="inline-flex items-center justify-center text-amber-500 animate-bounce" title="Sync required: Data drift detected">
-                        <AlertCircle size={16} />
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></div>
-                        <span className="text-[10px] font-black text-emerald-600/60 uppercase tracking-tighter">Verified</span>
-                      </div>
-                    )}
-                  </TableCell> */}
                 </TableRow>
               ))
             )}

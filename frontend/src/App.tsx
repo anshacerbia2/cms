@@ -46,11 +46,11 @@ function App() {
             <Route path="products" element={<ProductsPage />} />
             <Route path="banks" element={<BanksPage />} />
             <Route path="users" element={<StaffPage />} />
-            <Route path="finance" element={<FinancePage />} />
-            <Route path="finance/bank-mutation" element={<BankMutationPage />} />
-            <Route path="finance/account-payable" element={<AccountPayablePage />} />
-            <Route path="finance/account-receivable" element={<AccountReceivablePage />} />
-            <Route path="finance/depreciation" element={<DepreciationPage />} />
+            <Route path="finance-reports" element={<FinancePage />} />
+            <Route path="bank-mutation" element={<BankMutationPage />} />
+            <Route path="account-payable" element={<AccountPayablePage />} />
+            <Route path="account-receivable" element={<AccountReceivablePage />} />
+            <Route path="depreciation" element={<DepreciationPage />} />
             <Route path="sales" element={<SalesPage />} />
           </Route>
         </Routes>

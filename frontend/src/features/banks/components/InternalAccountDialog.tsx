@@ -116,40 +116,40 @@ export function InternalAccountDialog({
                   <FormLabel className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                     <Landmark size={12} className="text-secondary" /> Banking Institution
                   </FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value}
-                    disabled={form.watch("type") === "CASH" || form.watch("type") === "OTHER"}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="h-11 rounded-xl bg-muted/20 border-primary/5 font-bold text-xs uppercase">
-                        <SelectValue placeholder={form.watch("type") === "CASH" || form.watch("type") === "OTHER" ? "N/A FOR CASH/OTHER" : "Select Parent Bank"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="rounded-xl border-primary/5 shadow-premium">
-                      {isLoadingBanks ? (
-                        <div className="p-1 space-y-1">
-                          {[1, 2, 3].map((i) => (
-                            <div key={i} className="px-2 py-1.5">
-                              <span className="font-bold uppercase text-[10px] bg-primary/10 animate-pulse text-transparent select-none rounded-md block w-full">
-                                LOADING BANK MASTER REFERENCE...
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : banks.length === 0 ? (
-                        <div className="p-4 text-center">
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-40 italic">No banks available</p>
-                        </div>
-                      ) : (
-                        banks.map((bank) => (
-                          <SelectItem key={bank.id} value={String(bank.id)} className="font-bold uppercase text-[10px]">
-                            {bank.name || bank.bankName} {bank.bankCode ? `(${bank.bankCode})` : ""}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value}
+                      disabled={form.watch("type") === "CASH" || form.watch("type") === "OTHER"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={form.watch("type") === "CASH" || form.watch("type") === "OTHER" ? "N/A FOR CASH/OTHER" : "Select Parent Bank"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {isLoadingBanks ? (
+                          <div className="p-1 space-y-1">
+                            {[1, 2, 3].map((i) => (
+                              <div key={i} className="px-2 py-1.5">
+                                <span className="font-bold uppercase text-[10px] bg-primary/10 animate-pulse text-transparent select-none rounded-md block w-full">
+                                  LOADING BANK MASTER REFERENCE...
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : banks.length === 0 ? (
+                          <div className="p-4 text-center">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-40 italic">No banks available</p>
+                          </div>
+                        ) : (
+                          banks.map((bank) => (
+                            <SelectItem key={bank.id} value={String(bank.id)}>
+                              {bank.name || bank.bankName} {bank.bankCode ? `(${bank.bankCode})` : ""}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
                   <FormMessage className="text-[10px] uppercase font-bold text-destructive" />
                 </FormItem>
               )}
@@ -166,14 +166,14 @@ export function InternalAccountDialog({
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="h-11 rounded-xl bg-muted/20 border-primary/5 font-bold text-xs uppercase">
+                        <SelectTrigger>
                           <SelectValue placeholder="Select Type" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="rounded-xl border-primary/5 shadow-premium">
-                        <SelectItem value="BANK" className="font-bold uppercase text-[10px]">BANK ACCOUNT</SelectItem>
-                        <SelectItem value="CASH" className="font-bold uppercase text-[10px]">CASH/PETTY CASH</SelectItem>
-                        <SelectItem value="OTHER" className="font-bold uppercase text-[10px]">OTHER/EQUITY</SelectItem>
+                      <SelectContent>
+                        <SelectItem value="BANK">BANK ACCOUNT</SelectItem>
+                        <SelectItem value="CASH">CASH/PETTY CASH</SelectItem>
+                        <SelectItem value="OTHER">OTHER/EQUITY</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormItem>

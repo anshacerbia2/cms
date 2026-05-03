@@ -21,8 +21,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CustomerDialog } from "../components/CustomerDialog";
-import { CreateCustomerInput } from "../types";
+import { Customer, CreateCustomerInput } from "../types";
 import { PaginationControls } from "@/components/common/PaginationControls";
+
+import { PageHeader } from "@/components/common/PageHeader";
+import { PageContainer } from "@/components/common/PageContainer";
+import { Users } from "lucide-react";
 
 export default function CustomersPage() {
   const [page, setPage] = useState(1);
@@ -40,14 +44,14 @@ export default function CustomersPage() {
   const meta = response?.meta;
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   const handleCreate = () => {
     setSelectedCustomer(null);
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (customer: any) => {
+  const handleEdit = (customer: Customer) => {
     setSelectedCustomer(customer);
     setIsDialogOpen(true);
   };
@@ -68,21 +72,21 @@ export default function CustomersPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-primary uppercase">Customers</h1>
-          <p className="text-muted-foreground mt-1 text-sm font-medium">Manage your enterprise client accounts and billing data.</p>
-        </div>
-        <Button 
-          onClick={handleCreate}
-          className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
-        >
-          <Plus size={18} strokeWidth={3} />
-          <span>ADD CUSTOMER</span>
-        </Button>
-      </div>
+    <PageContainer>
+      <PageHeader 
+        title="Customers"
+        description="Enterprise client directory and relationship management."
+        icon={Users}
+        actions={
+          <Button 
+            onClick={handleCreate}
+            className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
+          >
+            <Plus size={18} strokeWidth={3} />
+            <span>ADD CLIENT</span>
+          </Button>
+        }
+      />
 
       {/* Filters & Actions */}
       <div className="flex flex-col sm:flex-row items-center gap-4 bg-white/50 p-2 rounded-2xl border border-primary/5 backdrop-blur-sm">
@@ -108,24 +112,24 @@ export default function CustomersPage() {
       <div className="space-y-4">
         <div className="bg-white rounded-3xl shadow-premium border border-primary/5 overflow-hidden">
           <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow className="hover:bg-transparent border-primary/5">
-                <TableHead className="w-[120px] font-extrabold text-[10px] uppercase tracking-widest text-muted-foreground pl-8 py-5">Code</TableHead>
-                <TableHead className="font-extrabold text-[10px] uppercase tracking-widest text-muted-foreground py-5">Customer Name</TableHead>
-                <TableHead className="font-extrabold text-[10px] uppercase tracking-widest text-muted-foreground py-5">Summary</TableHead>
-                <TableHead className="w-[120px] font-extrabold text-[10px] uppercase tracking-widest text-muted-foreground py-5">Status</TableHead>
-                <TableHead className="w-[80px] text-right pr-8 py-5"></TableHead>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[120px] pl-8">Code</TableHead>
+                <TableHead>Customer Name</TableHead>
+                <TableHead>Summary</TableHead>
+                <TableHead className="w-[120px]">Status</TableHead>
+                <TableHead className="w-[80px] text-right pr-8"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i} className="border-primary/5">
-                    <TableCell className="pl-8 py-4"><Skeleton className="h-5 w-20" /></TableCell>
-                    <TableCell className="py-4"><Skeleton className="h-5 w-48" /></TableCell>
-                    <TableCell className="py-4"><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell className="py-4"><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                    <TableCell className="pr-8 py-4"><Skeleton className="h-8 w-8 rounded-lg ml-auto" /></TableCell>
+                  <TableRow key={i}>
+                    <TableCell className="pl-8"><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                    <TableCell className="pr-8"><Skeleton className="h-8 w-8 rounded-lg ml-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : customers.length === 0 ? (
@@ -136,11 +140,11 @@ export default function CustomersPage() {
                 </TableRow>
               ) : (
                 customers.map((customer) => (
-                  <TableRow key={customer.id} className="group hover:bg-primary/[0.02] border-primary/5 transition-colors">
-                    <TableCell className="pl-8 py-4 font-bold text-primary text-xs tracking-tight">
+                  <TableRow key={customer.id} className="whitespace-nowrap">
+                    <TableCell className="pl-8 font-bold text-primary text-xs tracking-tight">
                       {customer.code}
                     </TableCell>
-                    <TableCell className="py-4">
+                    <TableCell>
                       <div className="flex flex-col">
                         <span className="font-bold text-[13px] text-primary transition-colors uppercase tracking-tight">
                           {customer.name}
@@ -152,7 +156,7 @@ export default function CustomersPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="py-4">
+                    <TableCell>
                       <div className="flex gap-2">
                         <Badge variant="outline" className="bg-muted/30 border-primary/5 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg text-muted-foreground">
                           {customer._count?.billingOptions || 0} OPT
@@ -162,7 +166,7 @@ export default function CustomersPage() {
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell className="py-4">
+                    <TableCell>
                       <Badge className={
                         customer.status === 'ACTIVE' 
                           ? "bg-green-50 text-green-600 border-green-100 hover:bg-green-100" 
@@ -174,7 +178,7 @@ export default function CustomersPage() {
                         <span className="text-[10px] font-extrabold uppercase tracking-widest">{customer.status}</span>
                       </Badge>
                     </TableCell>
-                    <TableCell className="pr-8 py-4 text-right">
+                    <TableCell className="pr-8 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-9 w-9 p-0 rounded-xl hover:bg-primary/5 text-muted-foreground transition-all">
@@ -225,6 +229,6 @@ export default function CustomersPage() {
         customer={selectedCustomer}
         isSubmitting={createCustomer.isPending || updateCustomer.isPending}
       />
-    </div>
+    </PageContainer>
   );
 }

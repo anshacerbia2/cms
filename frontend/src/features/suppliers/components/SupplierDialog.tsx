@@ -244,13 +244,13 @@ export function SupplierDialog({
                           <FormLabel className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">Registry Status</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
-                              <SelectTrigger className="h-11 rounded-xl bg-muted/20 border-primary/5 font-bold text-xs uppercase">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select Status" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="rounded-xl border-primary/5 shadow-premium">
-                              <SelectItem value="ACTIVE" className="font-bold text-green-600">ACTIVE</SelectItem>
-                              <SelectItem value="INACTIVE" className="font-bold text-muted-foreground">INACTIVE</SelectItem>
+                            <SelectContent>
+                              <SelectItem value="ACTIVE" className="text-green-600">ACTIVE</SelectItem>
+                              <SelectItem value="INACTIVE">INACTIVE</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormItem>

@@ -34,34 +34,49 @@ export function ExcelColumnFilter({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const uniqueValues = useMemo(() => {
-    const values = new Set<string>();
+  const { uniqueValues, displayToRawMap } = useMemo(() => {
+    const dToR = new Map<string, Set<string>>();
     data.forEach(item => {
-      const val = item[columnKey];
-      if (val !== undefined && val !== null) {
-        values.add(String(val));
+      const rawVal = String(item[columnKey] || "");
+      const displayedVal = valueFormatter ? valueFormatter(item[columnKey]) : (rawVal || "(Blanks)");
+      
+      if (!dToR.has(displayedVal)) {
+        dToR.set(displayedVal, new Set());
       }
+      dToR.get(displayedVal)!.add(rawVal);
     });
-    return Array.from(values).sort((a, b) => {
-      // Numerical sort if possible
-      const numA = Number(a);
-      const numB = Number(b);
+
+    const sortedLabels = Array.from(dToR.keys()).sort((a, b) => {
+      const numA = parseFloat(a.replace(/[^0-9,-]/g, '').replace(',', '.'));
+      const numB = parseFloat(b.replace(/[^0-9,-]/g, '').replace(',', '.'));
       if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-      // Default alphabetical sort
       return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [data, columnKey]);
+
+    return { uniqueValues: sortedLabels, displayToRawMap: dToR };
+  }, [data, columnKey, valueFormatter]);
 
   // Handle local checkbox state
-  // We sync with activeFilters when opening
   const [tempFilters, setTempFilters] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (isOpen) {
-      setTempFilters(activeFilters ? new Set(activeFilters) : new Set(uniqueValues));
+      // Find which displayed values are currently active based on raw filters
+      if (activeFilters) {
+        const activeLabels = new Set<string>();
+        uniqueValues.forEach(label => {
+          const raws = displayToRawMap.get(label);
+          if (raws && Array.from(raws).some(r => activeFilters.has(r))) {
+            activeLabels.add(label);
+          }
+        });
+        setTempFilters(activeLabels);
+      } else {
+        setTempFilters(new Set(uniqueValues));
+      }
       setSearchTerm("");
     }
-  }, [isOpen, activeFilters, uniqueValues]);
+  }, [isOpen, activeFilters, uniqueValues, displayToRawMap]);
 
   const filteredUniqueValues = uniqueValues.filter(v => 
     v.toLowerCase().includes(searchTerm.toLowerCase())
@@ -91,7 +106,13 @@ export function ExcelColumnFilter({
     if (tempFilters.size === uniqueValues.length) {
       onFilterChange(null);
     } else {
-      onFilterChange(new Set(tempFilters));
+      // Convert selected labels back to ALL corresponding raw values
+      const rawToFilter = new Set<string>();
+      tempFilters.forEach(label => {
+        const raws = displayToRawMap.get(label);
+        raws?.forEach(r => rawToFilter.add(r));
+      });
+      onFilterChange(rawToFilter);
     }
     setIsOpen(false);
   };

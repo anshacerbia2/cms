@@ -88,20 +88,20 @@ export function BanksTab() {
 
       <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-premium border border-primary/5 overflow-hidden">
         <Table>
-          <TableHeader className="bg-primary/5">
-            <TableRow className="hover:bg-transparent border-primary/5">
-              <TableHead className="pl-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-primary">Bank Name</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Code</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Short Name</TableHead>
-              <TableHead className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">HQ Address</TableHead>
-              <TableHead className="text-right pr-8 text-[10px] font-black uppercase tracking-[0.2em] text-primary">Actions</TableHead>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Bank Name</TableHead>
+              <TableHead>Code</TableHead>
+              <TableHead>Short Name</TableHead>
+              <TableHead>HQ Address</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {banksQuery.isPending ? (
               [1, 2, 3, 4, 5].map((i) => (
                 <TableRow key={i} className="border-primary/5 hover:bg-transparent">
-                  <TableCell className="pl-8 py-5">
+                  <TableCell>
                     <div className="flex items-center gap-4">
                       <Skeleton className="h-9 w-9 rounded-xl" />
                       <div className="flex flex-col">
@@ -109,17 +109,17 @@ export function BanksTab() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="py-5">
+                  <TableCell>
                     <span className="text-[11px] font-black uppercase tracking-widest bg-primary/10 animate-pulse text-transparent select-none rounded-md px-2 py-1">
                       CODE
                     </span>
                   </TableCell>
-                  <TableCell className="py-5">
+                  <TableCell>
                     <span className="text-[10px] font-black uppercase tracking-[0.15em] bg-primary/10 animate-pulse text-transparent select-none rounded-lg px-2.5 py-1">
                       BRAND NAME
                     </span>
                   </TableCell>
-                  <TableCell className="py-5">
+                  <TableCell>
                     <div className="flex items-center gap-2">
                       <Skeleton className="h-3 w-3 rounded-full" />
                       <span className="text-[10px] font-bold uppercase bg-primary/10 animate-pulse text-transparent select-none rounded-md">
@@ -127,7 +127,7 @@ export function BanksTab() {
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right pr-8 py-5">
+                  <TableCell className="text-right">
                     <Skeleton className="h-8 w-8 rounded-xl ml-auto" />
                   </TableCell>
                 </TableRow>
@@ -143,8 +143,8 @@ export function BanksTab() {
               </TableRow>
             ) : (
               banksQuery.data?.data.map((bank: any) => (
-                <TableRow key={bank.id} className="border-primary/5 hover:bg-primary/[0.02] transition-colors group">
-                  <TableCell className="pl-8 py-5">
+                <TableRow key={bank.id} className="group whitespace-nowrap">
+                  <TableCell>
                     <div className="flex items-center gap-4">
                       <div className="h-9 w-9 rounded-xl bg-primary/5 flex items-center justify-center group-hover:scale-110 transition-transform">
                         <Landmark size={18} className="text-primary" />
@@ -152,21 +152,21 @@ export function BanksTab() {
                       <span className="font-extrabold text-primary text-xs uppercase tracking-tight">{bank.bankName}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="py-5">
+                  <TableCell>
                     <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest bg-muted px-2 py-1 rounded-md opacity-80">{bank.bankCode}</span>
                   </TableCell>
-                  <TableCell className="py-5">
+                  <TableCell>
                     <span className="text-[10px] font-black text-secondary uppercase tracking-[0.15em] bg-secondary/10 px-2.5 py-1 rounded-lg">
                       {bank.bankBrand}
                     </span>
                   </TableCell>
-                  <TableCell className="py-5">
+                  <TableCell>
                     <div className="flex items-center gap-2 text-primary/60">
                       <MapPin size={14} className="shrink-0" />
                       <span className="text-[10px] font-bold uppercase line-clamp-1">{bank.bankAddress || "N/A"}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right pr-8 py-5">
+                  <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/5 cursor-pointer">

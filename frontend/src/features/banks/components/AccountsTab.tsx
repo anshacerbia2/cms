@@ -133,21 +133,24 @@ export function AccountsTab() {
 
         {/* Type Filter - Select Dropdown */}
         <Select value={selectedType} onValueChange={setSelectedType}>
-          <SelectTrigger className="w-full lg:w-[180px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all shrink-0 cursor-pointer">
+          <SelectTrigger className="w-full lg:w-[180px]">
             <SelectValue placeholder="Account Type" />
           </SelectTrigger>
-          <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden">
+          <SelectContent>
             {["BANK", "CASH", "OTHER"].map((type) => (
               <SelectItem 
                 key={type} 
                 value={type} 
-                className="text-[11px] font-bold py-3 px-5 focus:bg-slate-100 focus:text-primary cursor-pointer rounded-none border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors"
               >
                 {type === 'CASH' ? 'Cash - Non Bank' : type === 'BANK' ? 'Bank' : 'Other'}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+
+        <div className="h-12 px-6 flex items-center justify-center rounded-xl bg-white border-0 shadow-sm text-primary font-bold text-[13px] whitespace-nowrap">
+          {filteredAccounts.length} Results
+        </div>
 
         <Button 
           onClick={handleCreate}

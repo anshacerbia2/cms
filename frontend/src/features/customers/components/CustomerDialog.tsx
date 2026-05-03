@@ -208,13 +208,13 @@ export function CustomerDialog({
                           </FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
-                              <SelectTrigger className="h-12 rounded-xl bg-muted/30 border-primary/5 focus:ring-primary/10 font-bold uppercase tracking-tight">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select status" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="rounded-xl border-primary/5 shadow-premium bg-white">
-                              <SelectItem value="ACTIVE" className="font-bold uppercase tracking-tight text-xs py-3">ACTIVE</SelectItem>
-                              <SelectItem value="INACTIVE" className="font-bold uppercase tracking-tight text-xs py-3">INACTIVE</SelectItem>
+                            <SelectContent>
+                              <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                              <SelectItem value="INACTIVE">INACTIVE</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />

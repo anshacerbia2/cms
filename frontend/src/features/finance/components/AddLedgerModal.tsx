@@ -26,7 +26,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { useFinance } from '../hooks/useFinance';
+import { useBankMutation } from '../hooks/useBankMutation';
 import { Loader2 } from 'lucide-react';
 import Decimal from 'decimal.js';
 
@@ -37,7 +37,6 @@ interface AddLedgerModalProps {
   onSuccess: () => void;
   selectedAccount: any;
   year: number;
-  isPeriodClosed?: boolean;
 }
 
 interface LedgerRow {
@@ -54,7 +53,7 @@ interface LedgerRow {
 }
 
 export default function AddLedgerModal({ open, onOpenChange, onSuccess, selectedAccount, year }: AddLedgerModalProps) {
-  const { getAnchorBalance, createBulkTransactions } = useFinance();
+  const { getAnchorBalance, createBulkTransactions } = useBankMutation();
   const [startingBalance, setStartingBalance] = useState<string>('0');
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [loading, setLoading] = useState(false);

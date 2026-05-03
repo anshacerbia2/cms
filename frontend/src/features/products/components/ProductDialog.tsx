@@ -138,13 +138,13 @@ export function ProductDialog({
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="h-11 rounded-xl bg-muted/20 border-primary/5 font-bold text-xs uppercase">
+                        <SelectTrigger>
                           <SelectValue placeholder="Select Category" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="rounded-xl border-primary/5 shadow-premium">
+                      <SelectContent>
                         {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id} className="font-bold uppercase text-[10px]">
+                          <SelectItem key={cat.id} value={cat.id}>
                             {cat.name}
                           </SelectItem>
                         ))}
@@ -180,14 +180,14 @@ export function ProductDialog({
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="h-11 rounded-xl bg-muted/20 border-primary/5 font-bold text-xs uppercase">
+                      <SelectTrigger>
                         <SelectValue placeholder="Assign Supplier (Optional)" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="rounded-xl border-primary/5 shadow-premium max-h-[280px]">
-                      <SelectItem value="none" className="font-bold uppercase text-[10px] text-muted-foreground italic">None / Multiple</SelectItem>
+                    <SelectContent className="max-h-[280px]">
+                      <SelectItem value="none" className="italic text-muted-foreground">None / Multiple</SelectItem>
                       {suppliers.map((sup) => (
-                        <SelectItem key={sup.id} value={sup.id} className="font-bold uppercase text-[10px]">
+                        <SelectItem key={sup.id} value={sup.id}>
                           {sup.name}
                         </SelectItem>
                       ))}

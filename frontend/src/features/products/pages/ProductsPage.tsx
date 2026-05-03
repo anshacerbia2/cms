@@ -31,6 +31,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ProductDialog } from "../components/ProductDialog";
 import { CreateProductInput, Product } from "../types";
 import { PaginationControls } from "@/components/common/PaginationControls";
+import { PageHeader } from "@/components/common/PageHeader";
+import { PageContainer } from "@/components/common/PageContainer";
 
 export default function ProductsPage() {
   const [page, setPage] = useState(1);
@@ -82,21 +84,21 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-primary uppercase">Products</h1>
-          <p className="text-muted-foreground mt-1 text-sm font-medium">Catalog management for technical equipment and service SKU records.</p>
-        </div>
-        <Button 
-          onClick={handleCreate}
-          className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
-        >
-          <Plus size={18} strokeWidth={3} />
-          <span>ADD NEW PRODUCT</span>
-        </Button>
-      </div>
+    <PageContainer>
+      <PageHeader 
+        title="Product Catalog"
+        description="Unified management for all service inventory and SKU registries."
+        icon={Tag}
+        actions={
+          <Button 
+            onClick={handleCreate}
+            className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
+          >
+            <Plus size={18} strokeWidth={3} />
+            <span>ADD PRODUCT</span>
+          </Button>
+        }
+      />
 
       {/* Filters & Actions */}
       <div className="flex flex-col lg:flex-row items-center gap-4 bg-white/50 p-2 rounded-2xl border border-primary/5 backdrop-blur-sm shadow-sm">
@@ -115,16 +117,16 @@ export default function ProductsPage() {
         
         <div className="flex items-center gap-3 w-full lg:w-auto">
           <Select value={categoryId} onValueChange={(val) => { setCategoryId(val); setPage(1); }}>
-            <SelectTrigger className="h-12 w-full lg:w-[200px] rounded-xl border-primary/10 bg-white shadow-sm font-bold text-xs uppercase tracking-widest px-5">
+            <SelectTrigger className="w-full lg:w-[200px]">
               <div className="flex items-center gap-2">
                 <Tag size={16} className="text-primary/50" />
                 <SelectValue placeholder="Category" />
               </div>
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-primary/5 shadow-premium">
-              <SelectItem value="all" className="font-bold uppercase text-[10px]">ALL CATEGORIES</SelectItem>
+            <SelectContent>
+              <SelectItem value="all">ALL CATEGORIES</SelectItem>
               {categories.map((cat: any) => (
-                <SelectItem key={cat.id} value={cat.id} className="font-bold uppercase text-[10px]">
+                <SelectItem key={cat.id} value={cat.id}>
                   {cat.name}
                 </SelectItem>
               ))}
@@ -254,6 +256,6 @@ export default function ProductsPage() {
         suppliers={suppliers}
         isSubmitting={createProduct.isPending || updateProduct.isPending}
       />
-    </div>
+    </PageContainer>
   );
 }

@@ -25,6 +25,8 @@ import {
   ShoppingCart,
   ArrowDownRight,
   ArrowUpRight,
+  Calculator,
+  DollarSign,
   TrendingDown,
 } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
@@ -57,6 +59,8 @@ const iconMap: Record<string, LucideIcon> = {
   ShoppingCart,
   ArrowDownRight,
   ArrowUpRight,
+  Calculator,
+  DollarSign,
   TrendingDown,
 };
 

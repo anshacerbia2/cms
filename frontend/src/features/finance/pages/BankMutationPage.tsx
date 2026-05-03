@@ -15,10 +15,9 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Decimal } from "decimal.js";
-import { useFinance } from "@/features/finance/hooks/useFinance";
 import { useBanks } from "@/features/banks/hooks/useBanks";
 import { useAuthStore } from "@/store/authStore";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, cleanAmount } from "@/lib/utils";
 import AddLedgerModal from "../components/AddLedgerModal";
 import {
   Table,
@@ -30,6 +29,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useExcelFilter } from "../hooks/useExcelFilter";
 import {
   Select,
   SelectContent,
@@ -49,31 +49,28 @@ import {
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { ExcelColumnFilter } from "../components/ExcelColumnFilter";
 import { toast } from "sonner";
+import { useBankMutation } from "../hooks/useBankMutation";
 
 export default function BankMutationPage() {
-  const [ledgerPage, setLedgerPage] = useState(1);
-  const [ledgerSearch, setLedgerSearch] = useState("");
   const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
-  
+  const [ledgerYearFilter, setLedgerYearFilter] = useState(new Date().getFullYear().toString());
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const ledgerLimit = 10;
+
   // Fetch dynamic bank list
   const { internalAccountsQuery } = useBanks({ accounts: { limit: 100, enabled: true } });
   const internalAccounts = useMemo(() => internalAccountsQuery.data?.data || [], [internalAccountsQuery.data?.data]);
 
-  // Initialize selected account once data is loaded - stable selection
+  // Initialize selected account once data is loaded
   useEffect(() => {
     if (internalAccounts.length > 0 && !selectedAccount) {
       setSelectedAccount(internalAccounts[0]);
     }
   }, [internalAccounts, selectedAccount]);
-  const [ledgerYearFilter, setLedgerYearFilter] = useState(new Date().getFullYear().toString());
-  const [ledgerFilters, setLedgerFilters] = useState<Record<string, Set<string> | null>>({});
-  const [ledgerSort, setLedgerSort] = useState<{key: string, direction: 'asc'|'desc' | null}>({key: 'id', direction: 'asc'});
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const ledgerLimit = 10;
 
   const { user } = useAuthStore();
-  const { getAllTransactions, getFiscalPeriods, recalculateLedger, closeYear, getAnchorBalance } = useFinance();
+  const { getAllTransactions, getFiscalPeriods, recalculateLedger, closeYear, getAnchorBalance } = useBankMutation();
   
   const yearNum = useMemo(() => Number(ledgerYearFilter), [ledgerYearFilter]);
 
@@ -83,7 +80,7 @@ export default function BankMutationPage() {
     yearNum
   );
 
-  // 2. Fetch Anchor Data (Recursive Discovery for Opening Balance)
+  // 2. Fetch Anchor Data
   const { data: anchorData, isLoading: anchorLoading } = getAnchorBalance(
     selectedAccount?.id,
     yearNum
@@ -97,6 +94,42 @@ export default function BankMutationPage() {
     ledgerYearFilter,
     { enabled: !!selectedAccount?.id && !!ledgerYearFilter }
   );
+
+  // --- PRE-FORMAT DATA FOR EXCEL FILTER ---
+  const displayTransactions = useMemo(() => {
+    return (allTransactionsRaw || []).map((row: any) => ({
+      ...row,
+      colA: formatDate(row.colA),
+      colB: row.colB || "-",
+      colC: row.colC && Number(row.colC) !== 0 ? formatCurrency(row.colC) : "-",
+      colD: row.colD && Number(row.colD) !== 0 ? formatCurrency(row.colD) : "-",
+      colE: row.colE ? formatCurrency(row.colE) : "-",
+      colF: row.colF || "-",
+      colG: row.colG || "-",
+      colH: row.colH || "-",
+      colI: row.colI || "-",
+      colJ: row.colJ || "-",
+    }));
+  }, [allTransactionsRaw]);
+
+  // --- CASCADING FILTER HOOK ---
+  const { 
+    page: ledgerPage, 
+    setPage: setLedgerPage, 
+    search: ledgerSearch, 
+    setSearch: setLedgerSearch, 
+    filters: ledgerFilters, 
+    setFilters: setLedgerFilters, 
+    sort: ledgerSort, 
+    setSort: setLedgerSort, 
+    getCascadingData, 
+    filteredAndSortedData: filteredAndSortedLedger,
+    clearFilters: handleClearFilters,
+    isAnyFilterActive 
+  } = useExcelFilter({
+    data: displayTransactions,
+    searchFields: ['colB', 'colF', 'colG', 'colH', 'colI', 'colJ']
+  });
 
   const handleRecalculate = async () => {
     if (isProcessing) return;
@@ -144,144 +177,40 @@ export default function BankMutationPage() {
     return years;
   }, []);
 
-  const allTransactions = allTransactionsRaw || [];
-  const shouldShowData = !!fiscalData || allTransactions.length > 0;
-
-  // --- Wording & Display Logic ---
-  const openingBalanceLabel = useMemo(() => {
-    if (!shouldShowData || anchorLoading) return "";
-    if (!anchorData) return "No Fiscal Data";
-
-    const isCurrentYear = Number(anchorData.referredYear) === Number(ledgerYearFilter);
-
-    switch (anchorData.status) {
-      case 'CLOSED':
-        return isCurrentYear 
-          ? `Fiscal Opening ${anchorData.referredYear}` 
-          : `Fiscal Closing ${anchorData.referredYear}`;
-      case 'OPEN':
-        return `Fiscal Opening ${anchorData.referredYear}`;
-      case 'ONGOING':
-        return `Projected Opening ${anchorData.referredYear}`;
-      case 'INITIAL':
-        return 'Initial Migration';
-      default:
-        return 'No Fiscal Data';
-    }
-  }, [shouldShowData, anchorLoading, anchorData, ledgerYearFilter]);
-
-  const closingBalanceLabel = useMemo(() => {
-    if (!shouldShowData) return "";
-    
-    // Kalau sudah ada record fiscal dan statusnya CLOSED
-    if (fiscalData?.status === 'CLOSED') {
-      return `Fiscal Closing ${ledgerYearFilter}`;
-    }
-
-    // Default kalau belum closed atau record belum ada tapi ada mutasi
-    return `Projected Year-End ${ledgerYearFilter}`;
-  }, [shouldShowData, fiscalData, ledgerYearFilter]);
-
-  const filteredAndSortedLedger = useMemo(() => {
-    let result = [...allTransactions];
-    if (ledgerSearch) {
-      const term = ledgerSearch.toLowerCase();
-      result = result.filter(row => 
-        String(row.colB || "").toLowerCase().includes(term) ||
-        String(row.colF || "").toLowerCase().includes(term) ||
-        String(row.colG || "").toLowerCase().includes(term) ||
-        String(row.colH || "").toLowerCase().includes(term)
-      );
-    }
-    Object.entries(ledgerFilters).forEach(([key, values]) => {
-      if (values && values.size > 0) {
-        result = result.filter(row => values.has(String(row[key as keyof typeof row] || "")));
-      }
-    });
-    if (ledgerSort.key && ledgerSort.direction) {
-      result.sort((a, b) => {
-        const valA = a[ledgerSort.key as keyof typeof a];
-        const valB = b[ledgerSort.key as keyof typeof b];
-        if (ledgerSort.key === 'colA') {
-          const dateA = new Date(valA).getTime();
-          const dateB = new Date(valB).getTime();
-          return ledgerSort.direction === 'asc' ? dateA - dateB : dateB - dateA;
-        }
-        if (typeof valA === 'number' && typeof valB === 'number') {
-          return ledgerSort.direction === 'asc' ? valA - valB : valB - valA;
-        }
-        const strA = String(valA || "").toLowerCase();
-        const strB = String(valB || "").toLowerCase();
-        return ledgerSort.direction === 'asc' 
-          ? strA.localeCompare(strB, undefined, { numeric: true }) 
-          : strB.localeCompare(strA, undefined, { numeric: true });
-      });
-    }
-    return result;
-  }, [allTransactions, ledgerSearch, ledgerFilters, ledgerSort]);
-
-  // Helper for Cascading (Excel-like) Filters
-  const getCascadingData = (excludeKey: string) => {
-    let result = [...allTransactions];
-    
-    // 1. Apply Global Search first
-    if (ledgerSearch) {
-      const term = ledgerSearch.toLowerCase();
-      result = result.filter(row => 
-        String(row.colB || "").toLowerCase().includes(term) ||
-        String(row.colF || "").toLowerCase().includes(term) ||
-        String(row.colG || "").toLowerCase().includes(term) ||
-        String(row.colH || "").toLowerCase().includes(term)
-      );
-    }
-    
-    // 2. Apply all OTHER column filters
-    Object.entries(ledgerFilters).forEach(([key, values]) => {
-      if (key !== excludeKey && values && values.size > 0) {
-        result = result.filter(row => values.has(String(row[key as keyof typeof row] || "")));
-      }
-    });
-    
-    return result;
-  };
-
   const paginatedLedger = useMemo(() => {
     const start = (ledgerPage - 1) * ledgerLimit;
     return filteredAndSortedLedger.slice(start, start + ledgerLimit);
   }, [filteredAndSortedLedger, ledgerPage, ledgerLimit]);
 
-  const ledgerMeta = {
-    total: filteredAndSortedLedger.length,
-    page: ledgerPage,
-    limit: ledgerLimit,
-    lastPage: Math.ceil(filteredAndSortedLedger.length / ledgerLimit) || 1
+  const ledgerMeta = { 
+    total: filteredAndSortedLedger.length, 
+    page: ledgerPage, 
+    limit: ledgerLimit, 
+    lastPage: Math.ceil(filteredAndSortedLedger.length / ledgerLimit) || 1 
   };
 
   const accumulatedTotals = useMemo(() => {
-    return paginatedLedger.reduce((acc, row) => ({
-      withdrawal: acc.withdrawal.plus(new Decimal(row.colC || 0)),
-      deposit: acc.deposit.plus(new Decimal(row.colD || 0)),
-    }), { withdrawal: new Decimal(0), deposit: new Decimal(0) });
+    return paginatedLedger.reduce((acc, row) => {
+      return {
+        withdrawal: acc.withdrawal.plus(new Decimal(cleanAmount(row.colC))),
+        deposit: acc.deposit.plus(new Decimal(cleanAmount(row.colD))),
+      };
+    }, { withdrawal: new Decimal(0), deposit: new Decimal(0) });
   }, [paginatedLedger]);
 
-  const handleClearFilters = () => {
-    setLedgerSearch("");
-    setLedgerFilters({});
-    setLedgerPage(1);
-  };
+  const grandTotals = useMemo(() => {
+    return filteredAndSortedLedger.reduce((acc, row) => {
+      return {
+        withdrawal: acc.withdrawal.plus(new Decimal(cleanAmount(row.colC))),
+        deposit: acc.deposit.plus(new Decimal(cleanAmount(row.colD))),
+      };
+    }, { withdrawal: new Decimal(0), deposit: new Decimal(0) });
+  }, [filteredAndSortedLedger]);
 
-  const isAnyFilterActive = ledgerSearch !== "" || Object.keys(ledgerFilters).length > 0;
+  const allTransactions = allTransactionsRaw || [];
+  const shouldShowData = !!fiscalData || allTransactions.length > 0;
 
-  // const runningTotals = useMemo(() => {
-  //   const end = ledgerPage * ledgerLimit;
-  //   const viewUntilNow = filteredAndSortedLedger.slice(0, end);
-  //   return viewUntilNow.reduce((acc, row) => ({
-  //     withdrawal: acc.withdrawal.plus(new Decimal(row.colC || 0)),
-  //     deposit: acc.deposit.plus(new Decimal(row.colD || 0)),
-  //   }), { withdrawal: new Decimal(0), deposit: new Decimal(0) });
-  // }, [filteredAndSortedLedger, ledgerPage, ledgerLimit]);
-
-  // 7. Global Summary Stats
+  // Global Summary Stats
   const summaryStats = useMemo(() => {
     let opening: Decimal | null = null;
     if (fiscalData?.openingBalance !== undefined && fiscalData?.openingBalance !== null) {
@@ -290,12 +219,10 @@ export default function BankMutationPage() {
       opening = new Decimal(anchorData.balance);
     }
     
-    // If opening is still null, we can't reliably calculate others
     if (opening === null) {
-      return { opening: null, credit: null, debit: null, closing: null };
+      return { opening: null, credit: null, debit: null, closing: null, projected: null };
     }
 
-    // Inflow/Outflow are sums of all transactions in this specific year
     const debit = (allTransactions || []).reduce((sum, row) => {
       if (sum === null || row.colC === undefined || row.colC === null) return null;
       return sum.plus(new Decimal(row.colC));
@@ -306,25 +233,36 @@ export default function BankMutationPage() {
       return sum.plus(new Decimal(row.colD));
     }, new Decimal(0) as Decimal | null);
     
-    // Calculate Projected Balance (Always Live Ledger Sum)
     const projected = (opening !== null && credit !== null && debit !== null) 
       ? opening.plus(credit).minus(debit) 
       : null;
 
-    // Calculate Primary Closing Balance (Audited Priority)
     let closing: Decimal | null = null;
     if (fiscalData?.status === 'CLOSED' && fiscalData?.closingBalance !== null) {
       closing = new Decimal(fiscalData.closingBalance);
     }
       
-    return { 
-      opening, 
-      credit, 
-      debit, 
-      closing,
-      projected
-    };
+    return { opening, credit, debit, closing, projected };
   }, [fiscalData, anchorData, allTransactions]);
+
+  const openingBalanceLabel = useMemo(() => {
+    if (!shouldShowData || anchorLoading) return "";
+    if (!anchorData) return "No Fiscal Data";
+    const isCurrentYear = Number(anchorData.referredYear) === Number(ledgerYearFilter);
+    switch (anchorData.status) {
+      case 'CLOSED': return isCurrentYear ? `Fiscal Opening ${anchorData.referredYear}` : `Fiscal Closing ${anchorData.referredYear}`;
+      case 'OPEN': return `Fiscal Opening ${anchorData.referredYear}`;
+      case 'ONGOING': return `Projected Opening ${anchorData.referredYear}`;
+      case 'INITIAL': return 'Initial Migration';
+      default: return 'No Fiscal Data';
+    }
+  }, [shouldShowData, anchorLoading, anchorData, ledgerYearFilter]);
+
+  const closingBalanceLabel = useMemo(() => {
+    if (!shouldShowData) return "";
+    if (fiscalData?.status === 'CLOSED') return `Fiscal Closing ${ledgerYearFilter}`;
+    return `Projected Year-End ${ledgerYearFilter}`;
+  }, [shouldShowData, fiscalData, ledgerYearFilter]);
 
   return (
     <div className="w-full space-y-8 animate-in fade-in duration-700 pb-10">
@@ -336,34 +274,6 @@ export default function BankMutationPage() {
               <Landmark className="text-secondary shrink-0 w-6 h-6 sm:w-8 sm:h-8" />
               Bank Mutation
             </h1>
-            
-            {/* Status Badge - Only show if a fiscal record exists for this year */}
-            {/* {!fiscalLoading && shouldShowData && (
-              <div className={`px-3 py-1 rounded-full flex items-center gap-1.5 border shadow-sm ${
-                fiscalData?.status === 'CLOSED' 
-                  ? "bg-red-50 border-red-200 text-red-700" 
-                  : (fiscalData?.status === 'ONGOING' || (!fiscalData && shouldShowData))
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                  : "bg-sky-50 border-sky-200 text-sky-700"
-              }`}>
-                {fiscalData?.status === 'CLOSED' ? (
-                  <>
-                    <Lock size={12} className="shrink-0" />
-                    <span className="text-[10px] font-black uppercase tracking-wider">Closed</span>
-                  </>
-                ) : (fiscalData?.status === 'ONGOING' || (!fiscalData && shouldShowData)) ? (
-                  <>
-                    <RefreshCw size={12} className={fiscalData?.status === 'ONGOING' ? "animate-spin-slow" : "shrink-0"} />
-                    <span className="text-[10px] font-black uppercase tracking-wider">Ongoing</span>
-                  </>
-                ) : (
-                  <>
-                    <Unlock size={12} className="shrink-0" />
-                    <span className="text-[10px] font-black uppercase tracking-wider">Open</span>
-                  </>
-                )}
-              </div>
-            )} */}
           </div>
           <p className="text-muted-foreground text-xs sm:text-sm font-medium">Institutional financial ledger and audit trail for corporate accounts.</p>
         </div>
@@ -433,7 +343,6 @@ export default function BankMutationPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
-        {/* Opening Balance */}
         <div className="bg-white/60 backdrop-blur-sm p-4 lg:p-5 rounded-2xl lg:rounded-3xl shadow-sm min-w-0">
           <div className="flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
             <div className="p-2 bg-slate-100 rounded-lg lg:rounded-xl text-slate-500">
@@ -457,7 +366,6 @@ export default function BankMutationPage() {
           </div>
         </div>
 
-        {/* Total Debit (Outflow) */}
         <div className="bg-white/60 backdrop-blur-sm p-4 lg:p-5 rounded-2xl lg:rounded-3xl shadow-sm min-w-0">
           <div className="flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
             <div className="p-2 bg-rose-50 rounded-lg lg:rounded-xl text-rose-600">
@@ -475,7 +383,6 @@ export default function BankMutationPage() {
           </div>
         </div>
 
-        {/* Total Credit (Inflow) */}
         <div className="bg-white/60 backdrop-blur-sm p-4 lg:p-5 rounded-2xl lg:rounded-3xl shadow-sm min-w-0">
           <div className="flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
             <div className="p-2 bg-emerald-50 rounded-lg lg:rounded-xl text-emerald-600">
@@ -493,7 +400,6 @@ export default function BankMutationPage() {
           </div>
         </div>
 
-        {/* Closing Balance */}
         <div className="bg-primary/[0.03] backdrop-blur-sm p-4 lg:p-5 rounded-2xl lg:rounded-3xl shadow-sm min-w-0 border border-primary/5">
           <div className="flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
             <div className="p-2 bg-primary text-white rounded-lg lg:rounded-xl shadow-sm shadow-primary/5">
@@ -532,7 +438,6 @@ export default function BankMutationPage() {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
-          {/* Bank Select */}
           <Select 
             value={selectedAccount?.id || ""} 
             onValueChange={(id) => { 
@@ -541,21 +446,21 @@ export default function BankMutationPage() {
               handleClearFilters();
             }}
           >
-            <SelectTrigger className="flex items-center justify-between whitespace-nowrap border-0 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 cursor-pointer flex-1 xl:w-[220px] h-12 px-5 bg-white rounded-xl shadow-sm gap-1.5 text-muted-foreground transition-all">
+            <SelectTrigger className="flex items-center justify-between whitespace-nowrap border-0 py-2 text-sm focus:outline-none h-12 px-5 bg-white rounded-xl shadow-sm gap-1.5 text-muted-foreground transition-all cursor-pointer flex-1 xl:w-[220px]">
                <div className="flex items-center gap-3 overflow-hidden">
                  <Landmark size={18} className="text-secondary shrink-0" />
                  <div className="flex flex-col items-start gap-0 overflow-hidden whitespace-nowrap">
                    <div className="flex items-center gap-2">
                      <span className="text-[8px] font-black uppercase tracking-widest border border-slate-200 px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 shrink-0">
                        {selectedAccount?.type || "TYPE"}
-                        </span>
+                         </span>
                      <span className="text-[12px] font-extrabold text-muted-foreground truncate text-left">
                        {selectedAccount?.type === 'CASH' 
                          ? "CASH" 
                          : (selectedAccount?.bank?.bankBrand || selectedAccount?.holderName || "Select Account")}
                      </span>
                    </div>
-                   {selectedAccount?.accountNo && selectedAccount.accountNo !== "" && (
+                   {selectedAccount?.accountNo && (
                      <span className="text-[10px] text-muted-foreground font-bold tracking-[0.1em] truncate w-full text-left opacity-60 pl-0.5">
                        {selectedAccount.accountNo}
                      </span>
@@ -563,7 +468,7 @@ export default function BankMutationPage() {
                  </div>
                </div>
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden w-[var(--radix-select-trigger-width)] min-w-fit">
+            <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden w-[var(--radix-select-trigger-width)]">
                {internalAccounts.map((acc: any) => (
                 <SelectItem 
                   key={acc.id} 
@@ -572,14 +477,14 @@ export default function BankMutationPage() {
                 >
                   <div className="flex flex-col items-start gap-1 w-full">
                     <div className="flex items-center gap-2">
-                      <span className="text-[8px] font-black uppercase tracking-widest border border-slate-200 px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 group-focus:border-white/30 group-focus:bg-white/10 group-focus:text-white transition-all shrink-0">
+                      <span className="text-[8px] font-black uppercase tracking-widest border border-slate-200 px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 transition-all shrink-0">
                         {acc.type}
                       </span>
                       <span className="font-bold text-[12px] tracking-tight">
                         {acc.type === 'CASH' ? "CASH" : (acc.bank?.bankBrand || acc.holderName)}
                       </span>
                     </div>
-                    {acc.accountNo && acc.accountNo !== "" && (
+                    {acc.accountNo && (
                       <div className="flex items-center gap-1 opacity-40 pl-0.5">
                         <Hash size={10} strokeWidth={3} />
                         <span className="text-[10px] font-bold tracking-widest">{acc.accountNo}</span>
@@ -591,19 +496,10 @@ export default function BankMutationPage() {
             </SelectContent>
           </Select>
 
-          {/* Year Select */}
-          <Select 
-            value={ledgerYearFilter} 
-            onValueChange={(v) => {
-              setLedgerYearFilter(v);
-              setLedgerPage(1);
-            }}
-          >
-            <SelectTrigger className="flex-1 xl:w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all">
-              <div className="flex items-center gap-2">
-                <CalendarIcon size={18} className="text-secondary" />
-                <SelectValue placeholder="Year" />
-              </div>
+          <Select value={ledgerYearFilter} onValueChange={(v) => { setLedgerYearFilter(v); setLedgerPage(1); }}>
+            <SelectTrigger className="flex-1 xl:w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
+              <CalendarIcon size={18} className="text-secondary" />
+              <SelectValue placeholder="Year" />
             </SelectTrigger>
             <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden">
               {availableYears.map(year => (
@@ -615,19 +511,12 @@ export default function BankMutationPage() {
           </Select>
 
           {isAnyFilterActive && (
-            <Button 
-              onClick={handleClearFilters}
-              className="h-12 w-12 bg-white border-0 text-muted-foreground hover:text-red-500 hover:bg-red-50/50 rounded-xl shadow-sm flex items-center justify-center shrink-0 transition-all"
-              title="Clear all filters"
-            >
+            <Button onClick={handleClearFilters} className="h-12 w-12 bg-white border-0 text-muted-foreground hover:text-red-500 hover:bg-red-50/50 rounded-xl shadow-sm flex items-center justify-center shrink-0 transition-all">
               <FilterX size={20} strokeWidth={2} />
             </Button>
           )}
 
-          <Button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 disabled:grayscale transition-all active:scale-95"
-          >
+          <Button onClick={() => setIsAddModalOpen(true)} className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold transition-all active:scale-95">
             <Plus size={20} strokeWidth={3} />
             <span className="text-[13px]">Add Mutation</span>
           </Button>
@@ -640,9 +529,9 @@ export default function BankMutationPage() {
           <Table className="min-w-[1600px]">
             <TableHeader className="bg-slate-50/50">
               <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
-                <TableHead className="pl-8 py-3 text-[10px] font-black uppercase tracking-widest text-primary/40 w-32 text-left border-r border-primary/5">
+                <TableHead className="py-3 w-32">
                   <div className="flex items-center justify-start gap-1">
-                    Tanggal
+                    Date
                     <ExcelColumnFilter 
                       columnKey="colA" label="Tanggal" data={getCascadingData("colA")} 
                       activeFilters={ledgerFilters["colA"]} 
@@ -652,11 +541,11 @@ export default function BankMutationPage() {
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-[10px] font-black uppercase tracking-widest text-primary/40 border-r border-primary/5 px-4">
+                <TableHead className="py-3 px-4">
                   <div className="flex items-center gap-1">
-                    Keterangan Transaksi
+                    Description
                     <ExcelColumnFilter 
-                      columnKey="colB" label="Keterangan" data={getCascadingData("colB")} 
+                      columnKey="colB" label="Description" data={getCascadingData("colB")} 
                       activeFilters={ledgerFilters["colB"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colB: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colB", direction: d})}
@@ -664,106 +553,91 @@ export default function BankMutationPage() {
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-right text-[10px] font-black uppercase tracking-widest text-primary/40 w-40 border-r border-primary/5 pr-4">
+                <TableHead className="py-3 text-right w-40 pr-4">
                   <div className="flex items-center justify-end gap-1">
-                    Debet
+                    Debit
                     <ExcelColumnFilter 
-                      columnKey="colC" label="Debet" data={getCascadingData("colC")} 
+                      columnKey="colC" label="Debit" data={getCascadingData("colC")} 
                       activeFilters={ledgerFilters["colC"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colC: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colC", direction: d})}
                       currentSort={ledgerSort}
-                      valueFormatter={formatCurrency}
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-right text-[10px] font-black uppercase tracking-widest text-primary/40 w-40 border-r border-primary/5 pr-4">
+                <TableHead className="py-3 text-right w-40 pr-4">
                   <div className="flex items-center justify-end gap-1">
-                    Kredit
+                    Credit
                     <ExcelColumnFilter 
-                      columnKey="colD" label="Kredit" data={getCascadingData("colD")} 
+                      columnKey="colD" label="Credit" data={getCascadingData("colD")} 
                       activeFilters={ledgerFilters["colD"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colD: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colD", direction: d})}
                       currentSort={ledgerSort}
-                      valueFormatter={formatCurrency}
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-right text-[10px] font-black uppercase tracking-widest text-primary/40 w-44 border-r border-primary/5 pr-4">
+                <TableHead className="py-3 text-right w-44 pr-4">
                   <div className="flex items-center justify-end gap-1">
-                    Saldo
+                    Balance
                     <ExcelColumnFilter 
-                      columnKey="colE"
-                      label="Saldo"
-                      data={getCascadingData("colE")} 
+                      columnKey="colE" label="Balance" data={getCascadingData("colE")} 
                       activeFilters={ledgerFilters["colE"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colE: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colE", direction: d})}
                       currentSort={ledgerSort}
-                      valueFormatter={formatCurrency}
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-left text-[10px] font-black uppercase tracking-widest text-primary/40 w-48 border-r border-primary/5 pl-4">
+                <TableHead className="py-3 w-48 pl-4">
                   <div className="flex items-center gap-1">
                     Ledger
                     <ExcelColumnFilter 
-                      columnKey="colF"
-                      label="Ledger"
-                      data={getCascadingData("colF")} 
+                      columnKey="colF" label="Ledger" data={getCascadingData("colF")} 
                       activeFilters={ledgerFilters["colF"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colF: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colF", direction: d})}
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-left text-[10px] font-black uppercase tracking-widest text-primary/40 w-48 border-r border-primary/5 pl-4">
+                <TableHead className="py-3 w-48 pl-4">
                   <div className="flex items-center gap-1">
                     Sub Ledger - 1
                     <ExcelColumnFilter 
-                      columnKey="colG"
-                      label="Sub Ledger - 1"
-                      data={getCascadingData("colG")} 
+                      columnKey="colG" label="Sub Ledger - 1" data={getCascadingData("colG")} 
                       activeFilters={ledgerFilters["colG"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colG: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colG", direction: d})}
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-left text-[10px] font-black uppercase tracking-widest text-primary/40 w-48 border-r border-primary/5 pl-4">
+                <TableHead className="py-3 w-48 pl-4">
                   <div className="flex items-center gap-1">
                     Sub Ledger - 2
                     <ExcelColumnFilter 
-                      columnKey="colH"
-                      label="Sub Ledger - 2"
-                      data={getCascadingData("colH")} 
+                      columnKey="colH" label="Sub Ledger - 2" data={getCascadingData("colH")} 
                       activeFilters={ledgerFilters["colH"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colH: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colH", direction: d})}
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 text-left text-[10px] font-black uppercase tracking-widest text-primary/40 w-48 border-r border-primary/5 pl-4">
+                <TableHead className="py-3 w-48 pl-4">
                   <div className="flex items-center gap-1">
                     Sub Ledger - 3
                     <ExcelColumnFilter 
-                      columnKey="colI"
-                      label="Sub Ledger - 3"
-                      data={getCascadingData("colI")} 
+                      columnKey="colI" label="Sub Ledger - 3" data={getCascadingData("colI")} 
                       activeFilters={ledgerFilters["colI"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colI: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colI", direction: d})}
                     />
                   </div>
                 </TableHead>
-                <TableHead className="pr-8 py-3 text-left text-[10px] font-black uppercase tracking-widest text-primary/40 w-48 border-r border-primary/5 pl-4">
+                <TableHead className="py-3 w-48 pl-4">
                   <div className="flex items-center gap-1">
                     Sub Ledger - 4
                     <ExcelColumnFilter 
-                      columnKey="colJ"
-                      label="Sub Ledger - 4"
-                      data={getCascadingData("colJ")} 
+                      columnKey="colJ" label="Sub Ledger - 4" data={getCascadingData("colJ")} 
                       activeFilters={ledgerFilters["colJ"]} 
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colJ: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colJ", direction: d})}
@@ -792,84 +666,72 @@ export default function BankMutationPage() {
               ) : (
                 <>
                   {paginatedLedger.map((row: any) => (
-                    <TableRow key={row.id} className="border-primary/5 hover:bg-transparent transition-none whitespace-nowrap group">
-                      <TableCell className="pl-8 py-3 text-[12px] text-primary/60 border-r border-primary/5 text-left">{formatDate(row.colA)}</TableCell>
-                      <TableCell className="py-3 px-4 font-medium text-primary text-[12px] border-r border-primary/5 transition-colors max-w-md truncate" title={row.colB}>
+                    <TableRow key={row.id} className="hover:bg-transparent transition-none whitespace-nowrap">
+                      <TableCell className="text-primary/60">{row.colA}</TableCell>
+                      <TableCell className="font-medium text-primary transition-colors max-w-md truncate" title={row.colB}>
                         {row.colB}
                       </TableCell>
-                      <TableCell className="py-3 text-right text-red-600 text-[12px] border-r border-primary/5 pr-4 whitespace-nowrap">
-                        {row.colC && Number(row.colC) !== 0 ? formatCurrency(row.colC) : "-"}
-                      </TableCell>
-                      <TableCell className="py-3 text-right text-emerald-600 text-[12px] border-r border-primary/5 pr-4 whitespace-nowrap">
-                        {row.colD && Number(row.colD) !== 0 ? formatCurrency(row.colD) : "-"}
-                      </TableCell>
-                      <TableCell className="py-3 text-right border-r border-primary/5 pr-4 text-[12px] text-primary whitespace-nowrap">
-                        {row.colE ? formatCurrency(row.colE) : "-"}
-                      </TableCell>
-                      <TableCell className="py-3 text-left border-r border-primary/5 pl-4 text-[12px] text-primary tracking-tighter" title={row.colF}>
-                        {row.colF || "-"}
-                      </TableCell>
-                      <TableCell className="py-3 text-left text-[12px] text-primary truncate max-w-[150px] border-r border-primary/5 pl-4" title={row.colG}>
-                        {row.colG || "-"}
-                      </TableCell>
-                      <TableCell className="py-3 text-left text-[12px] text-primary truncate max-w-[150px] border-r border-primary/5 pl-4" title={row.colH}>
-                        {row.colH || "-"}
-                      </TableCell>
-                      <TableCell className="py-3 text-left text-[12px] text-primary truncate max-w-[150px] border-r border-primary/5 pl-4" title={row.colI}>
-                        {row.colI || "-"}
-                      </TableCell>
-                      <TableCell className="pr-8 py-3 text-left text-[12px] text-primary truncate max-w-[150px] pl-4" title={row.colJ}>
-                        {row.colJ || "-"}
-                      </TableCell>
+                      <TableCell className="text-right text-rose-600 pr-4 font-bold">{row.colC}</TableCell>
+                      <TableCell className="text-right text-emerald-600 pr-4 font-bold">{row.colD}</TableCell>
+                      <TableCell className="text-right pr-4 text-primary font-bold">{row.colE}</TableCell>
+                      <TableCell className="tracking-tighter" title={row.colF}>{row.colF}</TableCell>
+                      <TableCell className="text-primary truncate max-w-[150px]" title={row.colG}>{row.colG}</TableCell>
+                      <TableCell className="text-primary truncate max-w-[150px]" title={row.colH}>{row.colH}</TableCell>
+                      <TableCell className="text-primary truncate max-w-[150px]" title={row.colI}>{row.colI}</TableCell>
+                      <TableCell className="text-primary truncate max-w-[150px]" title={row.colJ}>{row.colJ}</TableCell>
                     </TableRow>
                   ))}
-
-                  {/* Summary Rows */}
-                  {/* Subtotal (Current Page) */}
-                  <TableRow className="bg-secondary/5 border-t-2 border-secondary/30 hover:bg-secondary/5 transition-none font-bold">
-                    <TableCell colSpan={2} className="pl-8 py-3 text-[11px] text-secondary/80 uppercase tracking-[0.2em]">
+                  
+                  {/* Subtotal Row */}
+                  <TableRow className="bg-secondary/5 border-t-2 border-secondary/30 hover:bg-secondary/5 transition-none font-bold whitespace-nowrap">
+                    <TableCell colSpan={2} className="text-[11px] text-secondary/80 uppercase tracking-[0.2em] pl-4">
                       Subtotal (Page {ledgerPage})
                     </TableCell>
-                    <TableCell className="py-3 text-right text-red-600/90 text-[12px] border-r border-secondary/20 pr-4 whitespace-nowrap">
-                      {accumulatedTotals.withdrawal !== 0 ? formatCurrency(accumulatedTotals.withdrawal) : "-"}
+                    <TableCell className="text-right text-rose-600 pr-4">
+                      {formatCurrency(accumulatedTotals.withdrawal)}
                     </TableCell>
-                    <TableCell className="py-3 text-right text-emerald-700/90 text-[12px] border-r border-secondary/20 pr-4 whitespace-nowrap">
-                      {accumulatedTotals.deposit !== 0 ? formatCurrency(accumulatedTotals.deposit) : "-"}
+                    <TableCell className="text-right text-emerald-600 pr-4">
+                      {formatCurrency(accumulatedTotals.deposit)}
                     </TableCell>
-                    <TableCell colSpan={6} className="bg-secondary/[0.02]" />
+                    <TableCell colSpan={6} />
                   </TableRow>
 
-                  {/* Grand Total (All Pages) */}
-                  <TableRow className="bg-secondary/10 border-t border-secondary/30 hover:bg-secondary/10 transition-none font-bold">
-                    <TableCell colSpan={2} className="pl-8 py-3 text-[11px] text-secondary uppercase tracking-[0.2em]">
-                      Period Totals ({ledgerMeta?.total || 0} rows)
+                  {/* Grand Total Row (Optional, but good for consistency) */}
+                  <TableRow className="bg-secondary/10 border-t border-secondary/30 hover:bg-secondary/10 transition-none font-bold whitespace-nowrap">
+                    <TableCell colSpan={2} className="text-[11px] text-secondary uppercase tracking-[0.2em] pl-4">
+                      Grand Total ({filteredAndSortedLedger.length} Records)
                     </TableCell>
-                    <TableCell className="py-3 text-right text-red-600 text-[12px] border-r border-secondary/20 pr-4 whitespace-nowrap">
-                      {shouldShowData && summaryStats.debit !== null ? formatCurrency(summaryStats.debit) : "-"}
+                    <TableCell className="text-right text-rose-600 pr-4">
+                      {formatCurrency(grandTotals.withdrawal)}
                     </TableCell>
-                    <TableCell className="py-3 text-right text-emerald-700 text-[12px] border-r border-secondary/20 pr-4 whitespace-nowrap">
-                      {shouldShowData && summaryStats.credit !== null ? formatCurrency(summaryStats.credit) : "-"}
+                    <TableCell className="text-right text-emerald-600 pr-4">
+                      {formatCurrency(grandTotals.deposit)}
                     </TableCell>
-                    <TableCell colSpan={6} className="bg-secondary/[0.03]" />
+                    <TableCell colSpan={6} />
                   </TableRow>
                 </>
               )}
             </TableBody>
           </Table>
         </div>
+        
       </div>
-      <PaginationControls meta={ledgerMeta} onPageChange={setLedgerPage} isFetching={transLoading} />
+     
+      <PaginationControls 
+        meta={ledgerMeta} 
+        onPageChange={setLedgerPage} 
+        isFetching={transLoading} 
+      />
 
       <AddLedgerModal 
         open={isAddModalOpen} 
         onOpenChange={setIsAddModalOpen} 
-        onSuccess={() => {
-          refetchTransactions();
-          refetchFiscal();
-        }} 
         selectedAccount={selectedAccount}
         year={yearNum}
-        isPeriodClosed={isPeriodClosed}
+        onSuccess={() => {
+          refetchFiscal();
+          refetchTransactions();
+        }}
       />
     </div>
   );

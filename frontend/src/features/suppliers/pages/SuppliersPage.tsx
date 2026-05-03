@@ -24,6 +24,9 @@ import { SupplierDialog } from "../components/SupplierDialog";
 import { CreateSupplierInput, Supplier } from "../types";
 import { PaginationControls } from "@/components/common/PaginationControls";
 
+import { PageHeader } from "@/components/common/PageHeader";
+import { PageContainer } from "@/components/common/PageContainer";
+
 export default function SuppliersPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -68,21 +71,21 @@ export default function SuppliersPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-primary uppercase">Suppliers</h1>
-          <p className="text-muted-foreground mt-1 text-sm font-medium">Manage your enterprise supply chain and provider records.</p>
-        </div>
-        <Button 
-          onClick={handleCreate}
-          className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
-        >
-          <Plus size={18} strokeWidth={3} />
-          <span>ADD SUPPLIER</span>
-        </Button>
-      </div>
+    <PageContainer>
+      <PageHeader 
+        title="Suppliers"
+        description="Manage your enterprise supply chain and provider records."
+        icon={Truck}
+        actions={
+          <Button 
+            onClick={handleCreate}
+            className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
+          >
+            <Plus size={18} strokeWidth={3} />
+            <span>ADD SUPPLIER</span>
+          </Button>
+        }
+      />
 
       {/* Filters & Actions */}
       <div className="flex flex-col sm:flex-row items-center gap-4 bg-white/50 p-2 rounded-2xl border border-primary/5 backdrop-blur-sm shadow-sm">
@@ -110,22 +113,22 @@ export default function SuppliersPage() {
           <Table>
             <TableHeader className="bg-primary/[0.02]">
               <TableRow className="hover:bg-transparent border-primary/5">
-                <TableHead className="pl-8 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Code</TableHead>
-                <TableHead className="py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Supplier Detail</TableHead>
-                <TableHead className="py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Engagement</TableHead>
-                <TableHead className="py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Registry Status</TableHead>
-                <TableHead className="pr-8 py-5 text-right text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Operations</TableHead>
+                <TableHead className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Code</TableHead>
+                <TableHead className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Supplier Detail</TableHead>
+                <TableHead className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Engagement</TableHead>
+                <TableHead className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Registry Status</TableHead>
+                <TableHead className="text-right text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Operations</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i} className="border-primary/5">
-                    <TableCell className="pl-8 py-4"><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell className="py-4"><Skeleton className="h-10 w-48" /></TableCell>
-                    <TableCell className="py-4"><Skeleton className="h-6 w-24" /></TableCell>
-                    <TableCell className="py-4"><Skeleton className="h-6 w-20" /></TableCell>
-                    <TableCell className="pr-8 py-4 text-right"><Skeleton className="h-8 w-8 ml-auto rounded-lg" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-10 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-lg" /></TableCell>
                   </TableRow>
                 ))
               ) : suppliers.length === 0 ? (
@@ -137,7 +140,7 @@ export default function SuppliersPage() {
               ) : (
                 suppliers.map((supplier) => (
                   <TableRow key={supplier.id} className="group hover:bg-primary/[0.02] border-primary/5 transition-all">
-                    <TableCell className="pl-8 py-4 font-bold text-primary text-xs tracking-tight">
+                    <TableCell className="font-bold text-primary text-xs tracking-tight">
                       {supplier.code}
                     </TableCell>
                     <TableCell className="py-4">
@@ -225,6 +228,6 @@ export default function SuppliersPage() {
         supplier={selectedSupplier}
         isSubmitting={createSupplier.isPending || updateSupplier.isPending}
       />
-    </div>
+    </PageContainer>
   );
 }

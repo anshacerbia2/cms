@@ -22,6 +22,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaginationControls } from "@/components/common/PaginationControls";
 
+import { PageHeader } from "@/components/common/PageHeader";
+import { PageContainer } from "@/components/common/PageContainer";
+import { Users } from "lucide-react";
+
 export default function StaffPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -49,21 +53,21 @@ export default function StaffPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-primary uppercase">Staff Management</h1>
-          <p className="text-muted-foreground mt-1 text-sm font-medium">Control system access levels and internal team credentials.</p>
-        </div>
-        <Button 
-          onClick={handleCreate}
-          className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
-        >
-          <Plus size={18} strokeWidth={3} />
-          <span>ADD STAFF</span>
-        </Button>
-      </div>
+    <PageContainer>
+      <PageHeader 
+        title="Staff Management"
+        description="Control system access levels and internal team credentials."
+        icon={Users}
+        actions={
+          <Button 
+            onClick={handleCreate}
+            className="bg-primary hover:bg-primary/90 text-white font-extrabold px-6 rounded-xl shadow-premium transition-all active:scale-95 flex items-center gap-2 h-11"
+          >
+            <Plus size={18} strokeWidth={3} />
+            <span>ADD STAFF</span>
+          </Button>
+        }
+      />
 
       {/* Filters & Actions */}
       <div className="flex flex-col sm:flex-row items-center gap-4 bg-white/50 p-2 rounded-2xl border border-primary/5 backdrop-blur-sm shadow-sm">
@@ -91,22 +95,22 @@ export default function StaffPage() {
           <Table>
             <TableHeader className="bg-primary/[0.02]">
               <TableRow className="hover:bg-transparent border-primary/5">
-                <TableHead className="pl-8 py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Profile</TableHead>
-                <TableHead className="py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Credentials</TableHead>
-                <TableHead className="py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Privileges</TableHead>
-                <TableHead className="py-5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Status</TableHead>
-                <TableHead className="pr-8 py-5 text-right text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Actions</TableHead>
+                <TableHead className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Profile</TableHead>
+                <TableHead className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Credentials</TableHead>
+                <TableHead className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Privileges</TableHead>
+                <TableHead className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Status</TableHead>
+                <TableHead className="text-right text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary/60">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i} className="border-primary/5">
-                    <TableCell className="pl-8 py-4"><Skeleton className="h-12 w-12 rounded-xl" /></TableCell>
-                    <TableCell className="py-4"><Skeleton className="h-10 w-48" /></TableCell>
-                    <TableCell className="py-4"><Skeleton className="h-6 w-24" /></TableCell>
-                    <TableCell className="py-4"><Skeleton className="h-6 w-20" /></TableCell>
-                    <TableCell className="pr-8 py-4 text-right"><Skeleton className="h-8 w-8 ml-auto rounded-lg" /></TableCell>
+                    <TableCell><Skeleton className="h-12 w-12 rounded-xl" /></TableCell>
+                    <TableCell><Skeleton className="h-10 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-lg" /></TableCell>
                   </TableRow>
                 ))
               ) : users.length === 0 ? (
@@ -118,7 +122,7 @@ export default function StaffPage() {
               ) : (
                 users.map((user) => (
                   <TableRow key={user.id} className="group hover:bg-primary/[0.02] border-primary/5 transition-all">
-                    <TableCell className="pl-8 py-4">
+                    <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary font-bold text-sm border border-primary/10">
                           {user.name.charAt(0).toUpperCase()}
@@ -133,7 +137,7 @@ export default function StaffPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="py-4">
+                    <TableCell>
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5 text-[11px] font-bold text-primary/80">
                           <UserIcon size={12} className="opacity-40" /> {user.username}
@@ -143,12 +147,12 @@ export default function StaffPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="py-4">
+                    <TableCell>
                       <Badge variant="outline" className="bg-primary/5 border-primary/10 text-[9px] font-extrabold uppercase tracking-[0.15em] px-2.5 py-1 rounded-lg text-primary shadow-sm flex w-fit items-center gap-1.5">
                         <Shield size={10} className="text-secondary" /> {user.role}
                       </Badge>
                     </TableCell>
-                    <TableCell className="py-4">
+                    <TableCell>
                       <Badge className={
                         user.status === 'active' 
                           ? "bg-green-50 text-green-600 border-green-100/50 hover:bg-green-100" 
@@ -160,7 +164,7 @@ export default function StaffPage() {
                         <span className="text-[10px] font-extrabold uppercase tracking-widest">{user.status}</span>
                       </Badge>
                     </TableCell>
-                    <TableCell className="pr-8 py-4 text-right">
+                    <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-9 w-9 p-0 rounded-xl hover:bg-primary/5 text-muted-foreground transition-all">
@@ -196,6 +200,6 @@ export default function StaffPage() {
           isFetching={isFetching}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -11,14 +11,16 @@ import {
 
 import { Link } from "react-router-dom"
 import { useFinance } from "@/features/finance/hooks/useFinance"
+import { useAccountReceivable } from "@/features/finance/hooks/useAccountReceivable"
+import { useAccountPayable } from "@/features/finance/hooks/useAccountPayable"
 import { Badge } from "@/components/ui/badge"
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
+  const { getAR } = useAccountReceivable()
+  const { getAP } = useAccountPayable()
   const { 
     getPLSummary, 
-    getAR, 
-    getAP, 
     getBalanceSheet 
   } = useFinance()
 
