@@ -4,9 +4,9 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
 import { Calculator, PieChart, FileBarChart, Layers } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PlPerProjectTab } from "../components/PlPerProjectTab";
 
 // Modular Tabs
-import { PlPerProjectTab } from "../components/PlPerProjectTab";
 
 export default function FinancePage() {
   const [searchParams, setSearchParams] = useSearchParams();
