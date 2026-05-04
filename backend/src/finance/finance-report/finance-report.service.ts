@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../common/interfaces/paginated-result.interface';
 import { formatDecimal } from '../../common/utils/format.utils';
+import { Prisma } from '@prisma/client';
 
 
 @Injectable()
@@ -154,6 +155,155 @@ export class FinanceReportService {
   }
 
 
+  async getProfitLossStatement(year?: number) {
+    const where: any = {};
+    if (year && year > 0) {
+      const start = new Date(`${year}-01-01T00:00:00.000Z`);
+      const end = new Date(`${year}-12-31T23:59:59.999Z`);
+      where.colA = { gte: start, lte: end };
+    }
+
+    // 1. Calculate Dynamic COGS from Bank Mutations
+    const cogsTransactions = await this.prisma.financialTransaction.findMany({
+      where: {
+        ...where,
+        colF: { contains: 'cost of goods', mode: 'insensitive' },
+      },
+    });
+
+    let cogsTotal = new Prisma.Decimal(0);
+    for (const trx of cogsTransactions) {
+      const debit = new Prisma.Decimal(trx.colC || 0);
+      const credit = new Prisma.Decimal(trx.colD || 0);
+      cogsTotal = cogsTotal.plus(credit).minus(debit);
+    }
+
+    // 2. Calculate Dynamic Sales from SalesRecord
+    const salesStats = await this.prisma.salesRecord.aggregate({
+      where: (year && year > 0) ? { colD: year } : {},
+      _sum: {
+        colJ: true, // PPN
+        colK: true  // AR IDR
+      }
+    });
+
+    const grossSales = new Prisma.Decimal(salesStats._sum.colK || 0);
+    const vatAmount = new Prisma.Decimal(salesStats._sum.colJ || 0);
+    const vatAdj = vatAmount.negated();
+    const netSales = grossSales.plus(vatAdj);
+
+    // 3. Hardcoded Values (Set to 0 as requested)
+
+    // 3. Calculate Expenses from Bank Mutations
+    const expenseTransactions = await this.prisma.financialTransaction.findMany({
+      where: {
+        ...where,
+        colF: {
+          in: ['Personnel Expense', 'Office Expense', 'Marketing Expense', 'Financial Expense'],
+          mode: 'insensitive'
+        }
+      }
+    });
+
+    let personnelExpense = new Prisma.Decimal(0);
+    let officeExpense = new Prisma.Decimal(0);
+    let marketingExpense = new Prisma.Decimal(0);
+    let financialExpense = new Prisma.Decimal(0);
+
+    for (const trx of expenseTransactions) {
+      const debit = new Prisma.Decimal(trx.colC || 0);
+      const credit = new Prisma.Decimal(trx.colD || 0);
+      const net = credit.minus(debit);
+      const ledger = (trx.colF || '').toLowerCase();
+
+      if (ledger.includes('personnel')) personnelExpense = personnelExpense.plus(net);
+      else if (ledger.includes('office')) officeExpense = officeExpense.plus(net);
+      else if (ledger.includes('marketing')) marketingExpense = marketingExpense.plus(net);
+      else if (ledger.includes('financial')) financialExpense = financialExpense.plus(net);
+    }
+
+    // 4. Calculate Other Income from Bank Mutations
+    const otherIncomeTransactions = await this.prisma.financialTransaction.findMany({
+      where: {
+        ...where,
+        colF: { contains: 'other income', mode: 'insensitive' }
+      }
+    });
+
+    let otherIncome = new Prisma.Decimal(0);
+    for (const trx of otherIncomeTransactions) {
+      const debit = new Prisma.Decimal(trx.colC || 0);
+      const credit = new Prisma.Decimal(trx.colD || 0);
+      otherIncome = otherIncome.plus(credit).minus(debit);
+    }
+
+    // 5. Calculate Depreciation from Depreciation table (Total colS)
+    const deprStats = await this.prisma.depreciation.aggregate({
+      _sum: { colS: true }
+    });
+    const depreciation = new Prisma.Decimal(deprStats._sum.colS || 0).negated();
+    const incomeTax = new Prisma.Decimal(0);
+
+    // 5. Derived Totals
+    const grossProfit = netSales.plus(cogsTotal);
+    const operatingExpenses = personnelExpense.plus(officeExpense).plus(marketingExpense).plus(financialExpense);
+    const operatingProfit = grossProfit.plus(operatingExpenses);
+    const otherIncomeNet = otherIncome.plus(depreciation);
+    const profitBeforeTax = operatingProfit.plus(otherIncomeNet);
+    const netProfit = profitBeforeTax.plus(incomeTax);
+
+    // 4. Construct Response
+    return {
+      summaryCards: [
+        {
+          title: "NET SALES",
+          value: formatDecimal(netSales),
+          grossValue: formatDecimal(grossSales),
+          color: "text-primary"
+        },
+        {
+          title: "GROSS PROFIT",
+          value: formatDecimal(grossProfit),
+          margin: netSales.isZero() ? "0.0000" : grossProfit.div(netSales).times(100).toFixed(4),
+          color: "text-emerald-500"
+        },
+        {
+          title: "OPERATING PROFIT",
+          value: formatDecimal(operatingProfit),
+          opexValue: formatDecimal(operatingExpenses),
+          color: "text-blue-500"
+        },
+        {
+          title: "PROFIT AFTER TAX",
+          value: formatDecimal(netProfit),
+          netMargin: netSales.isZero() ? "0.0000" : netProfit.div(netSales).times(100).toFixed(4),
+          color: "text-indigo-500"
+        }
+      ],
+      tableData: [
+        { account: "REVENUE", total: 0, isHeader: true },
+        { account: "Sales", gross: formatDecimal(grossSales), vatAdj: formatDecimal(vatAdj), total: formatDecimal(netSales) },
+        { account: "Cost of Goods", total: formatDecimal(cogsTotal), isSubItem: true },
+        { account: "GROSS PROFIT", total: formatDecimal(grossProfit), isTotal: true },
+        
+        { account: "EXPENSES", total: 0, isHeader: true },
+        { account: "Personnel Expense", total: formatDecimal(personnelExpense), hasInfo: true, isSubItem: true },
+        { account: "Office Expense", total: formatDecimal(officeExpense), isSubItem: true },
+        { account: "Marketing Expense", total: formatDecimal(marketingExpense), isSubItem: true },
+        { account: "Financial Expense", total: formatDecimal(financialExpense), isSubItem: true },
+        { account: "Total Expense", total: formatDecimal(operatingExpenses), isTotal: true },
+        
+        { account: "PROFITABILITY", total: 0, isHeader: true },
+        { account: "Operating Profit", total: formatDecimal(operatingProfit) },
+        { account: "Other Income (Expense)", total: formatDecimal(otherIncome) },
+        { account: "Depreciation", total: formatDecimal(depreciation) },
+        { account: "Profit Before Tax", total: formatDecimal(profitBeforeTax) },
+        { account: "Income Tax", total: formatDecimal(incomeTax) },
+        { account: "PROFIT AFTER TAX", total: formatDecimal(netProfit), isTotal: true },
+      ]
+    };
+  }
+
   async getPLSummary(): Promise<any[]> {
     const data = await this.prisma.profitLossSummary.findMany({
       orderBy: [{ id: 'asc' }],
@@ -199,4 +349,46 @@ export class FinanceReportService {
     };
   }
 
+  async getPLDetails(year?: number, ledger?: string) {
+    const where: any = {};
+    if (year && year > 0) {
+      const start = new Date(`${year}-01-01T00:00:00.000Z`);
+      const end = new Date(`${year}-12-31T23:59:59.999Z`);
+      where.colA = { gte: start, lte: end };
+    }
+    
+    if (ledger) {
+      where.colF = { contains: ledger, mode: 'insensitive' };
+    }
+
+    const data = await this.prisma.financialTransaction.findMany({
+      where,
+      include: {
+        internalAccount: {
+          include: { bank: true }
+        }
+      },
+      orderBy: { colA: 'desc' }
+    });
+
+    return data.map(trx => {
+      const debit = new Prisma.Decimal(trx.colC || 0);
+      const credit = new Prisma.Decimal(trx.colD || 0);
+      const net = credit.minus(debit);
+
+      return {
+        id: trx.id,
+        date: trx.colA,
+        description: trx.colB,
+        amount: formatDecimal(net),
+        bankBrand: trx.internalAccount?.bank?.bankBrand || '',
+        bankName: trx.internalAccount?.bank?.bankName || 'Unknown',
+        accountNo: trx.internalAccount?.accountNo || '',
+        branch: trx.internalAccount?.branch || '',
+        holderName: trx.internalAccount?.holderName || '',
+        accountType: trx.internalAccount?.type,
+        ledger: trx.colF
+      };
+    });
+  }
 }

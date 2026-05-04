@@ -44,6 +44,21 @@ export class FinanceReportController {
     return this.financeService.getPLSummary();
   }
 
+  @Get('pl-statement')
+  @Permissions('finance.reports')
+  async getPLStatement(@Query('year') year?: string) {
+    return this.financeService.getProfitLossStatement(year ? Number(year) : undefined);
+  }
+
+  @Get('pl-details')
+  @Permissions('finance.reports')
+  async getPLDetails(
+    @Query('year') year?: string,
+    @Query('ledger') ledger?: string,
+  ) {
+    return this.financeService.getPLDetails(year ? Number(year) : undefined, ledger);
+  }
+
   @Get('balance-sheet')
   @Permissions('finance.reports')
   async getBalanceSheet(@Query() query: PaginationQueryDto) {

@@ -66,10 +66,27 @@ export function useFinance() {
       ...options,
     });
 
+  const getPLStatement = (year?: string, options?: any) =>
+    useQuery<any>({
+      queryKey: ["finance", "pl-statement", year || "all"],
+      queryFn: () => financeService.getPLStatement(year),
+      ...options,
+    });
+
+  const getPLDetails = (year?: string, ledger?: string, options?: any) =>
+    useQuery<any[]>({
+      queryKey: ["finance", "pl-details", year || "all", ledger],
+      queryFn: () => financeService.getPLDetails(year, ledger),
+      enabled: !!ledger,
+      ...options,
+    });
+
   return {
     getRevenue,
     getExpenses,
     getPLSummary,
+    getPLStatement,
+    getPLDetails,
     getBalanceSheet,
     getInterAccountTransfers,
     getAllInterAccountTransfers,

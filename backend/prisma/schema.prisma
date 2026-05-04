@@ -348,19 +348,19 @@ enum InternalAccountType {
 model FinancialTransaction {
   id                BigInt   @id @default(autoincrement())
   internalAccountId BigInt?  @map("internal_account_id")
-  colA              DateTime? @map("col_a")
-  colB              String?   @map("col_b") @db.Text
-  colC              Decimal?  @default(0) @map("col_c") @db.Decimal(19, 4)
-  colD              Decimal?  @default(0) @map("col_d") @db.Decimal(19, 4)
-  colE              Decimal?  @default(0) @map("col_e") @db.Decimal(19, 4)
-  colF              String?   @map("col_f") @db.Text
-  colG              String?   @map("col_g") @db.Text
-  colH              String?   @map("col_h") @db.Text
-  colI              String?   @map("col_i") @db.Text
-  colJ              String?   @map("col_j") @db.Text
-  colK              String?   @map("col_k") @db.Text
-  colL              String?   @map("col_l") @db.Text
-  colM              String?   @map("col_m") @db.Text
+  colA              DateTime? @map("col_a") // Date
+  colB              String?   @map("col_b") @db.Text // Description
+  colC              Decimal?  @default(0) @map("col_c") @db.Decimal(19, 4) // Debit
+  colD              Decimal?  @default(0) @map("col_d") @db.Decimal(19, 4) // Credit
+  colE              Decimal?  @default(0) @map("col_e") @db.Decimal(19, 4) // Balance
+  colF              String?   @map("col_f") @db.Text // Ledger
+  colG              String?   @map("col_g") @db.Text // Sub Ledger 1
+  colH              String?   @map("col_h") @db.Text // Sub Ledger 2
+  colI              String?   @map("col_i") @db.Text // Sub Ledger 3
+  colJ              String?   @map("col_j") @db.Text // Sub Ledger 4
+  colK              String?   @map("col_k") @db.Text // Sub Ledger 5
+  colL              String?   @map("col_l") @db.Text // Sub Ledger 6
+  colM              String?   @map("col_m") @db.Text // Sub Ledger 7
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 

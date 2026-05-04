@@ -5,12 +5,13 @@ import { PageContainer } from "@/components/common/PageContainer";
 import { Calculator, PieChart, FileBarChart, Layers } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlPerProjectTab } from "../components/PlPerProjectTab";
+import { ProfitLossTab } from "../components/ProfitLossTab";
 
 // Modular Tabs
 
 export default function FinancePage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "project");
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "pl");
 
   // Sync state when URL changes
   useEffect(() => {
@@ -51,9 +52,7 @@ export default function FinancePage() {
           </TabsList>
 
           <TabsContent value="pl" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <div className="h-96 bg-white/50 rounded-xl border border-dashed border-primary/20 flex items-center justify-center">
-                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/20">Profit & Loss Section Coming Soon</p>
-             </div>
+            <ProfitLossTab />
           </TabsContent>
 
           <TabsContent value="project" className="animate-in fade-in slide-in-from-bottom-4 duration-500">

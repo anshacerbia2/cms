@@ -34,10 +34,11 @@ export function BalanceSheetTab() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="bg-white/70 backdrop-blur-md rounded-[2rem] shadow-premium border border-primary/5 overflow-hidden">
-        <Table>
-          <TableHeader className="bg-primary/5">
-            <TableRow className="hover:bg-transparent border-primary/5 h-12">
+      <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-premium border border-primary/5 overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table className="min-w-[1000px]">
+            <TableHeader className="bg-slate-50/50">
+              <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap h-12">
               <TableHead className="pl-8 text-[11px] font-black uppercase">Account Category & Name</TableHead>
               <TableHead className="text-right text-[11px] font-black uppercase w-48">Amount (IDR)</TableHead>
               <TableHead className="text-right text-[11px] font-black uppercase w-40">USD</TableHead>
@@ -49,14 +50,14 @@ export function BalanceSheetTab() {
               <TableRow><TableCell colSpan={4} className="h-64 text-center text-[10px] font-black uppercase tracking-widest animate-pulse">Calculating Balance Sheet...</TableCell></TableRow>
             ) : Object.entries(groupedData).map(([category, items]) => (
               <React.Fragment key={category}>
-                <TableRow className="bg-primary/5 hover:bg-primary/5">
+                <TableRow className="bg-primary/5 hover:bg-primary/5 border-primary/5 transition-none whitespace-nowrap">
                   <TableCell colSpan={4} className="pl-8 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">{category}</TableCell>
                 </TableRow>
                 {items.map((item) => (
-                  <TableRow key={item.id} className="border-primary/5 hover:bg-primary/5 transition-colors">
-                    <TableCell className="pl-12 py-3 text-[12px] font-bold text-primary uppercase">{item.accountName}</TableCell>
-                    <TableCell className="py-3 text-right text-[12px] font-black text-primary">{formatCurrency(item.idr)}</TableCell>
-                    <TableCell className="py-3 text-right text-[12px] font-bold text-primary/60">{item.usd > 0 ? `$${item.usd}` : "-"}</TableCell>
+                  <TableRow key={item.id} className="border-primary/5 hover:bg-transparent transition-none whitespace-nowrap">
+                    <TableCell className="pl-12 py-3 text-[12px] font-bold text-primary/70 uppercase">{item.accountName}</TableCell>
+                    <TableCell className={`py-3 text-right text-[12px] font-bold ${item.idr < 0 ? "text-rose-600" : "text-emerald-600"}`}>{formatCurrency(item.idr)}</TableCell>
+                    <TableCell className="py-3 text-right text-[12px] font-bold text-primary/40">{item.usd > 0 ? `$${item.usd}` : "-"}</TableCell>
                     <TableCell className="pr-8 py-3 text-right text-[12px] font-bold text-primary/40">{item.rate || "-"}</TableCell>
                   </TableRow>
                 ))}
@@ -66,6 +67,7 @@ export function BalanceSheetTab() {
         </Table>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
