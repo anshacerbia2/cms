@@ -175,7 +175,7 @@ export class BankMutationService {
       if (currentFiscal.status === 'CLOSED') {
         return { 
           status: currentFiscal.status, 
-          balance: currentFiscal.openingBalance.toString(), // Use openingBalance for the "Opening Balance" card
+          balance: formatDecimal(currentFiscal.openingBalance), // Use openingBalance for the "Opening Balance" card
           canEdit: false,
           referredYear: year,
           isStale: currentFiscal.isStale,
@@ -186,7 +186,7 @@ export class BankMutationService {
       if (currentFiscal.status === 'OPEN') {
         return {
           status: currentFiscal.status,
-          balance: currentFiscal.openingBalance.toString(),
+          balance: formatDecimal(currentFiscal.openingBalance),
           canEdit: true,
           referredYear: year,
           isStale: currentFiscal.isStale,
@@ -200,7 +200,7 @@ export class BankMutationService {
         orderBy: [{ colA: 'desc' }, { id: 'desc' }],
       });
 
-      const balance = lastTrans ? lastTrans.colE!.toString() : null;
+      const balance = lastTrans ? formatDecimal(lastTrans.colE) : null;
 
       return { 
         status: currentFiscal.status, 
@@ -245,8 +245,8 @@ export class BankMutationService {
 
       if (prevFiscal) {
         const openingBalance = prevFiscal.closingBalance !== null
-          ? prevFiscal.closingBalance.toString()
-          : (lastTransInYear ? lastTransInYear.colE!.toString() : prevFiscal.openingBalance.toString());
+          ? formatDecimal(prevFiscal.closingBalance)
+          : (lastTransInYear ? formatDecimal(lastTransInYear.colE) : formatDecimal(prevFiscal.openingBalance));
 
         let source = "opening balance";
         if (prevFiscal.closingBalance !== null) {
@@ -268,7 +268,7 @@ export class BankMutationService {
       if (lastTransInYear) {
         return {
           status: 'ONGOING',
-          balance: lastTransInYear.colE!.toString(),
+          balance: formatDecimal(lastTransInYear.colE),
           canEdit: false,
           referredYear: searchYear,
           message: `Auto-referred to latest transaction balance of year ${searchYear} (Lazy Registration)`

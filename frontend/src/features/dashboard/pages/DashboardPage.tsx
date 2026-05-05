@@ -28,7 +28,7 @@ export default function DashboardPage() {
   const { data: plSummary } = getPLSummary()
   const { data: arItems } = getAR({ page: 1, limit: 100 })
   const { data: apItems } = getAP({ page: 1, limit: 100 })
-  const { data: bsItems } = getBalanceSheet({ page: 1, limit: 100 })
+  const { data: bsData } = getBalanceSheet()
 
   const formatCurrencySimple = (val: any) => {
     const num = Number(val);
@@ -40,14 +40,7 @@ export default function DashboardPage() {
   };
 
   // Aggregation logic
-  const totalAssets = (bsItems?.data || []).reduce((acc: number, item: any) => {
-    // Basic Assets grouping (Cash, Bank, AR, Tax, Fixed)
-    const name = item.accountName?.toLowerCase() || "";
-    if (name.includes('cash') || name.includes('bank') || name.includes('receivable') || name.includes('tax') || name.includes('equipment') || name.includes('vehicle')) {
-        return acc + (Number(item.idr) || 0) + ((Number(item.usd) || 0) * 14500);
-    }
-    return acc;
-  }, 0) || 15700000000; // Fallback to 15.7B if empty
+  const totalAssets = Number(bsData?.summary?.totalAssets) || 15700000000; // Use centralized summary total
 
   const netProfit = Number((plSummary as any[])?.find((s: any) => s.label === 'PROFIT AFTER TAX')?.total) || 4040000000;
   const totalAR = (arItems?.data || []).reduce((acc: number, d: any) => acc + (Number(d.outstandingIdr) || 0), 0) || 6400000000;

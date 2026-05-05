@@ -36,11 +36,10 @@ export function useFinance() {
       ...options,
     });
 
-  const getBalanceSheet = (params: PaginationParams, options?: any) =>
-    useQuery<PaginatedResponse<any>>({
-      queryKey: ["finance", "balance-sheet", params],
-      queryFn: () => financeService.getBalanceSheet(params),
-      placeholderData: keepPreviousData,
+  const getBalanceSheet = (year?: string, options?: any) =>
+    useQuery<any>({
+      queryKey: ["finance", "balance-sheet", year || "all"],
+      queryFn: () => financeService.getBalanceSheet(year),
       ...options,
     });
 

@@ -61,8 +61,8 @@ export class FinanceReportController {
 
   @Get('balance-sheet')
   @Permissions('finance.reports')
-  async getBalanceSheet(@Query() query: PaginationQueryDto) {
-    return this.financeService.getBalanceSheet(query);
+  async getBalanceSheet(@Query('year') year?: string) {
+    return this.financeService.getBalanceSheet(year ? Number(year) : undefined);
   }
 
   @Get('inter-account-transfers')

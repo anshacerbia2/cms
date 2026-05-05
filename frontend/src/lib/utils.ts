@@ -6,14 +6,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatCurrency(val: any, currency = 'IDR') {
+export function formatCurrency(val: any, currency = 'IDR', showDashForZero = true) {
   if (val === undefined || val === null) return "-";
   
   // Convert to number for Intl.NumberFormat, but handle Decimal if present
   const num = typeof val.toNumber === 'function' ? val.toNumber() : Number(val);
   
   if (isNaN(num)) return "-";
-  if (num === 0) return "-";
+  if (num === 0 && showDashForZero) return "-";
 
   return new Intl.NumberFormat('id-ID', { 
     style: 'currency',

@@ -6,6 +6,7 @@ import { Calculator, PieChart, FileBarChart, Layers } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlPerProjectTab } from "../components/PlPerProjectTab";
 import { ProfitLossTab } from "../components/ProfitLossTab";
+import { BalanceSheetTab } from "../components/BalanceSheetTab";
 
 // Modular Tabs
 
@@ -60,9 +61,7 @@ export default function FinancePage() {
           </TabsContent>
 
           <TabsContent value="balance" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <div className="h-96 bg-white/50 rounded-xl border border-dashed border-primary/20 flex items-center justify-center">
-                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/20">Balance Sheet Section Coming Soon</p>
-             </div>
+            <BalanceSheetTab />
           </TabsContent>
         </Tabs>
       </div>

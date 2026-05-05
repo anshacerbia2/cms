@@ -251,6 +251,8 @@ export function ProfitLossTab() {
                 const isProfitLine = row.isTotal;
                 const isGrandTotal = row.account === "PROFIT AFTER TAX";
                 const isExpense = expenseLedgers.includes(row.account);
+                const isSpecialBold = ["Operating Profit", "Profit Before Tax"].includes(row.account);
+                const isOtherProfitItem = ["Other Income (Expense)", "Depreciation", "Income Tax"].includes(row.account);
 
                 return (
                   <TableRow 
@@ -269,7 +271,12 @@ export function ProfitLossTab() {
                     <TableCell className={`py-2 ${row.isSubItem ? "pl-16" : "pl-8"}`}>
                       <div className="flex items-center gap-2">
                         <span className={`text-[12px] uppercase tracking-wide ${
-                          isProfitLine ? "font-bold text-secondary" : row.isSubItem ? "font-medium text-primary/60" : "font-bold text-primary/70"
+                          isGrandTotal ? "font-bold text-secondary" :
+                          isSpecialBold ? "font-bold text-primary/70" :
+                          isOtherProfitItem ? "font-medium text-primary/60" :
+                          isProfitLine ? "font-bold text-secondary" : 
+                          row.isSubItem ? "font-medium text-primary/60" : 
+                          "font-bold text-primary/70"
                         }`}>
                           {row.account}
                         </span>

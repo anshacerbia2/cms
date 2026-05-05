@@ -243,6 +243,7 @@ export default function BankMutationPage() {
     if (fiscalData?.status === 'CLOSED' && fiscalData?.closingBalance !== null) {
       closing = new Decimal(fiscalData.closingBalance);
     }
+      console.log(opening,closing);
       
     return { opening, credit, debit, closing, projected };
   }, [fiscalData, anchorData, allTransactions]);
@@ -352,7 +353,7 @@ export default function BankMutationPage() {
                 {fiscalLoading || anchorLoading ? (
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-300 animate-pulse">Syncing...</span>
                 ) : (shouldShowData && summaryStats.opening !== null) ? (
-                  formatCurrency(summaryStats.opening)
+                  formatCurrency(summaryStats.opening, 'IDR', false)
                 ) : (
                   "-"
                 )}
@@ -372,7 +373,7 @@ export default function BankMutationPage() {
           </div>
           <div className="pl-0.5 overflow-hidden">
             <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold tracking-tighter text-rose-600 leading-none truncate">
-              {shouldShowData && summaryStats.debit !== null ? formatCurrency(summaryStats.debit) : "-"}
+              {shouldShowData && summaryStats.debit !== null ? formatCurrency(summaryStats.debit, 'IDR', false) : "-"}
             </p>
             <p className="text-[8px] lg:text-[9px] font-bold text-rose-400 uppercase tracking-wider mt-1 truncate">
               Annual Accumulation
@@ -389,7 +390,7 @@ export default function BankMutationPage() {
           </div>
           <div className="pl-0.5 overflow-hidden">
             <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold tracking-tighter text-emerald-600 leading-none truncate">
-              {shouldShowData && summaryStats.credit !== null ? formatCurrency(summaryStats.credit) : "-"}
+              {shouldShowData && summaryStats.credit !== null ? formatCurrency(summaryStats.credit, 'IDR', false) : "-"}
             </p>
             <p className="text-[8px] lg:text-[9px] font-bold text-emerald-400 uppercase tracking-wider mt-1 truncate">
               Annual Accumulation
@@ -410,8 +411,8 @@ export default function BankMutationPage() {
             <p className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold tracking-tighter text-primary leading-none truncate">
               {shouldShowData 
                 ? (summaryStats.closing !== null 
-                  ? formatCurrency(summaryStats.closing) 
-                  : (summaryStats.projected !== null ? formatCurrency(summaryStats.projected) : "-"))
+                  ? formatCurrency(summaryStats.closing, 'IDR', false) 
+                  : (summaryStats.projected !== null ? formatCurrency(summaryStats.projected, 'IDR', false) : "-"))
                 : "-"}
             </p>
             <div className="flex items-center gap-1.5 mt-1 truncate">

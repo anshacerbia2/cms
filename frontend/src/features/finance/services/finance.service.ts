@@ -22,8 +22,8 @@ export const financeService = {
     return data;
   },
 
-  getBalanceSheet: async (params: PaginationParams): Promise<PaginatedResponse<any>> => {
-    const { data } = await api.get("/finance/balance-sheet", { params });
+  getBalanceSheet: async (year?: string): Promise<any> => {
+    const { data } = await api.get("/finance/balance-sheet", { params: { year } });
     return data;
   },
 
