@@ -628,31 +628,70 @@ export class FinanceReportService {
 
     // 5. Liabilities & Equity
     const apItems = [];
-    const apUniqueCats = Array.from(new Set(apRecordsRaw.map(r => r.colA || 'Trade Payables')));
-    
-    for (const cat of apUniqueCats) {
-      const records = apRecordsRaw.filter(r => (r.colA || 'Trade Payables') === cat);
-      const total = records.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colU || 0)), new Prisma.Decimal(0));
+    const apCategories = [
+      "AP Credit Card", "AP Deposit from customer", "AP Expense",
+      "AP Leasing", "AP Tax", "AP Temporary Loan", "AP Trade", "AP Others"
+    ];
+
+    const processedApIds = new Set<bigint>();
+    for (const cat of apCategories) {
+      // Search term is the name without "AP " prefix
+      const searchTerm = cat.replace('AP ', '').toLowerCase();
+      const records = apRecordsRaw.filter(r => 
+        !processedApIds.has(r.id) && 
+        r.colF?.toLowerCase().includes(searchTerm)
+      );
       
-      if (!total.isZero() || records.length > 0) {
-          apItems.push({
-            accountName: cat.startsWith('AP') ? cat : `AP ${cat}`,
-            idr: total.toNumber(),
-            code: '21' + (apItems.length + 1).toString().padStart(2, '0'),
-            tx: records.length
-          });
+      const total = records.reduce((acc, r) => {
+        processedApIds.add(r.id);
+        return acc.plus(new Prisma.Decimal(r.colU || 0));
+      }, new Prisma.Decimal(0));
+      
+      apItems.push({
+        accountName: cat,
+        idr: total.toNumber(),
+        code: '21' + (apItems.length + 1).toString().padStart(2, '0'),
+        tx: records.length
+      });
+    }
+
+    // 5.1 Process Remaining AP as Others
+    const remainingApRecords = apRecordsRaw.filter(r => !processedApIds.has(r.id));
+    if (remainingApRecords.length > 0) {
+      const othersTotal = remainingApRecords.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colU || 0)), new Prisma.Decimal(0));
+      const existingOthers = apItems.find(i => i.accountName === 'AP Others');
+      if (existingOthers) {
+        existingOthers.idr += othersTotal.toNumber();
+        existingOthers.tx += remainingApRecords.length;
+      } else {
+        apItems.push({
+          accountName: 'AP Others',
+          idr: othersTotal.toNumber(),
+          code: '21' + (apItems.length + 1).toString().padStart(2, '0'),
+          tx: remainingApRecords.length
+        });
       }
     }
 
-    let apTotal = apItems.reduce((acc, c) => acc.plus(new Prisma.Decimal(c.idr || 0)), new Prisma.Decimal(0));
+    let apTotalFromItems = apItems.reduce((acc, c) => acc.plus(new Prisma.Decimal(c.idr || 0)), new Prisma.Decimal(0));
+    let apTotal = apTotalFromItems;
+    const finalApItems = [...apItems];
+
     if (apTotal.isZero()) {
       apTotal = legacyItems.filter(li => li.category?.toLowerCase().includes('payable')).reduce((acc, c) => acc.plus(c.idr), new Prisma.Decimal(0));
+      // Force legacy balance into "AP Trade" if dynamic data is empty
+      const targetItem = finalApItems.find(i => i.accountName === 'AP Trade');
+      if (targetItem && !apTotal.isZero()) {
+        targetItem.idr = apTotal.toNumber();
+        targetItem.tx = 1;
+      }
     }
     
     const plNetStr = plData.summaryCards.find((c: any) => c.title === "PROFIT AFTER TAX")?.value.replace(/,/g, '') || 0;
     let totalEquity = new Prisma.Decimal(plNetStr);
     if (totalEquity.isZero()) totalEquity = legacyItems.filter(li => li.category?.toLowerCase().includes('equity')).reduce((acc, c) => acc.plus(c.idr), new Prisma.Decimal(0));
 
+    // 7. Final Response Construction
     return {
       version: "AR-DEPOSIT-TAX-V8",
       summary: {
@@ -666,6 +705,7 @@ export class FinanceReportService {
       },
       assets: {
         total: forceZero(totalAssets),
+        // Grouping Assets by category for the frontend accordion/chart
         categories: [
           { name: 'Cash', total: forceZero(cashTotal), items: cashItems.map(i => ({ ...i, idr: forceZero(i.idr), tx: i.tx })) },
           { name: 'Bank Accounts', total: forceZero(bankTotal), items: bankItems.map(i => ({ ...i, idr: forceZero(i.idr), tx: i.tx })) },
@@ -677,8 +717,9 @@ export class FinanceReportService {
       },
       liabilities: {
         total: forceZero(apTotal),
+        // AP is categorized into 8 specific filters (Credit Card, Trade, etc.)
         categories: [
-          { name: 'Account Payable', total: forceZero(apTotal), items: apItems.map(i => ({ ...i, idr: forceZero(i.idr) })) }
+          { name: 'Account Payable', total: forceZero(apTotal), items: finalApItems.map(i => ({ ...i, idr: forceZero(i.idr) })) }
         ]
       },
       equity: {
