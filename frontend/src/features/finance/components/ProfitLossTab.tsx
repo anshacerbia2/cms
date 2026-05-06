@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { 
   Table, 
   TableBody, 
@@ -7,10 +7,19 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { formatCurrency, getAmountColor } from "@/lib/utils";
+import { formatCurrency, getAmountColor, formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, DollarSign, PieChart, Info, Loader2, History, Plus } from "lucide-react";
+import { TrendingUp, DollarSign, PieChart, Info, Loader2, History, Plus, Calendar as CalendarIcon } from "lucide-react";
 import { useFinance } from "../hooks/useFinance";
+import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import { 
   Select, 
@@ -25,13 +34,27 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatDate } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+
 
 export function ProfitLossTab() {
   const [year, setYear] = useState("all");
-  const { getPLStatement } = useFinance();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const { getPLStatement, getPLDetails, getSalesCogsDetails, getDepreciationDetails } = useFinance();
   
-  const { data: plData, isLoading } = getPLStatement(year === "all" ? undefined : year);
+  const { data: plData, isLoading } = getPLStatement(
+    year === "all" ? undefined : year, 
+    selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined
+  );
+
+  // Sync selectedDate with year filter
+  useEffect(() => {
+    if (year !== "all" && selectedDate) {
+      if (selectedDate.getFullYear() !== parseInt(year)) {
+        setSelectedDate(undefined);
+      }
+    }
+  }, [year]);
   
   const summaryCards = useMemo(() => {
     if (!plData?.summaryCards) return [];
@@ -65,14 +88,75 @@ export function ProfitLossTab() {
   }, [plData]);
 
   const [selectedLedger, setSelectedLedger] = useState<string | null>(null);
-  const { getPLDetails } = useFinance();
-  const { data: details, isLoading: isLoadingDetails } = getPLDetails(year === "all" ? undefined : year, selectedLedger || undefined, {
-    enabled: !!selectedLedger
-  });
+  const isCogs = selectedLedger === "Cost of Goods";
+  const isDepr = selectedLedger === "Depreciation";
 
-  const expenseLedgers = ["Personnel Expense", "Office Expense", "Marketing Expense", "Financial Expense", "OTHER INCOME"];
+  const { data: plDetails, isLoading: isLoadingPlDetails } = getPLDetails(
+    year === "all" ? undefined : year, 
+    selectedLedger || undefined, 
+    selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
+    { enabled: !!selectedLedger && !isCogs && !isDepr }
+  );
+
+  const { data: cogsDetails, isLoading: isLoadingCogsDetails } = getSalesCogsDetails(
+    year === "all" ? undefined : year, 
+    selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
+    { enabled: !!selectedLedger && isCogs }
+  );
+
+  const { data: deprDetails, isLoading: isLoadingDeprDetails } = getDepreciationDetails(
+    year === "all" ? undefined : year,
+    selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
+    { enabled: !!selectedLedger && isDepr }
+  );
+
+  const isLoadingDetails = isCogs ? isLoadingCogsDetails : isDepr ? isLoadingDeprDetails : isLoadingPlDetails;
+
+  const expenseLedgers = [
+    "Cost of Goods", 
+    "Personnel Expense", 
+    "Office Expense", 
+    "Marketing Expense", 
+    "Financial Expense", 
+    "Other Income", 
+    "Depreciation"
+  ];
 
   const tableData = plData?.tableData || [];
+  
+  const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+  const totals = useMemo(() => {
+    if (isCogs) {
+      if (!cogsDetails?.rows || !cogsDetails?.headers) return null;
+      const res: any = { cogs: "TOTAL" };
+      cogsDetails.headers.forEach((h: any) => {
+        const sum = cogsDetails.rows.reduce((acc: number, row: any) => {
+          return acc + parseFloat(row[h.key] || "0");
+        }, 0);
+        res[h.key] = sum.toString();
+      });
+      return res;
+    } else if (isDepr) {
+      if (!deprDetails || deprDetails.length === 0) return null;
+      
+      const res: any = { label: "TOTAL" };
+      const numericFields = ["purchasePrice", "accumulated2024", ...months, "total2025", "accumulated2025", "bookValue"];
+      
+      numericFields.forEach(field => {
+        const sum = deprDetails.reduce((acc: number, row: any) => acc + parseFloat(row[field] || "0"), 0);
+        res[field] = sum.toString();
+      });
+      
+      return res;
+    } else {
+      if (!plDetails || plDetails.length === 0) return null;
+      const sum = plDetails.reduce((acc: number, row: any) => {
+        return acc + parseFloat(row.amount || "0");
+      }, 0);
+      return { amount: sum.toString(), label: "TOTAL" };
+    }
+  }, [isCogs, isDepr, cogsDetails, plDetails, deprDetails]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
@@ -86,8 +170,8 @@ export function ProfitLossTab() {
                   <History size={24} />
                 </div>
                 <div>
-                  <DialogTitle className="text-xl font-black text-primary uppercase tracking-tight leading-none mb-1.5">
-                    {selectedLedger} Breakdown
+                  <DialogTitle className="text-xl font-bold text-primary uppercase tracking-tight leading-none mb-1.5">
+                    {selectedLedger === "Other Income" ? "Other Income (Expense)" : selectedLedger} Breakdown
                   </DialogTitle>
                   <DialogDescription className="text-[10px] font-bold text-primary/30 uppercase tracking-[0.2em]">
                     Bank Mutation Records • Financial Audit Trail
@@ -103,62 +187,243 @@ export function ProfitLossTab() {
             </div>
           </div>
 
-          <div className="p-0 flex-1 overflow-auto custom-scrollbar">
+          <div className="p-0 flex-1 overflow-auto custom-scrollbar relative">
             {isLoadingDetails ? (
               <div className="h-64 flex flex-col items-center justify-center gap-4 opacity-40">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <p className="text-[10px] font-black uppercase tracking-[0.3em]">Retrieving Records...</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em]">Retrieving Records...</p>
               </div>
-            ) : !details || details.length === 0 ? (
-              <div className="h-64 flex items-center justify-center opacity-20 font-black uppercase tracking-[0.2em]">
+            ) : (isCogs && (!cogsDetails?.rows || cogsDetails.rows.length === 0)) || 
+                (isDepr && (!deprDetails || deprDetails.length === 0)) ||
+                (!isCogs && !isDepr && (!plDetails || plDetails.length === 0)) ? (
+              <div className="h-64 flex items-center justify-center opacity-20 font-bold uppercase tracking-[0.2em]">
                 No Records Found
               </div>
             ) : (
-              <table className="w-full min-w-full border-collapse">
-                <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
-                  <tr className="border-b border-primary/5">
-                    <th className="pl-8 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-primary/40 bg-white">Channel</th>
-                    <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-primary/40 bg-white">Date</th>
-                    <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-primary/40 bg-white min-w-[200px]">Description</th>
-                    <th className="pr-8 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-primary/40 bg-white">Debit</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-primary/5">
-                  {details.map((item: any) => (
-                    <tr key={item.id} className="bg-white hover:bg-primary/[0.01] transition-colors group">
-                      <td className="pl-8 py-3 whitespace-nowrap">
-                        <div className="flex flex-col gap-0.5">
-                          {item.accountType === "CASH" ? (
-                             <p className="text-[11px] font-bold text-primary/70 uppercase tracking-wider">CASH</p>
-                          ) : item.accountType === "BANK" ? (
-                            <>
-                              <p className="text-[11px] font-bold text-primary/70 uppercase">
-                                {item.bankBrand || item.bankName} - {item.branch}
-                              </p>
-                              <p className="text-[9px] font-medium text-primary/30">{item.accountNo}</p>
-                            </>
-                          ) : (
-                            <p className="text-[11px] font-bold text-primary/70 uppercase">{item.holderName}</p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">{formatDate(item.date)}</td>
-                      <td className="px-4 py-3 whitespace-normal min-w-[200px]">
-                        <div className="flex flex-col gap-0.5">
-                          <p className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:text-primary transition-colors">{item.description}</p>
-                          <p className="text-[9px] font-black text-primary/20 uppercase tracking-widest">{item.ledger}</p>
-                        </div>
-                      </td>
-                      <td className="pr-8 py-3 text-right whitespace-nowrap">
-                        <span className="text-[12px] font-black text-primary tabular-nums">
-                          {formatCurrency(item.amount)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+              <table className="w-full border-separate border-spacing-0">
+                {isCogs ? (
+                  <>
+                        <thead>
+                          <tr className="bg-white">
+                            <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 sticky top-0 left-0 z-[60] bg-white border-b border-r border-primary/5 min-w-[350px] max-w-[350px] align-baseline">COGS</th>
+                            {cogsDetails?.headers?.map((header: any) => (
+                              <th 
+                                key={header.key} 
+                                className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 whitespace-nowrap sticky top-0 z-50 bg-white border-b border-primary/5 align-baseline"
+                              >
+                                {header.label}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-primary/5">
+                          {cogsDetails?.rows?.map((item: any) => (
+                            <tr key={item.id} className="bg-white hover:bg-primary/[0.01] transition-colors group">
+                              <td className="pl-8 pr-6 py-2 sticky left-0 z-20 bg-white group-hover:bg-slate-50 transition-colors border-r border-primary/5 min-w-[350px] max-w-[350px] align-baseline">
+                                <span className="text-[12px] font-bold text-primary uppercase tracking-wide whitespace-normal break-words block">
+                                  {item.cogs || "-"}
+                                </span>
+                              </td>
+                              {cogsDetails?.headers?.map((header: any) => {
+                                const isTotal = header.key === 'rowTotal';
+                                return (
+                                  <td 
+                                    key={header.key} 
+                                    className={cn(
+                                      "px-4 py-2 text-right whitespace-nowrap align-baseline",
+                                      isTotal && "bg-slate-50/50 font-bold border-l border-primary/5"
+                                    )}
+                                  >
+                                    <span className={cn(
+                                      "text-[12px] font-bold tabular-nums",
+                                      isTotal ? "text-primary" : "text-primary/70"
+                                    )}>
+                                      {formatCurrency(item[header.key])}
+                                    </span>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                        {totals && (
+                          <tfoot className="sticky bottom-0 z-50">
+                            <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
+                              <td className="pl-8 py-4 sticky left-0 z-[60] bg-[#fdf8ec] border-r border-[#cc9929]/10 min-w-[350px] max-w-[350px] font-bold">
+                                <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">{totals.cogs}</span>
+                              </td>
+                              {cogsDetails?.headers?.map((header: any) => {
+                                const isTotal = header.key === 'rowTotal';
+                                return (
+                                  <td 
+                                    key={header.key} 
+                                    className={cn(
+                                      "px-4 py-4 text-right whitespace-nowrap font-bold",
+                                      isTotal && "bg-[#fdf8ec] border-l border-[#cc9929]/20",
+                                      getAmountColor(totals[header.key])
+                                    )}
+                                  >
+                                    <span className={cn("text-[12px] tabular-nums font-bold", isTotal && "text-[14px]")}>
+                                      {formatCurrency(totals[header.key])}
+                                    </span>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          </tfoot>
+                        )}
+                      </>
+                ) : isDepr ? (
+                  <>
+                    <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                      <tr className="border-b border-primary/5 whitespace-nowrap h-12">
+                        <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Category</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Date</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Source</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">Description</th>
+                        <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Purchase Price</th>
+                        <th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-24">Month</th>
+                        <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">S/D 2024</th>
+                        {months.map(m => (
+                          <th key={m} className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-32">{m}</th>
+                        ))}
+                        <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Total 2025</th>
+                        <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">S/D 2025</th>
+                        <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Book Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-primary/5">
+                      {deprDetails?.map((item: any) => (
+                        <tr key={item.id} className="bg-white hover:bg-secondary/[0.02] border-primary/5 transition-colors group">
+                          <td className="pl-8 py-3 whitespace-nowrap">
+                            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 font-bold uppercase text-[10px] py-0.5 px-2">
+                              {item.category}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">{formatDate(item.purchaseDate)}</td>
+                          <td className="px-4 py-3 text-[11px] font-bold text-primary/40 whitespace-nowrap uppercase tracking-wider">{item.bankRef}</td>
+                          <td className="px-4 py-3">
+                            <p className="text-[12px] font-bold text-primary uppercase leading-tight">{item.assetName}</p>
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums">
+                            {formatCurrency(item.purchasePrice)}
+                          </td>
+                          <td className="px-4 py-3 text-center opacity-60 font-medium text-[12px]">
+                            {item.usefulLife}
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums">
+                            {formatCurrency(item.accumulated2024)}
+                          </td>
+                          {months.map(m => (
+                            <td key={m} className="px-4 py-3 text-right whitespace-nowrap text-[12px] tabular-nums">
+                              {formatCurrency(item[m])}
+                            </td>
+                          ))}
+                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold text-primary tabular-nums">
+                            {formatCurrency(item.total2025)}
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold text-primary tabular-nums">
+                            {formatCurrency(item.accumulated2025)}
+                          </td>
+                          <td className="pr-8 py-3 text-right whitespace-nowrap text-[12px] font-bold text-primary tabular-nums">
+                            {formatCurrency(item.bookValue)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    {totals && (
+                      <tfoot className="sticky bottom-0 z-50">
+                        <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
+                          <td colSpan={4} className="pl-8 py-4 text-left font-bold">
+                            <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">{totals.label}</span>
+                          </td>
+                          <td className={`px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] ${getAmountColor(totals.purchasePrice)}`}>
+                            {formatCurrency(totals.purchasePrice)}
+                          </td>
+                          <td className="px-4 py-4" />
+                          <td className={`px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] ${getAmountColor(totals.accumulated2024)}`}>
+                            {formatCurrency(totals.accumulated2024)}
+                          </td>
+                          {months.map(m => (
+                            <td key={m} className={`px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] ${getAmountColor(totals[m])}`}>
+                              {formatCurrency(totals[m])}
+                            </td>
+                          ))}
+                          <td className={`px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[13px] ${getAmountColor(totals.total2025)}`}>
+                            {formatCurrency(totals.total2025)}
+                          </td>
+                          <td className={`px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[13px] ${getAmountColor(totals.accumulated2025)}`}>
+                            {formatCurrency(totals.accumulated2025)}
+                          </td>
+                          <td className={`pr-8 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[14px] ${getAmountColor(totals.bookValue)}`}>
+                            {formatCurrency(totals.bookValue)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                      <tr className="border-b border-primary/5">
+                        <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Channel</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Date</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[200px]">Description</th>
+                        <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Debit</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-primary/5">
+                      {plDetails?.map((item: any) => (
+                        <tr key={item.id} className="bg-white hover:bg-primary/[0.01] transition-colors group">
+                          <td className="pl-8 py-3 whitespace-nowrap">
+                            <div className="flex flex-col gap-0.5">
+                              {item.accountType === "CASH" ? (
+                                 <p className="text-[11px] font-bold text-primary/70 uppercase tracking-wider">CASH</p>
+                              ) : item.accountType === "BANK" ? (
+                                <>
+                                  <p className="text-[11px] font-bold text-primary/70 uppercase">
+                                    {item.bankBrand || item.bankName} - {item.branch}
+                                  </p>
+                                  <p className="text-[9px] font-medium text-primary/30">{item.accountNo}</p>
+                                </>
+                              ) : (
+                                <p className="text-[11px] font-bold text-primary/70 uppercase">{item.holderName}</p>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">{formatDate(item.date)}</td>
+                          <td className="px-4 py-3 whitespace-normal min-w-[200px]">
+                            <div className="flex flex-col gap-0.5">
+                              <p className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:text-primary transition-colors">{item.description}</p>
+                              <p className="text-[9px] font-bold text-primary/20 uppercase tracking-widest">{item.ledger}</p>
+                            </div>
+                          </td>
+                          <td className="pr-8 py-3 text-right whitespace-nowrap">
+                            <span className="text-[12px] font-bold text-primary tabular-nums">
+                              {formatCurrency(item.amount)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    {totals && (
+                      <tfoot className="sticky bottom-0 z-50">
+                        <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
+                          <td colSpan={3} className="pl-8 py-4 text-left font-bold">
+                            <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">{totals.label}</span>
+                          </td>
+                          <td className={cn("pr-8 py-4 text-right whitespace-nowrap font-bold", getAmountColor(totals.amount))}>
+                            <span className="text-[14px] tabular-nums font-bold">
+                              {formatCurrency(totals.amount)}
+                            </span>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </>
+                )}
+                </table>
+              )}
           </div>
         </DialogContent>
       </Dialog>
@@ -166,7 +431,7 @@ export function ProfitLossTab() {
         <div className="absolute inset-0 z-50 bg-white/20 backdrop-blur-[2px] flex items-center justify-center rounded-xl">
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-primary/40">Aggregating Financial Data...</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Aggregating Financial Data...</p>
           </div>
         </div>
       )}
@@ -185,13 +450,41 @@ export function ProfitLossTab() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex flex-col items-end mr-2">
+        <div className="flex items-center gap-4 mr-4">
+          <div className="flex flex-col items-end">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-12 px-6 bg-white border-0 shadow-sm rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all justify-start text-left hover:bg-white hover:shadow-sm text-muted-foreground hover:text-muted-foreground",
+                    !selectedDate && "text-muted-foreground hover:text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 text-secondary" />
+                  {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 shadow-premium border-primary/5 overflow-hidden" align="end">
+                <Calendar
+                  mode="single"
+                  captionLayout="dropdown"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  startMonth={year === "all" ? new Date(2020, 0) : new Date(parseInt(year), 0)}
+                  endMonth={year === "all" ? new Date(2030, 11) : new Date(parseInt(year), 11)}
+                  defaultMonth={year === "all" ? undefined : new Date(parseInt(year), 0)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="flex flex-col items-end">
             <Select value={year} onValueChange={setYear}>
-              <SelectTrigger className="h-12 w-32 bg-white border-0 shadow-sm rounded-xl text-[11px] font-bold uppercase tracking-widest focus:ring-0 focus:ring-offset-0 transition-all">
+              <SelectTrigger className="h-12 w-32 bg-white border-0 shadow-sm rounded-xl text-[11px] font-bold uppercase tracking-widest focus:ring-0 focus:ring-offset-0 transition-all hover:bg-white hover:shadow-sm">
                 <SelectValue placeholder="Select Year" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-primary/5 shadow-2xl">
+              <SelectContent className="border-primary/5 shadow-2xl">
                 <SelectItem value="all" className="text-[11px] font-bold uppercase tracking-widest py-3 cursor-pointer">All Time</SelectItem>
                 <SelectItem value="2024" className="text-[11px] font-bold uppercase tracking-widest py-3 cursor-pointer">2024</SelectItem>
                 <SelectItem value="2025" className="text-[11px] font-bold uppercase tracking-widest py-3 cursor-pointer">2025</SelectItem>
@@ -208,11 +501,11 @@ export function ProfitLossTab() {
           <Card key={i} className="bg-white/70 backdrop-blur-md border-primary/5 shadow-premium overflow-hidden group transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">
-                <p className="text-[10px] font-black text-primary/40 tracking-widest uppercase">{card.title}</p>
+                <p className="text-[10px] font-bold text-primary/40 tracking-widest uppercase">{card.title}</p>
                 <card.icon className={`w-4 h-4 ${card.color} transition-opacity`} />
               </div>
               <div className="space-y-1">
-                <h3 className="text-xl font-black text-primary tracking-tight">
+                <h3 className="text-xl font-bold text-primary tracking-tight">
                   {card.value}
                 </h3>
                 <p className="text-[10px] font-bold text-primary/40 uppercase tracking-wider">
@@ -230,10 +523,10 @@ export function ProfitLossTab() {
           <Table className="min-w-[800px]">
             <TableHeader className="bg-slate-50/50">
               <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap h-12">
-                <TableHead className="pl-8 text-[11px] font-black uppercase tracking-widest">Account</TableHead>
-                <TableHead className="text-right text-[11px] font-black uppercase tracking-widest">Gross</TableHead>
-                <TableHead className="text-right text-[11px] font-black uppercase tracking-widest">VAT / Adj.</TableHead>
-                <TableHead className="pr-8 text-right text-[11px] font-black uppercase tracking-widest w-64">Total</TableHead>
+                <TableHead className="pl-8 text-[11px] font-bold uppercase tracking-widest">Account</TableHead>
+                <TableHead className="text-right text-[11px] font-bold uppercase tracking-widest">Gross</TableHead>
+                <TableHead className="text-right text-[11px] font-bold uppercase tracking-widest">VAT / Adj.</TableHead>
+                <TableHead className="pr-8 text-right text-[11px] font-bold uppercase tracking-widest w-64">Total</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -241,7 +534,11 @@ export function ProfitLossTab() {
                 if (row.isHeader) {
                   return (
                     <TableRow key={idx} className="bg-primary/5 hover:bg-primary/5 border-primary/5 transition-none whitespace-nowrap">
-                      <TableCell colSpan={4} className="pl-8 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">
+                      <TableCell 
+                        colSpan={4} 
+                        className="py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60"
+                        style={{ paddingLeft: `${(row.level >= 2 ? (row.level - 1) * 16 : 0) + 32}px` }}
+                      >
                         {row.account}
                       </TableCell>
                     </TableRow>
@@ -252,7 +549,9 @@ export function ProfitLossTab() {
                 const isGrandTotal = row.account === "PROFIT AFTER TAX";
                 const isExpense = expenseLedgers.includes(row.account);
                 const isSpecialBold = ["Operating Profit", "Profit Before Tax"].includes(row.account);
-                const isOtherProfitItem = ["Other Income (Expense)", "Depreciation", "Income Tax"].includes(row.account);
+                const isOtherProfitItem = ["Other Income", "Depreciation", "Income Tax"].includes(row.account);
+
+
 
                 return (
                   <TableRow 
@@ -268,7 +567,10 @@ export function ProfitLossTab() {
                     `}
                     onClick={() => isExpense && setSelectedLedger(row.account)}
                   >
-                    <TableCell className={`py-2 ${row.isSubItem ? "pl-16" : "pl-8"}`}>
+                    <TableCell 
+                      className="py-2 pr-4" 
+                      style={{ paddingLeft: `${(row.level >= 2 ? (row.level - 1) * 16 : 0) + 32}px` }}
+                    >
                       <div className="flex items-center gap-2">
                         <span className={`text-[12px] uppercase tracking-wide ${
                           isGrandTotal ? "font-bold text-secondary" :
@@ -278,7 +580,7 @@ export function ProfitLossTab() {
                           row.isSubItem ? "font-medium text-primary/60" : 
                           "font-bold text-primary/70"
                         }`}>
-                          {row.account}
+                          {row.account === "Other Income" ? "Other Income (Expense)" : row.account}
                         </span>
                         {isExpense && (
                           <div className="flex items-center justify-center opacity-40 group-hover/row:opacity-100 group-hover/row:text-blue-500 transition-all text-primary">
@@ -287,13 +589,17 @@ export function ProfitLossTab() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right text-[12px] font-bold text-primary/40 py-2">
+                    <TableCell className={cn("text-right text-[12px] py-2 text-primary/40", (isProfitLine || isGrandTotal) ? "font-bold" : "font-normal")}>
                       {row.gross ? formatCurrency(row.gross) : "-"}
                     </TableCell>
-                    <TableCell className="text-right text-[12px] font-bold text-primary/40 py-2">
+                    <TableCell className={cn("text-right text-[12px] py-2 text-primary/40", (isProfitLine || isGrandTotal) ? "font-bold" : "font-normal")}>
                       {row.vatAdj ? formatCurrency(row.vatAdj) : "-"}
                     </TableCell>
-                    <TableCell className={`pr-8 text-right text-[12px] tracking-tight py-2 ${getAmountColor(row.total)} ${isProfitLine || isGrandTotal ? "font-black" : ""}`}>
+                    <TableCell className={cn(
+                      "pr-8 text-right text-[12px] tracking-tight py-2",
+                      (isProfitLine || isGrandTotal) ? "font-bold" : "font-normal",
+                      getAmountColor(row.total)
+                    )}>
                       {formatCurrency(row.total)}
                     </TableCell>
                   </TableRow>
@@ -308,7 +614,7 @@ export function ProfitLossTab() {
       <div className="flex items-start gap-2 px-8 mt-6">
         <Info size={14} className="text-primary/20 shrink-0 mt-0.5" />
         <p className="text-[10px] font-bold text-primary/40 uppercase tracking-widest">
-          Click on an expense row marked with the info icon to view the detailed bank mutation breakdown.
+          Click on an account row marked with the info icon to view the detailed bank mutation breakdown.
         </p>
       </div>
     </div>

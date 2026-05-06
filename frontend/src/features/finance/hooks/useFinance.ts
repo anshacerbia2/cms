@@ -36,10 +36,10 @@ export function useFinance() {
       ...options,
     });
 
-  const getBalanceSheet = (year?: string, options?: any) =>
+  const getBalanceSheet = (options?: any) =>
     useQuery<any>({
-      queryKey: ["finance", "balance-sheet", year || "all"],
-      queryFn: () => financeService.getBalanceSheet(year),
+      queryKey: ["finance", "balance-sheet"],
+      queryFn: () => financeService.getBalanceSheet(),
       ...options,
     });
 
@@ -58,25 +58,39 @@ export function useFinance() {
       ...options,
     });
 
-  const getPLSummary = (options?: any) =>
+  const getPLSummary = (year?: string, date?: string, options?: any) =>
     useQuery<any[]>({
-      queryKey: ["finance", "pl-summary"],
-      queryFn: () => financeService.getPLSummary(),
+      queryKey: ["finance", "pl-summary", year || "all", date || "now"],
+      queryFn: () => financeService.getPLSummary(year, date),
       ...options,
     });
 
-  const getPLStatement = (year?: string, options?: any) =>
+  const getPLStatement = (year?: string, date?: string, options?: any) =>
     useQuery<any>({
-      queryKey: ["finance", "pl-statement", year || "all"],
-      queryFn: () => financeService.getPLStatement(year),
+      queryKey: ["finance", "pl-statement", year || "all", date || "now"],
+      queryFn: () => financeService.getPLStatement(year, date),
       ...options,
     });
 
-  const getPLDetails = (year?: string, ledger?: string, options?: any) =>
+  const getPLDetails = (year?: string, ledger?: string, date?: string, options?: any) =>
     useQuery<any[]>({
-      queryKey: ["finance", "pl-details", year || "all", ledger],
-      queryFn: () => financeService.getPLDetails(year, ledger),
+      queryKey: ["finance", "pl-details", year || "all", ledger, date || "now"],
+      queryFn: () => financeService.getPLDetails(year, ledger, date),
       enabled: !!ledger,
+      ...options,
+    });
+
+  const getSalesCogsDetails = (year?: string, date?: string, options?: any) =>
+    useQuery<any>({
+      queryKey: ["finance", "sales-cogs-details", year || "all", date || "now"],
+      queryFn: () => financeService.getSalesCogsDetails(year, date),
+      ...options,
+    });
+
+  const getDepreciationDetails = (year?: string, date?: string, options?: any) =>
+    useQuery<any[]>({
+      queryKey: ["finance", "depreciation-details", year || "all", date || "now"],
+      queryFn: () => financeService.getDepreciationDetails(year, date),
       ...options,
     });
 
@@ -86,8 +100,10 @@ export function useFinance() {
     getPLSummary,
     getPLStatement,
     getPLDetails,
+    getSalesCogsDetails,
     getBalanceSheet,
     getInterAccountTransfers,
     getAllInterAccountTransfers,
+    getDepreciationDetails,
   };
 }

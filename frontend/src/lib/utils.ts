@@ -47,8 +47,8 @@ export function cleanAmount(val: any) {
 export function getAmountColor(val: any, showEmerald = true) {
   try {
     const num = new Decimal(cleanAmount(val));
-    if (num.gt(0)) return showEmerald ? "text-emerald-600 font-medium" : "";
-    if (num.lt(0)) return "text-rose-600 font-medium";
+    if (num.gt(0)) return showEmerald ? "text-emerald-600" : "";
+    if (num.lt(0)) return "text-rose-600";
     return "";
   } catch (e) {
     return "";

@@ -168,8 +168,8 @@ export async function seedAuth(prisma: PrismaClient) {
       { id: 4003, name: 'Account Payable', icon: 'ArrowUpRight', route: 'account-payable.index', order: 3, forFinance: true },
       { id: 4004, name: 'Account Receivable', icon: 'ArrowDownRight', route: 'account-receivable.index', order: 4, forFinance: true },
       { id: 4005, name: 'Depreciation', icon: 'Calculator', route: 'depreciation.index', order: 5, forFinance: true },
-      { id: 4006, name: 'Financial Reports', icon: 'FileText', route: 'finance.reports', order: 6, forFinance: true },
-      { id: 4007, name: 'Sales', icon: 'DollarSign', route: 'sales.index', order: 7, forFinance: true },
+      { id: 4006, name: 'Sales', icon: 'DollarSign', route: 'sales.index', order: 6, forFinance: true },
+      { id: 4007, name: 'Financial Reports', icon: 'FileText', route: 'finance.reports', order: 7, forFinance: true },
     ]},
     { id: 500, name: 'Operations', icon: 'Briefcase', order: 5, forFinance: false, items: [
       { id: 5001, name: 'Projects', icon: 'Briefcase', route: 'finance.index', order: 1, forFinance: false },

@@ -40,14 +40,26 @@ export class FinanceReportController {
 
   @Get('pl-summary')
   @Permissions('finance.reports')
-  async getPLSummary() {
-    return this.financeService.getPLSummary();
+  async getPLSummary(
+    @Query('year') year?: string,
+    @Query('date') date?: string
+  ) {
+    return this.financeService.getPLSummary(
+      year ? Number(year) : undefined,
+      date
+    );
   }
 
   @Get('pl-statement')
   @Permissions('finance.reports')
-  async getPLStatement(@Query('year') year?: string) {
-    return this.financeService.getProfitLossStatement(year ? Number(year) : undefined);
+  async getPLStatement(
+    @Query('year') year?: string,
+    @Query('date') date?: string
+  ) {
+    return this.financeService.getProfitLossStatement(
+      year ? Number(year) : undefined,
+      date
+    );
   }
 
   @Get('pl-details')
@@ -55,14 +67,43 @@ export class FinanceReportController {
   async getPLDetails(
     @Query('year') year?: string,
     @Query('ledger') ledger?: string,
+    @Query('date') date?: string
   ) {
-    return this.financeService.getPLDetails(year ? Number(year) : undefined, ledger);
+    return this.financeService.getPLDetails(
+      year ? Number(year) : undefined, 
+      ledger,
+      date
+    );
+  }
+
+  @Get('depreciation-details')
+  @Permissions('finance.reports')
+  async getDepreciationDetails(
+    @Query('year') year?: string,
+    @Query('date') date?: string
+  ) {
+    return this.financeService.getDepreciationDetails(
+      year ? Number(year) : undefined,
+      date
+    );
+  }
+
+  @Get('sales-cogs-details')
+  @Permissions('finance.reports')
+  async getSalesCogsDetails(
+    @Query('year') year?: string,
+    @Query('date') date?: string,
+  ) {
+    return this.financeService.getSalesCogsDetails(
+      year ? Number(year) : undefined,
+      date
+    );
   }
 
   @Get('balance-sheet')
   @Permissions('finance.reports')
-  async getBalanceSheet(@Query('year') year?: string) {
-    return this.financeService.getBalanceSheet(year ? Number(year) : undefined);
+  async getBalanceSheet() {
+    return this.financeService.getBalanceSheet();
   }
 
   @Get('inter-account-transfers')

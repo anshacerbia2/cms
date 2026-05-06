@@ -22,8 +22,8 @@ export const financeService = {
     return data;
   },
 
-  getBalanceSheet: async (year?: string): Promise<any> => {
-    const { data } = await api.get("/finance/balance-sheet", { params: { year } });
+  getBalanceSheet: async (): Promise<any> => {
+    const { data } = await api.get("/finance/balance-sheet");
     return data;
   },
 
@@ -37,18 +37,28 @@ export const financeService = {
     return Array.isArray(data) ? data : (data as any).data || [];
   },
 
-  getPLSummary: async (): Promise<any[]> => {
-    const { data } = await api.get("/finance/pl-summary");
+  getPLSummary: async (year?: string, date?: string): Promise<any[]> => {
+    const { data } = await api.get("/finance/pl-summary", { params: { year, date } });
     return data;
   },
   
-  getPLStatement: async (year?: string): Promise<any> => {
-    const { data } = await api.get("/finance/pl-statement", { params: { year } });
+  getPLStatement: async (year?: string, date?: string): Promise<any> => {
+    const { data } = await api.get("/finance/pl-statement", { params: { year, date } });
     return data;
   },
 
-  getPLDetails: async (year?: string, ledger?: string): Promise<any[]> => {
-    const { data } = await api.get("/finance/pl-details", { params: { year, ledger } });
+  getPLDetails: async (year?: string, ledger?: string, date?: string): Promise<any[]> => {
+    const { data } = await api.get("/finance/pl-details", { params: { year, ledger, date } });
+    return data;
+  },
+
+  getSalesCogsDetails: async (year?: string, date?: string): Promise<any> => {
+    const { data } = await api.get("/finance/sales-cogs-details", { params: { year, date } });
+    return data;
+  },
+
+  getDepreciationDetails: async (year?: string, date?: string): Promise<any[]> => {
+    const { data } = await api.get("/finance/depreciation-details", { params: { year, date } });
     return data;
   },
 };

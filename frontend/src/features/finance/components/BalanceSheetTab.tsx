@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatCurrency, getAmountColor } from "@/lib/utils";
 import { useFinance } from "../hooks/useFinance";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,27 +31,34 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Calendar } from "lucide-react";
 
 export function BalanceSheetTab() {
-  const [selectedYear, setSelectedYear] = useState<string>("all");
   const { getBalanceSheet } = useFinance();
-  const { data: bsData, isLoading } = getBalanceSheet(selectedYear === "all" ? undefined : selectedYear);
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    "Cash": true,
-    "Bank Accounts": true,
-    "Account Receivable": true
-  });
+  const { data: bsData, isLoading } = getBalanceSheet();
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const toggleSection = (name: string) => {
-    setOpenSections(prev => ({ ...prev, [name]: !prev[name] }));
+  useEffect(() => {
+    if (bsData && !isInitialized) {
+      const initial: Record<string, boolean> = {};
+      // Initialize accordion state directly from backend's isOpen flag
+      bsData.assets?.categories?.forEach((c: any) => {
+        if (c.isOpen) initial[`assets-${c.name}`] = true;
+      });
+      bsData.liabilities?.categories?.forEach((c: any) => {
+        if (c.isOpen) initial[`liabilities-${c.name}`] = true;
+      });
+      bsData.equity?.categories?.forEach((c: any) => {
+        if (c.isOpen) initial[`equity-${c.name}`] = true;
+      });
+      setOpenSections(initial);
+      setIsInitialized(true);
+    }
+  }, [bsData, isInitialized]);
+
+  const toggleSection = (section: string, name: string) => {
+    const key = `${section}-${name}`;
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const summary = bsData?.summary || {
@@ -65,25 +72,14 @@ export function BalanceSheetTab() {
   };
 
   const charts = bsData?.charts || {
-    composition: [],
+    assetComposition: [],
+    liabilityEquityComposition: [],
     trend: []
   };
 
-  // Helper to ensure categories always show up even if backend returns empty []
-  const ensureCategories = (section: any, defaultNames: string[]) => {
-    const existing = section?.categories || [];
-    if (existing.length > 0) return existing;
-    
-    return defaultNames.map(name => ({
-      name,
-      total: "0",
-      items: []
-    }));
-  };
-
-  const assetCategories = ensureCategories(bsData?.assets, ["Cash", "Bank Accounts", "Deposit", "Account Receivable", "Prepaid Tax", "Fixed Assets"]);
-  const liabilityCategories = ensureCategories(bsData?.liabilities, ["Account Payable", "Short Term Loan"]);
-  const equityCategories = ensureCategories(bsData?.equity, ["Equity"]);
+  const assetCategories = bsData?.assets?.categories || [];
+  const liabilityCategories = bsData?.liabilities?.categories || [];
+  const equityCategories = bsData?.equity?.categories || [];
   
   
 
@@ -152,28 +148,12 @@ export function BalanceSheetTab() {
               Balance Sheet
             </h3>
             <p className="text-[11px] text-primary/40 uppercase tracking-widest mt-1.5">
-              Snapshot of financial position · As of 31 Dec {selectedYear === "all" ? new Date().getFullYear() : selectedYear}
+              Snapshot of financial position · Real-time Cumulative Balance
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="flex-1 xl:w-[180px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
-              <div className="flex items-center gap-2">
-                <Calendar size={18} className="text-secondary" />
-                <SelectValue placeholder="Year" />
-              </div>
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden">
-              <SelectItem value="all" className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">All Time Records</SelectItem>
-              <SelectItem value="2026" className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">Fiscal Year 2026</SelectItem>
-              <SelectItem value="2025" className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">Fiscal Year 2025</SelectItem>
-              <SelectItem value="2024" className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">Fiscal Year 2024</SelectItem>
-              <SelectItem value="2023" className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">Fiscal Year 2023</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+
       </div>
       
       {/* Top Status Bar */}
@@ -299,72 +279,106 @@ export function BalanceSheetTab() {
           </CardContent>
         </Card>
 
-        {/* Asset Composition */}
+        {/* Compositions Section */}
         <Card className="bg-white/70 backdrop-blur-md border-primary/5 shadow-premium">
           <CardContent className="p-8">
-            <h3 className="text-[15px] font-black text-primary uppercase tracking-widest mb-1">Asset Composition</h3>
-            <p className="text-[11px] text-primary/40 uppercase font-bold mb-8">Where capital is held</p>
-            
-            <div className="h-[240px] w-full relative mb-8">
-              {/* Central Statistics Indicator */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none translate-y-1">
-                <span className="text-[9px] font-black text-primary/30 uppercase tracking-[0.2em] mb-0.5">Total Assets</span>
-                <span className="text-xl font-black text-primary tabular-nums leading-none">
-                  {formatCurrency(bsData?.assets?.total).split(',')[0]}
-                </span>
-                <span className="text-[9px] font-black text-primary/20 uppercase mt-1 tracking-widest">IDR Equivalent</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Asset Composition */}
+              <div>
+                <h3 className="text-[15px] font-black text-primary uppercase tracking-widest mb-1">Asset Composition</h3>
+                <p className="text-[11px] text-primary/40 uppercase font-bold mb-6">Allocation of resources</p>
+                
+                <div className="h-[200px] w-full relative mb-6">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none translate-y-1">
+                    <span className="text-[8px] font-black text-primary/30 uppercase tracking-[0.2em] mb-0.5">Total Assets</span>
+                    <span className="text-sm font-black text-primary tabular-nums">
+                      {formatCurrency(bsData?.assets?.total).split(',')[0]}
+                    </span>
+                  </div>
+
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={charts.assetComposition}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={6}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {charts.assetComposition.map((_: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {charts.assetComposition.map((item: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                        <span className="text-[10px] font-bold text-primary/40 uppercase">{item.name}</span>
+                      </div>
+                      <span className="text-[10px] font-black text-primary/80">
+                        {((item.value / (Number(bsData?.assets?.total?.toString().replace(/,/g, '')) || 1)) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={charts.composition}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={72}
-                    outerRadius={92}
-                    paddingAngle={6}
-                    minAngle={3}
-                    dataKey="value"
-                    stroke="none"
-                    animationBegin={0}
-                    animationDuration={1500}
-                  >
-                    {charts.composition.map((_: any, index: number) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={COLORS[index % COLORS.length]} 
-                        className="hover:opacity-80 transition-opacity cursor-pointer outline-none"
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
-                    itemStyle={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase' }}
-                    formatter={(value: any) => formatCurrency(value)}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="grid grid-cols-2 gap-x-8 gap-y-4 pt-6 border-t border-primary/5">
-              {charts.composition.slice(0, 6).map((item: any, i: number) => {
-                const total = charts.composition.reduce((acc: number, curr: any) => acc + curr.value, 0);
-                const percentNum = (item.value / total) * 100;
-                const percent = percentNum > 0 && percentNum < 0.1 ? "< 0.1" : percentNum.toFixed(1);
-                return (
-                  <div key={i} className="flex items-center justify-between group cursor-default">
-                    <div className="flex items-center gap-2.5">
-                      <div 
-                        className="w-2.5 h-2.5 rounded-full shadow-sm ring-2 ring-white" 
-                        style={{ backgroundColor: COLORS[i % COLORS.length] }} 
-                      />
-                      <span className="text-[11px] font-bold text-primary/40 uppercase tracking-tight group-hover:text-primary transition-colors">{item.name}</span>
-                    </div>
-                    <span className="text-[11px] font-black text-primary/80 tabular-nums">{percent}%</span>
+              {/* L & E Structure */}
+              <div>
+                <h3 className="text-[15px] font-black text-primary uppercase tracking-widest mb-1">Financial Structure</h3>
+                <p className="text-[11px] text-primary/40 uppercase font-bold mb-6">Liabilities vs Equity</p>
+                
+                <div className="h-[200px] w-full relative mb-6">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none translate-y-1">
+                    <span className="text-[8px] font-black text-primary/30 uppercase tracking-[0.2em] mb-0.5">Solvency</span>
+                    <span className="text-sm font-black text-primary tabular-nums">
+                      {summary.deRatio}x
+                    </span>
                   </div>
-                );
-              })}
+
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={charts.liabilityEquityComposition}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={6}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        <Cell fill="#f59e0b" /> {/* Liabilities */}
+                        <Cell fill="#10b981" /> {/* Equity */}
+                      </Pie>
+                      <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="space-y-2">
+                  {charts.liabilityEquityComposition.map((item: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: i === 0 ? "#f59e0b" : "#10b981" }} />
+                        <span className="text-[10px] font-bold text-primary/40 uppercase">{item.name}</span>
+                      </div>
+                      <span className="text-[10px] font-black text-primary/80">
+                        {formatCurrency(item.value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -389,26 +403,32 @@ export function BalanceSheetTab() {
             {assetCategories.map((group: any, idx: number) => (
               <Collapsible 
                 key={idx} 
-                open={openSections[group.name]} 
-                onOpenChange={() => toggleSection(group.name)}
+                open={openSections[`assets-${group.name}`]} 
+                onOpenChange={() => toggleSection('assets', group.name)}
               >
-                <CollapsibleTrigger className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50/50 transition-colors group cursor-pointer">
+                <CollapsibleTrigger 
+                  className={cn(
+                    "w-full flex items-center justify-between px-6 py-4 transition-colors group",
+                    group.items?.length > 0 ? "hover:bg-slate-50/50 cursor-pointer" : "cursor-default pointer-events-none"
+                  )}
+                >
                   <div className="flex items-center gap-2">
                     <div className={cn(
                       "text-slate-400 transition-transform duration-200",
-                      openSections[group.name] ? "rotate-0" : "-rotate-90"
+                      group.items?.length === 0 && "opacity-0 w-[14px]",
+                      openSections[`assets-${group.name}`] ? "rotate-0" : "-rotate-90"
                     )}>
-                      <ChevronDown size={14} />
+                      {group.items?.length > 0 && <ChevronDown size={14} />}
                     </div>
                     <span className="text-[13px] font-semibold text-slate-700">{group.name}</span>
-                    <span className="text-[11px] font-medium text-slate-400 ml-1">{group.items.length}</span>
+                    {group.items?.length > 0 && <span className="text-[11px] font-medium text-slate-400 ml-1">{group.items.length}</span>}
                   </div>
                   <span className="text-[13px] font-bold text-slate-900 tabular-nums whitespace-nowrap">{formatCurrency(group.total)}</span>
                 </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="bg-white px-6 pb-4 space-y-1">
-                    {group.items && group.items.length > 0 ? (
-                      group.items.map((item: any, i: number) => (
+                {group.items?.length > 0 && (
+                  <CollapsibleContent>
+                    <div className="bg-white px-6 pb-4 space-y-1">
+                      {group.items.map((item: any, i: number) => (
                         <div key={i} className="flex items-center py-2 group/item pl-6">
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             <span className="text-[11px] font-medium text-slate-300 w-10 tabular-nums flex-shrink-0">
@@ -427,15 +447,10 @@ export function BalanceSheetTab() {
                             </span>
                           </div>
                         </div>
-                      ))
-                    ) : (
-                      <div className="py-6 flex flex-col items-center justify-center text-center opacity-30">
-                        <Activity className="w-6 h-6 text-slate-400 mb-2 animate-pulse" />
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No account records found</p>
-                      </div>
-                    )}
-                  </div>
-                </CollapsibleContent>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                )}
               </Collapsible>
             ))}
           </div>
@@ -457,26 +472,32 @@ export function BalanceSheetTab() {
               {liabilityCategories.map((group: any, idx: number) => (
                 <Collapsible 
                   key={idx} 
-                  open={openSections[group.name]} 
-                  onOpenChange={() => toggleSection(group.name)}
+                  open={openSections[`liabilities-${group.name}`]} 
+                  onOpenChange={() => toggleSection('liabilities', group.name)}
                 >
-                  <CollapsibleTrigger className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50/50 transition-colors group cursor-pointer">
+                  <CollapsibleTrigger 
+                    className={cn(
+                      "w-full flex items-center justify-between px-6 py-4 transition-colors group",
+                      group.items?.length > 0 ? "hover:bg-slate-50/50 cursor-pointer" : "cursor-default pointer-events-none"
+                    )}
+                  >
                     <div className="flex items-center gap-2">
                       <div className={cn(
                         "text-slate-400 transition-transform duration-200",
-                        openSections[group.name] ? "rotate-0" : "-rotate-90"
+                        group.items?.length === 0 && "opacity-0 w-[14px]",
+                        openSections[`liabilities-${group.name}`] ? "rotate-0" : "-rotate-90"
                       )}>
-                        <ChevronDown size={14} />
+                        {group.items?.length > 0 && <ChevronDown size={14} />}
                       </div>
                       <span className="text-[13px] font-semibold text-slate-700">{group.name}</span>
-                      <span className="text-[11px] font-medium text-slate-400 ml-1">{group.items.length}</span>
+                      {group.items?.length > 0 && <span className="text-[11px] font-medium text-slate-400 ml-1">{group.items.length}</span>}
                     </div>
                     <span className="text-[13px] font-bold text-rose-600 tabular-nums whitespace-nowrap">{formatCurrency(group.total)}</span>
                   </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="bg-white px-6 pb-4 space-y-1">
-                      {group.items && group.items.length > 0 ? (
-                        group.items.map((item: any, i: number) => (
+                  {group.items?.length > 0 && (
+                    <CollapsibleContent>
+                      <div className="bg-white px-6 pb-4 space-y-1">
+                        {group.items.map((item: any, i: number) => (
                           <div key={i} className="flex items-center py-2 group/item pl-6">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               <span className="text-[11px] font-medium text-slate-300 w-10 tabular-nums flex-shrink-0">
@@ -495,15 +516,10 @@ export function BalanceSheetTab() {
                               </span>
                             </div>
                           </div>
-                        ))
-                      ) : (
-                        <div className="py-6 flex flex-col items-center justify-center text-center opacity-30">
-                          <Activity className="w-6 h-6 text-slate-400 mb-2 animate-pulse" />
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No account records found</p>
-                        </div>
-                      )}
-                    </div>
-                  </CollapsibleContent>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  )}
                 </Collapsible>
               ))}
             </div>
@@ -523,26 +539,32 @@ export function BalanceSheetTab() {
               {equityCategories.map((group: any, idx: number) => (
                 <Collapsible 
                   key={idx} 
-                  open={openSections[group.name]} 
-                  onOpenChange={() => toggleSection(group.name)}
+                  open={openSections[`equity-${group.name}`]} 
+                  onOpenChange={() => toggleSection('equity', group.name)}
                 >
-                  <CollapsibleTrigger className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50/50 transition-colors group cursor-pointer">
+                  <CollapsibleTrigger 
+                    className={cn(
+                      "w-full flex items-center justify-between px-6 py-4 transition-colors group",
+                      group.items?.length > 0 ? "hover:bg-slate-50/50 cursor-pointer" : "cursor-default pointer-events-none"
+                    )}
+                  >
                     <div className="flex items-center gap-2">
                       <div className={cn(
                         "text-slate-400 transition-transform duration-200",
-                        openSections[group.name] ? "rotate-0" : "-rotate-90"
+                        group.items?.length === 0 && "opacity-0 w-[14px]",
+                        openSections[`equity-${group.name}`] ? "rotate-0" : "-rotate-90"
                       )}>
-                        <ChevronDown size={14} />
+                        {group.items?.length > 0 && <ChevronDown size={14} />}
                       </div>
                       <span className="text-[13px] font-semibold text-slate-700">{group.name}</span>
-                      <span className="text-[11px] font-medium text-slate-400 ml-1">{group.items.length}</span>
+                      {group.items?.length > 0 && <span className="text-[11px] font-medium text-slate-400 ml-1">{group.items.length}</span>}
                     </div>
                     <span className="text-[13px] font-black text-emerald-600 tabular-nums whitespace-nowrap">{formatCurrency(group.total)}</span>
                   </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="bg-white px-6 pb-4 space-y-1">
-                      {group.items && group.items.length > 0 ? (
-                        group.items.map((item: any, i: number) => (
+                  {group.items?.length > 0 && (
+                    <CollapsibleContent>
+                      <div className="bg-white px-6 pb-4 space-y-1">
+                        {group.items.map((item: any, i: number) => (
                           <div key={i} className="flex items-center py-2 group/item pl-6">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               <span className="text-[11px] font-medium text-slate-300 w-10 tabular-nums flex-shrink-0">
@@ -561,15 +583,10 @@ export function BalanceSheetTab() {
                               </span>
                             </div>
                           </div>
-                        ))
-                      ) : (
-                        <div className="py-6 flex flex-col items-center justify-center text-center opacity-30">
-                          <Activity className="w-6 h-6 text-slate-400 mb-2 animate-pulse" />
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No account records found</p>
-                        </div>
-                      )}
-                    </div>
-                  </CollapsibleContent>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  )}
                 </Collapsible>
               ))}
           </div>
@@ -579,17 +596,25 @@ export function BalanceSheetTab() {
 
       {/* Insights Footer */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-        <div className="p-6 bg-emerald-50/50 rounded-2xl border border-emerald-500/10 flex gap-4">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0">
-            <Zap size={20} />
-          </div>
-          <div>
-            <h5 className="text-[11px] font-black text-emerald-700 uppercase tracking-widest mb-1">Insight</h5>
-            <p className="text-[12px] font-medium text-emerald-900/70 leading-relaxed">
-              Account Receivable is your largest asset at <span className="font-bold text-emerald-800">Rp {formatCurrency(charts.composition[0]?.value || 0)}</span>. Consider tightening collections to further improve your cash position.
-            </p>
-          </div>
-        </div>
+        {/* Dynamic Insight based on largest asset */}
+        {(() => {
+          const sortedAssets = [...charts.assetComposition].sort((a, b) => b.value - a.value);
+          const topAsset = sortedAssets[0] || { name: 'Assets', value: 0 };
+          return (
+            <div className="p-6 bg-emerald-50/50 rounded-2xl border border-emerald-500/10 flex gap-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0">
+                <Zap size={20} />
+              </div>
+              <div>
+                <h5 className="text-[11px] font-black text-emerald-700 uppercase tracking-widest mb-1">Insight</h5>
+                <p className="text-[12px] font-medium text-emerald-900/70 leading-relaxed">
+                  {topAsset.name} is your largest asset at <span className="font-bold text-emerald-800">{formatCurrency(topAsset.value)}</span>. 
+                  {topAsset.name === 'AR' ? " Consider tightening collections to further improve your cash position." : " Maintain this liquidity to ensure operational stability."}
+                </p>
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="p-6 bg-amber-50/50 rounded-2xl border border-amber-500/10 flex gap-4">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0">
