@@ -13,7 +13,7 @@ import {
   PieChart,
   Pie,
   Cell
-} from 'recharts';
+} from "recharts";
 import { 
   TrendingUp, 
   ShieldCheck, 
@@ -263,7 +263,7 @@ export function BalanceSheetTab() {
                     axisLine={false} 
                     tickLine={false} 
                     tick={{fontSize: 10, fontWeight: 900, fill: 'rgba(0,0,0,0.3)'}}
-                    tickFormatter={(val) => `Rp ${(val/1e9).toFixed(1)}B`}
+                    tickFormatter={(val: number) => `Rp ${(val/1e9).toFixed(1)}B`}
                   />
                   <Tooltip 
                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
