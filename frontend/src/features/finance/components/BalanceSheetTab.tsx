@@ -506,19 +506,27 @@ export function BalanceSheetTab() {
                 {group.items?.length > 0 && (
                   <CollapsibleContent>
                     <div className="bg-white px-0 pb-4 space-y-1">
-                      {group.items.map((item: any, i: number) => (
-                        <div 
-                          key={i} 
-                          className="flex items-center py-2 group/item px-6 hover:bg-slate-50 cursor-pointer transition-colors"
-                          onClick={() => setDrillDown({ 
-                            isOpen: true, 
-                            category: group.name, 
-                            subItem: item.accountName,
-                            accountId: item.accountId,
-                            total: item.idr,
-                            isLiability: false
-                          })}
-                        >
+                        {group.items.map((item: any, i: number) => {
+                          const isNonClickable = item.accountName === 'Depreciation & Amortization';
+                          return (
+                            <div 
+                              key={i} 
+                              className={cn(
+                                "flex items-center py-2 group/item px-6 transition-colors",
+                                isNonClickable ? "" : "hover:bg-slate-50 cursor-pointer"
+                              )}
+                              onClick={() => {
+                                if (isNonClickable) return;
+                                setDrillDown({ 
+                                  isOpen: true, 
+                                  category: group.name, 
+                                  subItem: item.accountName,
+                                  accountId: item.accountId,
+                                  total: item.idr,
+                                  isLiability: false
+                                });
+                              }}
+                            >
                           <div className="flex items-center gap-2 flex-1 min-w-0 pl-[22px]">
                             <span className="text-[11px] font-medium text-slate-300 w-10 tabular-nums flex-shrink-0">
                               {item.code}
@@ -541,7 +549,8 @@ export function BalanceSheetTab() {
                             </span>
                           </div>
                         </div>
-                      ))}
+                      );
+                    })}
                     </div>
                   </CollapsibleContent>
                 )}
