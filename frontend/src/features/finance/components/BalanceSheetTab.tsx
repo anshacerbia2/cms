@@ -819,7 +819,6 @@ export function BalanceSheetTab() {
                   { (isARorTax || drillDown.isLiability) ? (
                     <tr className="border-b border-primary/5">
                       <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Year</th>
-                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Vendor</th>
                       <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">Description</th>
                       <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Outstanding IDR</th>
                     </tr>
@@ -845,11 +844,6 @@ export function BalanceSheetTab() {
                         <tr key={i} className="bg-white hover:bg-primary/[0.01] transition-colors group">
                           <td className="pl-8 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">
                             {row.colC}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="text-[12px] font-bold text-primary/40 uppercase tracking-tight">
-                              {row.colD}
-                            </span>
                           </td>
                           <td className="px-4 py-3 whitespace-normal min-w-[250px]">
                             <span className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:text-primary transition-colors">
@@ -887,7 +881,8 @@ export function BalanceSheetTab() {
 
                     const date = row.colA || row.date || row.createdAt;
                     const reference = row.colF || row.type || row.category || '-';
-                    const description = row.colE || row.colB || row.description || '-';
+                    // Fix: For Cash/Bank, description must come from colB, and amount from colE
+                    const description = isCashOrBank ? (row.colB || '-') : (row.colE || row.colB || row.description || '-');
                     const amount = isCashOrBank ? row.colE : (row.colR || row.colD || row.amount || row.idr || 0);
 
                     return (
@@ -920,11 +915,13 @@ export function BalanceSheetTab() {
                       <td className="pl-8 py-4 text-[11px] font-bold text-[#cc9929] whitespace-nowrap">
                         {formatDate(displayDetails.footer.colA)}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className="text-[12px] font-bold text-[#cc9929]/60 uppercase tracking-tight">
-                          {displayDetails.footer.colF || '-'}
-                        </span>
-                      </td>
+                      {!(isARorTax || drillDown.isLiability) && (
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className="text-[12px] font-bold text-[#cc9929]/60 uppercase tracking-tight">
+                            {displayDetails.footer.colF || '-'}
+                          </span>
+                        </td>
+                      )}
                       <td className="px-4 py-4 whitespace-normal min-w-[250px]">
                         <span className="text-[12px] font-bold text-[#cc9929] uppercase leading-tight">
                           {displayDetails.footer.colB || 'LATEST BALANCE'} (FINAL SALDO)
@@ -938,7 +935,7 @@ export function BalanceSheetTab() {
                     </tr>
                   ) : (
                     <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
-                      <td colSpan={isFixedAsset ? 2 : 3} className="pl-8 py-4 text-left font-bold">
+                      <td colSpan={(isFixedAsset || isARorTax || drillDown.isLiability) ? 2 : 3} className="pl-8 py-4 text-left font-bold">
                         <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">
                           Total
                         </span>
