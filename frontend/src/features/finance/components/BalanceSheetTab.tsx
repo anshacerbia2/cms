@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { formatCurrency, getAmountColor } from "@/lib/utils";
+import { useState, useEffect, useMemo } from "react";
+import { formatCurrency, getAmountColor, cn, formatDate } from "@/lib/utils";
 import { useFinance } from "../hooks/useFinance";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -23,20 +23,74 @@ import {
   Activity,
   Zap,
   Eye,
-  Loader2
+  Loader2,
+  History, Plus, Info,
+  Calendar as CalendarIcon
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { 
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 
 export function BalanceSheetTab() {
-  const { getBalanceSheet } = useFinance();
-  const { data: bsData, isLoading } = getBalanceSheet();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const { getBalanceSheet, getBSDetails } = useFinance();
+  
+  // Year for UI Display only
+  const displayYear = selectedDate ? selectedDate.getFullYear().toString() : new Date().getFullYear().toString();
+
+  const { data: bsData, isLoading } = getBalanceSheet(
+    selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined
+  );
+
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Drill-down state
+  const [drillDown, setDrillDown] = useState<{
+    isOpen: boolean;
+    category?: string;
+    subItem?: string;
+    accountId?: string;
+    total?: number;
+    isLiability?: boolean;
+  }>({ isOpen: false });
+
+  const { data: detailData, isLoading: isLoadingDetails } = getBSDetails(
+    drillDown.category!,
+    drillDown.subItem,
+    selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
+    drillDown.accountId,
+    { enabled: drillDown.isOpen }
+  );
+
+  const isCashOrBank = drillDown.category === 'Cash' || drillDown.category === 'Bank Accounts';
+  const isARorTax = drillDown.category === 'Account Receivable' || drillDown.category === 'Deposit' || drillDown.category === 'Prepaid Tax';
+  const isFixedAsset = drillDown.category === 'Fixed Assets';
+  const displayDetails = useMemo(() => {
+    if (!detailData || detailData.length === 0) return { body: [], footer: null };
+    if (!isCashOrBank) return { body: detailData, footer: null };
+    return {
+      body: detailData.slice(0, -1),
+      footer: detailData[detailData.length - 1]
+    };
+  }, [detailData, isCashOrBank]);
 
   useEffect(() => {
     if (bsData && !isInitialized) {
@@ -89,7 +143,7 @@ export function BalanceSheetTab() {
     { 
       title: "TOTAL ASSETS", 
       value: formatCurrency(summary.totalAssets), 
-      subValue: "+9.2% vs prev. quarter", 
+      subValue: "Cash, Bank, AR, Tax, & Fixed Assets", 
       icon: TrendingUp, 
       color: "text-indigo-500",
       bg: "bg-indigo-50/50"
@@ -97,7 +151,7 @@ export function BalanceSheetTab() {
     { 
       title: "LIABILITIES", 
       value: formatCurrency(summary.totalLiabilities), 
-      subValue: "Short-term debt priority", 
+      subValue: "Account Payable & Short-term Loans", 
       icon: Activity, 
       color: "text-rose-500",
       bg: "bg-rose-50/50"
@@ -105,7 +159,7 @@ export function BalanceSheetTab() {
     { 
       title: "TOTAL EQUITY", 
       value: formatCurrency(summary.totalEquity), 
-      subValue: "Retained earnings stable", 
+      subValue: "Capital & Retained Earnings", 
       icon: Scale, 
       color: "text-emerald-500",
       bg: "bg-emerald-50/50"
@@ -113,7 +167,7 @@ export function BalanceSheetTab() {
     { 
       title: "WORKING CAPITAL", 
       value: formatCurrency(summary.workingCapital), 
-      subValue: "Liquid capital availability", 
+      subValue: "Current Assets minus Current Liabilities", 
       icon: Zap, 
       color: "text-amber-500",
       bg: "bg-amber-50/50"
@@ -145,19 +199,44 @@ export function BalanceSheetTab() {
           </div>
           <div className="flex flex-col justify-center">
             <h3 className="text-[13px] font-bold text-primary leading-none uppercase">
-              Balance Sheet
+              Balance Sheet — FY {displayYear}
             </h3>
             <p className="text-[11px] text-primary/40 uppercase tracking-widest mt-1.5">
               Snapshot of financial position · Real-time Cumulative Balance
             </p>
           </div>
         </div>
-
-
+        <div className="flex items-center gap-4 mr-4">
+          <div className="flex flex-col items-end">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-12 px-6 bg-white border-0 shadow-sm rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all justify-start text-left hover:bg-white hover:shadow-sm text-muted-foreground hover:text-muted-foreground",
+                    !selectedDate && "text-muted-foreground hover:text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 text-secondary" />
+                  {selectedDate ? format(selectedDate, "PPP") : <span>As of Today</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 shadow-premium border-primary/5 overflow-hidden" align="end">
+                <Calendar
+                  mode="single"
+                  captionLayout="dropdown"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
       </div>
       
-      {/* Top Status Bar */}
-      <div className="flex items-center justify-between bg-white/70 backdrop-blur-md p-3 px-6 rounded-2xl border border-primary/5 shadow-premium">
+      {/* Top Status Bar — temporarily hidden */}
+      <div className="hidden flex items-center justify-between bg-white/70 backdrop-blur-md p-3 px-6 rounded-2xl border border-primary/5 shadow-premium">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <div className={cn("w-2.5 h-2.5 rounded-full animate-pulse", summary.isBalanced ? "bg-emerald-500" : "bg-rose-500")} />
@@ -218,7 +297,7 @@ export function BalanceSheetTab() {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="hidden grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Position Trend */}
         <Card className="lg:col-span-2 bg-white/70 backdrop-blur-md border-primary/5 shadow-premium">
           <CardContent className="p-8">
@@ -414,9 +493,8 @@ export function BalanceSheetTab() {
                 >
                   <div className="flex items-center gap-2">
                     <div className={cn(
-                      "text-slate-400 transition-transform duration-200",
-                      group.items?.length === 0 && "opacity-0 w-[14px]",
-                      openSections[`assets-${group.name}`] ? "rotate-0" : "-rotate-90"
+                      "w-3.5 h-3.5 flex items-center justify-center text-slate-400 transition-transform duration-200 flex-shrink-0",
+                      group.items?.length === 0 ? "opacity-0" : (openSections[`assets-${group.name}`] ? "rotate-0" : "-rotate-90")
                     )}>
                       {group.items?.length > 0 && <ChevronDown size={14} />}
                     </div>
@@ -427,16 +505,32 @@ export function BalanceSheetTab() {
                 </CollapsibleTrigger>
                 {group.items?.length > 0 && (
                   <CollapsibleContent>
-                    <div className="bg-white px-6 pb-4 space-y-1">
+                    <div className="bg-white px-0 pb-4 space-y-1">
                       {group.items.map((item: any, i: number) => (
-                        <div key={i} className="flex items-center py-2 group/item pl-6">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div 
+                          key={i} 
+                          className="flex items-center py-2 group/item px-6 hover:bg-slate-50 cursor-pointer transition-colors"
+                          onClick={() => setDrillDown({ 
+                            isOpen: true, 
+                            category: group.name, 
+                            subItem: item.accountName,
+                            accountId: item.accountId,
+                            total: item.idr,
+                            isLiability: false
+                          })}
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0 pl-[22px]">
                             <span className="text-[11px] font-medium text-slate-300 w-10 tabular-nums flex-shrink-0">
                               {item.code}
                             </span>
-                            <span className="text-[12px] font-normal text-slate-600 truncate" title={item.accountName}>
-                              {item.accountName}
-                            </span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-[12px] font-normal text-slate-600 truncate group-hover/item:text-blue-600 transition-colors" title={item.accountName}>
+                                {item.accountName}
+                              </span>
+                              <div className="flex items-center justify-center opacity-60 group-hover/item:opacity-100 group-hover/item:text-blue-600 transition-all text-slate-400">
+                                <Info size={11} />
+                              </div>
+                            </div>
                           </div>
                           <div className="flex items-center gap-3 flex-shrink-0 ml-4">
                             <span className="text-[11px] font-medium text-slate-300 tabular-nums whitespace-nowrap">
@@ -483,9 +577,8 @@ export function BalanceSheetTab() {
                   >
                     <div className="flex items-center gap-2">
                       <div className={cn(
-                        "text-slate-400 transition-transform duration-200",
-                        group.items?.length === 0 && "opacity-0 w-[14px]",
-                        openSections[`liabilities-${group.name}`] ? "rotate-0" : "-rotate-90"
+                        "w-3.5 h-3.5 flex items-center justify-center text-slate-400 transition-transform duration-200 flex-shrink-0",
+                        group.items?.length === 0 ? "opacity-0" : (openSections[`liabilities-${group.name}`] ? "rotate-0" : "-rotate-90")
                       )}>
                         {group.items?.length > 0 && <ChevronDown size={14} />}
                       </div>
@@ -496,16 +589,32 @@ export function BalanceSheetTab() {
                   </CollapsibleTrigger>
                   {group.items?.length > 0 && (
                     <CollapsibleContent>
-                      <div className="bg-white px-6 pb-4 space-y-1">
+                      <div className="bg-white px-0 pb-4 space-y-1">
                         {group.items.map((item: any, i: number) => (
-                          <div key={i} className="flex items-center py-2 group/item pl-6">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div 
+                            key={i} 
+                            className="flex items-center py-2 group/item px-6 hover:bg-rose-50/50 cursor-pointer transition-colors"
+                            onClick={() => setDrillDown({ 
+                              isOpen: true, 
+                              category: group.name, 
+                              subItem: item.accountName,
+                              accountId: item.accountId,
+                              total: item.idr,
+                              isLiability: true
+                            })}
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0 pl-[22px]">
                               <span className="text-[11px] font-medium text-slate-300 w-10 tabular-nums flex-shrink-0">
                                 {item.code}
                               </span>
-                              <span className="text-[12px] font-normal text-slate-600 truncate" title={item.accountName}>
-                                {item.accountName}
-                              </span>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-[12px] font-normal text-slate-600 truncate group-hover/item:text-rose-600 transition-colors" title={item.accountName}>
+                                  {item.accountName}
+                                </span>
+                                <div className="flex items-center justify-center opacity-60 group-hover/item:opacity-100 group-hover/item:text-rose-600 transition-all text-slate-400">
+                                  <Info size={11} />
+                                </div>
+                              </div>
                             </div>
                             <div className="flex items-center gap-3 flex-shrink-0 ml-4">
                               <span className="text-[11px] font-medium text-slate-300 tabular-nums whitespace-nowrap">
@@ -550,9 +659,8 @@ export function BalanceSheetTab() {
                   >
                     <div className="flex items-center gap-2">
                       <div className={cn(
-                        "text-slate-400 transition-transform duration-200",
-                        group.items?.length === 0 && "opacity-0 w-[14px]",
-                        openSections[`equity-${group.name}`] ? "rotate-0" : "-rotate-90"
+                        "w-3.5 h-3.5 flex items-center justify-center text-slate-400 transition-transform duration-200 flex-shrink-0",
+                        group.items?.length === 0 ? "opacity-0" : (openSections[`equity-${group.name}`] ? "rotate-0" : "-rotate-90")
                       )}>
                         {group.items?.length > 0 && <ChevronDown size={14} />}
                       </div>
@@ -563,35 +671,63 @@ export function BalanceSheetTab() {
                   </CollapsibleTrigger>
                   {group.items?.length > 0 && (
                     <CollapsibleContent>
-                      <div className="bg-white px-6 pb-4 space-y-1">
-                        {group.items.map((item: any, i: number) => (
-                          <div key={i} className="flex items-center py-2 group/item pl-6">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <span className="text-[11px] font-medium text-slate-300 w-10 tabular-nums flex-shrink-0">
-                                {item.code}
-                              </span>
-                              <span className="text-[12px] font-normal text-slate-600 truncate" title={item.accountName}>
-                                {item.accountName}
-                              </span>
+                      <div className="bg-white px-0 pb-4 space-y-1">
+                        {group.items.map((item: any, i: number) => {
+                          const isNonClickable = item.accountName === 'Previous years' || item.accountName === 'Dividend' || item.accountName.startsWith('Profit (Loss)');
+                          return (
+                            <div 
+                              key={i} 
+                              className={cn(
+                                "flex items-center py-2 group/item px-6 transition-colors",
+                                isNonClickable ? "" : "hover:bg-emerald-50/50 cursor-pointer"
+                              )}
+                              onClick={() => {
+                                if (isNonClickable) return;
+                                // Fixed Assets category is special
+                                const category = group.name === 'Fixed Assets' ? 'Fixed Assets' : 'Equity';
+                                setDrillDown({ 
+                                  isOpen: true, 
+                                  category, 
+                                  subItem: item.accountName,
+                                  total: item.idr,
+                                  isLiability: false
+                                });
+                              }}
+                            >
+                              <div className="flex items-center gap-2 flex-1 min-w-0 pl-[22px]">
+                                <span className="text-[11px] font-medium text-slate-300 w-10 tabular-nums flex-shrink-0">
+                                  {item.code}
+                                </span>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className={cn("text-[12px] font-normal text-slate-600 truncate transition-colors", isNonClickable ? "" : "group-hover/item:text-emerald-600")} title={item.accountName}>
+                                    {item.accountName}
+                                  </span>
+                                  {!isNonClickable && (
+                                    <div className="flex items-center justify-center opacity-60 group-hover/item:opacity-100 group-hover/item:text-emerald-600 transition-all text-slate-400">
+                                      <Info size={11} />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                                <span className="text-[11px] font-medium text-slate-300 tabular-nums whitespace-nowrap">
+                                  {item.tx || 0}tx
+                                </span>
+                                <span className="text-[12px] font-normal text-emerald-600 tabular-nums w-48 text-right whitespace-nowrap">
+                                  {formatCurrency(item.idr)}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                              <span className="text-[11px] font-medium text-slate-300 tabular-nums whitespace-nowrap">
-                                {item.tx || 0}tx
-                              </span>
-                              <span className="text-[12px] font-normal text-emerald-600 tabular-nums w-48 text-right whitespace-nowrap">
-                                {formatCurrency(item.idr)}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </CollapsibleContent>
                   )}
                 </Collapsible>
               ))}
+            </div>
           </div>
         </div>
-      </div>
       </div>
 
       {/* Insights Footer */}
@@ -629,6 +765,191 @@ export function BalanceSheetTab() {
         </div>
       </div>
 
+      {/* Audit Trail Modal */}
+      <Dialog open={drillDown.isOpen} onOpenChange={(open) => !open && setDrillDown({ isOpen: false })}>
+        <DialogContent className="max-w-7xl w-[95vw] max-h-[90vh] bg-slate-50 border border-slate-200 shadow-2xl rounded-3xl overflow-hidden p-0 gap-0 flex flex-col">
+          <div className="py-5 px-8 border-b border-primary/5 bg-white sticky top-0 z-20 shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#fdf8ec] flex items-center justify-center text-[#cc9929] border border-[#cc9929]/20 shadow-premium shrink-0">
+                  <Activity size={24} />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-bold text-primary uppercase tracking-tight leading-none mb-1.5">
+                    {drillDown.subItem || drillDown.category} Breakdown
+                  </DialogTitle>
+                  <DialogDescription className="text-[10px] font-bold text-primary/30 uppercase tracking-[0.2em]">
+                    {isCashOrBank 
+                      ? "Bank Mutation Records • Financial Audit Trail" 
+                      : (isARorTax || isFixedAsset)
+                        ? "Outstanding Balances • Financial Audit Trail" 
+                        : "Account Records • Financial Audit Trail"}
+                  </DialogDescription>
+                </div>
+              </div>
+              <button 
+                onClick={() => setDrillDown({ isOpen: false })}
+                className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-50 flex items-center justify-center text-primary/40 hover:text-red-600 transition-all cursor-pointer group"
+              >
+                <Plus className="w-5 h-5 rotate-45 group-hover:scale-110 transition-transform" />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-0 flex-1 overflow-auto custom-scrollbar relative">
+            {isLoadingDetails ? (
+              <div className="h-64 flex flex-col items-center justify-center gap-4 opacity-40">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em]">Retrieving Records...</p>
+              </div>
+            ) : detailData && detailData.length > 0 ? (
+              <table className="w-full border-separate border-spacing-0">
+                <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                  { (isARorTax || drillDown.isLiability) ? (
+                    <tr className="border-b border-primary/5">
+                      <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Year</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Vendor</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">Description</th>
+                      <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Outstanding IDR</th>
+                    </tr>
+                  ) : isFixedAsset ? (
+                    <tr className="border-b border-primary/5">
+                      <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Purchase Date</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">Asset Name</th>
+                      <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Purchase Price</th>
+                    </tr>
+                  ) : (
+                    <tr className="border-b border-primary/5">
+                      <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Date</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Reference</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">Description</th>
+                      <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Balance</th>
+                    </tr>
+                  )}
+                </thead>
+                <tbody className="divide-y divide-primary/5">
+                  {displayDetails.body.map((row: any, i: number) => {
+                    if (isARorTax || drillDown.isLiability) {
+                      return (
+                        <tr key={i} className="bg-white hover:bg-primary/[0.01] transition-colors group">
+                          <td className="pl-8 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">
+                            {row.colC}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="text-[12px] font-bold text-primary/40 uppercase tracking-tight">
+                              {row.colD}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-normal min-w-[250px]">
+                            <span className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:text-primary transition-colors">
+                              {row.colE}
+                            </span>
+                          </td>
+                          <td className="pr-8 py-3 text-right whitespace-nowrap">
+                            <span className={cn("text-[12px] font-bold tabular-nums", drillDown.isLiability ? "text-rose-600" : "text-primary")}>
+                              {formatCurrency(row.colR)}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    if (isFixedAsset) {
+                      return (
+                        <tr key={i} className="bg-white hover:bg-primary/[0.01] transition-colors group">
+                          <td className="pl-8 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">
+                            {formatDate(row.purchaseDate)}
+                          </td>
+                          <td className="px-4 py-3 whitespace-normal min-w-[250px]">
+                            <span className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:text-primary transition-colors">
+                              {row.assetName}
+                            </span>
+                          </td>
+                          <td className="pr-8 py-3 text-right whitespace-nowrap">
+                            <span className="text-[12px] font-bold text-primary tabular-nums">
+                              {formatCurrency(row.purchasePrice)}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    const date = row.colA || row.date || row.createdAt;
+                    const reference = row.colF || row.type || row.category || '-';
+                    const description = row.colE || row.colB || row.description || '-';
+                    const amount = isCashOrBank ? row.colE : (row.colR || row.colD || row.amount || row.idr || 0);
+
+                    return (
+                      <tr key={i} className="bg-white hover:bg-primary/[0.01] transition-colors group">
+                        <td className="pl-8 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">
+                          {formatDate(date)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className="text-[12px] font-bold text-primary/40 uppercase tracking-tight">
+                            {reference}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-normal min-w-[250px]">
+                          <span className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:text-primary transition-colors">
+                            {description}
+                          </span>
+                        </td>
+                        <td className="pr-8 py-3 text-right whitespace-nowrap">
+                          <span className="text-[12px] font-bold text-primary tabular-nums">
+                            {formatCurrency(amount)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="sticky bottom-0 z-50">
+                  {displayDetails.footer ? (
+                    <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
+                      <td className="pl-8 py-4 text-[11px] font-bold text-[#cc9929] whitespace-nowrap">
+                        {formatDate(displayDetails.footer.colA)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className="text-[12px] font-bold text-[#cc9929]/60 uppercase tracking-tight">
+                          {displayDetails.footer.colF || '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-normal min-w-[250px]">
+                        <span className="text-[12px] font-bold text-[#cc9929] uppercase leading-tight">
+                          {displayDetails.footer.colB || 'LATEST BALANCE'} (FINAL SALDO)
+                        </span>
+                      </td>
+                      <td className={cn("pr-8 py-4 text-right whitespace-nowrap font-bold", getAmountColor(displayDetails.footer.colE))}>
+                        <span className="text-[14px] tabular-nums font-bold">
+                          {formatCurrency(displayDetails.footer.colE)}
+                        </span>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
+                      <td colSpan={isFixedAsset ? 2 : 3} className="pl-8 py-4 text-left font-bold">
+                        <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">
+                          Total
+                        </span>
+                      </td>
+                      <td className={cn("pr-8 py-4 text-right whitespace-nowrap font-bold", drillDown.isLiability ? "text-rose-600" : getAmountColor(drillDown.total || 0))}>
+                        <span className="text-[14px] tabular-nums font-bold">
+                          {formatCurrency(drillDown.total || 0)}
+                        </span>
+                      </td>
+                    </tr>
+                  )}
+                </tfoot>
+              </table>
+            ) : (
+              <div className="h-64 flex flex-col items-center justify-center gap-4 opacity-20">
+                <History className="w-12 h-12 text-primary" />
+                <p className="text-[10px] font-black uppercase tracking-[0.3em]">No Transactions Found</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

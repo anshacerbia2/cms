@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, DepreciationType } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import * as path from 'path';
 import { 
@@ -19,7 +19,7 @@ export async function seedDepreciation(prisma: PrismaClient) {
     const assets = [];
 
     // Loop 1: Office Equipment (Rows 6 to 87)
-    for (let i = 5; i < 87; i++) {
+    for (let i = 4; i < 87; i++) {
       const row = rows[i];
       if (!row || isRowEmpty(row)) continue;
 
@@ -45,12 +45,12 @@ export async function seedDepreciation(prisma: PrismaClient) {
         colS: cleanCurrency(row[18]),
         colT: cleanCurrency(row[19]),
         colU: cleanCurrency(row[20]),
-        type: 'OFFICE_EQUIPMENT',
+        type: DepreciationType.OFFICE_EQUIPMENT,
       });
     }
 
     // Loop 2: Vehicle (Rows 92 to 100)
-    for (let i = 91; i < 100; i++) {
+    for (let i = 90; i < 100; i++) {
       const row = rows[i];
       if (!row || isRowEmpty(row)) continue;
 
@@ -76,7 +76,7 @@ export async function seedDepreciation(prisma: PrismaClient) {
         colS: cleanCurrency(row[18]),
         colT: cleanCurrency(row[19]),
         colU: cleanCurrency(row[20]),
-        type: 'VEHICLE',
+        type: DepreciationType.VEHICLE,
       });
     }
 

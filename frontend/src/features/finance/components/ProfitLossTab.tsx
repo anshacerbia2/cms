@@ -105,8 +105,6 @@ export function ProfitLossTab() {
   );
 
   const { data: deprDetails, isLoading: isLoadingDeprDetails } = getDepreciationDetails(
-    year === "all" ? undefined : year,
-    selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
     { enabled: !!selectedLedger && isDepr }
   );
 
@@ -166,7 +164,7 @@ export function ProfitLossTab() {
           <div className="py-5 px-8 border-b border-primary/5 bg-white sticky top-0 z-20 shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600 border border-blue-500/20 shadow-premium shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-[#fdf8ec] flex items-center justify-center text-[#cc9929] border border-[#cc9929]/20 shadow-premium shrink-0">
                   <History size={24} />
                 </div>
                 <div>

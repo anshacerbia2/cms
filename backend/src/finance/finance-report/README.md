@@ -47,3 +47,197 @@ In the Balance Sheet, `Prepaid Tax` (PPh 21, 23, 25, PPN) is displayed under Cur
 ### Why query from `AccountReceivable` (AR)?
 1.  **Accounting Classification:** Prepaid Tax represents a "claim" or right to offset future tax liabilities with the government. Because its nature is identical to a receivable (Piutang), the ERP groups Prepaid Tax ledgers inside the AR module.
 2.  **Performance (Zero Waste Logic):** The Balance Sheet requires the total outstanding balance accumulated over the company's lifespan. Calculating this by summing every transaction in `FinancialTransaction` since day one is highly inefficient. The `AccountReceivable` table (specifically `colR`) already maintains the active, cumulative outstanding balance. By querying the AR table, the system achieves a highly performant, deterministic, and accurate snapshot.
+
+---
+
+## 4. Profit & Loss Summary & Filtering Logic
+
+The P&L Summary is constructed by `getProfitLossStatement(year?, endDate?)`. It aggregates from **5 different data sources** sequentially, then computes the profitability chain.
+
+---
+
+### Step 1: Date Range Construction
+
+Before any query runs, a shared `where` clause is computed based on the provided filters:
+
+| Scenario | `year` | `endDate` | Date Range Applied |
+| :--- | :--- | :--- | :--- |
+| **Full Year** | `2025` | `null` | `2025-01-01` → `2025-12-31` |
+| **Year-to-Date** | `2025` | `2025-05-31` | `2025-01-01` → `2025-05-31` |
+| **Historical S/D** | `null` | `2024-12-31` | *Beginning of time* → `2024-12-31` |
+| **No Filter** | `null` | `null` | All records (no date restriction) |
+
+> **Note:** `FinancialTransaction` uses `colA` as the date field. `SalesRecord` uses `colC` as the date field. Both use the same computed date range but with different field names.
+
+---
+
+### Step 2: COGS (Cost of Goods Sold)
+
+*   **Source Table:** `FinancialTransaction`
+*   **Filter:** `colF` contains `'cost of goods'` (case-insensitive)
+*   **Date Filter:** Applied via shared `where` (field: `colA`)
+*   **Calculation per row:** `Credit (colD) - Debit (colC)`
+*   **Result:** Sum of all net values. Since cost transactions are typically debited, the result is naturally **negative**, correctly reducing Gross Profit.
+
+```
+cogsTotal = Σ (colD - colC)  for all rows where colF contains 'cost of goods'
+```
+
+---
+
+### Step 3: NET SALES
+
+*   **Source Table:** `SalesRecord`
+*   **Date Filter:** Applied via shared `where` (field: `colC`)
+*   **Aggregation:** Uses `aggregate._sum` (single DB query, no loop).
+
+| Component | Column | Description |
+| :--- | :--- | :--- |
+| **Gross Sales** | `colK` | AR IDR / Total invoice amount |
+| **VAT (PPN)** | `colJ` | Tax component of the sale |
+
+```
+vatAdj    = Sum(colJ) * -1        → VAT is subtracted from Gross
+netSales  = Sum(colK) + vatAdj   → = Gross - VAT
+```
+
+---
+
+### Step 4: Operating Expenses
+
+*   **Source Table:** `FinancialTransaction`
+*   **Date Filter:** Applied via shared `where` (field: `colA`)
+*   **Ledger Filter:** `colF` must be one of (case-insensitive `in` filter):
+    *   `Personnel Expense`
+    *   `Office Expense`
+    *   `Marketing Expense`
+    *   `Financial Expense`
+
+All 4 categories are fetched in a **single query**, then split into separate accumulators using `String.includes()`:
+
+| Expense Category | Ledger Keyword | Accumulator |
+| :--- | :--- | :--- |
+| **Personnel Expense** | `'personnel'` | `personnelExpense` |
+| **Office Expense** | `'office'` | `officeExpense` |
+| **Marketing Expense** | `'marketing'` | `marketingExpense` |
+| **Financial Expense** | `'financial'` | `financialExpense` |
+
+```
+net per row = Credit (colD) - Debit (colC)
+operatingExpenses = personnelExpense + officeExpense + marketingExpense + financialExpense
+```
+
+> Because expenses are **debited**, the net is negative, which correctly reduces Operating Profit.
+
+---
+
+### Step 5: Other Income
+
+*   **Source Table:** `FinancialTransaction`
+*   **Date Filter:** Applied via shared `where` (field: `colA`)
+*   **Ledger Filter:** `colF` contains `'other income'` (case-insensitive)
+*   **Calculation per row:** `Credit (colD) - Debit (colC)`
+
+```
+otherIncomeTotal = Σ (colD - colC)  for all rows where colF contains 'other income'
+```
+
+---
+
+### Step 6: Depreciation
+
+*   **Source:** `Depreciation` table via `processDepreciationSummary(year, endDate)`
+*   **Applied Rules:** The 4 Golden Rules (see Section 5)
+*   **Result:** The raw total is **negated** before being used in P&L calculations, making it a negative expense.
+
+```
+depreciation = processDepreciationSummary(year, endDate).negated()
+```
+
+---
+
+### Step 7: Income Tax (PPH-23)
+
+*   **Source Table:** `FinancialTransaction`
+*   **Date Filter:** Applied via shared `where` (field: `colA`)
+*   **All 4 conditions must match simultaneously (AND):**
+
+| Condition | Field | Value |
+| :--- | :--- | :--- |
+| 1 | `colF` | contains `'Account Receivable'` |
+| 2 | `colG` | contains `'AR Prepaid Tax'` |
+| 3 | `colH` | contains `'pph-23'` OR `'pph 23'` |
+| 4 | `internalAccount.type` | = `'OTHER'` AND `holderName` contains `'non cash & bank'` |
+
+```
+incomeTax = Σ (colC * -1)   → Debit of Prepaid Tax, negated to reduce Profit
+```
+
+---
+
+### Step 8: Profitability Chain (Final Calculation)
+
+```
+grossProfit      = netSales + cogsTotal
+operatingExpenses = personnelExpense + officeExpense + marketingExpense + financialExpense
+operatingProfit  = grossProfit + operatingExpenses
+
+otherIncomeNet   = otherIncomeTotal + depreciation
+profitBeforeTax  = operatingProfit + otherIncomeNet
+netProfit        = profitBeforeTax + incomeTax
+```
+
+
+### Filter Scenarios
+| Scenario | Params | Date Range Logic |
+| :--- | :--- | :--- |
+| **Full Year** | `year=2025`, `date=null` | Jan 1st to Dec 31st of the selected year. |
+| **Year-to-Date (YTD)** | `year=2025`, `date=2025-05-31` | Jan 1st to the selected date. |
+| **Historical Snapshot** | `year=null`, `date=2024-12-31` | All records up to the selected date. |
+| **Master Master** | `year=null`, `date=null` | Current state of all records in the database. |
+
+---
+
+## 5. Depreciation Engine (The 4 Golden Rules)
+
+To ensure the P&L matches the Excel source exactly, the `processDepreciationSummary` helper enforces 4 distinct fiscal rules based on the filter:
+
+1.  **Historical Rule (<= 2024):** If the filter is year 2024 or earlier, the system ignores monthly columns and returns the value from **`colF`** (Accumulated Depreciation s/d 2024).
+2.  **Current Year Rule (2025):** 
+    *   If Full Year: Returns **`colS`** (Total 2025).
+    *   If YTD (e.g., until May): Sums monthly columns **Jan to May** (`colG` to `colK`).
+3.  **Future Rule (2026+):** Returns **0** (Empty), as the system currently only holds data up to 2025.
+4.  **Master Rule (No Filter):** Returns **`colT`** (Accumulated Depreciation s/d 2025), which is the master total of all historical and current year depreciation.
+
+---
+
+## 6. Audit Trail & Detail Modals
+
+When a user clicks the "Info" icon on a P&L row, specialized functions are called to provide transparency:
+
+### Standard Ledger Audit (`getPLDetails`)
+*   **Source:** `FinancialTransaction`.
+*   **Logic:** Retrieves every transaction that falls within the **exact date range** and **ledger category** currently visible on the P&L table.
+
+### Depreciation Audit Trail (`getDepreciationDetails`)
+*   **Source:** `Depreciation` table.
+*   **Policy: "AS-IS" (UNFILTERED).** 
+    *   Unlike the summary, the detail modal **does not apply date filters**.
+    *   It retrieves **all registered assets** to provide full transparency of the registry.
+    *   **Columns Provided:**
+        *   `jan` to `dec`: The full monthly breakdown from the Excel source.
+        *   `accumulated2024`: Value from `colF`.
+        *   `total2025`: Value from `colS`.
+        *   `accumulated2025`: Value from `colT`.
+        *   `bookValue`: Net value from `colU`.
+
+> [!IMPORTANT]
+> Because the Summary is filtered and the Detail is "As-Is", the totals in the Detail Modal Footer are designed to match the **Full Year 2025** totals. If the P&L is filtered to a specific month (e.g., March), the P&L Summary will show the YTD total, while the Modal will show the full context of the assets.
+
+---
+
+## 7. Data Integrity & Type Safety
+
+*   **Decimal Precision:** All financial calculations use `Prisma.Decimal`.
+*   **String Casting:** To avoid `bigint` serialization issues, all database values are cast to `String()` before being initialized as `Decimal` objects.
+*   **Signage:** Depreciation is always calculated as a positive number internally but **negated** (converted to negative) when returned to the UI to correctly reflect its nature as an expense/contra-asset.

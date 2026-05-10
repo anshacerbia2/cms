@@ -19,8 +19,6 @@ export async function seedFinance(prisma: PrismaClient) {
   await prisma.financeRevenue.deleteMany();
   await prisma.financeExpense.deleteMany();
   await prisma.profitLossSummary.deleteMany();
-  await prisma.balanceSheetItem.deleteMany();
-  await prisma.interAccountTransfer.deleteMany();
 
   const filePath = path.join(process.cwd(), 'prisma', 'seed-data', 'finance-report.xlsx');
   const workbook = XLSX.readFile(filePath);
@@ -110,51 +108,4 @@ export async function seedFinance(prisma: PrismaClient) {
   // --- 3. ASSETS SHEET ---
   await seedDepreciation(prisma);
 
-  // --- 4. BALANCE SHEET ---
-  const bsSheet = workbook.Sheets['Balance Sheet 2021'];
-  if (bsSheet) {
-    const rows: any[][] = XLSX.utils.sheet_to_json(bsSheet, { header: 1 });
-    const bs = [];
-    let currentCategory = '';
-    for (let i = 4; i < rows.length; i++) {
-      const row = rows[i];
-      if (isRowEmpty(row)) continue;
-      const label = cleanString(row[1]);
-      if (!row[2] && label) { currentCategory = label; continue; }
-
-      bs.push({
-        category: currentCategory,
-        accountName: label,
-        idr: cleanCurrency(row[2]),
-        usd: cleanCurrency(row[3]),
-        rate: cleanCurrency(row[4]),
-      });
-    }
-    await prisma.balanceSheetItem.createMany({ data: bs });
-    console.log(`✅ Seeded ${bs.length} records for Balance Sheet`);
-  }
-
-  // --- 4. INTER-ACCOUNT TRANSFERS ---
-  const transferSheet = workbook.Sheets['Inter Accounts'];
-  if (transferSheet) {
-    const rows: any[][] = XLSX.utils.sheet_to_json(transferSheet, { header: 1 });
-    const transfers = [];
-    for (let i = 4; i < rows.length; i++) {
-      const row = rows[i];
-      if (isRowEmpty(row)) break;
-      transfers.push({
-        date: cleanString(row[0]),
-        description: cleanString(row[1]),
-        bca: cleanCurrency(row[2]),
-        mandiri: cleanCurrency(row[3]),
-        bri: cleanCurrency(row[4]),
-        btn: cleanCurrency(row[5]),
-        cashIdr: cleanCurrency(row[6]),
-        nonCashBank: cleanCurrency(row[7]),
-        checker: cleanCurrency(row[8]),
-      });
-    }
-    await prisma.interAccountTransfer.createMany({ data: transfers });
-    console.log(`✅ Seeded ${transfers.length} records for Inter-Account Transfers`);
-  }
 }

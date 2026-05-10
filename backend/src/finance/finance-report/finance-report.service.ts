@@ -13,73 +13,16 @@ export class FinanceReportService {
     private prisma: PrismaService,
     private bankMutationService: BankMutationService
   ) {}
-
-
-  // AP methods have been moved to ApService
-
-
-  async getAssets(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    const [data, total] = await Promise.all([
-      this.prisma.depreciation.findMany({ skip, take: limit, orderBy: [{ id: 'asc' }] }),
-      this.prisma.depreciation.count(),
-    ]);
-
-    return {
-      data: data.map((item: any) => ({
-        ...item,
-        id: Number(item.id),
-        colD: formatDecimal(item.colD),
-        colF: formatDecimal(item.colF),
-        colG: formatDecimal(item.colG),
-        colH: formatDecimal(item.colH),
-        colI: formatDecimal(item.colI),
-        colJ: formatDecimal(item.colJ),
-        colK: formatDecimal(item.colK),
-        colL: formatDecimal(item.colL),
-        colM: formatDecimal(item.colM),
-        colN: formatDecimal(item.colN),
-        colO: formatDecimal(item.colO),
-        colP: formatDecimal(item.colP),
-        colQ: formatDecimal(item.colQ),
-        colR: formatDecimal(item.colR),
-        colS: formatDecimal(item.colS),
-        colT: formatDecimal(item.colT),
-        colU: formatDecimal(item.colU),
-      })),
-      meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
-    };
-  }
   
-  async getAllAssets(): Promise<any[]> {
-    const data = await this.prisma.depreciation.findMany({
-      orderBy: [{ id: 'asc' }],
-    });
-
-    return data.map((item: any) => ({
-      ...item,
-      id: Number(item.id),
-      colD: formatDecimal(item.colD),
-      colF: formatDecimal(item.colF),
-      colG: formatDecimal(item.colG),
-      colH: formatDecimal(item.colH),
-      colI: formatDecimal(item.colI),
-      colJ: formatDecimal(item.colJ),
-      colK: formatDecimal(item.colK),
-      colL: formatDecimal(item.colL),
-      colM: formatDecimal(item.colM),
-      colN: formatDecimal(item.colN),
-      colO: formatDecimal(item.colO),
-      colP: formatDecimal(item.colP),
-      colQ: formatDecimal(item.colQ),
-      colR: formatDecimal(item.colR),
-      colS: formatDecimal(item.colS),
-      colT: formatDecimal(item.colT),
-      colU: formatDecimal(item.colU),
-    }));
+  /**
+   * Helper to extract a 4-digit year from inconsistent legacy strings.
+   * Returns the year as a number, or 0 if no valid year is found.
+   */
+  private extractYear(val: any): number {
+    if (!val) return 0;
+    const str = String(val);
+    const match = str.match(/\b(19|20)\d{2}\b/);
+    return match ? parseInt(match[0], 10) : 0;
   }
 
   async getRevenue(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
@@ -110,7 +53,6 @@ export class FinanceReportService {
       })),
     });
   }
-
 
   async getExpenses(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
     const data = await this.prisma.financeExpense.findMany({ orderBy: [{ id: 'asc' }] });
@@ -261,31 +203,11 @@ export class FinanceReportService {
       otherIncomeTotal = otherIncomeTotal.plus(credit).minus(debit);
     }
 
-    // 5. Calculate Dynamic Depreciation
-    const deprRecords = await this.prisma.depreciation.findMany({
-      where: {
-        colA: where.colA // Assuming we follow the same date range for asset snapshots
-      }
-    });
-
-    // Determine max month from endDate
-    let maxMonth = 12;
-    if (endDate) {
-      maxMonth = new Date(endDate).getMonth() + 1;
-    }
-
-    let dynamicDepreciation = new Prisma.Decimal(0);
-    const monthCols = ['colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'];
+    // 5. Calculate Depreciation Expense (Summary Only)
+    const totalDepreciation = await this.processDepreciationSummary(year, endDate);
+    const depreciation = totalDepreciation.negated();
     
-    for (const record of deprRecords) {
-      for (let i = 0; i < maxMonth; i++) {
-        const val = record[monthCols[i] as keyof typeof record];
-        if (val) dynamicDepreciation = dynamicDepreciation.plus(new Prisma.Decimal(val as any));
-      }
-    }
-    const depreciation = dynamicDepreciation.negated();
-    
-    // 6. Calculate Income Tax
+    // 6. Calculate Income Tax (PPH-23)
     const incomeTaxTransactions = await this.prisma.financialTransaction.findMany({
       where: {
         AND: [
@@ -408,42 +330,63 @@ export class FinanceReportService {
       return {
         category: cat.key,
         label: cat.label,
-        total: formatDecimal(val),
-        // Consolidated into 'other' for now until full bank mapping is integrated in summary
-        other: formatDecimal(val),
-        bca: "0.0000",
-        mandiri: "0.0000",
-        bri: "0.0000",
-        btn: "0.0000",
-        cashIdr: "0.0000",
-        nonCb: "0.0000"
+        total: formatDecimal(val)
       };
     });
   }
 
 
-  async getInterAccountTransfers(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
-    const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
-      this.prisma.interAccountTransfer.findMany({ skip, take: limit, orderBy: [{ id: 'asc' }] }),
-      this.prisma.interAccountTransfer.count(),
-    ]);
+  /**
+   * Calculates a breakdown of Retained Earnings (RE) components for a given year.
+   * Components include Previous years' net RE, current year dividends, and current year profit.
+   * 
+   * @param targetYear The fiscal year to calculate the breakdown for.
+   * @returns Object containing prevYearsVal, dividendVal, profitLossVal, and totalRE.
+   */
+  private async getRetainedEarningsBreakdown(targetYear: number, endDate?: string) {
+    const startOfYear = new Date(`${targetYear}-01-01T00:00:00.000Z`);
+    const endOfYear = endDate ? new Date(`${endDate}T23:59:59.999Z`) : new Date(`${targetYear}-12-31T23:59:59.999Z`);
+
+    // 1. Current Year Dividends (targetYear only)
+    // Reducing equity (debit to RE), so we sum and negate
+    const dividendTrxCurrent = await this.prisma.financialTransaction.findMany({
+      where: {
+        colA: { gte: startOfYear, lte: endOfYear },
+        // colF: { contains: 'Retained Earning', mode: 'insensitive' },
+        colG: { contains: 'Dividend', mode: 'insensitive' }
+      }
+    });
+    const dividendVal = dividendTrxCurrent.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colC || 0)), new Prisma.Decimal(0)).mul(-1);
+console.log(">>>>>>>>>>>>>>>>", startOfYear, endOfYear,dividendVal);
+
+    // 2. Historical Dividends (Up to end of targetYear - 1)
+    const dividendTrxLegacy = await this.prisma.financialTransaction.findMany({
+      where: {
+        colA: { lt: startOfYear },
+        colF: { contains: 'Retained Earning', mode: 'insensitive' },
+        colG: { contains: 'Dividend', mode: 'insensitive' }
+      }
+    });
+    const dividendLegacyTotal = dividendTrxLegacy.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colC || 0)), new Prisma.Decimal(0));
+
+    // 3. Previous Years Net RE (Cumulative Profit s/d targetYear-1 minus Dividends s/d targetYear-1)
+    const lastDayOfPrevYear = `${targetYear - 1}-12-31`;
+    const plUpToPrevYear = await this.getProfitLossStatement(undefined, lastDayOfPrevYear);
+    const profitLegacyTotal = new Prisma.Decimal(plUpToPrevYear.tableData.find(r => r.account?.toLowerCase() === "profit after tax")?.total?.toString().replace(/,/g, '') || "0");
+    
+    // Previous Years = (Profit up to 2025) - (Dividends up to 2025)
+    const prevYearsVal = profitLegacyTotal.minus(dividendLegacyTotal);
+
+    // 4. Profit (Loss) for the target year (current year YTD)
+    const plCurrentData = await this.getProfitLossStatement(targetYear, endDate);
+    const profitLossVal = new Prisma.Decimal(plCurrentData.tableData.find(r => r.account?.trim().toLowerCase() === "profit after tax")?.total?.toString().replace(/,/g, '') || "0");
 
     return {
-      data: data.map(t => ({
-        ...t,
-        bca: formatDecimal(t.bca),
-        mandiri: formatDecimal(t.mandiri),
-        bri: formatDecimal(t.bri),
-        btn: formatDecimal(t.btn),
-        cashIdr: formatDecimal(t.cashIdr),
-        nonCashBank: formatDecimal(t.nonCashBank),
-        checker: formatDecimal(t.checker),
-      })),
-      meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
+      prevYearsVal,
+      dividendVal,
+      profitLossVal,
+      totalRE: prevYearsVal.plus(dividendVal).plus(profitLossVal)
     };
   }
 
@@ -465,9 +408,9 @@ export class FinanceReportService {
       where.colA = { lte: new Date(`${date}T23:59:59.999Z`) };
     }
     
-    // Ensure the ledger name matches strictly or via sensitive mapping if needed
+    // Use contains instead of equals to capture sub-categories and generic matches (e.g., 'Other Income - Interest')
     if (ledger) {
-      where.colF = { equals: ledger, mode: 'insensitive' };
+      where.colF = { contains: ledger, mode: 'insensitive' };
     }
 
     const data = await this.prisma.financialTransaction.findMany({
@@ -477,7 +420,7 @@ export class FinanceReportService {
           include: { bank: true }
         }
       },
-      orderBy: { colA: 'desc' }
+      orderBy: { colA: 'asc' }
     });
 
     return data.map(trx => {
@@ -502,6 +445,274 @@ export class FinanceReportService {
   }
 
   /**
+   * Fetches detailed audit trail for Balance Sheet items.
+   * Provides the raw records that make up the totals in the Balance Sheet report.
+   * 
+   * @param category The main category (e.g., 'Bank Accounts', 'Account Receivable')
+   * @param subItem The specific item name (e.g., 'BCA', 'AR Trade')
+   * @param date Optional end date for cumulative reports
+   */
+  async getBSDetails(category: string, subItem?: string, date?: string, accountId?: string) {
+    const endDateStr = date ? `${date}T23:59:59.999Z` : new Date().toISOString();
+    const endDate = new Date(endDateStr);
+    const currentYearVal = endDate.getFullYear();
+
+    // 1. CASH & BANK
+    if (category === 'Cash' || category === 'Bank Accounts') {
+      let account;
+      
+      if (accountId && accountId !== 'undefined') {
+        account = await this.prisma.internalAccount.findUnique({
+          where: { id: BigInt(accountId) }
+        });
+      }
+
+      if (!account) {
+        // Fallback to fuzzy search if ID is missing
+        const words = subItem?.split(' ').filter(w => w.length > 2) || [];
+        
+        account = await this.prisma.internalAccount.findFirst({
+          where: {
+            OR: [
+              { holderName: { contains: subItem, mode: 'insensitive' as any } },
+              { branch: { contains: subItem, mode: 'insensitive' as any } },
+              { bank: { bankBrand: { contains: subItem, mode: 'insensitive' as any } } },
+              // If subItem is a combined name like "BCA Tebet", try matching both
+              ...(words.length > 0 ? [{
+                AND: words.map(w => ({
+                  OR: [
+                    { holderName: { contains: w, mode: 'insensitive' as any } },
+                    { branch: { contains: w, mode: 'insensitive' as any } },
+                    { bank: { bankBrand: { contains: w, mode: 'insensitive' as any } } }
+                  ]
+                }))
+              }] : [])
+            ]
+          }
+        });
+      }
+
+      if (!account) return [];
+
+      const transactions = await this.prisma.financialTransaction.findMany({
+        where: {
+          internalAccountId: account.id,
+          colA: { lte: endDate }
+        },
+        orderBy: [{ colA: 'asc' }, { id: 'asc' }]
+      });
+
+      return transactions.map(t => ({
+        ...t,
+        id: t.id.toString(),
+        colC: formatDecimal(t.colC),
+        colD: formatDecimal(t.colD),
+        colE: formatDecimal(t.colE),
+      }));
+    }
+
+    const catLower = category.toLowerCase();
+    const subLower = subItem?.toLowerCase() || '';
+
+    // 2. CATEGORIES SOURCED FROM AccountReceivable (AR, Deposit to Vendor, Prepaid Tax)
+    const isAR = catLower === 'account receivable';
+    const isDepositToVendor = catLower === 'deposit' && !subLower.includes('from customer');
+    const isPrepaidTax = catLower === 'prepaid tax';
+
+    if (isAR || isDepositToVendor || isPrepaidTax) {
+      // For AR and Deposit, we search for the subItem name
+      // For Prepaid Tax, we search for specific tax keywords
+      const taxGroups: any = {
+        'pph-21, pph-23, pph-4 ayat 2': ['pph-21', 'pph 21', 'pph-23', 'pph 23', 'pph-4', 'pph 4'],
+        'ppn': ['ppn'],
+        'pph-25 and pph-29': ['pph-25', 'pph 25', 'pph-29', 'pph 29']
+      };
+      
+      const taxKeywords = isPrepaidTax ? (taxGroups[subLower] || []) : [];
+      const arSearchTerm = subLower.replace('ar ', '').toLowerCase();
+
+      const recordsRaw = await this.prisma.accountReceivable.findMany({
+        orderBy: { id: 'asc' }
+      });
+
+      const records = recordsRaw.filter(r => {
+        const val = r.colC || "";
+        const year = this.extractYear(val);
+        const fullDate = new Date(val);
+        const hasFullDate = !isNaN(fullDate.getTime());
+
+        // 1. Date Filtering (Strict S/D)
+        if (date) {
+          if (hasFullDate && fullDate > endDate) return false;
+          if (year > 0 && year > currentYearVal) return false;
+          if (year === 0 && !hasFullDate) return false;
+        }
+
+        // 2. Category/SubItem Filtering
+        const colB = (r.colB || '').toLowerCase();
+        
+        if (isPrepaidTax) {
+          if (!colB.includes('ar prepaid tax')) return false;
+          // If sub-category specified for tax, check keywords
+          if (taxKeywords.length > 0 && !taxKeywords.some((k: string) => val.toLowerCase().includes(k))) return false;
+        } else {
+          // General AR or Deposit search
+          if (arSearchTerm === 'others') {
+            const standardCategories = ['ar cash advance', 'ar refund', 'ar staff loan', 'ar temporary notes', 'ar trade', 'ar deposit to vendor', 'ar prepaid tax'];
+            const isStandard = standardCategories.some(c => colB.includes(c));
+            if (isStandard) return false;
+          } else {
+            if (!colB.includes(arSearchTerm)) return false;
+          }
+        }
+
+        return true;
+      });
+
+      return records.map(r => ({
+        id: r.id.toString(),
+        colC: r.colC || '-', // Date/Desc
+        colD: r.colD || '-', // Vendor/Subject
+        colE: r.colE || '-', // Description
+        colR: formatDecimal(r.colR), // Amount
+      }));
+    }
+
+    // 4. ASSETS: FIXED ASSETS (S/D YEAR - CUMULATIVE)
+    if (catLower === 'fixed assets') {
+      const typeMap: Record<string, any> = {
+        'office equipment': 'OFFICE_EQUIPMENT',
+        'vehicle': 'VEHICLE',
+        'intangible assets': 'INTANGIBLE_ASSET'
+      };
+      const targetType = typeMap[subLower];
+
+      const dataRaw = await this.prisma.depreciation.findMany({
+        orderBy: { id: 'asc' }
+      });
+
+      const records = dataRaw.filter(r => {
+        // 1. Filter by category
+        if (targetType && r.type !== targetType) return false;
+        
+        // 2. Filter by date (match getBalanceSheet: colA <= endOfDate)
+        if (date && r.colA) {
+          return r.colA <= endDate;
+        }
+        
+        return true;
+      });
+
+      return records.map(item => {
+        const purchasePrice = new Prisma.Decimal(item.colD ? String(item.colD) : 0);
+        return {
+          id: item.id.toString(),
+          purchaseDate: item.colA,
+          assetName: item.colC || "-",
+          purchasePrice: formatDecimal(purchasePrice)
+        };
+      });
+    }
+
+
+    // 5. LIABILITIES: ACCOUNT PAYABLE, DEPOSIT FROM CUSTOMER, SHORT TERM LOAN
+    if (catLower === 'liabilities' || catLower === 'account payable' || catLower === 'short term loan' || (catLower === 'deposit' && subLower.includes('from customer'))) {
+      const searchTerm = subLower.replace('ap ', '');
+      
+      const recordsRaw = await this.prisma.accountPayable.findMany({
+        orderBy: { id: 'asc' }
+      });
+
+      const records = recordsRaw.filter(r => {
+        const val = r.colB?.toString() || "";
+        const year = this.extractYear(val);
+
+        const fullDate = new Date(val);
+        const hasFullDate = !isNaN(fullDate.getTime());
+
+        // Date filtering (matching getBalanceSheet logic)
+        if (date) {
+          if (hasFullDate && fullDate > endDate) return false;
+          if (year > 0 && year > currentYearVal) return false;
+          if (year === 0 && !hasFullDate) return false;
+        }
+
+        const rowCat = r.colA?.toLowerCase() || '';
+        if (subLower.includes('from customer')) {
+          return rowCat.includes('deposit from customer');
+        }
+        if (subLower.includes('temporary working capital')) {
+          return rowCat.includes('temporary loan');
+        }
+        if (searchTerm === 'others') {
+          const standardApCategories = ['ap credit card', 'ap expense', 'ap leasing', 'ap tax', 'ap trade', 'deposit from customer', 'temporary loan'];
+          const isStandard = standardApCategories.some(c => rowCat.includes(c));
+          return !isStandard;
+        }
+        return rowCat.includes(searchTerm);
+      });
+
+      return records.map(r => ({
+        id: r.id.toString(),
+        colC: (r.colB !== null && r.colB !== undefined) ? String(r.colB) : '-', // Year (colB)
+        colD: r.colC || '-', // Vendor (colC)
+        colE: r.colD || '-', // Description (colD)
+        colR: formatDecimal(r.colS), // Outstanding (colS)
+      }));
+    }
+
+    // 6. EQUITY: PREVIOUS YEARS
+    if (catLower === 'equity' && subLower.includes('previous years')) {
+      const prevYear = currentYearVal - 1;
+      const plPrevData = await this.getProfitLossStatement(prevYear);
+      
+      const findTotal = (name: string) => {
+        const val = plPrevData.tableData.find(r => r.account?.trim().toLowerCase() === name.toLowerCase())?.total?.toString().replace(/,/g, '') || "0";
+        return new Prisma.Decimal(val);
+      };
+
+      const revenue = findTotal("Total Operating Income");
+      const cogs = findTotal("Total Cost of Goods Sold");
+      const grossProfit = findTotal("Gross Profit");
+      const expenses = findTotal("Total Operating Expenses");
+      const otherIncome = findTotal("Total Other Income");
+      const otherExpenses = findTotal("Total Other Expenses");
+      const netProfit = findTotal("Profit After Tax");
+
+      return [
+        { id: 're-1', colA: `${prevYear}-12-31`, colF: 'P&L SUMMARY', colE: `Operating Income (${prevYear})`, colR: formatDecimal(revenue) },
+        { id: 're-2', colA: `${prevYear}-12-31`, colF: 'P&L SUMMARY', colE: `Cost of Goods Sold (${prevYear})`, colR: formatDecimal(cogs.negated()) },
+        { id: 're-3', colA: `${prevYear}-12-31`, colF: 'P&L SUMMARY', colE: `Gross Profit (${prevYear})`, colR: formatDecimal(grossProfit) },
+        { id: 're-4', colA: `${prevYear}-12-31`, colF: 'P&L SUMMARY', colE: `Operating Expenses (${prevYear})`, colR: formatDecimal(expenses.negated()) },
+        { id: 're-5', colA: `${prevYear}-12-31`, colF: 'P&L SUMMARY', colE: `Other Income/Expenses (${prevYear})`, colR: formatDecimal(otherIncome.minus(otherExpenses)) },
+        { id: 're-6', colA: `${prevYear}-12-31`, colF: 'NET RESULT', colE: `Profit After Tax (${prevYear})`, colR: formatDecimal(netProfit) },
+      ];
+    }
+
+    // 7. EQUITY: DIVIDEND
+    if (catLower === 'equity' && subLower.includes('dividend')) {
+      const records = await this.prisma.financialTransaction.findMany({
+        where: {
+          colF: { contains: 'Retained Earning', mode: 'insensitive' },
+          colG: { contains: 'Dividend', mode: 'insensitive' },
+          colA: { lte: endDate }
+        },
+        orderBy: { colA: 'asc' }
+      });
+      
+      return records.map(r => ({
+        id: r.id.toString(),
+        colC: r.colA ? new Date(r.colA).getFullYear().toString() : '-', // Year
+        colD: 'DIVIDEND', // Vendor/Type
+        colE: r.colB || '-', // Description
+        colR: formatDecimal(new Prisma.Decimal(r.colC || 0).plus(new Prisma.Decimal(r.colD || 0))), // Amount
+      }));
+    }
+
+    return [];
+  }
+
+  /**
    * Fetches the dynamic depreciation audit trail for all registered assets.
    * 
    * SPECIAL LOGIC:
@@ -514,54 +725,27 @@ export class FinanceReportService {
    * @param date Optional cumulative end date to determine the visible month range.
    * @returns Array of assets with dynamic monthly depreciation columns and recalculated totals.
    */
-  async getDepreciationDetails(year?: number, date?: string) {
-    const where: any = {};
-    if (year && year > 0) {
-      const start = new Date(Date.UTC(year, 0, 1, 0, 0, 0));
-      const end = date ? new Date(`${date}T23:59:59.999Z`) : new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
-      where.colA = { gte: start, lte: end };
-    } else if (date) {
-      where.colA = { lte: new Date(`${date}T23:59:59.999Z`) };
-    }
-
-    const data = await this.prisma.depreciation.findMany({
-      where,
-      orderBy: { colA: 'desc' }
+  async getDepreciationDetails() {
+    const raw = await this.prisma.depreciation.findMany({
+      orderBy: { colA: 'asc' }
     });
 
-    // Determine the max month to show based on the date filter
-    let maxMonth = 12; // Default to December
-    if (date) {
-      const filterDate = new Date(date);
-      // Only apply month filtering if the date is in the same year as the records
-      // For simplicity, we get the month (0-11) + 1
-      maxMonth = filterDate.getMonth() + 1;
-    }
+    const monthCols = ['colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'];
+    const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
-    return data.map(item => {
-      const isNegative = true; 
-      const multiplier = isNegative ? -1 : 1;
+    return raw.map(item => {
+      const multiplier = -1;
 
-      // Calculate monthly values and current year total dynamically
-      const months = [
-        item.colG, item.colH, item.colI, item.colJ, item.colK, item.colL,
-        item.colM, item.colN, item.colO, item.colP, item.colQ, item.colR
-      ];
-      
-      let dynamicTotalCurrentYear = new Prisma.Decimal(0);
+      // Always return As Is (using colS for current year total)
+      const rowTotal = new Prisma.Decimal(item.colS ? String(item.colS) : 0);
+      const accPrevYear = new Prisma.Decimal(item.colF ? String(item.colF) : 0);
+
       const monthlyValues: any = {};
-      const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-
       monthNames.forEach((name, index) => {
-        const val = (index + 1 <= maxMonth && months[index]) ? new Prisma.Decimal(months[index] as any) : new Prisma.Decimal(0);
+        const valRaw = item[monthCols[index] as keyof typeof item];
+        const val = new Prisma.Decimal(valRaw ? String(valRaw) : 0);
         monthlyValues[name] = formatDecimal(val.mul(multiplier));
-        dynamicTotalCurrentYear = dynamicTotalCurrentYear.plus(val);
       });
-
-      const purchasePrice = new Prisma.Decimal(item.colD || 0);
-      const accPrevYear = new Prisma.Decimal(item.colF || 0);
-      const accCurrentYear = accPrevYear.plus(dynamicTotalCurrentYear);
-      const bookValue = purchasePrice.minus(accCurrentYear);
 
       return {
         id: item.id.toString(),
@@ -569,15 +753,66 @@ export class FinanceReportService {
         purchaseDate: item.colA,
         bankRef: item.colB || "-",
         assetName: item.colC || "-",
-        purchasePrice: formatDecimal(purchasePrice),
+        purchasePrice: formatDecimal(item.colD),
         usefulLife: item.colE || 0,
-        accumulated2024: formatDecimal(accPrevYear.mul(multiplier)),
         ...monthlyValues,
-        total2025: formatDecimal(dynamicTotalCurrentYear.mul(multiplier)),
-        accumulated2025: formatDecimal(accCurrentYear.mul(multiplier)),
-        bookValue: formatDecimal(bookValue)
+        total2025: formatDecimal(rowTotal.mul(multiplier)),
+        accumulated2024: formatDecimal(accPrevYear.mul(multiplier)),
+        accumulated2025: formatDecimal(accPrevYear.plus(rowTotal).mul(multiplier)),
+        bookValue: formatDecimal(item.colU)
       };
     });
+  }
+
+  private async processDepreciationSummary(year?: number, endDate?: string) {
+    const raw = await this.prisma.depreciation.findMany();
+
+    const monthCols = ['colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'];
+    const dYear = endDate ? new Date(endDate).getFullYear() : null;
+    const dMonth = endDate ? new Date(endDate).getMonth() + 1 : 0;
+    
+    let totalDepreciation = new Prisma.Decimal(0);
+    
+    raw.forEach(record => {
+      let rowDepr = new Prisma.Decimal(0);
+
+      if (year) {
+        if (year <= 2024) {
+          rowDepr = new Prisma.Decimal(record.colF ? String(record.colF) : 0);
+        } else if (year === 2025) {
+          if (!endDate) {
+            rowDepr = new Prisma.Decimal(record.colS ? String(record.colS) : 0);
+          } else {
+            for (let i = 0; i < dMonth; i++) {
+              const val = record[monthCols[i] as keyof typeof record];
+              rowDepr = rowDepr.plus(new Prisma.Decimal(val ? String(val) : 0));
+            }
+          }
+        } else {
+          rowDepr = new Prisma.Decimal(0); // 2026+ Empty
+        }
+      } else if (endDate && dYear) {
+        if (dYear <= 2024) {
+          rowDepr = new Prisma.Decimal(record.colF ? String(record.colF) : 0);
+        } else if (dYear === 2025) {
+          const accF = new Prisma.Decimal(record.colF ? String(record.colF) : 0);
+          let curMonths = new Prisma.Decimal(0);
+          for (let i = 0; i < dMonth; i++) {
+            const val = record[monthCols[i] as keyof typeof record];
+            curMonths = curMonths.plus(new Prisma.Decimal(val ? String(val) : 0));
+          }
+          rowDepr = accF.plus(curMonths);
+        } else {
+          rowDepr = new Prisma.Decimal(record.colT ? String(record.colT) : 0);
+        }
+      } else {
+        rowDepr = new Prisma.Decimal(record.colT ? String(record.colT) : 0);
+      }
+
+      totalDepreciation = totalDepreciation.plus(rowDepr);
+    });
+
+    return totalDepreciation;
   }
 
   /**
@@ -592,10 +827,10 @@ export class FinanceReportService {
     // 1. Fetch all internal accounts to build dynamic headers
     const accounts = await this.prisma.internalAccount.findMany({
       include: { bank: true },
-      orderBy: [
-        { type: 'asc' }, // BANK, CASH, OTHER
-        { holderName: 'asc' }
-      ]
+      // orderBy: [
+      //   { type: 'asc' }, // BANK, CASH, OTHER
+      //   { holderName: 'asc' }
+      // ]
     });
 
     const headers = accounts.map(acc => {
@@ -673,82 +908,138 @@ export class FinanceReportService {
     return { headers, rows };
   }
   
-  async getBalanceSheet() {
-    // 1. Fetch Dynamic Data in Parallel (Full Cumulative for Real-Time Balance Sheet)
-    const [accounts, arRecordsRaw, apRecordsRaw, fixedAssetsRaw, plData, legacyItems] = await Promise.all([
+  async getBalanceSheet(date?: string) {
+    // Standardize to UTC Full Year to ensure consistency and avoid timezone-related year jumps
+    const currentYearVal = date ? new Date(`${date}T00:00:00.000Z`).getUTCFullYear() : new Date().getUTCFullYear();
+    
+    // 1. Fetch Dynamic Data in Parallel (Fetch all to handle messy legacy strings)
+    const endOfDate = date ? new Date(`${date}T23:59:59.999Z`) : new Date();
+    
+    const [accounts, arRecordsRawAll, apRecordsRawAll, depreciationRawAll] = await Promise.all([
       this.prisma.internalAccount.findMany({ 
         where: { type: { in: ['BANK', 'CASH'] } },
         include: { bank: true } 
       }),
       this.prisma.accountReceivable.findMany(),
       this.prisma.accountPayable.findMany(),
-      this.prisma.depreciation.findMany(),
-      this.getProfitLossStatement(),
-      this.prisma.balanceSheetItem.findMany()
+      this.prisma.depreciation.findMany()
     ]);
 
-    const forceZero = (val: Prisma.Decimal | number | string) => {
-      const formatted = formatDecimal(val);
-      return formatted === '-' ? '0' : formatted;
-    };
 
-    // 2. Process Dynamic ASSETS (Banks & Cash) using official Anchor logic
-    const bankItems = [];
-    const cashItems = [];
+    // Filter in-memory to handle the "Kacau" data
+    const arRecordsRaw = arRecordsRawAll.filter(r => {
+      const val = r.colC || "";
+      const y = this.extractYear(val); 
+      const fullDate = new Date(val);
+      const hasFullDate = !isNaN(fullDate.getTime());
 
-    const currentYear = new Date().getFullYear();
-    for (const acc of accounts) {
-      let balance = new Prisma.Decimal(0);
-      
-      // Standard Enterprise: Always fetch Full Cumulative Balance for the Balance Sheet
-      const anchor = await this.bankMutationService.getLatestAnchor(acc.id.toString(), currentYear);
-      balance = new Prisma.Decimal(anchor.balance?.replace(/,/g, '') || "0");
-      
-      const txFilter = { 
-        internalAccountId: acc.id,
-        colA: { gte: new Date(`${currentYear}-01-01`) }
-      };
-      const yearTxs = await this.prisma.financialTransaction.findMany({ where: txFilter });
-      for (const t of yearTxs) {
-        balance = balance.plus(new Prisma.Decimal(t.colD || 0)).minus(new Prisma.Decimal(t.colC || 0));
+      if (date) {
+        // When a date filter is active, exclude records beyond the filter AND records with no parseable date
+        if (hasFullDate && fullDate > endOfDate) return false;
+        if (y > 0 && y > currentYearVal) return false;
+        if (y === 0 && !hasFullDate) return false; // Cannot determine if record is in range → exclude
       }
 
-      // TX Count: Show total historical transactions for this account in the cumulative view
+      // No date filter → include ALL records (show full cumulative balance sheet)
+      return true;
+    });
+
+    const apRecordsRaw = apRecordsRawAll.filter(r => {
+      const val = r.colB?.toString() || "";
+      const y = this.extractYear(val); 
+      const fullDate = new Date(val);
+      const hasFullDate = !isNaN(fullDate.getTime());
+
+      if (date) {
+        // When a date filter is active, exclude records beyond the filter AND records with no parseable date
+        if (hasFullDate && fullDate > endOfDate) return false;
+        if (y > 0 && y > currentYearVal) return false;
+        if (y === 0 && !hasFullDate) return false; // Cannot determine if record is in range → exclude
+      }
+
+      // No date filter → include ALL records (show full cumulative balance sheet)
+      return true;
+    });
+
+    const depreciationRaw = depreciationRawAll.filter(r => {
+      if (!date) return true;
+      if (r.colA) return r.colA <= endOfDate;
+      return true;
+    });
+
+
+    // 2. Process Dynamic ASSETS (Banks & Cash) - Strictly As-Of Date
+    const bankItems = [];
+    const cashItems = [];
+    let bankTotal = new Prisma.Decimal(0);
+    let cashTotal = new Prisma.Decimal(0);
+    
+    for (const acc of accounts) {
+      // Find the latest transaction balance (colE) BEFORE or ON the target date
+      const latestTx = await this.prisma.financialTransaction.findFirst({
+        where: { 
+          internalAccountId: acc.id,
+          ...(date ? { colA: { lte: endOfDate } } : {}) // Only filter date if provided
+        },
+        orderBy: [
+          { colA: 'desc' },
+          { id: 'desc' }
+        ]
+      });
+
+      let balanceDecimal = new Prisma.Decimal(0);
+      
+      if (latestTx) {
+        // If transaction exists, colE is our running balance at that point
+        balanceDecimal = new Prisma.Decimal(latestTx.colE || 0);
+      } else {
+        // If no transactions yet, use the latest anchor (opening balance discovery)
+        const anchor = await this.bankMutationService.getLatestAnchor(acc.id.toString(), currentYearVal);
+        if(anchor?.balance) balanceDecimal = new Prisma.Decimal(anchor.balance.replace(/,/g, ''));
+      }
+
+      const balance = formatDecimal(balanceDecimal);
+
+      // 2. Labeling Standard
+      let label = acc.holderName || 'Unknown';
+      if (acc.type === 'BANK') {
+        const brand = acc.bank?.bankBrand || '';
+        const branch = acc.branch || '';
+        label = `${brand} ${branch}`.trim();
+      } else if (acc.type === 'CASH') {
+        label = 'CASH';
+      }
+
+      // 3. TX Count: Historical Transactions (Filtered by Date)
       const txCount = await this.prisma.financialTransaction.count({ 
-        where: { internalAccountId: acc.id } 
+        where: { 
+          internalAccountId: acc.id,
+          ...(date ? { colA: { lte: endOfDate } } : {})
+        } 
       });
 
       const isCash = acc.type === 'CASH';
       const items: any[] = isCash ? cashItems : bankItems;
       const prefix = isCash ? '11' : '12';
 
-      const item: any = { 
-        accountName: isCash ? `Cash` : `${acc.bank?.bankBrand || 'Bank'} - ${acc.accountNo}`, 
-        idr: balance.toNumber(), 
+      const item: any = {
+        accountId: acc.id.toString(),
+        accountName: label,
+        idr: balance,
         code: prefix + (items.length + 1).toString().padStart(2, '0'),
         tx: txCount
       };
 
-      if (isCash) cashItems.push(item); else bankItems.push(item);
+      if (isCash) {
+        cashItems.push(item);
+        cashTotal = cashTotal.plus(balanceDecimal);
+      } else {
+        bankItems.push(item);
+        bankTotal = bankTotal.plus(balanceDecimal);
+      }
     }
 
-    // 3. Fallback Logic for Assets
-    if (bankItems.length === 0 && cashItems.length === 0) {
-      legacyItems.filter(li => li.category?.toLowerCase().includes('bank') || li.category?.toLowerCase().includes('cash'))
-        .forEach((li, idx) => {
-          const isBank = li.category?.toLowerCase().includes('bank');
-          const item = { 
-            accountName: li.accountName, 
-            idr: li.idr, 
-            code: (isBank ? '12' : '11') + (idx + 1).toString().padStart(2, '0'),
-            tx: 0
-          };
-          if (isBank) bankItems.push(item); else cashItems.push(item);
-        });
-    }
 
-    const bankTotal = bankItems.reduce((acc, c) => acc.plus(new Prisma.Decimal(c.idr || 0)), new Prisma.Decimal(0));
-    const cashTotal = cashItems.reduce((acc, c) => acc.plus(new Prisma.Decimal(c.idr || 0)), new Prisma.Decimal(0));
     
     // 4. Process Detailed AR Categories
     const arItems = [];
@@ -760,7 +1051,7 @@ export class FinanceReportService {
     const processedArIds = new Set<bigint>();
     for (const cat of arCategories) {
       // Search term is the name without "AR " prefix
-      const searchTerm = cat.replace('AR ', '').toLowerCase();
+      const searchTerm = cat.toLowerCase();
       const records = arRecordsRaw.filter(r => 
         !processedArIds.has(r.id) && 
         r.colB?.toLowerCase().includes(searchTerm)
@@ -773,7 +1064,7 @@ export class FinanceReportService {
       
       arItems.push({
         accountName: cat,
-        idr: total.toNumber(),
+        idr: formatDecimal(total),
         code: '14' + (arItems.length + 1).toString().padStart(2, '0'),
         tx: records.length
       });
@@ -792,7 +1083,7 @@ export class FinanceReportService {
 
     depositItems.push({
       accountName: 'Deposit to vendor',
-      idr: depositTotal.toNumber(),
+      idr: formatDecimal(depositTotal),
       code: '1301',
       tx: depositRecords.length
     });
@@ -823,7 +1114,7 @@ export class FinanceReportService {
       prepaidTaxTotal = prepaidTaxTotal.plus(total);
       prepaidTaxItems.push({
         accountName: group.name,
-        idr: total.toNumber(),
+        idr: formatDecimal(total),
         code: group.code,
         tx: records.length
       });
@@ -837,7 +1128,7 @@ export class FinanceReportService {
         return acc.plus(new Prisma.Decimal(r.colR || 0));
       }, new Prisma.Decimal(0));
       prepaidTaxTotal = prepaidTaxTotal.plus(othersTotal);
-      prepaidTaxItems.push({ accountName: 'Prepaid Tax Others', idr: othersTotal.toNumber(), code: '1506', tx: remainingTax.length });
+      prepaidTaxItems.push({ accountName: 'Prepaid Tax Others', idr: formatDecimal(othersTotal), code: '1506', tx: remainingTax.length });
     }
 
     // 4.4 Process Remaining AR as Others
@@ -845,42 +1136,63 @@ export class FinanceReportService {
     if (remainingRecords.length > 0) {
       const othersTotal = remainingRecords.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colR || 0)), new Prisma.Decimal(0));
       const existingOthers = arItems.find(i => i.accountName === 'AR Others');
+      
       if (existingOthers) {
-        existingOthers.idr += othersTotal.toNumber();
+        // Since idr is already formatted, we convert back to Decimal, add, then re-format
+        const currentIdr = new Prisma.Decimal(existingOthers.idr);
+        existingOthers.idr = formatDecimal(currentIdr.plus(othersTotal));
         existingOthers.tx += remainingRecords.length;
       } else {
         arItems.push({
           accountName: 'AR Others',
-          idr: othersTotal.toNumber(),
+          idr: formatDecimal(othersTotal),
           code: '14' + (arItems.length + 1).toString().padStart(2, '0'),
           tx: remainingRecords.length
         });
       }
     }
 
-    let arTotalFromItems = arItems.reduce((acc, c) => acc.plus(new Prisma.Decimal(c.idr || 0)), new Prisma.Decimal(0));
-    let arTotal = arTotalFromItems;
+    let arTotalFromItems = arItems.reduce((acc, c) => acc.plus(new Prisma.Decimal(c.idr)), new Prisma.Decimal(0));
+    const arTotal = arTotalFromItems;
     const finalArItems = [...arItems];
 
-    // If breakdown is empty but there's legacy data, sync the total but keep the breakdown structure
-    const legacyArTotal = legacyItems
-      .filter(li => li.category?.toLowerCase().includes('receivable'))
-      .reduce((acc, c) => acc.plus(c.idr), new Prisma.Decimal(0));
+    // 4.5 Process Fixed Assets by Category (Purchase Price / colD)
+    const fixedAssetItems = [];
+    const fixedAssetTypes = [
+      { name: 'Office Equipment', type: 'OFFICE_EQUIPMENT', code: '1601' },
+      { name: 'Vehicle', type: 'VEHICLE', code: '1602' },
+      { name: 'Intangible Assets', type: 'INTANGIBLE_ASSET', code: '1603' }
+    ];
 
-    if (arTotal.isZero() && !legacyArTotal.isZero()) {
-      arTotal = legacyArTotal;
-      // MANDATORY: Force legacy balance into "AR Trade"
-      const targetItem = finalArItems.find(i => i.accountName === 'AR Trade');
-      if (targetItem) {
-        targetItem.idr = legacyArTotal.toNumber();
-        targetItem.tx = 1; // Mark as legacy record
-      }
+    let totalBookValue = new Prisma.Decimal(0);
+    for (const item of fixedAssetTypes) {
+      // depreciationRaw is already filtered by purchase date (colA <= endOfDate)
+      const records = depreciationRaw.filter(r => r.type === item.type);
+      // Client preference: show Purchase Price (colD)
+      const subTotal = records.reduce((acc, r) => {
+        return acc.plus(new Prisma.Decimal(r.colD ? String(r.colD) : 0));
+      }, new Prisma.Decimal(0));
+
+      totalBookValue = totalBookValue.plus(subTotal);
+      fixedAssetItems.push({
+        accountName: item.name,
+        idr: formatDecimal(subTotal),
+        code: item.code,
+        tx: records.length
+      });
     }
 
-    let bookValue = fixedAssetsRaw.reduce((acc, c) => acc.plus(new Prisma.Decimal(c.colD || 0)).minus(new Prisma.Decimal(c.colU || 0)), new Prisma.Decimal(0));
-    if (bookValue.isZero()) bookValue = legacyItems.filter(li => li.category?.toLowerCase().includes('fixed')).reduce((acc, c) => acc.plus(c.idr), new Prisma.Decimal(0));
+    // Hardcoded: Depreciation & Amortization (value sourced from Excel master, not DB-computed)
+    const deprAmortVal = new Prisma.Decimal('-1183894353.6667');
+    totalBookValue = totalBookValue.plus(deprAmortVal);
+    fixedAssetItems.push({
+      accountName: 'Depreciation & Amortization',
+      idr: formatDecimal(deprAmortVal),
+      code: '1604',
+      tx: 0
+    });
 
-    const totalAssets = bankTotal.plus(cashTotal).plus(arTotal).plus(depositTotal).plus(prepaidTaxTotal).plus(bookValue);
+    const totalAssets = bankTotal.plus(cashTotal).plus(arTotal).plus(depositTotal).plus(prepaidTaxTotal).plus(totalBookValue);
 
     // 5. Liabilities & Equity
     const processedApIds = new Set<bigint>();
@@ -898,7 +1210,7 @@ export class FinanceReportService {
 
     apDepositItems.push({
       accountName: 'Deposit from customer',
-      idr: apDepositTotal.toNumber(),
+      idr: formatDecimal(apDepositTotal),
       code: '2101',
       tx: apDepositRecords.length
     });
@@ -916,7 +1228,7 @@ export class FinanceReportService {
 
     apShortTermLoanItems.push({
       accountName: 'Temporary Working Capital loan',
-      idr: apShortTermLoanTotal.toNumber(),
+      idr: formatDecimal(apShortTermLoanTotal),
       code: '2102',
       tx: apShortTermLoanRecords.length
     });
@@ -929,7 +1241,7 @@ export class FinanceReportService {
 
     for (const cat of apCategories) {
       // Search term is the name without "AP " prefix
-      const searchTerm = cat.replace('AP ', '').toLowerCase();
+      const searchTerm = cat.toLowerCase();
       const records = apRecordsRaw.filter(r => 
         !processedApIds.has(r.id) && 
         r.colA?.toLowerCase().includes(searchTerm)
@@ -942,75 +1254,121 @@ export class FinanceReportService {
       
       apItems.push({
         accountName: cat,
-        idr: total.toNumber(),
+        idr: formatDecimal(total),
         code: '21' + (apItems.length + 1).toString().padStart(2, '0'),
         tx: records.length
       });
     }
 
     // 5.2 Process Remaining AP as Others
-    const remainingApRecords = apRecordsRaw.filter(r => !processedApIds.has(r.id));
+    const remainingApRecords = apRecordsRaw.filter(r => !processedApIds.has(r.id) && r.colA?.toLowerCase().includes('ap others'));
     if (remainingApRecords.length > 0) {
-      const othersTotal = remainingApRecords.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colU || 0)), new Prisma.Decimal(0));
+      const othersTotal = remainingApRecords.reduce((acc, r) => {
+        processedApIds.add(r.id);
+        return acc.plus(new Prisma.Decimal(r.colS || 0));
+      }, new Prisma.Decimal(0));
+
       const existingOthers = apItems.find(i => i.accountName === 'AP Others');
       if (existingOthers) {
-        existingOthers.idr += othersTotal.toNumber();
+        const currentIdr = new Prisma.Decimal(existingOthers.idr);
+        existingOthers.idr = formatDecimal(currentIdr.plus(othersTotal));
         existingOthers.tx += remainingApRecords.length;
       } else {
         apItems.push({
           accountName: 'AP Others',
-          idr: othersTotal.toNumber(),
+          idr: formatDecimal(othersTotal),
           code: '21' + (apItems.length + 1).toString().padStart(2, '0'),
           tx: remainingApRecords.length
         });
       }
     }
 
-    let apTotalFromItems = apItems.reduce((acc, c) => acc.plus(new Prisma.Decimal(c.idr || 0)), new Prisma.Decimal(0));
+    let apTotalFromItems = apItems.reduce((acc, c) => acc.plus(new Prisma.Decimal(c.idr)), new Prisma.Decimal(0));
     let apTotal = apTotalFromItems.plus(apDepositTotal).plus(apShortTermLoanTotal);
     const finalApItems = [...apItems];
 
-    if (apTotal.isZero()) {
-      apTotal = legacyItems.filter(li => li.category?.toLowerCase().includes('payable')).reduce((acc, c) => acc.plus(c.idr), new Prisma.Decimal(0));
-      // Force legacy balance into "AP Trade" if dynamic data is empty
-      const targetItem = finalApItems.find(i => i.accountName === 'AP Trade');
-      if (targetItem && !apTotal.isZero()) {
-        targetItem.idr = apTotal.toNumber();
-        targetItem.tx = 1;
-      }
-    }
-    
-    // 6. Equity (Dynamic Profit Integration)
-    const sharedCapitalVal = new Prisma.Decimal(2500000000);
-    const prevYearsVal = new Prisma.Decimal(8453697304.01);
-    const dividendVal = new Prisma.Decimal(-660000000);
-    
-    // Use dynamic net profit from P&L statement instead of hardcoded value
-    const plNetProfit = plData.summaryCards.find(c => c.title === "PROFIT AFTER TAX")?.value || "0";
-    const profitLossCurrentYear = new Prisma.Decimal(plNetProfit.replace(/,/g, ''));
+    // 6. Equity (Dynamic RE Logic)
+    const { prevYearsVal, dividendVal, profitLossVal } = await this.getRetainedEarningsBreakdown(currentYearVal, date);
 
-    const totalEquity = sharedCapitalVal.plus(prevYearsVal).plus(dividendVal).plus(profitLossCurrentYear);
+    // 6.4 Shared Capital (Stable Hardcoded Value)
+    const sharedCapitalVal = new Prisma.Decimal(2500000000); 
+    const totalEquity = sharedCapitalVal.plus(prevYearsVal).plus(dividendVal).plus(profitLossVal);
 
-    // 7. Calculate Real Monthly Trend (Current Year)
-    const trend = [];
+    // 7. Calculate Real Monthly Trend
+    // Strategy:
+    //  - Year and max month derived from the user's filter (consistent with the balance sheet above)
+    //  - AR/AP data reused from already-filtered in-memory arrays (zero extra DB queries)
+    //  - Only bank/cash needs a separate fetch (requires per-month colE running balance per account)
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const currentMonth = new Date().getMonth(); // 0-indexed
+    const trendYear = currentYearVal;
+    // If user filtered to a specific date, chart ends at that month. Otherwise, ends at current month.
+    const trendMaxMonth = date
+      ? new Date(`${date}T00:00:00.000Z`).getUTCMonth()
+      : new Date().getMonth();
 
-    // We calculate cumulative balances for each month of the current year
-    let monthlyAssets = bankTotal.plus(cashTotal); // Starting point is current cumulative
-    let monthlyLiabilities = apTotal;
+    // Only fetch bank/cash transactions for the trend year (still needed for monthly colE snapshots)
+    const trendBankTrx = await this.prisma.financialTransaction.findMany({
+      where: {
+        colA: {
+          gte: new Date(`${trendYear}-01-01T00:00:00.000Z`),
+          lte: new Date(`${trendYear}-12-31T23:59:59.999Z`)
+        },
+        internalAccount: { type: { in: ['BANK', 'CASH'] } }
+      },
+      select: { colA: true, colE: true, internalAccountId: true },
+      orderBy: { colA: 'asc' }
+    });
 
-    // For the trend chart, we can approximate the previous months by subtracting mutations 
-    // but a cleaner way for the user is to show the growth from Anchor
-    for (let i = 0; i <= currentMonth; i++) {
-      // Mocked slightly for historical months if we don't want to run 12 heavy queries
-      // but let's make it look like a real growth curve based on current totals
-      const factor = 0.7 + (i * 0.05); // More realistic than static 0.85
+    const trend = [];
+    for (let m = 0; m <= trendMaxMonth; m++) {
+      // Last millisecond of month m (JS: day 0 = last day of previous month → month m+1, day 0 = last day of month m)
+      const monthEnd = new Date(trendYear, m + 1, 0, 23, 59, 59, 999);
+
+      // BANK/CASH: Last colE (running balance) per account as of monthEnd
+      const trxUpToMonth = trendBankTrx.filter(t => t.colA && t.colA <= monthEnd);
+      const accountLastBalance = new Map<string, Prisma.Decimal>();
+      for (const trx of trxUpToMonth) {
+        if (trx.internalAccountId != null && trx.colE != null) {
+          accountLastBalance.set(
+            trx.internalAccountId.toString(),
+            new Prisma.Decimal(String(trx.colE))
+          );
+        }
+      }
+      const trendBankCash = Array.from(accountLastBalance.values())
+        .reduce((acc, v) => acc.plus(v), new Prisma.Decimal(0));
+
+      // AR: Reuse arRecordsRaw (already date-filtered). Sum colR where record date <= monthEnd.
+      const trendAR = arRecordsRaw.reduce((acc, r) => {
+        const d = new Date(r.colC || '');
+        if (!isNaN(d.getTime()) && d <= monthEnd) {
+          return acc.plus(new Prisma.Decimal(r.colR ? String(r.colR) : 0));
+        }
+        return acc;
+      }, new Prisma.Decimal(0));
+
+      // AP: Reuse apRecordsRaw (already date-filtered). Sum colS where record date <= monthEnd.
+      const trendAP = apRecordsRaw.reduce((acc, r) => {
+        const d = new Date(r.colB?.toString() || '');
+        if (!isNaN(d.getTime()) && d <= monthEnd) {
+          return acc.plus(new Prisma.Decimal(r.colS ? String(r.colS) : 0));
+        }
+        return acc;
+      }, new Prisma.Decimal(0));
+
+      // Assets = BankCash + AR | Equity = Assets - Liabilities (Accounting Identity: A = L + E)
+      const trendAssets = trendBankCash.plus(trendAR);
+      const trendEquity = trendAssets.minus(trendAP);
+
+      // PARITY GUARANTEE: The last data point always uses the actual computed balance sheet totals
+      // so the chart endpoint is always identical to the Summary Cards.
+      // Previous months use per-month computation as a real historical approximation.
+      const isLastPoint = m === trendMaxMonth;
       trend.push({
-        name: monthNames[i],
-        assets: totalAssets.mul(factor).toNumber(),
-        liabilities: apTotal.mul(factor).toNumber(),
-        equity: totalEquity.mul(factor).toNumber()
+        name: monthNames[m],
+        assets: isLastPoint ? totalAssets.toNumber() : trendAssets.toNumber(),
+        liabilities: isLastPoint ? apTotal.toNumber() : trendAP.toNumber(),
+        equity: isLastPoint ? totalEquity.toNumber() : trendEquity.toNumber()
       });
     }
 
@@ -1018,45 +1376,45 @@ export class FinanceReportService {
     return {
       version: "AR-DEPOSIT-TAX-V9",
       summary: {
-        totalAssets: forceZero(totalAssets),
-        totalLiabilities: forceZero(apTotal),
-        totalEquity: forceZero(totalEquity),
-        workingCapital: forceZero(totalAssets.minus(apTotal)),
+        totalAssets: formatDecimal(totalAssets),
+        totalLiabilities: formatDecimal(apTotal),
+        totalEquity: formatDecimal(totalEquity),
+        workingCapital: formatDecimal(totalAssets.minus(apTotal)),
         currentRatio: apTotal.isZero() ? "0.00" : totalAssets.div(apTotal).toFixed(2),
         deRatio: totalEquity.isZero() ? "0.00" : apTotal.div(totalEquity).toFixed(2),
         isBalanced: totalAssets.toFixed(2) === totalEquity.plus(apTotal).toFixed(2)
       },
       assets: {
-        total: forceZero(totalAssets),
+        total: formatDecimal(totalAssets),
         categories: [
-          { name: 'Cash', isOpen: true, total: forceZero(cashTotal), items: cashItems.map(i => ({ ...i, idr: forceZero(i.idr), tx: i.tx })) },
-          { name: 'Bank Accounts', isOpen: true, total: forceZero(bankTotal), items: bankItems.map(i => ({ ...i, idr: forceZero(i.idr), tx: i.tx })) },
-          { name: 'Deposit', isOpen: true, total: forceZero(depositTotal), items: depositItems.map(i => ({ ...i, idr: forceZero(i.idr) })) },
-          { name: 'Account Receivable', total: forceZero(arTotal), items: finalArItems.map(i => ({ ...i, idr: forceZero(i.idr) })) },
-          { name: 'Prepaid Tax', total: forceZero(prepaidTaxTotal), items: prepaidTaxItems.map(i => ({ ...i, idr: forceZero(i.idr) })) },
-          { name: 'Fixed Assets', total: forceZero(bookValue), items: bookValue.isZero() ? [] : [{ accountName: 'Net Book Value', idr: forceZero(bookValue), code: '1600', tx: fixedAssetsRaw.length }] }
+          { name: 'Cash', isOpen: true, total: formatDecimal(cashTotal), items: cashItems.map(i => ({ ...i, idr: i.idr, tx: i.tx })) },
+          { name: 'Bank Accounts', isOpen: true, total: formatDecimal(bankTotal), items: bankItems.map(i => ({ ...i, idr: i.idr, tx: i.tx })) },
+          { name: 'Deposit', isOpen: true, total: formatDecimal(depositTotal), items: depositItems.map(i => ({ ...i, idr: i.idr })) },
+          { name: 'Account Receivable', total: formatDecimal(arTotal), items: finalArItems.map(i => ({ ...i, idr: i.idr })) },
+          { name: 'Prepaid Tax', total: formatDecimal(prepaidTaxTotal), items: prepaidTaxItems.map(i => ({ ...i, idr: i.idr })) },
+          { name: 'Fixed Assets', total: formatDecimal(totalBookValue), items: fixedAssetItems.map(i => ({ ...i, idr: i.idr })) }
         ]
       },
       liabilities: {
-        total: forceZero(apTotal),
+        total: formatDecimal(apTotal),
         categories: [
-          { name: 'Deposit', isOpen: true, total: forceZero(apDepositTotal), items: apDepositItems.map(i => ({ ...i, idr: forceZero(i.idr) })) },
-          { name: 'Account Payable', isOpen: true, total: forceZero(apTotal.minus(apDepositTotal).minus(apShortTermLoanTotal)), items: finalApItems.map(i => ({ ...i, idr: forceZero(i.idr) })) },
-          { name: 'Short Term Loan', isOpen: true, total: forceZero(apShortTermLoanTotal), items: apShortTermLoanItems.map(i => ({ ...i, idr: forceZero(i.idr) })) }
+          { name: 'Deposit', isOpen: true, total: formatDecimal(apDepositTotal), items: apDepositItems.map(i => ({ ...i, idr: i.idr })) },
+          { name: 'Account Payable', isOpen: true, total: formatDecimal(apTotal.minus(apDepositTotal).minus(apShortTermLoanTotal)), items: finalApItems.map(i => ({ ...i, idr: i.idr })) },
+          { name: 'Short Term Loan', isOpen: true, total: formatDecimal(apShortTermLoanTotal), items: apShortTermLoanItems.map(i => ({ ...i, idr: i.idr })) }
         ]
       },
       equity: {
-        total: forceZero(totalEquity),
+        total: formatDecimal(totalEquity),
         categories: [
-          { name: 'Shared Capital', isOpen: true, total: forceZero(sharedCapitalVal) },
+          { name: 'Shared Capital', isOpen: true, total: formatDecimal(sharedCapitalVal) },
           { 
             name: 'Retained Earnings', 
             isOpen: true, 
-            total: forceZero(totalEquity.minus(sharedCapitalVal)), 
+            total: formatDecimal(totalEquity.minus(sharedCapitalVal)), 
             items: [
-              ...(prevYearsVal.isZero() ? [] : [{ accountName: 'Previous years', idr: forceZero(prevYearsVal), code: '3101', tx: 1 }]),
-              ...(dividendVal.isZero() ? [] : [{ accountName: 'Dividend', idr: forceZero(dividendVal), code: '3102', tx: 1 }]),
-              { accountName: `Profit (Loss) ${new Date().getFullYear()}`, idr: forceZero(profitLossCurrentYear), code: '3103', tx: 1 }
+              { accountName: 'Previous years', idr: formatDecimal(prevYearsVal), code: '3101', tx: 1 },
+              { accountName: 'Dividend', idr: formatDecimal(dividendVal), code: '3102', tx: 1 },
+              { accountName: `Profit (Loss) ${currentYearVal}`, idr: formatDecimal(profitLossVal), code: '3103', tx: 1 }
             ] 
           }
         ]
@@ -1068,7 +1426,7 @@ export class FinanceReportService {
           { name: 'Deposit', value: depositTotal.toNumber() },
           { name: 'AR', value: arTotal.toNumber() },
           { name: 'Tax', value: prepaidTaxTotal.toNumber() },
-          { name: 'Fixed Assets', value: bookValue.toNumber() }
+          { name: 'Fixed Assets', value: totalBookValue.toNumber() }
         ].filter(i => i.value > 0),
         liabilityEquityComposition: [
           { name: 'Liabilities', value: apTotal.toNumber() },
@@ -1078,4 +1436,61 @@ export class FinanceReportService {
       }
     };
   }
+
+  async getDashboardActivities() {
+    const [transactions, arRecords, apRecords] = await Promise.all([
+      this.prisma.financialTransaction.findMany({
+        take: 5,
+        orderBy: [{ colA: 'desc' }, { id: 'desc' }],
+        where: { colA: { not: null } },
+        include: { internalAccount: { include: { bank: true } } }
+      }),
+      this.prisma.accountReceivable.findMany({
+        take: 5,
+        orderBy: [{ id: 'desc' }],
+      }),
+      this.prisma.accountPayable.findMany({
+        take: 5,
+        orderBy: [{ id: 'desc' }],
+      })
+    ]);
+    
+    const activities = [
+      ...transactions.map(t => {
+        const isDeposit = t.colD && Number(t.colD) > 0;
+        const amount = isDeposit ? t.colD : t.colC;
+        return {
+          id: `TRX-${t.id.toString().padStart(4, '0')}`,
+          customer: t.colB || t.internalAccount?.bank?.bankBrand || t.internalAccount?.type || 'Unknown',
+          amount: Number(amount) > 0 ? formatDecimal(new Prisma.Decimal(String(amount))) : '0',
+          status: isDeposit ? 'Received' : 'Processed',
+          date: t.colA
+        };
+      }),
+      ...arRecords.map(r => ({
+        id: `INV-${r.id.toString().padStart(4, '0')}`,
+        customer: r.colB || 'Unknown Customer',
+        amount: formatDecimal(new Prisma.Decimal(String(r.colR || 0))),
+        status: Number(r.colR) > 0 ? 'Pending' : 'Paid',
+        date: r.colC ? new Date(r.colC) : new Date()
+      })),
+      ...apRecords.map(r => ({
+        id: `BILL-${r.id.toString().padStart(4, '0')}`,
+        customer: r.colA || 'Unknown Vendor',
+        amount: formatDecimal(new Prisma.Decimal(String(r.colS || 0))),
+        status: Number(r.colS) > 0 ? 'Pending' : 'Paid',
+        date: r.colB ? new Date(r.colB) : new Date()
+      }))
+    ];
+
+    return activities
+      .sort((a, b) => {
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        return dateB - dateA;
+      })
+      .slice(0, 8); // Show 8 items for a more full list
+  }
 }
+
+

@@ -14,6 +14,12 @@ export class FinanceReportController {
 
   // Depreciation endpoints are handled by DepreciationController
 
+  @Get('recent-activities')
+  @Permissions('finance.reports')
+  async getDashboardActivities() {
+    return this.financeService.getDashboardActivities();
+  }
+
   @Get('revenue')
   @Permissions('finance.reports')
   async getRevenue(@Query() query: PaginationQueryDto) {
@@ -78,14 +84,8 @@ export class FinanceReportController {
 
   @Get('depreciation-details')
   @Permissions('finance.reports')
-  async getDepreciationDetails(
-    @Query('year') year?: string,
-    @Query('date') date?: string
-  ) {
-    return this.financeService.getDepreciationDetails(
-      year ? Number(year) : undefined,
-      date
-    );
+  async getDepreciationDetails() {
+    return this.financeService.getDepreciationDetails();
   }
 
   @Get('sales-cogs-details')
@@ -100,15 +100,22 @@ export class FinanceReportController {
     );
   }
 
-  @Get('balance-sheet')
+  @Get('balance-sheet-details')
   @Permissions('finance.reports')
-  async getBalanceSheet() {
-    return this.financeService.getBalanceSheet();
+  async getBSDetails(
+    @Query('category') category: string,
+    @Query('subItem') subItem?: string,
+    @Query('date') date?: string,
+    @Query('accountId') accountId?: string
+  ) {
+    return this.financeService.getBSDetails(category, subItem, date, accountId);
   }
 
-  @Get('inter-account-transfers')
+  @Get('balance-sheet')
   @Permissions('finance.reports')
-  async getInterAccountTransfers(@Query() query: PaginationQueryDto) {
-    return this.financeService.getInterAccountTransfers(query);
+  async getBalanceSheet(
+    @Query('date') date?: string
+  ) {
+    return this.financeService.getBalanceSheet(date);
   }
 }

@@ -488,38 +488,6 @@ CREATE TABLE "profit_loss_summary" (
     CONSTRAINT "profit_loss_summary_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "balance_sheet_items" (
-    "id" BIGSERIAL NOT NULL,
-    "category" VARCHAR(100),
-    "account_name" VARCHAR(255),
-    "idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "usd" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "rate" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "balance_sheet_items_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "inter_account_transfers" (
-    "id" BIGSERIAL NOT NULL,
-    "date" VARCHAR(50),
-    "description" TEXT,
-    "bca" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "mandiri" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "bri" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "btn" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "cash_idr" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "non_cash_bank" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "checker" DECIMAL(19,4) NOT NULL DEFAULT 0,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "inter_account_transfers_pkey" PRIMARY KEY ("id")
-);
-
 -- CreateIndex
 CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
 

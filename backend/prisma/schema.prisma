@@ -437,27 +437,27 @@ model AccountReceivable {
 
 model AccountPayable {
   id              BigInt   @id @default(autoincrement())
-  colA            String?  @db.VarChar(100)
-  colB            Int?
-  colC            String?  @db.Text
-  colD            String?  @db.Text
-  colE            Decimal? @db.Decimal(19, 4)
-  colF            String?  @db.Text
-  colG            String?  @db.Text
-  colH            String?  @db.Text
-  colI            Decimal? @db.Decimal(19, 4)
-  colJ            Decimal? @db.Decimal(19, 4)
-  colK            Decimal? @db.Decimal(19, 4)
-  colL            Decimal? @db.Decimal(19, 4)
-  colM            Decimal? @db.Decimal(19, 4)
-  colN            Decimal? @db.Decimal(19, 4)
-  colO            Decimal? @db.Decimal(19, 4)
-  colP            Decimal? @db.Decimal(19, 4)
-  colQ            Decimal? @db.Decimal(19, 4)
+  colA            String?  @db.VarChar(100)   // Payable (Supplier, Deposit, 
+  colB            Int?                        // Year
+  colC            String?  @db.Text           // Vendor
+  colD            String?  @db.Text           // Description
+  colE            Decimal? @db.Decimal(19, 4) // EOY IDR
+  colF            String?  @db.Text           // Col F
+  colG            String?  @db.Text           // Col G
+  colH            String?  @db.Text           // Col H
+  colI            Decimal? @db.Decimal(19, 4) // BCA Shardjo
+  colJ            Decimal? @db.Decimal(19, 4) // BCA Juanda
+  colK            Decimal? @db.Decimal(19, 4) // Mandiri Mid Plaza
+  colL            Decimal? @db.Decimal(19, 4) // BTN
+  colM            Decimal? @db.Decimal(19, 4) // BRI Shardjo
+  colN            Decimal? @db.Decimal(19, 4) // BRI Tebet
+  colO            Decimal? @db.Decimal(19, 4) // Cash IDR
+  colP            Decimal? @db.Decimal(19, 4) // Non CB 
+  colQ            Decimal? @db.Decimal(19, 4) // AP PPN
   colR            String?  @db.Text
-  colS            Decimal? @db.Decimal(19, 4)
-  colT            Decimal? @db.Decimal(19, 4)
-  colU            Decimal? @db.Decimal(19, 4)
+  colS            Decimal? @db.Decimal(19, 4) // OUTSTANDING IDR
+  colT            Decimal? @db.Decimal(19, 4) // COL T
+  colU            Decimal? @db.Decimal(19, 4) // COL U
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -483,12 +483,12 @@ model TaxLedger {
   colC            String?     @db.VarChar(100) // No Faktur
   colD            String?     @db.Text         // Client / Supplier
   colE            String?     @db.VarChar(255) // Reference
-  colF            Int?                         // Year
+  colF            Int?                         // Sales (Year)
   colG            String?     @db.VarChar(100) // STATUS
   colH            Decimal?    @db.Decimal(19, 4) // PPN
-  colI            Decimal?    @db.Decimal(19, 4) // Amount (Wapu/Non-Wapu)
-  colJ            Decimal?    @db.Decimal(19, 4) // Masukan
-  colK            Decimal?    @db.Decimal(19, 4) // Kurang Bayar
+  colI            Decimal?    @db.Decimal(19, 4) // Amount (WAPU/Non-WAPU)
+  colJ            Decimal?    @db.Decimal(19, 4) // Masukan (WAPU/Non WAPU Paid)
+  colK            Decimal?    @db.Decimal(19, 4) // Kurang Bayar (AP PPN WAPU)
   colL            String?     @db.VarChar(255) // Account
   colM            String?     @db.VarChar(255) // Sub Ledger 1
   colN            String?     @db.VarChar(255) // Sub Ledger 2
@@ -577,36 +577,3 @@ model ProfitLossSummary {
   @@map("profit_loss_summary")
 }
 
-// --- FINANCIAL DATA: BALANCE SHEET ---
-
-model BalanceSheetItem {
-  id          BigInt   @id @default(autoincrement())
-  category    String?  @db.VarChar(100)
-  accountName String?  @map("account_name") @db.VarChar(255)
-  idr         Decimal  @default(0) @db.Decimal(19, 4)
-  usd         Decimal  @default(0) @db.Decimal(19, 4)
-  rate        Decimal  @default(0) @db.Decimal(19, 4)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@map("balance_sheet_items")
-}
-
-// --- FINANCIAL DATA: INTER-ACCOUNT TRANSFERS ---
-
-model InterAccountTransfer {
-  id          BigInt   @id @default(autoincrement())
-  date        String?  @db.VarChar(50)
-  description String?  @db.Text
-  bca         Decimal  @default(0) @db.Decimal(19, 4)
-  mandiri     Decimal  @default(0) @db.Decimal(19, 4)
-  bri         Decimal  @default(0) @db.Decimal(19, 4)
-  btn         Decimal  @default(0) @db.Decimal(19, 4)
-  cashIdr     Decimal  @default(0) @map("cash_idr") @db.Decimal(19, 4)
-  nonCashBank Decimal  @default(0) @map("non_cash_bank") @db.Decimal(19, 4)
-  checker     Decimal  @default(0) @db.Decimal(19, 4)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@map("inter_account_transfers")
-}

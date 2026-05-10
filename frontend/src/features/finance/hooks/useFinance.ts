@@ -36,25 +36,17 @@ export function useFinance() {
       ...options,
     });
 
-  const getBalanceSheet = (options?: any) =>
+  const getBalanceSheet = (date?: string, options?: any) =>
     useQuery<any>({
-      queryKey: ["finance", "balance-sheet"],
-      queryFn: () => financeService.getBalanceSheet(),
+      queryKey: ["finance", "balance-sheet", date],
+      queryFn: () => financeService.getBalanceSheet(date),
       ...options,
     });
 
-  const getInterAccountTransfers = (params: PaginationParams, options?: any) =>
-    useQuery<PaginatedResponse<any>>({
-      queryKey: ["finance", "inter-account", params],
-      queryFn: () => financeService.getInterAccountTransfers(params),
-      placeholderData: keepPreviousData,
-      ...options,
-    });
-
-  const getAllInterAccountTransfers = (options?: any) =>
+  const getDashboardActivities = (options?: any) =>
     useQuery<any[]>({
-      queryKey: ["finance", "inter-account", "all"],
-      queryFn: () => financeService.getAllInterAccountTransfers(),
+      queryKey: ["finance", "recent-activities"],
+      queryFn: () => financeService.getDashboardActivities(),
       ...options,
     });
 
@@ -87,10 +79,18 @@ export function useFinance() {
       ...options,
     });
 
-  const getDepreciationDetails = (year?: string, date?: string, options?: any) =>
+  const getDepreciationDetails = (options?: any) =>
     useQuery<any[]>({
-      queryKey: ["finance", "depreciation-details", year || "all", date || "now"],
-      queryFn: () => financeService.getDepreciationDetails(year, date),
+      queryKey: ["finance", "depreciation-details"],
+      queryFn: () => financeService.getDepreciationDetails(),
+      ...options,
+    });
+
+  const getBSDetails = (category: string, subItem?: string, date?: string, accountId?: string, options?: any) =>
+    useQuery<any[]>({
+      queryKey: ["finance", "balance-sheet-details", category, subItem, date || "now", accountId],
+      queryFn: () => financeService.getBSDetails(category, subItem, date, accountId),
+      enabled: !!category,
       ...options,
     });
 
@@ -102,8 +102,8 @@ export function useFinance() {
     getPLDetails,
     getSalesCogsDetails,
     getBalanceSheet,
-    getInterAccountTransfers,
-    getAllInterAccountTransfers,
     getDepreciationDetails,
+    getBSDetails,
+    getDashboardActivities,
   };
 }

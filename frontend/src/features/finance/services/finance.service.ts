@@ -22,13 +22,13 @@ export const financeService = {
     return data;
   },
 
-  getBalanceSheet: async (): Promise<any> => {
-    const { data } = await api.get("/finance/balance-sheet");
+  getBalanceSheet: async (date?: string): Promise<any> => {
+    const { data } = await api.get("/finance/balance-sheet", { params: { date } });
     return data;
   },
 
-  getInterAccountTransfers: async (params: PaginationParams): Promise<PaginatedResponse<any>> => {
-    const { data } = await api.get("/finance/inter-account-transfers", { params });
+  getDashboardActivities: async (): Promise<any[]> => {
+    const { data } = await api.get("/finance/recent-activities");
     return data;
   },
 
@@ -57,8 +57,13 @@ export const financeService = {
     return data;
   },
 
-  getDepreciationDetails: async (year?: string, date?: string): Promise<any[]> => {
-    const { data } = await api.get("/finance/depreciation-details", { params: { year, date } });
+  getDepreciationDetails: async (): Promise<any[]> => {
+    const { data } = await api.get("/finance/depreciation-details");
+    return data;
+  },
+
+  getBSDetails: async (category: string, subItem?: string, date?: string, accountId?: string): Promise<any[]> => {
+    const { data } = await api.get("/finance/balance-sheet-details", { params: { category, subItem, date, accountId } });
     return data;
   },
 };
