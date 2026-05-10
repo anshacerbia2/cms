@@ -505,9 +505,10 @@ console.log(">>>>>>>>>>>>>>>>", startOfYear, endOfYear,dividendVal);
       return transactions.map(t => ({
         ...t,
         id: t.id.toString(),
-        colC: formatDecimal(t.colC),
-        colD: formatDecimal(t.colD),
-        colE: formatDecimal(t.colE),
+        colC: t.colA ? t.colA.toISOString().split('T')[0] : '-', // Date
+        colD: t.colF || '-', // Reference
+        colE: t.colB || '-', // Description
+        colR: formatDecimal(new Prisma.Decimal(String(t.colE || 0))), // Balance
       }));
     }
 
