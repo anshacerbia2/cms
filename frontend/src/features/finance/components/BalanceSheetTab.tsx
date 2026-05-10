@@ -507,7 +507,7 @@ export function BalanceSheetTab() {
                   <CollapsibleContent>
                     <div className="bg-white px-0 pb-4 space-y-1">
                         {group.items.map((item: any, i: number) => {
-                          const isNonClickable = item.accountName === 'Depreciation & Amortization';
+                          const isNonClickable = item.accountName.toLowerCase().includes('depreciation');
                           return (
                             <div 
                               key={i} 
@@ -535,9 +535,11 @@ export function BalanceSheetTab() {
                               <span className="text-[12px] font-normal text-slate-600 truncate group-hover/item:text-blue-600 transition-colors" title={item.accountName}>
                                 {item.accountName}
                               </span>
-                              <div className="flex items-center justify-center opacity-60 group-hover/item:opacity-100 group-hover/item:text-blue-600 transition-all text-slate-400">
-                                <Info size={11} />
-                              </div>
+                              {!isNonClickable && (
+                                <div className="flex items-center justify-center opacity-60 group-hover/item:opacity-100 group-hover/item:text-blue-600 transition-all text-slate-400">
+                                  <Info size={11} />
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-3 flex-shrink-0 ml-4">

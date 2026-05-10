@@ -556,13 +556,8 @@ console.log(">>>>>>>>>>>>>>>>", startOfYear, endOfYear,dividendVal);
           if (taxKeywords.length > 0 && !taxKeywords.some((k: string) => val.toLowerCase().includes(k))) return false;
         } else {
           // General AR or Deposit search
-          if (arSearchTerm === 'others') {
-            const standardCategories = ['ar cash advance', 'ar refund', 'ar staff loan', 'ar temporary notes', 'ar trade', 'ar deposit to vendor', 'ar prepaid tax'];
-            const isStandard = standardCategories.some(c => colB.includes(c));
-            if (isStandard) return false;
-          } else {
-            if (!colB.includes(arSearchTerm)) return false;
-          }
+          // Normal search for the specific category type
+          if (!colB.includes(arSearchTerm)) return false;
         }
 
         return true;
@@ -642,11 +637,7 @@ console.log(">>>>>>>>>>>>>>>>", startOfYear, endOfYear,dividendVal);
         if (subLower.includes('temporary working capital')) {
           return rowCat.includes('temporary loan');
         }
-        if (searchTerm === 'others') {
-          const standardApCategories = ['ap credit card', 'ap expense', 'ap leasing', 'ap tax', 'ap trade', 'deposit from customer', 'temporary loan'];
-          const isStandard = standardApCategories.some(c => rowCat.includes(c));
-          return !isStandard;
-        }
+        // Normal search for the specific category type
         return rowCat.includes(searchTerm);
       });
 
@@ -1125,29 +1116,11 @@ console.log(">>>>>>>>>>>>>>>>", startOfYear, endOfYear,dividendVal);
       prepaidTaxItems.push({ accountName: 'Prepaid Tax Others', idr: formatDecimal(othersTotal), code: '1506', tx: remainingTax.length });
     }
 
-    // 4.4 Process Remaining AR as Others
-    const remainingRecords = arRecordsRaw.filter(r => !processedArIds.has(r.id));
-    if (remainingRecords.length > 0) {
-      const othersTotal = remainingRecords.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colR || 0)), new Prisma.Decimal(0));
-      const existingOthers = arItems.find(i => i.accountName === 'AR Others');
-      
-      if (existingOthers) {
-        // Since idr is already formatted, we convert back to Decimal, add, then re-format
-        const currentIdr = new Prisma.Decimal(existingOthers.idr);
-        existingOthers.idr = formatDecimal(currentIdr.plus(othersTotal));
-        existingOthers.tx += remainingRecords.length;
-      } else {
-        arItems.push({
-          accountName: 'AR Others',
-          idr: formatDecimal(othersTotal),
-          code: '14' + (arItems.length + 1).toString().padStart(2, '0'),
-          tx: remainingRecords.length
-        });
-      }
-    }
+    // Logic: Others is a specific type, not a catch-all. 
+    // Remaining records are not shown in items but are already included in the group total calculation.
 
-    let arTotalFromItems = arItems.reduce((acc, c) => acc.plus(new Prisma.Decimal(c.idr)), new Prisma.Decimal(0));
-    const arTotal = arTotalFromItems;
+    // Calculate total from ALL raw records to ensure balance sheet parity
+    const arTotal = arRecordsRaw.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colR || 0)), new Prisma.Decimal(0));
     const finalArItems = [...arItems];
 
     // 4.5 Process Fixed Assets by Category (Purchase Price / colD)
@@ -1254,31 +1227,11 @@ console.log(">>>>>>>>>>>>>>>>", startOfYear, endOfYear,dividendVal);
       });
     }
 
-    // 5.2 Process Remaining AP as Others
-    const remainingApRecords = apRecordsRaw.filter(r => !processedApIds.has(r.id) && r.colA?.toLowerCase().includes('ap others'));
-    if (remainingApRecords.length > 0) {
-      const othersTotal = remainingApRecords.reduce((acc, r) => {
-        processedApIds.add(r.id);
-        return acc.plus(new Prisma.Decimal(r.colS || 0));
-      }, new Prisma.Decimal(0));
+    // Logic: Others is a specific type, not a catch-all.
+    // Remaining records are not shown in items but are already included in the group total calculation.
 
-      const existingOthers = apItems.find(i => i.accountName === 'AP Others');
-      if (existingOthers) {
-        const currentIdr = new Prisma.Decimal(existingOthers.idr);
-        existingOthers.idr = formatDecimal(currentIdr.plus(othersTotal));
-        existingOthers.tx += remainingApRecords.length;
-      } else {
-        apItems.push({
-          accountName: 'AP Others',
-          idr: formatDecimal(othersTotal),
-          code: '21' + (apItems.length + 1).toString().padStart(2, '0'),
-          tx: remainingApRecords.length
-        });
-      }
-    }
-
-    let apTotalFromItems = apItems.reduce((acc, c) => acc.plus(new Prisma.Decimal(c.idr)), new Prisma.Decimal(0));
-    let apTotal = apTotalFromItems.plus(apDepositTotal).plus(apShortTermLoanTotal);
+    // Calculate total from ALL raw records to ensure balance sheet parity
+    const apTotal = apRecordsRaw.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colS || 0)), new Prisma.Decimal(0));
     const finalApItems = [...apItems];
 
     // 6. Equity (Dynamic RE Logic)
