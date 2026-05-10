@@ -1119,8 +1119,9 @@ console.log(">>>>>>>>>>>>>>>>", startOfYear, endOfYear,dividendVal);
     // Logic: Others is a specific type, not a catch-all. 
     // Remaining records are not shown in items but are already included in the group total calculation.
 
-    // Calculate total from ALL raw records to ensure balance sheet parity
-    const arTotal = arRecordsRaw.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colR || 0)), new Prisma.Decimal(0));
+    // Correct AR Total: Only include specified AR items (Trade, Staff Loan, etc.)
+    // Note: Prepaid Tax and Deposit to Vendor are shown in their own categories below.
+    const arTotal = arItems.reduce((acc, c) => acc.plus(new Prisma.Decimal(c.idr)), new Prisma.Decimal(0));
     const finalArItems = [...arItems];
 
     // 4.5 Process Fixed Assets by Category (Purchase Price / colD)
@@ -1159,6 +1160,7 @@ console.log(">>>>>>>>>>>>>>>>", startOfYear, endOfYear,dividendVal);
       tx: 0
     });
 
+    // Final sum of all clean, non-overlapping asset categories
     const totalAssets = bankTotal.plus(cashTotal).plus(arTotal).plus(depositTotal).plus(prepaidTaxTotal).plus(totalBookValue);
 
     // 5. Liabilities & Equity
