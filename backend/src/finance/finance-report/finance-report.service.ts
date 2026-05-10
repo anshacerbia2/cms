@@ -545,7 +545,6 @@ console.log(">>>>>>>>>>>>>>>>", startOfYear, endOfYear,dividendVal);
         if (date) {
           if (hasFullDate && fullDate > endDate) return false;
           if (year > 0 && year > currentYearVal) return false;
-          if (year === 0 && !hasFullDate) return false;
         }
 
         // 2. Category/SubItem Filtering
@@ -634,7 +633,6 @@ console.log(">>>>>>>>>>>>>>>>", startOfYear, endOfYear,dividendVal);
         if (date) {
           if (hasFullDate && fullDate > endDate) return false;
           if (year > 0 && year > currentYearVal) return false;
-          if (year === 0 && !hasFullDate) return false;
         }
 
         const rowCat = r.colA?.toLowerCase() || '';
@@ -934,10 +932,8 @@ console.log(">>>>>>>>>>>>>>>>", startOfYear, endOfYear,dividendVal);
       const hasFullDate = !isNaN(fullDate.getTime());
 
       if (date) {
-        // When a date filter is active, exclude records beyond the filter AND records with no parseable date
         if (hasFullDate && fullDate > endOfDate) return false;
         if (y > 0 && y > currentYearVal) return false;
-        if (y === 0 && !hasFullDate) return false; // Cannot determine if record is in range → exclude
       }
 
       // No date filter → include ALL records (show full cumulative balance sheet)
@@ -951,10 +947,8 @@ console.log(">>>>>>>>>>>>>>>>", startOfYear, endOfYear,dividendVal);
       const hasFullDate = !isNaN(fullDate.getTime());
 
       if (date) {
-        // When a date filter is active, exclude records beyond the filter AND records with no parseable date
         if (hasFullDate && fullDate > endOfDate) return false;
         if (y > 0 && y > currentYearVal) return false;
-        if (y === 0 && !hasFullDate) return false; // Cannot determine if record is in range → exclude
       }
 
       // No date filter → include ALL records (show full cumulative balance sheet)
