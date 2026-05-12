@@ -55,6 +55,7 @@ export class AuthService {
       group.items.forEach((item: any) => {
         if (item.title === 'Dashboard') item.url = '/dashboard';
         if (item.title === 'Bank Mutation') {
+          item.title = 'Bank Statement';
           item.url = '/bank-mutation';
         }
         if (item.title === 'Account Payable') {

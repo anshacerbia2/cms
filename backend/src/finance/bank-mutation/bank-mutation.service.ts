@@ -1,8 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { PaginationQueryDto } from '../../common/dto/pagination.dto';
-import { PaginatedResult } from '../../common/interfaces/paginated-result.interface';
 import { formatDecimal } from '../../common/utils/format.utils';
 
 
@@ -10,70 +8,34 @@ import { formatDecimal } from '../../common/utils/format.utils';
 export class BankMutationService {
   constructor(private prisma: PrismaService) {}
 
-  async getTransactions(query: PaginationQueryDto & { accountId?: string, year?: string }): Promise<PaginatedResult<any>> {
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
-    const skip = (page - 1) * limit;
-    const search = query.search || '';
-    const accountIdFilter = query.accountId ? BigInt(query.accountId) : undefined;
-    const yearFilter = query.year ? Number(query.year) : undefined;
-
-    const where: any = {
-      AND: [
-        accountIdFilter ? { internalAccountId: accountIdFilter } : {},
-        {
-          OR: [
-            { colB: { contains: search, mode: 'insensitive' } }, // description
-          ],
-        },
-      ],
-    };
-
-    if (yearFilter) {
-      const start = new Date(`${yearFilter}-01-01T00:00:00.000Z`);
-      const end = new Date(`${yearFilter}-12-31T23:59:59.999Z`);
-      where.AND.push({
-        colA: {
-          gte: start,
-          lte: end
-        }
-      });
-    }
-
-    const [data, total] = await Promise.all([
-      this.prisma.financialTransaction.findMany({
-        skip,
-        take: limit,
-        where,
-        orderBy: [{ id: 'asc' }],
-      }),
-      this.prisma.financialTransaction.count({ where }),
-    ]);
-
-    return {
-      data: data.map(t => ({
-        ...t,
-        id: Number(t.id),
-        colC: formatDecimal(t.colC),
-        colD: formatDecimal(t.colD),
-        colE: formatDecimal(t.colE),
-      })),
-      meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
-    };
-  }
-
-  async getAllTransactions(accountId?: string, year?: number): Promise<any[]> {
+  async getAllTransactions(accountId?: string, year?: number, startDate?: string, endDate?: string): Promise<any[]> {
     const where: any = {};
     if (accountId) {
       where.internalAccountId = BigInt(accountId);
     }
     
-    if (year) {
-      const start = new Date(`${year}-01-01T00:00:00.000Z`);
-      const end = new Date(`${year}-12-31T23:59:59.999Z`);
+    // Smart Date Range Logic
+    let finalStart: Date | undefined;
+    let finalEnd: Date | undefined;
+
+    if (startDate) {
+      finalStart = new Date(`${startDate}T00:00:00.000Z`);
+    } else if (year && !isNaN(year)) {
+      finalStart = new Date(`${year}-01-01T00:00:00.000Z`);
+    }
+
+    if (endDate) {
+      finalEnd = new Date(`${endDate}T23:59:59.999Z`);
+    } else if (year && !isNaN(year)) {
+      finalEnd = new Date(`${year}-12-31T23:59:59.999Z`);
+    } else {
+      finalEnd = new Date(); // Fallback to current date
+    }
+
+    if (finalStart || finalEnd) {
       where.colA = {
-        gte: start,
-        lte: end
+        ...(finalStart && { gte: finalStart }),
+        ...(finalEnd && { lte: finalEnd })
       };
     }
     

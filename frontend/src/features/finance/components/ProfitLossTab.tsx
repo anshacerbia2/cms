@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, DollarSign, PieChart, Info, Loader2, History, Plus, Calendar as CalendarIcon } from "lucide-react";
 import { useFinance } from "../hooks/useFinance";
+import { useExcelFilter } from "../hooks/useExcelFilter";
+import { ExcelColumnFilter } from "./ExcelColumnFilter";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -35,11 +37,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Settings } from "lucide-react";
+import PLPropertiesModal from "./PLPropertiesModal";
 
 
 export function ProfitLossTab() {
   const [year, setYear] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [showPropertiesModal, setShowPropertiesModal] = useState(false);
   const { getPLStatement, getPLDetails, getSalesCogsDetails, getDepreciationDetails } = useFinance();
   
   const { data: plData, isLoading } = getPLStatement(
@@ -98,6 +103,28 @@ export function ProfitLossTab() {
     { enabled: !!selectedLedger && !isCogs && !isDepr }
   );
 
+  const displayPlDetails = useMemo(() => {
+    return (plDetails || []).map((row: any) => ({
+      ...row,
+      displayDate: formatDate(row.date),
+      displayAmount: formatCurrency(row.amount),
+    }));
+  }, [plDetails]);
+
+  const { 
+    search: plSearch, 
+    filters: plFilters, 
+    setFilters: setPlFilters, 
+    sort: plSort, 
+    setSort: setPlSort, 
+    getCascadingData: getPlCascadingData, 
+    filteredAndSortedData: filteredPlDetails,
+    clearFilters: clearPlFilters
+  } = useExcelFilter({
+    data: displayPlDetails,
+    searchFields: ['description', 'ledger', 'bankBrand', 'holderName', 'displayAmount', 'displayDate']
+  });
+
   const { data: cogsDetails, isLoading: isLoadingCogsDetails } = getSalesCogsDetails(
     year === "all" ? undefined : year, 
     selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
@@ -107,6 +134,60 @@ export function ProfitLossTab() {
   const { data: deprDetails, isLoading: isLoadingDeprDetails } = getDepreciationDetails(
     { enabled: !!selectedLedger && isDepr }
   );
+
+  // --- COGS Filter Hook ---
+  const normalizedCogs = useMemo(() => {
+    if (!cogsDetails?.rows) return [];
+    return cogsDetails.rows.map((row: any) => {
+      const formatted: any = { ...row };
+      cogsDetails.headers?.forEach((h: any) => {
+        if (row[h.key] !== undefined) {
+          formatted[`display_${h.key}`] = formatCurrency(parseFloat(row[h.key] || "0"));
+        }
+      });
+      return formatted;
+    });
+  }, [cogsDetails]);
+
+
+  const { 
+    search: cogsSearch, 
+    filters: cogsFilters, setFilters: setCogsFilters, 
+    sort: cogsSort, setSort: setCogsSort, 
+    getCascadingData: getCogsCascadingData, 
+    filteredAndSortedData: filteredCogs,
+    clearFilters: clearCogsFilters
+  } = useExcelFilter({
+    data: normalizedCogs,
+    searchFields: ['cogs', ...(cogsDetails?.headers?.map((h: any) => `display_${h.key}`) || [])]
+  });
+
+  // --- Depreciation Filter Hook ---
+  const normalizedDepr = useMemo(() => {
+    if (!deprDetails) return [];
+    return deprDetails.map((row: any) => ({
+      ...row,
+      displayPurchaseDate: formatDate(row.purchaseDate),
+      displayPurchasePrice: formatCurrency(row.purchasePrice),
+      displayAccumulated2024: formatCurrency(row.accumulated2024),
+      displayTotal2025: formatCurrency(row.total2025),
+      displayAccumulated2025: formatCurrency(row.accumulated2025),
+      displayBookValue: formatCurrency(row.bookValue),
+      ...months.reduce((acc, m) => ({ ...acc, [`display_${m}`]: formatCurrency(row[m]) }), {}),
+    }));
+  }, [deprDetails]);
+
+  const { 
+    search: deprSearch, 
+    filters: deprFilters, setFilters: setDeprFilters, 
+    sort: deprSort, setSort: setDeprSort, 
+    getCascadingData: getDeprCascadingData, 
+    filteredAndSortedData: filteredDepr,
+    clearFilters: clearDeprFilters
+  } = useExcelFilter({
+    data: normalizedDepr,
+    searchFields: ['assetName', 'displayPurchasePrice', 'displayBookValue']
+  });
 
   const isLoadingDetails = isCogs ? isLoadingCogsDetails : isDepr ? isLoadingDeprDetails : isLoadingPlDetails;
 
@@ -172,16 +253,34 @@ export function ProfitLossTab() {
                     {selectedLedger === "Other Income" ? "Other Income (Expense)" : selectedLedger} Breakdown
                   </DialogTitle>
                   <DialogDescription className="text-[10px] font-bold text-primary/30 uppercase tracking-[0.2em]">
-                    Bank Mutation Records • Financial Audit Trail
+                    Bank Statement Records • Financial Audit Trail
                   </DialogDescription>
                 </div>
               </div>
-              <button 
-                onClick={() => setSelectedLedger(null)}
-                className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-50 flex items-center justify-center text-primary/40 hover:text-red-600 transition-all cursor-pointer group"
-              >
-                <Plus className="w-5 h-5 rotate-45 group-hover:scale-110 transition-transform" />
-              </button>
+              <div className="flex items-center gap-4">
+                {(
+                  (plSearch !== "" || Object.values(plFilters).some(s => s && s.size > 0)) ||
+                  (cogsSearch !== "" || Object.values(cogsFilters).some(s => s && s.size > 0)) ||
+                  (deprSearch !== "" || Object.values(deprFilters).some(s => s && s.size > 0))
+                ) && (
+                   <button 
+                     onClick={() => {
+                       clearPlFilters();
+                       clearCogsFilters();
+                       clearDeprFilters();
+                     }}
+                     className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 transition-colors"
+                   >
+                     Clear Filters
+                   </button>
+                )}
+                <button 
+                  onClick={() => setSelectedLedger(null)}
+                  className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-50 flex items-center justify-center text-primary/40 hover:text-red-600 transition-all cursor-pointer group"
+                >
+                  <Plus className="w-5 h-5 rotate-45 group-hover:scale-110 transition-transform" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -193,7 +292,7 @@ export function ProfitLossTab() {
               </div>
             ) : (isCogs && (!cogsDetails?.rows || cogsDetails.rows.length === 0)) || 
                 (isDepr && (!deprDetails || deprDetails.length === 0)) ||
-                (!isCogs && !isDepr && (!plDetails || plDetails.length === 0)) ? (
+                (!isCogs && !isDepr && (filteredPlDetails.length === 0)) ? (
               <div className="h-64 flex items-center justify-center opacity-20 font-bold uppercase tracking-[0.2em]">
                 No Records Found
               </div>
@@ -203,7 +302,18 @@ export function ProfitLossTab() {
                   <>
                         <thead>
                           <tr className="bg-white">
-                            <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 sticky top-0 left-0 z-[60] bg-white border-b border-r border-primary/5 min-w-[350px] max-w-[350px] align-baseline">COGS</th>
+                            <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 sticky top-0 left-0 z-[60] bg-white border-b border-r border-primary/5 min-w-[350px] max-w-[350px] align-baseline">
+                              <div className="flex items-center gap-1">
+                                COGS
+                                <ExcelColumnFilter 
+                                  columnKey="cogs" label="COGS" data={getCogsCascadingData("cogs")} 
+                                  activeFilters={cogsFilters["cogs"]} 
+                                  onFilterChange={(v) => setCogsFilters(p => ({...p, cogs: v}))}
+                                  onSort={(d) => setCogsSort({key: "cogs", direction: d})}
+                                  currentSort={cogsSort}
+                                />
+                              </div>
+                            </th>
                             {cogsDetails?.headers?.map((header: any) => (
                               <th 
                                 key={header.key} 
@@ -215,7 +325,7 @@ export function ProfitLossTab() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-primary/5">
-                          {cogsDetails?.rows?.map((item: any) => (
+                          {filteredCogs?.map((item: any) => (
                             <tr key={item.id} className="bg-white hover:bg-primary/[0.01] transition-colors group">
                               <td className="pl-8 pr-6 py-2 sticky left-0 z-20 bg-white group-hover:bg-slate-50 transition-colors border-r border-primary/5 min-w-[350px] max-w-[350px] align-baseline">
                                 <span className="text-[12px] font-bold text-primary uppercase tracking-wide whitespace-normal break-words block">
@@ -236,7 +346,7 @@ export function ProfitLossTab() {
                                       "text-[12px] font-bold tabular-nums",
                                       isTotal ? "text-primary" : "text-primary/70"
                                     )}>
-                                      {formatCurrency(item[header.key])}
+                                      {item[`display_${header.key}`]}
                                     </span>
                                   </td>
                                 );
@@ -275,10 +385,43 @@ export function ProfitLossTab() {
                   <>
                     <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
                       <tr className="border-b border-primary/5 whitespace-nowrap h-12">
-                        <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Category</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Date</th>
+                        <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">
+                          <div className="flex items-center gap-1">
+                            Category
+                            <ExcelColumnFilter 
+                              columnKey="category" label="Category" data={getDeprCascadingData("category")} 
+                              activeFilters={deprFilters["category"]} 
+                              onFilterChange={(v) => setDeprFilters(p => ({...p, category: v}))}
+                              onSort={(d) => setDeprSort({key: "category", direction: d})}
+                              currentSort={deprSort}
+                            />
+                          </div>
+                        </th>
+                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">
+                          <div className="flex items-center gap-1">
+                            Date
+                            <ExcelColumnFilter 
+                              columnKey="displayPurchaseDate" label="Date" data={getDeprCascadingData("displayPurchaseDate")} 
+                              activeFilters={deprFilters["displayPurchaseDate"]} 
+                              onFilterChange={(v) => setDeprFilters(p => ({...p, displayPurchaseDate: v}))}
+                              onSort={(d) => setDeprSort({key: "displayPurchaseDate", direction: d})}
+                              currentSort={deprSort}
+                            />
+                          </div>
+                        </th>
                         <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Source</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">Description</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">
+                          <div className="flex items-center gap-1">
+                            Description
+                            <ExcelColumnFilter 
+                              columnKey="assetName" label="Description" data={getDeprCascadingData("assetName")} 
+                              activeFilters={deprFilters["assetName"]} 
+                              onFilterChange={(v) => setDeprFilters(p => ({...p, assetName: v}))}
+                              onSort={(d) => setDeprSort({key: "assetName", direction: d})}
+                              currentSort={deprSort}
+                            />
+                          </div>
+                        </th>
                         <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Purchase Price</th>
                         <th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-24">Month</th>
                         <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">S/D 2024</th>
@@ -291,40 +434,40 @@ export function ProfitLossTab() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-primary/5">
-                      {deprDetails?.map((item: any) => (
+                      {filteredDepr?.map((item: any) => (
                         <tr key={item.id} className="bg-white hover:bg-secondary/[0.02] border-primary/5 transition-colors group">
                           <td className="pl-8 py-3 whitespace-nowrap">
                             <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 font-bold uppercase text-[10px] py-0.5 px-2">
                               {item.category}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">{formatDate(item.purchaseDate)}</td>
+                          <td className="px-4 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">{item.displayPurchaseDate}</td>
                           <td className="px-4 py-3 text-[11px] font-bold text-primary/40 whitespace-nowrap uppercase tracking-wider">{item.bankRef}</td>
                           <td className="px-4 py-3">
                             <p className="text-[12px] font-bold text-primary uppercase leading-tight">{item.assetName}</p>
                           </td>
                           <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums">
-                            {formatCurrency(item.purchasePrice)}
+                            {item.displayPurchasePrice}
                           </td>
                           <td className="px-4 py-3 text-center opacity-60 font-medium text-[12px]">
                             {item.usefulLife}
                           </td>
                           <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums">
-                            {formatCurrency(item.accumulated2024)}
+                            {item.displayAccumulated2024}
                           </td>
                           {months.map(m => (
                             <td key={m} className="px-4 py-3 text-right whitespace-nowrap text-[12px] tabular-nums">
-                              {formatCurrency(item[m])}
+                              {item[`display_${m}`]}
                             </td>
                           ))}
                           <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold text-primary tabular-nums">
-                            {formatCurrency(item.total2025)}
+                            {item.displayTotal2025}
                           </td>
                           <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold text-primary tabular-nums">
-                            {formatCurrency(item.accumulated2025)}
+                            {item.displayAccumulated2025}
                           </td>
                           <td className="pr-8 py-3 text-right whitespace-nowrap text-[12px] font-bold text-primary tabular-nums">
-                            {formatCurrency(item.bookValue)}
+                            {item.displayBookValue}
                           </td>
                         </tr>
                       ))}
@@ -364,14 +507,58 @@ export function ProfitLossTab() {
                   <>
                     <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
                       <tr className="border-b border-primary/5">
-                        <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Channel</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Date</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[200px]">Description</th>
-                        <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Debit</th>
+                        <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                          <div className="flex items-center gap-1">
+                            Channel
+                            <ExcelColumnFilter 
+                              columnKey="bankBrand" label="Channel" data={getPlCascadingData("bankBrand")} 
+                              activeFilters={plFilters["bankBrand"]} 
+                              onFilterChange={(v) => setPlFilters(p => ({...p, bankBrand: v}))}
+                              onSort={(d) => setPlSort({key: "bankBrand", direction: d})}
+                              currentSort={plSort}
+                            />
+                          </div>
+                        </th>
+                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                          <div className="flex items-center gap-1">
+                            Date
+                            <ExcelColumnFilter 
+                              columnKey="displayDate" label="Date" data={getPlCascadingData("displayDate")} 
+                              activeFilters={plFilters["displayDate"]} 
+                              onFilterChange={(v) => setPlFilters(p => ({...p, displayDate: v}))}
+                              onSort={(d) => setPlSort({key: "displayDate", direction: d})}
+                              currentSort={plSort}
+                            />
+                          </div>
+                        </th>
+                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[200px]">
+                          <div className="flex items-center gap-1">
+                            Description
+                            <ExcelColumnFilter 
+                              columnKey="description" label="Description" data={getPlCascadingData("description")} 
+                              activeFilters={plFilters["description"]} 
+                              onFilterChange={(v) => setPlFilters(p => ({...p, description: v}))}
+                              onSort={(d) => setPlSort({key: "description", direction: d})}
+                              currentSort={plSort}
+                            />
+                          </div>
+                        </th>
+                        <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                          <div className="flex items-center justify-end gap-1">
+                            Amount
+                            <ExcelColumnFilter 
+                              columnKey="displayAmount" label="Amount" data={getPlCascadingData("displayAmount")} 
+                              activeFilters={plFilters["displayAmount"]} 
+                              onFilterChange={(v) => setPlFilters(p => ({...p, displayAmount: v}))}
+                              onSort={(d) => setPlSort({key: "displayAmount", direction: d})}
+                              currentSort={plSort}
+                            />
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-primary/5">
-                      {plDetails?.map((item: any) => (
+                      {filteredPlDetails?.map((item: any) => (
                         <tr key={item.id} className="bg-white hover:bg-primary/[0.01] transition-colors group">
                           <td className="pl-8 py-3 whitespace-nowrap">
                             <div className="flex flex-col gap-0.5">
@@ -389,7 +576,7 @@ export function ProfitLossTab() {
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">{formatDate(item.date)}</td>
+                          <td className="px-4 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">{item.displayDate}</td>
                           <td className="px-4 py-3 whitespace-normal min-w-[200px]">
                             <div className="flex flex-col gap-0.5">
                               <p className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:text-primary transition-colors">{item.description}</p>
@@ -398,7 +585,7 @@ export function ProfitLossTab() {
                           </td>
                           <td className="pr-8 py-3 text-right whitespace-nowrap">
                             <span className="text-[12px] font-bold text-primary tabular-nums">
-                              {formatCurrency(item.amount)}
+                              {item.displayAmount}
                             </span>
                           </td>
                         </tr>
@@ -490,8 +677,26 @@ export function ProfitLossTab() {
               </SelectContent>
             </Select>
           </div>
+          {year !== "all" && (
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => setShowPropertiesModal(true)}
+              className="h-12 w-12 bg-white border-0 shadow-sm rounded-xl text-primary/40 hover:text-primary transition-all hover:bg-white hover:shadow-sm"
+            >
+              <Settings size={20} />
+            </Button>
+          )}
         </div>
       </div>
+
+      {year !== "all" && (
+        <PLPropertiesModal 
+          open={showPropertiesModal}
+          onOpenChange={setShowPropertiesModal}
+          year={parseInt(year)}
+        />
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

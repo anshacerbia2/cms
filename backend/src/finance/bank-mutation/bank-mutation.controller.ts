@@ -4,25 +4,24 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @Controller('bank-mutation')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+@Roles('admin', 'finance_manager')
 export class BankMutationController {
   constructor(private readonly bankMutationService: BankMutationService) {}
-
-  @Get('transactions')
-  @Permissions('bank-mutation.index')
-  async getTransactions(@Query() query: PaginationQueryDto & { accountId?: string, year?: string }) {
-    return this.bankMutationService.getTransactions(query);
-  }
 
   @Get('transactions/all')
   @Permissions('bank-mutation.index')
   async getAllTransactions(
     @Query('accountId') accountId?: string,
-    @Query('year') year?: string
+    @Query('year') year?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string
   ) {
-    return this.bankMutationService.getAllTransactions(accountId, year ? Number(year) : undefined);
+    return this.bankMutationService.getAllTransactions(accountId, year ? Number(year) : undefined, startDate, endDate);
   }
 
   @Post('transactions/bulk')

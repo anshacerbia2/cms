@@ -1,14 +1,8 @@
 import api from "@/lib/api";
-import { PaginationParams, PaginatedResponse } from "../hooks/useFinance";
 
 export const bankMutationService = {
-  getTransactions: async (params: PaginationParams): Promise<PaginatedResponse<any>> => {
-    const { data } = await api.get("/bank-mutation/transactions", { params });
-    return data;
-  },
-
-  getAllTransactions: async (accountId?: string, year?: string): Promise<any[]> => {
-    const { data } = await api.get("/bank-mutation/transactions/all", { params: { accountId, year } });
+  getAllTransactions: async (accountId?: string, year?: string, startDate?: string, endDate?: string): Promise<any[]> => {
+    const { data } = await api.get("/bank-mutation/transactions/all", { params: { accountId, year, startDate, endDate } });
     return Array.isArray(data) ? data : (data as any).data || [];
   },
 

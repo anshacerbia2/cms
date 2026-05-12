@@ -13,6 +13,7 @@ import { AccountPayableModule } from './finance/account-payable/account-payable.
 import { AccountReceivableModule } from './finance/account-receivable/account-receivable.module';
 import { DepreciationModule } from './finance/depreciation/depreciation.module';
 import { SalesModule } from './finance/sales/sales.module';
+import { EquityPropertyModule } from './finance/equity-property/equity-property.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { SalesModule } from './finance/sales/sales.module';
     AccountReceivableModule,
     DepreciationModule,
     SalesModule,
+    EquityPropertyModule,
   ],
   controllers: [],
   providers: [],

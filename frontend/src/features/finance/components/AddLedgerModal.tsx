@@ -186,34 +186,51 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
   // FOR INPUTS: Clean thousands separator but NO forced decimals (so user can type easily)
   const formatInput = (val: string | number) => {
     if (val === undefined || val === null || val === '') return '';
-    const str = val.toString();
+    let str = val.toString();
+    const isNegative = str.startsWith('-');
+    if (isNegative) str = str.slice(1);
+
     const [int, dec] = str.split('.');
     const formattedInt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    return dec !== undefined ? `${formattedInt},${dec}` : formattedInt;
+    const result = dec !== undefined ? `${formattedInt},${dec}` : formattedInt;
+    return isNegative ? `-${result}` : result;
   };
 
   // FOR DISPLAY: Force at least 2 decimals for a clean accounting look
   const formatAccounting = (val: string | number) => {
     if (val === undefined || val === null || val === '') return '';
-    const str = val.toString();
+    let str = val.toString();
+    const isNegative = str.startsWith('-');
+    if (isNegative) str = str.slice(1);
+
     const [int, dec] = str.split('.');
     const formattedInt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     
+    let result = "";
     if (dec === undefined) {
-      return `${formattedInt},00`;
+      result = `${formattedInt},00`;
+    } else {
+      const paddedDec = dec.length < 2 ? dec.padEnd(2, '0') : dec;
+      result = `${formattedInt},${paddedDec}`;
     }
-    const paddedDec = dec.length < 2 ? dec.padEnd(2, '0') : dec;
-    return `${formattedInt},${paddedDec}`;
+    return isNegative ? `-${result}` : result;
   };
 
   const parseDisplay = (val: string) => {
-    let cleaned = val.replace(/\./g, ''); // Remove dots
+    if (val === '-') return '-';
+    
+    const isNegative = val.startsWith('-');
+    let cleaned = val.replace(/[^0-9,.]/g, '');
+    
+    cleaned = cleaned.replace(/\./g, ''); // Remove dots
     cleaned = cleaned.replace(/,/g, '.'); // Convert comma to dot
+    
     // Ensure only one dot
     const parts = cleaned.split(".");
     if (parts.length > 2) {
       cleaned = parts[0] + "." + parts.slice(1).join("");
     }
+    
     // Handle leading dot
     if (cleaned.startsWith('.')) cleaned = '0' + cleaned;
     
@@ -223,7 +240,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
       if (cleaned === '' || cleaned.startsWith('.')) cleaned = '0' + cleaned;
     }
     
-    return cleaned.replace(/[^0-9.]/g, '');
+    return isNegative ? `-${cleaned}` : cleaned;
   };
 
   const handlePaste = (e: React.ClipboardEvent, rowIndex: number, colKey: keyof LedgerRow) => {

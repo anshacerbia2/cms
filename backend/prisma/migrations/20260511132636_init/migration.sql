@@ -488,6 +488,18 @@ CREATE TABLE "profit_loss_summary" (
     CONSTRAINT "profit_loss_summary_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "equity_properties" (
+    "id" BIGSERIAL NOT NULL,
+    "year" INTEGER NOT NULL,
+    "key" TEXT NOT NULL,
+    "value" DECIMAL(19,4) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "equity_properties_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
 
@@ -565,6 +577,9 @@ CREATE UNIQUE INDEX "internal_accounts_account_no_type_holder_name_branch_key" O
 
 -- CreateIndex
 CREATE UNIQUE INDEX "fiscal_periods_internal_account_id_year_key" ON "fiscal_periods"("internal_account_id", "year");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "equity_properties_year_key_key" ON "equity_properties"("year", "key");
 
 -- AddForeignKey
 ALTER TABLE "role_permission" ADD CONSTRAINT "role_permission_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;

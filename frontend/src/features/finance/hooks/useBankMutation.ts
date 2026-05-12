@@ -1,22 +1,13 @@
-import { useQuery, keepPreviousData, useQueryClient } from "@tanstack/react-query";
-import { PaginationParams, PaginatedResponse } from "./useFinance";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { bankMutationService } from "../services/bankMutation.service";
 
 export function useBankMutation() {
   const queryClient = useQueryClient();
 
-  const getTransactions = (params: PaginationParams, options?: any) => 
-    useQuery<PaginatedResponse<any>>({
-      queryKey: ["finance", "bank-mutation", "transactions", params],
-      queryFn: () => bankMutationService.getTransactions(params),
-      placeholderData: keepPreviousData,
-      ...options,
-    });
-
-  const getAllTransactions = (accountId?: string, year?: string, options?: any) =>
+  const getAllTransactions = (accountId?: string, year?: string, startDate?: string, endDate?: string, options?: any) =>
     useQuery<any[]>({
-      queryKey: ["finance", "bank-mutation", "transactions", "all", accountId, year],
-      queryFn: () => bankMutationService.getAllTransactions(accountId, year),
+      queryKey: ["finance", "bank-mutation", "transactions", "all", accountId, year, startDate, endDate],
+      queryFn: () => bankMutationService.getAllTransactions(accountId, year, startDate, endDate),
       ...options,
     });
 
@@ -61,7 +52,6 @@ export function useBankMutation() {
   };
 
   return {
-    getTransactions,
     getAllTransactions,
     createBulkTransactions,
     getAnchorBalance,

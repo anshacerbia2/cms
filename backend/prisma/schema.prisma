@@ -577,3 +577,15 @@ model ProfitLossSummary {
   @@map("profit_loss_summary")
 }
 
+model EquityProperty {
+  id        BigInt   @id @default(autoincrement())
+  year      Int
+  key       String   // 'SHARED_CAPITAL', 'RE_PREV_YEARS', 'DIVIDENDS', 'PL_NET_SALES', 'PL_NET_PROFIT', etc.
+  value     Decimal  @db.Decimal(19, 4)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([year, key])
+  @@map("equity_properties")
+}
+

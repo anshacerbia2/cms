@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { formatCurrency, getAmountColor, cn, formatDate } from "@/lib/utils";
 import { useFinance } from "../hooks/useFinance";
+import { useExcelFilter } from "../hooks/useExcelFilter";
+import { ExcelColumnFilter } from "./ExcelColumnFilter";
+import EquityPropertiesModal from "./EquityPropertiesModal";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   XAxis, 
@@ -61,6 +64,7 @@ export function BalanceSheetTab() {
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isEquityModalOpen, setIsEquityModalOpen] = useState(false);
   
   // Drill-down state
   const [drillDown, setDrillDown] = useState<{
@@ -91,6 +95,52 @@ export function BalanceSheetTab() {
       footer: detailData[detailData.length - 1]
     };
   }, [detailData, isCashOrBank]);
+
+  const normalizedDetails = useMemo(() => {
+    return (displayDetails.body || []).map((row: any) => {
+      if (isARorTax || drillDown.isLiability) {
+        return { 
+          ...row, 
+          f_col1: row.colC, 
+          f_col2: row.colE, 
+          f_col3: formatCurrency(row.colR) 
+        };
+      }
+      if (isFixedAsset) {
+        return { 
+          ...row, 
+          f_col1: formatDate(row.purchaseDate), 
+          f_col2: row.assetName, 
+          f_col3: formatCurrency(row.purchasePrice) 
+        };
+      }
+      const date = row.colA || row.date || row.createdAt;
+      const reference = row.colF || row.type || row.category || '-';
+      const description = isCashOrBank ? (row.colB || '-') : (row.colE || row.colB || row.description || '-');
+      const amount = isCashOrBank ? row.colE : (row.colR || row.colD || row.amount || row.idr || 0);
+      return { 
+        ...row, 
+        f_col1: formatDate(date), 
+        f_col2: reference, 
+        f_col3: description, 
+        f_col4: formatCurrency(amount) 
+      };
+    });
+  }, [displayDetails.body, isARorTax, isFixedAsset, isCashOrBank, drillDown.isLiability]);
+
+  const { 
+    search: bsSearch, 
+    filters: bsFilters, 
+    setFilters: setBsFilters, 
+    sort: bsSort, 
+    setSort: setBsSort, 
+    getCascadingData: getBsCascadingData, 
+    filteredAndSortedData: filteredBsDetails,
+    clearFilters: clearBsFilters
+  } = useExcelFilter({
+    data: normalizedDetails,
+    searchFields: ['f_col1', 'f_col2', 'f_col3', 'f_col4']
+  });
 
   useEffect(() => {
     if (bsData && !isInitialized) {
@@ -207,6 +257,16 @@ export function BalanceSheetTab() {
           </div>
         </div>
         <div className="flex items-center gap-4 mr-4">
+          <Button
+            variant="ghost"
+            onClick={() => setIsEquityModalOpen(true)}
+            className="h-12 px-5 rounded-xl border border-primary/5 bg-white shadow-sm flex items-center gap-2 text-primary/60 hover:text-primary transition-all active:scale-95"
+            title="Equity Settings"
+          >
+            <ShieldCheck size={18} />
+            <span className="text-[11px] font-black uppercase tracking-widest">Equity Settings</span>
+          </Button>
+
           <div className="flex flex-col items-end">
             <Popover>
               <PopoverTrigger asChild>
@@ -466,103 +526,123 @@ export function BalanceSheetTab() {
       {/* Main Two-Column Table */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         
-        {/* Left Column: Assets */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-premium overflow-hidden">
-          {/* Section Header */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-              <h4 className="text-[15px] font-bold text-slate-900 tracking-tight">Assets</h4>
+        {/* Left Column: Assets + Summary */}
+        <div className="space-y-8">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-premium overflow-hidden">
+            {/* Section Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                <h4 className="text-[15px] font-bold text-slate-900 tracking-tight">Assets</h4>
+              </div>
+              <span className="text-[16px] font-bold text-slate-900 tabular-nums whitespace-nowrap">{formatCurrency(bsData?.assets?.total)}</span>
             </div>
-            <span className="text-[16px] font-bold text-slate-900 tabular-nums whitespace-nowrap">{formatCurrency(bsData?.assets?.total)}</span>
-          </div>
 
-          {/* Categories Accordion */}
-          <div className="divide-y divide-slate-100">
-            {assetCategories.map((group: any, idx: number) => (
-              <Collapsible 
-                key={idx} 
-                open={openSections[`assets-${group.name}`]} 
-                onOpenChange={() => toggleSection('assets', group.name)}
-              >
-                <CollapsibleTrigger 
-                  className={cn(
-                    "w-full flex items-center justify-between px-6 py-4 transition-colors group",
-                    group.items?.length > 0 ? "hover:bg-slate-50/50 cursor-pointer" : "cursor-default pointer-events-none"
-                  )}
+            {/* Categories Accordion */}
+            <div className="divide-y divide-slate-100">
+              {assetCategories.map((group: any, idx: number) => (
+                <Collapsible 
+                  key={idx} 
+                  open={openSections[`assets-${group.name}`]} 
+                  onOpenChange={() => toggleSection('assets', group.name)}
                 >
-                  <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "w-3.5 h-3.5 flex items-center justify-center text-slate-400 transition-transform duration-200 flex-shrink-0",
-                      group.items?.length === 0 ? "opacity-0" : (openSections[`assets-${group.name}`] ? "rotate-0" : "-rotate-90")
-                    )}>
-                      {group.items?.length > 0 && <ChevronDown size={14} />}
+                  <CollapsibleTrigger 
+                    className={cn(
+                      "w-full flex items-center justify-between px-6 py-4 transition-colors group",
+                      group.items?.length > 0 ? "hover:bg-slate-50/50 cursor-pointer" : "cursor-default pointer-events-none"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "w-3.5 h-3.5 flex items-center justify-center text-slate-400 transition-transform duration-200 flex-shrink-0",
+                        group.items?.length === 0 ? "opacity-0" : (openSections[`assets-${group.name}`] ? "rotate-0" : "-rotate-90")
+                      )}>
+                        {group.items?.length > 0 && <ChevronDown size={14} />}
+                      </div>
+                      <span className="text-[13px] font-semibold text-slate-700">{group.name}</span>
+                      {group.items?.length > 0 && <span className="text-[11px] font-medium text-slate-400 ml-1">{group.items.length}</span>}
                     </div>
-                    <span className="text-[13px] font-semibold text-slate-700">{group.name}</span>
-                    {group.items?.length > 0 && <span className="text-[11px] font-medium text-slate-400 ml-1">{group.items.length}</span>}
-                  </div>
-                  <span className="text-[13px] font-bold text-slate-900 tabular-nums whitespace-nowrap">{formatCurrency(group.total)}</span>
-                </CollapsibleTrigger>
-                {group.items?.length > 0 && (
-                  <CollapsibleContent>
-                    <div className="bg-white px-0 pb-4 space-y-1">
-                        {group.items.map((item: any, i: number) => {
-                          const isNonClickable = item.accountName.toLowerCase().includes('depreciation');
-                          return (
-                            <div 
-                              key={i} 
-                              className={cn(
-                                "flex items-center py-2 group/item px-6 transition-colors",
-                                isNonClickable ? "" : "hover:bg-slate-50 cursor-pointer"
-                              )}
-                              onClick={() => {
-                                if (isNonClickable) return;
-                                setDrillDown({ 
-                                  isOpen: true, 
-                                  category: group.name, 
-                                  subItem: item.accountName,
-                                  accountId: item.accountId,
-                                  total: item.idr,
-                                  isLiability: false
-                                });
-                              }}
-                            >
-                          <div className="flex items-center gap-2 flex-1 min-w-0 pl-[22px]">
-                            <span className="text-[11px] font-medium text-slate-300 w-10 tabular-nums flex-shrink-0">
-                              {item.code}
-                            </span>
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="text-[12px] font-normal text-slate-600 truncate group-hover/item:text-blue-600 transition-colors" title={item.accountName}>
-                                {item.accountName}
+                    <span className="text-[13px] font-bold text-slate-900 tabular-nums whitespace-nowrap">{formatCurrency(group.total)}</span>
+                  </CollapsibleTrigger>
+                  {group.items?.length > 0 && (
+                    <CollapsibleContent>
+                      <div className="bg-white px-0 pb-4 space-y-1">
+                          {group.items.map((item: any, i: number) => {
+                            const isNonClickable = item.accountName.toLowerCase().includes('depreciation');
+                            return (
+                              <div 
+                                key={i} 
+                                className={cn(
+                                  "flex items-center py-2 group/item px-6 transition-colors",
+                                  isNonClickable ? "" : "hover:bg-slate-50 cursor-pointer"
+                                )}
+                                onClick={() => {
+                                  if (isNonClickable) return;
+                                  setDrillDown({ 
+                                    isOpen: true, 
+                                    category: group.name, 
+                                    subItem: item.accountName,
+                                    accountId: item.accountId,
+                                    total: item.idr,
+                                    isLiability: false
+                                  });
+                                }}
+                              >
+                            <div className="flex items-center gap-2 flex-1 min-w-0 pl-[22px]">
+                              <span className="text-[11px] font-medium text-slate-300 w-10 tabular-nums flex-shrink-0">
+                                {item.code}
                               </span>
-                              {!isNonClickable && (
-                                <div className="flex items-center justify-center opacity-60 group-hover/item:opacity-100 group-hover/item:text-blue-600 transition-all text-slate-400">
-                                  <Info size={11} />
-                                </div>
-                              )}
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-[12px] font-normal text-slate-600 truncate group-hover/item:text-blue-600 transition-colors" title={item.accountName}>
+                                  {item.accountName}
+                                </span>
+                                {!isNonClickable && (
+                                  <div className="flex items-center justify-center opacity-60 group-hover/item:opacity-100 group-hover/item:text-blue-600 transition-all text-slate-400">
+                                    <Info size={11} />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                              <span className="text-[11px] font-medium text-slate-300 tabular-nums whitespace-nowrap">
+                                {item.tx || 0}tx
+                              </span>
+                              <span className={cn("text-[12px] font-normal tabular-nums w-48 text-right whitespace-nowrap", getAmountColor(item.idr, false))}>
+                                {formatCurrency(item.idr)}
+                              </span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                            <span className="text-[11px] font-medium text-slate-300 tabular-nums whitespace-nowrap">
-                              {item.tx || 0}tx
-                            </span>
-                            <span className={cn("text-[12px] font-normal tabular-nums w-48 text-right whitespace-nowrap", getAmountColor(item.idr, false))}>
-                              {formatCurrency(item.idr)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    </div>
-                  </CollapsibleContent>
-                )}
-              </Collapsible>
-            ))}
+                        );
+                      })}
+                      </div>
+                    </CollapsibleContent>
+                  )}
+                </Collapsible>
+              ))}
+            </div>
           </div>
+
         </div>
 
         {/* Right Column: Liabilities & Equity */}
         <div className="space-y-8">
+          {/* Total Equity + Liability Card */}
+          <div className="bg-slate-900 rounded-xl shadow-premium overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <h4 className="text-[15px] font-bold text-white tracking-tight">Total Equity + Liability</h4>
+              </div>
+              <span className="text-[16px] font-black text-emerald-400 tabular-nums whitespace-nowrap">
+                {(() => {
+                  const l = Number(bsData?.liabilities?.total?.toString().replace(/,/g, '')) || 0;
+                  const e = Number(bsData?.equity?.total?.toString().replace(/,/g, '')) || 0;
+                  return formatCurrency(l + e);
+                })()}
+              </span>
+            </div>
+          </div>
+
           {/* Liabilities Section */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-premium overflow-hidden">
             <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
@@ -791,19 +871,29 @@ export function BalanceSheetTab() {
                   </DialogTitle>
                   <DialogDescription className="text-[10px] font-bold text-primary/30 uppercase tracking-[0.2em]">
                     {isCashOrBank 
-                      ? "Bank Mutation Records • Financial Audit Trail" 
+                      ? "Bank Statement Records • Financial Audit Trail" 
                       : (isARorTax || isFixedAsset)
                         ? "Outstanding Balances • Financial Audit Trail" 
                         : "Account Records • Financial Audit Trail"}
                   </DialogDescription>
                 </div>
               </div>
-              <button 
-                onClick={() => setDrillDown({ isOpen: false })}
-                className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-50 flex items-center justify-center text-primary/40 hover:text-red-600 transition-all cursor-pointer group"
-              >
-                <Plus className="w-5 h-5 rotate-45 group-hover:scale-110 transition-transform" />
-              </button>
+              <div className="flex items-center gap-4">
+                {(bsSearch !== "" || Object.values(bsFilters).some(s => s && s.size > 0)) && (
+                   <button 
+                     onClick={clearBsFilters}
+                     className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 transition-colors"
+                   >
+                     Clear Filters
+                   </button>
+                )}
+                <button 
+                  onClick={() => setDrillDown({ isOpen: false })}
+                  className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-50 flex items-center justify-center text-primary/40 hover:text-red-600 transition-all cursor-pointer group"
+                >
+                  <Plus className="w-5 h-5 rotate-45 group-hover:scale-110 transition-transform" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -818,27 +908,137 @@ export function BalanceSheetTab() {
                 <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
                   { (isARorTax || drillDown.isLiability) ? (
                     <tr className="border-b border-primary/5">
-                      <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Year</th>
-                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">Description</th>
-                      <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Outstanding IDR</th>
+                      <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                        <div className="flex items-center gap-1">
+                          Year
+                          <ExcelColumnFilter 
+                            columnKey="f_col1" label="Year" data={getBsCascadingData("f_col1")} 
+                            activeFilters={bsFilters["f_col1"]} 
+                            onFilterChange={(v) => setBsFilters(p => ({...p, f_col1: v}))}
+                            onSort={(d) => setBsSort({key: "f_col1", direction: d})}
+                            currentSort={bsSort}
+                          />
+                        </div>
+                      </th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">
+                        <div className="flex items-center gap-1">
+                          Description
+                          <ExcelColumnFilter 
+                            columnKey="f_col2" label="Description" data={getBsCascadingData("f_col2")} 
+                            activeFilters={bsFilters["f_col2"]} 
+                            onFilterChange={(v) => setBsFilters(p => ({...p, f_col2: v}))}
+                            onSort={(d) => setBsSort({key: "f_col2", direction: d})}
+                            currentSort={bsSort}
+                          />
+                        </div>
+                      </th>
+                      <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                        <div className="flex items-center justify-end gap-1">
+                          Outstanding IDR
+                          <ExcelColumnFilter 
+                            columnKey="f_col3" label="Outstanding IDR" data={getBsCascadingData("f_col3")} 
+                            activeFilters={bsFilters["f_col3"]} 
+                            onFilterChange={(v) => setBsFilters(p => ({...p, f_col3: v}))}
+                            onSort={(d) => setBsSort({key: "f_col3", direction: d})}
+                            currentSort={bsSort}
+                          />
+                        </div>
+                      </th>
                     </tr>
                   ) : isFixedAsset ? (
                     <tr className="border-b border-primary/5">
-                      <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Purchase Date</th>
-                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">Asset Name</th>
-                      <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Purchase Price</th>
+                      <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                        <div className="flex items-center gap-1">
+                          Purchase Date
+                          <ExcelColumnFilter 
+                            columnKey="f_col1" label="Date" data={getBsCascadingData("f_col1")} 
+                            activeFilters={bsFilters["f_col1"]} 
+                            onFilterChange={(v) => setBsFilters(p => ({...p, f_col1: v}))}
+                            onSort={(d) => setBsSort({key: "f_col1", direction: d})}
+                            currentSort={bsSort}
+                          />
+                        </div>
+                      </th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">
+                        <div className="flex items-center gap-1">
+                          Asset Name
+                          <ExcelColumnFilter 
+                            columnKey="f_col2" label="Asset Name" data={getBsCascadingData("f_col2")} 
+                            activeFilters={bsFilters["f_col2"]} 
+                            onFilterChange={(v) => setBsFilters(p => ({...p, f_col2: v}))}
+                            onSort={(d) => setBsSort({key: "f_col2", direction: d})}
+                            currentSort={bsSort}
+                          />
+                        </div>
+                      </th>
+                      <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                        <div className="flex items-center justify-end gap-1">
+                          Purchase Price
+                          <ExcelColumnFilter 
+                            columnKey="f_col3" label="Price" data={getBsCascadingData("f_col3")} 
+                            activeFilters={bsFilters["f_col3"]} 
+                            onFilterChange={(v) => setBsFilters(p => ({...p, f_col3: v}))}
+                            onSort={(d) => setBsSort({key: "f_col3", direction: d})}
+                            currentSort={bsSort}
+                          />
+                        </div>
+                      </th>
                     </tr>
                   ) : (
                     <tr className="border-b border-primary/5">
-                      <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Date</th>
-                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Reference</th>
-                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">Description</th>
-                      <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">Balance</th>
+                      <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                        <div className="flex items-center gap-1">
+                          Date
+                          <ExcelColumnFilter 
+                            columnKey="f_col1" label="Date" data={getBsCascadingData("f_col1")} 
+                            activeFilters={bsFilters["f_col1"]} 
+                            onFilterChange={(v) => setBsFilters(p => ({...p, f_col1: v}))}
+                            onSort={(d) => setBsSort({key: "f_col1", direction: d})}
+                            currentSort={bsSort}
+                          />
+                        </div>
+                      </th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                        <div className="flex items-center gap-1">
+                          Reference
+                          <ExcelColumnFilter 
+                            columnKey="f_col2" label="Reference" data={getBsCascadingData("f_col2")} 
+                            activeFilters={bsFilters["f_col2"]} 
+                            onFilterChange={(v) => setBsFilters(p => ({...p, f_col2: v}))}
+                            onSort={(d) => setBsSort({key: "f_col2", direction: d})}
+                            currentSort={bsSort}
+                          />
+                        </div>
+                      </th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">
+                        <div className="flex items-center gap-1">
+                          Description
+                          <ExcelColumnFilter 
+                            columnKey="f_col3" label="Description" data={getBsCascadingData("f_col3")} 
+                            activeFilters={bsFilters["f_col3"]} 
+                            onFilterChange={(v) => setBsFilters(p => ({...p, f_col3: v}))}
+                            onSort={(d) => setBsSort({key: "f_col3", direction: d})}
+                            currentSort={bsSort}
+                          />
+                        </div>
+                      </th>
+                      <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                        <div className="flex items-center justify-end gap-1">
+                          Balance
+                          <ExcelColumnFilter 
+                            columnKey="f_col4" label="Balance" data={getBsCascadingData("f_col4")} 
+                            activeFilters={bsFilters["f_col4"]} 
+                            onFilterChange={(v) => setBsFilters(p => ({...p, f_col4: v}))}
+                            onSort={(d) => setBsSort({key: "f_col4", direction: d})}
+                            currentSort={bsSort}
+                          />
+                        </div>
+                      </th>
                     </tr>
                   )}
                 </thead>
                 <tbody className="divide-y divide-primary/5">
-                  {displayDetails.body.map((row: any, i: number) => {
+                  {filteredBsDetails.map((row: any, i: number) => {
                     if (isARorTax || drillDown.isLiability) {
                       return (
                         <tr key={i} className="bg-white hover:bg-primary/[0.01] transition-colors group">
@@ -958,6 +1158,11 @@ export function BalanceSheetTab() {
           </div>
         </DialogContent>
       </Dialog>
+      <EquityPropertiesModal 
+        open={isEquityModalOpen}
+        onOpenChange={setIsEquityModalOpen}
+        year={Number(displayYear)}
+      />
     </div>
   );
 }

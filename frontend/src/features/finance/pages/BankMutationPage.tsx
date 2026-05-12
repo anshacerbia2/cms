@@ -14,10 +14,17 @@ import {
   History,
   ShieldCheck,
 } from "lucide-react";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Decimal } from "decimal.js";
 import { useBanks } from "@/features/banks/hooks/useBanks";
 import { useAuthStore } from "@/store/authStore";
-import { formatCurrency, formatDate, cleanAmount } from "@/lib/utils";
+import { formatCurrency, formatDate, cleanAmount, cn } from "@/lib/utils";
 import AddLedgerModal from "../components/AddLedgerModal";
 import {
   Table,
@@ -52,10 +59,24 @@ import { toast } from "sonner";
 import { useBankMutation } from "../hooks/useBankMutation";
 import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
-
 export default function BankMutationPage() {
   const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
   const [ledgerYearFilter, setLedgerYearFilter] = useState(new Date().getFullYear().toString());
+  const [ledgerStartDate, setLedgerStartDate] = useState<Date | undefined>(undefined);
+  const [ledgerEndDate, setLedgerEndDate] = useState<Date | undefined>(undefined);
+
+  // Sync selectedDate with year filter
+  useEffect(() => {
+    if (ledgerYearFilter !== "all") {
+      if (ledgerStartDate && ledgerStartDate.getFullYear() !== parseInt(ledgerYearFilter)) {
+        setLedgerStartDate(undefined);
+      }
+      if (ledgerEndDate && ledgerEndDate.getFullYear() !== parseInt(ledgerYearFilter)) {
+        setLedgerEndDate(undefined);
+      }
+    }
+  }, [ledgerYearFilter]);
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const ledgerLimit = 10;
@@ -94,7 +115,9 @@ export default function BankMutationPage() {
   const { data: allTransactionsRaw, isLoading: transLoading, refetch: refetchTransactions } = getAllTransactions(
     selectedAccount?.id,
     ledgerYearFilter,
-    { enabled: !!selectedAccount?.id && !!ledgerYearFilter }
+    ledgerStartDate ? format(ledgerStartDate, "yyyy-MM-dd") : undefined,
+    ledgerEndDate ? format(ledgerEndDate, "yyyy-MM-dd") : undefined,
+    { enabled: !!selectedAccount?.id && (!!ledgerYearFilter || !!ledgerStartDate || !!ledgerEndDate) }
   );
 
   // --- PRE-FORMAT DATA FOR EXCEL FILTER ---
@@ -126,12 +149,20 @@ export default function BankMutationPage() {
     setSort: setLedgerSort, 
     getCascadingData, 
     filteredAndSortedData: filteredAndSortedLedger,
-    clearFilters: handleClearFilters,
-    isAnyFilterActive 
+    clearFilters: handleClearFiltersBase,
+    isAnyFilterActive: isExcelFilterActive 
   } = useExcelFilter({
     data: displayTransactions,
     searchFields: ['colB', 'colF', 'colG', 'colH', 'colI', 'colJ']
   });
+
+  const handleClearFilters = () => {
+    handleClearFiltersBase();
+    setLedgerStartDate(undefined);
+    setLedgerEndDate(undefined);
+  };
+
+  const isAnyFilterActive = isExcelFilterActive || ledgerStartDate !== undefined || ledgerEndDate !== undefined;
 
   const handleRecalculate = async () => {
     if (isProcessing) return;
@@ -179,10 +210,15 @@ export default function BankMutationPage() {
     return years;
   }, []);
 
+  const isNoPaginationAccount = useMemo(() => {
+    return selectedAccount?.accountNo?.replace(/\s/g, '') === '5750489666';
+  }, [selectedAccount]);
+
   const paginatedLedger = useMemo(() => {
+    if (isNoPaginationAccount) return filteredAndSortedLedger;
     const start = (ledgerPage - 1) * ledgerLimit;
     return filteredAndSortedLedger.slice(start, start + ledgerLimit);
-  }, [filteredAndSortedLedger, ledgerPage, ledgerLimit]);
+  }, [filteredAndSortedLedger, ledgerPage, ledgerLimit, isNoPaginationAccount]);
 
   const ledgerMeta = { 
     total: filteredAndSortedLedger.length, 
@@ -243,7 +279,6 @@ export default function BankMutationPage() {
     if (fiscalData?.status === 'CLOSED' && fiscalData?.closingBalance !== null) {
       closing = new Decimal(fiscalData.closingBalance);
     }
-      console.log(opening,closing);
       
     return { opening, credit, debit, closing, projected };
   }, [fiscalData, anchorData, allTransactions]);
@@ -270,7 +305,7 @@ export default function BankMutationPage() {
   return (
     <PageContainer>
       <PageHeader 
-        title="Bank Mutation"
+        title="Bank Statement"
         description="Institutional financial ledger and audit trail for corporate accounts."
         icon={Landmark}
         actions={
@@ -494,12 +529,81 @@ export default function BankMutationPage() {
             </SelectContent>
           </Select>
 
+          {/* Start Date Picker */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "h-12 px-4 bg-white border-0 shadow-sm rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all justify-start text-left hover:bg-white hover:shadow-sm text-muted-foreground hover:text-muted-foreground min-w-[150px]",
+                  !ledgerStartDate && "text-muted-foreground opacity-60"
+                )}
+              >
+                <div className="flex flex-col items-start gap-0.5">
+                  <span className="text-[7px] text-secondary font-black">FROM</span>
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon size={12} className="text-secondary" />
+                    {ledgerStartDate ? format(ledgerStartDate, "dd MMM y") : <span>Start Date</span>}
+                  </div>
+                </div>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 shadow-premium border-primary/5 overflow-hidden" align="end">
+              <Calendar
+                mode="single"
+                captionLayout="dropdown"
+                selected={ledgerStartDate}
+                onSelect={(d) => { setLedgerStartDate(d); setLedgerPage(1); }}
+                startMonth={ledgerYearFilter === "all" ? new Date(2020, 0) : new Date(parseInt(ledgerYearFilter), 0)}
+                endMonth={ledgerYearFilter === "all" ? new Date(2030, 11) : new Date(parseInt(ledgerYearFilter), 11)}
+                defaultMonth={ledgerStartDate || (ledgerYearFilter === "all" ? undefined : new Date(parseInt(ledgerYearFilter), 0))}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
+          {/* End Date Picker */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "h-12 px-4 bg-white border-0 shadow-sm rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all justify-start text-left hover:bg-white hover:shadow-sm text-muted-foreground hover:text-muted-foreground min-w-[150px]",
+                  !ledgerEndDate && "text-muted-foreground opacity-60"
+                )}
+              >
+                <div className="flex flex-col items-start gap-0.5">
+                  <span className="text-[7px] text-rose-500 font-black">UNTIL</span>
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon size={12} className="text-rose-500" />
+                    {ledgerEndDate ? format(ledgerEndDate, "dd MMM y") : <span>End Date</span>}
+                  </div>
+                </div>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 shadow-premium border-primary/5 overflow-hidden" align="end">
+              <Calendar
+                mode="single"
+                captionLayout="dropdown"
+                selected={ledgerEndDate}
+                onSelect={(d) => { setLedgerEndDate(d); setLedgerPage(1); }}
+                startMonth={ledgerYearFilter === "all" ? new Date(2020, 0) : new Date(parseInt(ledgerYearFilter), 0)}
+                endMonth={ledgerYearFilter === "all" ? new Date(2030, 11) : new Date(parseInt(ledgerYearFilter), 11)}
+                defaultMonth={ledgerEndDate || (ledgerYearFilter === "all" ? undefined : new Date(parseInt(ledgerYearFilter), 0))}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
           <Select value={ledgerYearFilter} onValueChange={(v) => { setLedgerYearFilter(v); setLedgerPage(1); }}>
             <SelectTrigger className="flex-1 xl:w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
               <CalendarIcon size={18} className="text-secondary" />
               <SelectValue placeholder="Year" />
             </SelectTrigger>
             <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden">
+              <SelectItem value="all" className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">
+                All Time
+              </SelectItem>
               {availableYears.map(year => (
                 <SelectItem key={year} value={year} className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">
                   {year}
@@ -685,7 +789,7 @@ export default function BankMutationPage() {
                   {/* Subtotal Row */}
                   <TableRow className="bg-secondary/5 border-t-2 border-secondary/30 hover:bg-secondary/5 transition-none font-bold whitespace-nowrap">
                     <TableCell colSpan={2} className="text-[11px] text-secondary/80 uppercase tracking-[0.2em] pl-4">
-                      Subtotal (Page {ledgerPage})
+                      {isNoPaginationAccount ? "Total Statement" : `Subtotal (Page ${ledgerPage})`}
                     </TableCell>
                     <TableCell className="text-right text-rose-600 pr-4">
                       {formatCurrency(accumulatedTotals.withdrawal)}
@@ -717,11 +821,13 @@ export default function BankMutationPage() {
         
       </div>
      
-      <PaginationControls 
-        meta={ledgerMeta} 
-        onPageChange={setLedgerPage} 
-        isFetching={transLoading} 
-      />
+      {!isNoPaginationAccount && (
+        <PaginationControls 
+          meta={ledgerMeta} 
+          onPageChange={setLedgerPage} 
+          isFetching={transLoading} 
+        />
+      )}
 
       <AddLedgerModal 
         open={isAddModalOpen} 

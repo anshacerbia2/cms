@@ -47,14 +47,14 @@ export async function seedFinance(prisma: PrismaClient) {
         if (label && !label.includes('Total Revenue')) {
           summaries.push({
             category: label,
-            bca: cleanCurrency(row[5]),
-            mandiri: cleanCurrency(row[6]),
-            bri: cleanCurrency(row[7]),
-            btn: cleanCurrency(row[8]),
-            cashIdr: cleanCurrency(row[9]),
-            nonCb: cleanCurrency(row[10]),
-            other: cleanCurrency(row[11]),
-            total: cleanCurrency(row[12]),
+            bca: cleanCurrency(row[5]) ?? 0,
+            mandiri: cleanCurrency(row[6]) ?? 0,
+            bri: cleanCurrency(row[7]) ?? 0,
+            btn: cleanCurrency(row[8]) ?? 0,
+            cashIdr: cleanCurrency(row[9]) ?? 0,
+            nonCb: cleanCurrency(row[10]) ?? 0,
+            other: cleanCurrency(row[11]) ?? 0,
+            total: cleanCurrency(row[12]) ?? 0,
           });
         }
       }
@@ -79,9 +79,9 @@ export async function seedFinance(prisma: PrismaClient) {
         colA: cleanString(row[0]),
         colB: cleanString(row[1]),
         colC: cleanString(row[2]),
-        colD: cleanCurrency(row[3]),
-        colE: cleanCurrency(row[4]),
-        colF: cleanCurrency(row[5]),
+        colD: cleanCurrency(row[3]) ?? 0,
+        colE: cleanCurrency(row[4]) ?? 0,
+        colF: cleanCurrency(row[5]) ?? 0,
       });
     }
 
@@ -94,9 +94,9 @@ export async function seedFinance(prisma: PrismaClient) {
         colA: cleanString(row[0]),
         colB: row[1] ? excelDateToJSDate(row[1]) : null,
         colC: cleanString(row[2]),
-        colD: cleanCurrency(row[3]),
-        colE: cleanCurrency(row[4]),
-        colF: cleanCurrency(row[5]),
+        colD: cleanCurrency(row[3]) ?? 0,
+        colE: cleanCurrency(row[4]) ?? 0,
+        colF: cleanCurrency(row[5]) ?? 0,
       });
     }
 
