@@ -289,13 +289,13 @@ export function ExcelColumnFilter({
                       {expandedItems.has(year) ? <ChevronDown size={12} className="text-primary/40" /> : <ChevronRight size={12} className="text-primary/40" />}
                     </button>
                     <label className="flex items-center space-x-2.5 flex-grow cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="h-3.5 w-3.5 rounded border-primary/20 text-primary focus:ring-primary/20 accent-primary"
-                        checked={isYearSelected(year)}
-                        ref={el => el && (el.indeterminate = isYearIndeterminate(year))}
-                        onChange={() => toggleYear(year)}
-                      />
+                        <input 
+                          type="checkbox" 
+                          className="h-3.5 w-3.5 rounded border-primary/20 text-primary focus:ring-primary/20 accent-primary"
+                          checked={isYearSelected(year)}
+                          ref={el => { if (el) el.indeterminate = isYearIndeterminate(year); }}
+                          onChange={() => toggleYear(year)}
+                        />
                       <span className="text-[12px] font-bold text-primary">{year}</span>
                     </label>
                   </div>
@@ -313,13 +313,13 @@ export function ExcelColumnFilter({
                           {expandedItems.has(`${year}-${month}`) ? <ChevronDown size={12} className="text-primary/40" /> : <ChevronRight size={12} className="text-primary/40" />}
                         </button>
                         <label className="flex items-center space-x-2.5 flex-grow cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            className="h-3.5 w-3.5 rounded border-primary/20 text-primary focus:ring-primary/20 accent-primary"
-                            checked={isMonthSelected(year, month)}
-                            ref={el => el && (el.indeterminate = isMonthIndeterminate(year, month))}
-                            onChange={() => toggleMonth(year, month)}
-                          />
+                            <input 
+                              type="checkbox" 
+                              className="h-3.5 w-3.5 rounded border-primary/20 text-primary focus:ring-primary/20 accent-primary"
+                              checked={isMonthSelected(year, month)}
+                              ref={el => { if (el) el.indeterminate = isMonthIndeterminate(year, month); }}
+                              onChange={() => toggleMonth(year, month)}
+                            />
                           <span className="text-[11px] font-medium text-primary/70">{month}</span>
                         </label>
                       </div>
