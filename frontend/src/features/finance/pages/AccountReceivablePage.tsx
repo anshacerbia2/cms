@@ -35,6 +35,7 @@ export default function AccountReceivablePage() {
     return (allARRaw || []).map((row: any) => ({
       ...row,
       colB: row.colB || "-",
+      rawColC: row.colC,
       colC: formatDate(row.colC), // Format date early
       colD: row.colD || "-",
       colE: row.colE || "-",
@@ -169,7 +170,7 @@ export default function AccountReceivablePage() {
                 <TableHead className="w-32">
                   <div className="flex items-center gap-1">
                     Date
-                    <ExcelColumnFilter columnKey="colC" label="Date" data={getCascadingData("colC")} activeFilters={filters["colC"]} onFilterChange={(v) => { setFilters(p => ({...p, colC: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colC", direction: d})} />
+                    <ExcelColumnFilter columnKey="colC" label="Date" data={getCascadingData("colC")} activeFilters={filters["colC"]} onFilterChange={(v) => { setFilters(p => ({...p, colC: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colC", direction: d})} type="date" dateKey="rawColC" />
                   </div>
                 </TableHead>
                 <TableHead className="w-48">

@@ -124,6 +124,7 @@ export default function BankMutationPage() {
   const displayTransactions = useMemo(() => {
     return (allTransactionsRaw || []).map((row: any) => ({
       ...row,
+      rawColA: row.colA,
       colA: formatDate(row.colA),
       colB: row.colB || "-",
       colC: row.colC && Number(row.colC) !== 0 ? formatCurrency(row.colC) : "-",
@@ -642,6 +643,8 @@ export default function BankMutationPage() {
                       onFilterChange={(v) => { setLedgerFilters(p => ({...p, colA: v})); setLedgerPage(1); }}
                       onSort={(d) => setLedgerSort({key: "colA", direction: d})}
                       currentSort={ledgerSort}
+                      type="date"
+                      dateKey="rawColA"
                     />
                   </div>
                 </TableHead>

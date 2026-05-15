@@ -28,6 +28,7 @@ export default function DepreciationPage() {
     return (allAssetsRaw || []).map((row: any) => ({
       ...row,
       category: row.type || "-",
+      rawColA: row.colA,
       purchaseDate: formatDate(row.colA),
       bankRef: row.colB || "-",
       assetName: row.colC || "-",
@@ -176,7 +177,7 @@ export default function DepreciationPage() {
                   <div className="flex items-center gap-1">Category <ExcelColumnFilter columnKey="category" label="Category" data={getCascadingData("category")} activeFilters={filters["category"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, category: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "category", direction: d}); setPage(1); }} /></div>
                 </TableHead>
                 <TableHead className="w-40 px-4">
-                  <div className="flex items-center gap-1">Date <ExcelColumnFilter columnKey="purchaseDate" label="Purchase Date" data={getCascadingData("purchaseDate")} activeFilters={filters["purchaseDate"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, purchaseDate: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "purchaseDate", direction: d}); setPage(1); }} /></div>
+                  <div className="flex items-center gap-1">Date <ExcelColumnFilter columnKey="purchaseDate" label="Purchase Date" data={getCascadingData("purchaseDate")} activeFilters={filters["purchaseDate"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, purchaseDate: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "purchaseDate", direction: d}); setPage(1); }} type="date" dateKey="rawColA" /></div>
                 </TableHead>
                 <TableHead className="w-40 px-4">
                   <div className="flex items-center gap-1">Source <ExcelColumnFilter columnKey="bankRef" label="Source" data={getCascadingData("bankRef")} activeFilters={filters["bankRef"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, bankRef: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "bankRef", direction: d}); setPage(1); }} /></div>

@@ -29,6 +29,7 @@ export default function SalesPage() {
     return (allSalesRaw || []).map((row: any) => ({
       ...row,
       colB: row.colB || "-",
+      rawColC: row.colC,
       colC: formatDate(row.colC),
       colD: row.colD || "-",
       colE: row.colE || "-",
@@ -38,6 +39,7 @@ export default function SalesPage() {
       colI: formatCurrency(row.colI),
       colJ: formatCurrency(row.colJ),
       colK: formatCurrency(row.colK),
+      rawColL: row.colL,
       colL: formatDate(row.colL),
       colM: formatCurrency(row.colM),
       colN: formatCurrency(row.colN),
@@ -201,7 +203,7 @@ export default function SalesPage() {
                   <div className="flex items-center gap-1">Invoice No <ExcelColumnFilter columnKey="colB" label="Invoice No" data={getCascadingData("colB")} activeFilters={salesFilters["colB"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colB: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colB", direction: d}); setSalesPage(1); }} /></div>
                 </TableHead>
                 <TableHead className="w-32 px-4">
-                  <div className="flex items-center gap-1">Date <ExcelColumnFilter columnKey="colC" label="Date" data={getCascadingData("colC")} activeFilters={salesFilters["colC"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colC: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colC", direction: d}); setSalesPage(1); }} /></div>
+                  <div className="flex items-center gap-1">Date <ExcelColumnFilter columnKey="colC" label="Date" data={getCascadingData("colC")} activeFilters={salesFilters["colC"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colC: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colC", direction: d}); setSalesPage(1); }} type="date" dateKey="rawColC" /></div>
                 </TableHead>
                 <TableHead className="w-20 px-4">
                   <div className="flex items-center gap-1">Year <ExcelColumnFilter columnKey="colD" label="Year" data={getCascadingData("colD")} activeFilters={salesFilters["colD"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colD: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colD", direction: d}); setSalesPage(1); }} /></div>
@@ -229,7 +231,7 @@ export default function SalesPage() {
                   <div className="flex items-center justify-end gap-1">AR IDR <ExcelColumnFilter columnKey="colK" label="AR IDR" data={getCascadingData("colK")} activeFilters={salesFilters["colK"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colK: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colK", direction: d}); setSalesPage(1); }} /></div>
                 </TableHead>
                 <TableHead className="w-40 px-4">
-                  <div className="flex items-center gap-1">Date Received <ExcelColumnFilter columnKey="colL" label="Date Received" data={getCascadingData("colL")} activeFilters={salesFilters["colL"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colL: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colL", direction: d}); setSalesPage(1); }} /></div>
+                  <div className="flex items-center gap-1">Date Received <ExcelColumnFilter columnKey="colL" label="Date Received" data={getCascadingData("colL")} activeFilters={salesFilters["colL"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colL: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colL", direction: d}); setSalesPage(1); }} type="date" dateKey="rawColL" /></div>
                 </TableHead>
 
                 <TableHead className="w-40 px-4 text-right">
