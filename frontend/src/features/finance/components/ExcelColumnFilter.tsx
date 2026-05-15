@@ -60,14 +60,17 @@ export function ExcelColumnFilter({
 
       // Build Date Tree if type is date
       if (type === 'date') {
-        const d = dateKey ? new Date(item[dateKey]) : new Date(item[columnKey]);
-        if (!isNaN(d.getTime())) {
-          const year = d.getFullYear().toString();
-          const month = d.toLocaleString('en-US', { month: 'long' });
-          
-          if (!tree[year]) tree[year] = {};
-          if (!tree[year][month]) tree[year][month] = new Set();
-          tree[year][month].add(displayedVal);
+        const dateVal = dateKey ? item[dateKey] : item[columnKey];
+        if (dateVal) {
+          const d = new Date(dateVal);
+          if (!isNaN(d.getTime())) {
+            const year = d.getFullYear().toString();
+            const month = d.toLocaleString('en-US', { month: 'long' });
+            
+            if (!tree[year]) tree[year] = {};
+            if (!tree[year][month]) tree[year][month] = new Set();
+            tree[year][month].add(displayedVal);
+          }
         }
       }
     });
