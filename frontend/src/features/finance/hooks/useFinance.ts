@@ -64,10 +64,10 @@ export function useFinance() {
       ...options,
     });
 
-  const getPLDetails = (year?: string, ledger?: string, date?: string, options?: any) =>
+  const getPLDetails = (year?: string, ledger?: string, date?: string, subItem?: string, options?: any) =>
     useQuery<any[]>({
-      queryKey: ["finance", "pl-details", year || "all", ledger, date || "now"],
-      queryFn: () => financeService.getPLDetails(year, ledger, date),
+      queryKey: ["finance", "pl-details", year || "all", ledger, subItem || "all", date || "now"],
+      queryFn: () => financeService.getPLDetails(year, ledger, date, subItem),
       enabled: !!ledger,
       ...options,
     });

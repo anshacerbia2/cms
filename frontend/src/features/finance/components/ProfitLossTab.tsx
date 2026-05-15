@@ -10,7 +10,7 @@ import {
 import { formatCurrency, getAmountColor, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, DollarSign, PieChart, Info, Loader2, History, Plus, Calendar as CalendarIcon } from "lucide-react";
+import { TrendingUp, DollarSign, PieChart, Info, Loader2, History, Plus, Calendar as CalendarIcon, ChevronDown, ChevronRight } from "lucide-react";
 import { useFinance } from "../hooks/useFinance";
 import { useExcelFilter } from "../hooks/useExcelFilter";
 import { ExcelColumnFilter } from "./ExcelColumnFilter";
@@ -93,6 +93,19 @@ export function ProfitLossTab() {
   }, [plData]);
 
   const [selectedLedger, setSelectedLedger] = useState<string | null>(null);
+  const [selectedSubItem, setSelectedSubItem] = useState<string | null>(null);
+  const [expandedLedgers, setExpandedLedgers] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (ledger: string) => {
+    const newSet = new Set(expandedLedgers);
+    if (newSet.has(ledger)) {
+      newSet.delete(ledger);
+    } else {
+      newSet.add(ledger);
+    }
+    setExpandedLedgers(newSet);
+  };
+
   const isCogs = selectedLedger === "Cost of Goods";
   const isDepr = selectedLedger === "Depreciation";
 
@@ -100,6 +113,7 @@ export function ProfitLossTab() {
     year === "all" ? undefined : year, 
     selectedLedger || undefined, 
     selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
+    selectedSubItem || undefined,
     { enabled: !!selectedLedger && !isCogs && !isDepr }
   );
 
@@ -240,7 +254,12 @@ export function ProfitLossTab() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
       {/* Details Modal */}
-      <Dialog open={!!selectedLedger} onOpenChange={(open) => !open && setSelectedLedger(null)}>
+      <Dialog open={!!selectedLedger} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedLedger(null);
+          setSelectedSubItem(null);
+        }
+      }}>
         <DialogContent className="max-w-7xl w-[95vw] max-h-[90vh] bg-slate-50 border border-slate-200 shadow-2xl rounded-3xl overflow-hidden p-0 gap-0 flex flex-col">
           <div className="py-5 px-8 border-b border-primary/5 bg-white sticky top-0 z-20 shrink-0">
             <div className="flex items-center justify-between">
@@ -249,9 +268,16 @@ export function ProfitLossTab() {
                   <History size={24} />
                 </div>
                 <div>
-                  <DialogTitle className="text-xl font-bold text-primary uppercase tracking-tight leading-none mb-1.5">
-                    {selectedLedger === "Other Income" ? "Other Income (Expense)" : selectedLedger} Breakdown
-                  </DialogTitle>
+                  <div className="flex items-center gap-2 mb-1">
+                    <DialogTitle className="text-xl font-bold text-primary uppercase tracking-tight leading-none">
+                      {selectedLedger === "Other Income" ? "Other Income (Expense)" : selectedLedger} Breakdown
+                    </DialogTitle>
+                    {selectedSubItem && (
+                      <Badge className="bg-secondary/10 text-secondary border-none text-[10px] font-black uppercase tracking-widest py-0.5">
+                        {selectedSubItem}
+                      </Badge>
+                    )}
+                  </div>
                   <DialogDescription className="text-[10px] font-bold text-primary/30 uppercase tracking-[0.2em]">
                     Bank Statement Records • Financial Audit Trail
                   </DialogDescription>
@@ -748,11 +774,19 @@ export function ProfitLossTab() {
                   );
                 }
 
-                const isProfitLine = row.isTotal;
+                // --- ACCORDION LOGIC ---
+                // If it's a sub-item (level 3), only show if parent is expanded
+                if (row.level === 3 && !expandedLedgers.has(row.parentLedger)) {
+                  return null;
+                }
+
+                const isProfitLine = row.isTotal && row.account !== "PROFIT BEFORE TAX";
                 const isGrandTotal = row.account === "PROFIT AFTER TAX";
                 const isExpense = expenseLedgers.includes(row.account);
-                const isSpecialBold = ["Operating Profit", "Profit Before Tax"].includes(row.account);
+                const isSpecialBold = ["Operating Profit", "PROFIT BEFORE TAX"].includes(row.account);
                 const isOtherProfitItem = ["Other Income", "Depreciation", "Income Tax"].includes(row.account);
+                const hasSubItems = tableData.some((r: any) => r.level === 3 && r.parentLedger === row.account);
+                const isExpanded = expandedLedgers.has(row.account);
 
 
 
@@ -764,29 +798,71 @@ export function ProfitLossTab() {
                         ? "bg-secondary/10 hover:bg-secondary/10 border-t border-secondary/30" 
                         : isProfitLine 
                           ? "bg-secondary/5 hover:bg-secondary/5 border-t-2 border-secondary/30" 
-                          : "hover:bg-primary/[0.01] border-primary/5"}
-                      ${isExpense ? "cursor-pointer group/row" : ""}
+                          : row.account === "PROFIT BEFORE TAX"
+                            ? "hover:bg-primary/[0.01] border-primary/5"
+                            : row.level === 3
+                              ? "bg-slate-50/30 hover:bg-slate-50/50 cursor-pointer animate-in fade-in slide-in-from-top-1 duration-200"
+                              : "hover:bg-primary/[0.01] border-primary/5"}
+                      ${isExpense || row.level === 3 ? "cursor-pointer group/row" : ""}
                       transition-all duration-200 border-b
                     `}
-                    onClick={() => isExpense && setSelectedLedger(row.account)}
                   >
                     <TableCell 
                       className="py-2 pr-4" 
-                      style={{ paddingLeft: `${(row.level >= 2 ? (row.level - 1) * 16 : 0) + 32}px` }}
+                      style={{ paddingLeft: `${(row.level >= 2 ? (row.level - 1) * 24 : 0) + 32}px` }}
                     >
                       <div className="flex items-center gap-2">
-                        <span className={`text-[12px] uppercase tracking-wide ${
-                          isGrandTotal ? "font-bold text-secondary" :
-                          isSpecialBold ? "font-bold text-primary/70" :
-                          isOtherProfitItem ? "font-medium text-primary/60" :
-                          isProfitLine ? "font-bold text-secondary" : 
-                          row.isSubItem ? "font-medium text-primary/60" : 
-                          "font-bold text-primary/70"
-                        }`}>
+                        {/* Accordion Toggle */}
+                        {hasSubItems && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpand(row.account);
+                            }}
+                            className="p-1 hover:bg-primary/5 rounded transition-colors cursor-pointer"
+                          >
+                            {isExpanded ? <ChevronDown size={12} className="text-primary/40" /> : <ChevronRight size={12} className="text-primary/40" />}
+                          </button>
+                        )}
+                        
+                        {row.level === 3 && <div className="w-1.5 h-1.5 rounded-full bg-primary/10 mr-1" />}
+                        
+                        <span 
+                          className={`text-[12px] uppercase tracking-wide flex-grow ${
+                            isGrandTotal ? "font-bold text-secondary" :
+                            isSpecialBold ? "font-bold text-primary/70" :
+                            isOtherProfitItem ? "font-medium text-primary/60" :
+                            isProfitLine ? "font-bold text-secondary" : 
+                            row.level === 3 ? "font-bold text-primary/40 text-[11px]" :
+                            row.isSubItem ? "font-medium text-primary/60" : 
+                            "font-bold text-primary/70"
+                          }`}
+                          onClick={() => {
+                            if (isExpense) {
+                              setSelectedLedger(row.account);
+                              setSelectedSubItem(null);
+                            } else if (row.level === 3) {
+                              setSelectedLedger(row.parentLedger);
+                              setSelectedSubItem(row.account);
+                            }
+                          }}
+                        >
                           {row.account === "Other Income" ? "Other Income (Expense)" : row.account}
                         </span>
-                        {isExpense && (
-                          <div className="flex items-center justify-center opacity-40 group-hover/row:opacity-100 group-hover/row:text-blue-500 transition-all text-primary">
+                        
+                        {(isExpense || row.level === 3) && (
+                          <div 
+                            className="flex items-center justify-center opacity-0 group-hover/row:opacity-100 group-hover/row:text-blue-500 transition-all text-primary"
+                            onClick={() => {
+                              if (isExpense) {
+                                setSelectedLedger(row.account);
+                                setSelectedSubItem(null);
+                              } else if (row.level === 3) {
+                                setSelectedLedger(row.parentLedger);
+                                setSelectedSubItem(row.account);
+                              }
+                            }}
+                          >
                             <Info size={12} />
                           </div>
                         )}

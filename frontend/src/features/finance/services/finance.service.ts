@@ -47,8 +47,8 @@ export const financeService = {
     return data;
   },
 
-  getPLDetails: async (year?: string, ledger?: string, date?: string): Promise<any[]> => {
-    const { data } = await api.get("/finance/pl-details", { params: { year, ledger, date } });
+  getPLDetails: async (year?: string, ledger?: string, date?: string, subItem?: string): Promise<any[]> => {
+    const { data } = await api.get("/finance/pl-details", { params: { year, ledger, date, subItem } });
     return data;
   },
 

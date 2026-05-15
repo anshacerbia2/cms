@@ -274,7 +274,75 @@ export class FinanceReportService {
       ? new Prisma.Decimal(props['PL_NET_PROFIT'])
       : profitBeforeTax.plus(incomeTax);
 
+    // Temporal filter for sub-item fetching
+    const subWhere: any = {};
+    if (year && year > 0) {
+      const start = `${year}-01-01T00:00:00.000Z`;
+      const end = endDate ? `${endDate}T23:59:59.999Z` : `${year}-12-31T23:59:59.999Z`;
+      subWhere.colA = { gte: new Date(start), lte: new Date(end) };
+    } else if (endDate) {
+      subWhere.colA = { lte: new Date(`${endDate}T23:59:59.999Z`) };
+    }
+
     // 8. Construct Response
+    const initialTableData = [
+      { account: "REVENUE", total: 0, isHeader: true, level: 0 },
+      { account: "Sales", gross: formatDecimal(grossSales), vatAdj: formatDecimal(vatAdj), total: formatDecimal(netSales), level: 1 },
+      { account: "Cost of Goods", total: formatDecimal(cogsTotal), isSubItem: true, level: 2 /*, ledgerFilter: { contains: 'cost of goods', mode: 'insensitive' }*/ },
+      { account: "GROSS PROFIT", total: formatDecimal(grossProfit), isTotal: true, level: 1 },
+      
+      { account: "EXPENSES", total: 0, isHeader: true, level: 0 },
+      { account: "Personnel Expense", total: formatDecimal(personnelExpense), hasInfo: true, isSubItem: true, level: 2, ledgerFilter: { equals: 'Personnel Expense', mode: 'insensitive' } },
+      { account: "Office Expense", total: formatDecimal(officeExpense), isSubItem: true, level: 2, ledgerFilter: { equals: 'Office Expense', mode: 'insensitive' } },
+      { account: "Marketing Expense", total: formatDecimal(marketingExpense), isSubItem: true, level: 2, ledgerFilter: { equals: 'Marketing Expense', mode: 'insensitive' } },
+      { account: "Financial Expense", total: formatDecimal(financialExpense), isSubItem: true, level: 2, ledgerFilter: { equals: 'Financial Expense', mode: 'insensitive' } },
+      { account: "Total Expense", total: formatDecimal(operatingExpenses), isTotal: true, level: 1 },
+      
+      { account: "PROFITABILITY", total: 0, isHeader: true, level: 0 },
+      { account: "Operating Profit", total: formatDecimal(operatingProfit), level: 1 },
+      { account: "Other Income", total: formatDecimal(otherIncomeTotal), isSubItem: true, level: 2 /*, ledgerFilter: { contains: 'other income', mode: 'insensitive' }*/ },
+      { account: "Depreciation", total: formatDecimal(depreciation), hasInfo: true, isSubItem: true, level: 2 },
+      { account: "PROFIT BEFORE TAX", total: formatDecimal(profitBeforeTax), isTotal: true, level: 1 },
+      { account: "Income Tax", total: formatDecimal(incomeTax), isSubItem: true, level: 2 },
+      { account: "PROFIT AFTER TAX", total: formatDecimal(netProfit), isTotal: true, level: 1 },
+    ];
+
+    const tableData: any[] = [];
+    for (const row of initialTableData) {
+      tableData.push(row);
+      
+      if ((row as any).ledgerFilter) {
+        const subTrxs = await this.prisma.financialTransaction.findMany({
+          where: {
+            AND: [subWhere, { colF: (row as any).ledgerFilter }]
+          },
+          select: { colG: true, colC: true, colD: true }
+        });
+
+        const groups = new Map<string, Prisma.Decimal>();
+        subTrxs.forEach(t => {
+          const key = t.colG || 'Other';
+          const debit = new Prisma.Decimal(t.colC || 0);
+          const credit = new Prisma.Decimal(t.colD || 0);
+          const net = credit.minus(debit);
+          
+          groups.set(key, (groups.get(key) || new Prisma.Decimal(0)).plus(net));
+        });
+
+        const subItems = Array.from(groups.entries())
+          .map(([label, total]) => ({
+            account: label,
+            total: formatDecimal(total),
+            isSubItem: true,
+            level: 3,
+            parentLedger: row.account
+          }))
+          .filter(s => s.total !== "0.0000");
+
+        tableData.push(...subItems);
+      }
+    }
+
     return {
       summaryCards: [
         {
@@ -302,27 +370,7 @@ export class FinanceReportService {
           color: "text-indigo-500"
         }
       ],
-      tableData: [
-        { account: "REVENUE", total: 0, isHeader: true, level: 0 },
-        { account: "Sales", gross: formatDecimal(grossSales), vatAdj: formatDecimal(vatAdj), total: formatDecimal(netSales), level: 1 },
-        { account: "Cost of Goods", total: formatDecimal(cogsTotal), isSubItem: true, level: 2 },
-        { account: "GROSS PROFIT", total: formatDecimal(grossProfit), isTotal: true, level: 1 },
-        
-        { account: "EXPENSES", total: 0, isHeader: true, level: 0 },
-        { account: "Personnel Expense", total: formatDecimal(personnelExpense), hasInfo: true, isSubItem: true, level: 2 },
-        { account: "Office Expense", total: formatDecimal(officeExpense), isSubItem: true, level: 2 },
-        { account: "Marketing Expense", total: formatDecimal(marketingExpense), isSubItem: true, level: 2 },
-        { account: "Financial Expense", total: formatDecimal(financialExpense), isSubItem: true, level: 2 },
-        { account: "Total Expense", total: formatDecimal(operatingExpenses), isTotal: true, level: 1 },
-        
-        { account: "PROFITABILITY", total: 0, isHeader: true, level: 0 },
-        { account: "Operating Profit", total: formatDecimal(operatingProfit), level: 1 },
-        { account: "Other Income", total: formatDecimal(otherIncomeTotal), level: 2 },
-        { account: "Depreciation", total: formatDecimal(depreciation), level: 2 },
-        { account: "Profit Before Tax", total: formatDecimal(profitBeforeTax), level: 1 },
-        { account: "Income Tax", total: formatDecimal(incomeTax), level: 1 },
-        { account: "PROFIT AFTER TAX", total: formatDecimal(netProfit), isTotal: true, level: 1 },
-      ]
+      tableData
     };
   }
 
@@ -337,32 +385,76 @@ export class FinanceReportService {
   async getPLSummary(year?: number, date?: string): Promise<any[]> {
     const plData = await this.getProfitLossStatement(year, date);
     
+    // Construct temporal filter for sub-item fetching
+    const where: any = {};
+    if (year && year > 0) {
+      const start = `${year}-01-01T00:00:00.000Z`;
+      const end = date ? `${date}T23:59:59.999Z` : `${year}-12-31T23:59:59.999Z`;
+      where.colA = { gte: new Date(start), lte: new Date(end) };
+    } else if (date) {
+      where.colA = { lte: new Date(`${date}T23:59:59.999Z`) };
+    }
+
     // Categories to extract from the P&L statement for the summary view
     const categories = [
       { key: "NET SALES", label: "NET SALES" },
-      { key: "COGS", label: "COGS" },
+      { key: "COGS", label: "COGS" /*, ledgerFilter: { contains: 'cost of goods', mode: 'insensitive' }*/ },
       { key: "GROSS PROFIT", label: "GROSS PROFIT" },
-      { key: "Personnel Expense", label: "Personnel Expense" },
-      { key: "Office Expense", label: "Office Expense" },
-      { key: "Marketing Expense", label: "Marketing Expense" },
-      { key: "Financial Expense", label: "Financial Expense" },
+      { key: "Personnel Expense", label: "Personnel Expense", ledgerFilter: { equals: 'Personnel Expense', mode: 'insensitive' } },
+      { key: "Office Expense", label: "Office Expense", ledgerFilter: { equals: 'Office Expense', mode: 'insensitive' } },
+      { key: "Marketing Expense", label: "Marketing Expense", ledgerFilter: { equals: 'Marketing Expense', mode: 'insensitive' } },
+      { key: "Financial Expense", label: "Financial Expense", ledgerFilter: { equals: 'Financial Expense', mode: 'insensitive' } },
       { key: "OPERATING PROFIT", label: "OPERATING PROFIT" },
-      { key: "Other Income", label: "Other Income (Expense)" },
+      { key: "Other Income", label: "Other Income (Expense)" /*, ledgerFilter: { contains: 'other income', mode: 'insensitive' }*/ },
       { key: "PROFIT BEFORE TAX", label: "PROFIT BEFORE TAX" },
       { key: "INCOME TAX", label: "INCOME TAX" },
       { key: "PROFIT AFTER TAX", label: "PROFIT AFTER TAX" }
     ];
 
-    return categories.map(cat => {
-      const row = plData.tableData.find(r => r.account.toUpperCase() === cat.key.toUpperCase());
+    const results: any[] = [];
+    for (const cat of categories) {
+      const row = plData.tableData.find(r => 
+        r.account.toUpperCase() === cat.key.toUpperCase() || 
+        (cat.key === 'COGS' && r.account.toUpperCase() === 'COST OF GOODS')
+      );
       const val = row ? row.total : 0;
       
-      return {
+      let subItems: { label: string; total: string }[] = [];
+      if (cat.ledgerFilter) {
+        const subTrxs = await this.prisma.financialTransaction.findMany({
+          where: {
+            AND: [where, { colF: cat.ledgerFilter }]
+          },
+          select: { colG: true, colC: true, colD: true }
+        });
+
+        const groups = new Map<string, Prisma.Decimal>();
+        subTrxs.forEach(t => {
+          const key = t.colG || 'Other';
+          const debit = new Prisma.Decimal(t.colC || 0);
+          const credit = new Prisma.Decimal(t.colD || 0);
+          const net = credit.minus(debit);
+          
+          groups.set(key, (groups.get(key) || new Prisma.Decimal(0)).plus(net));
+        });
+
+        subItems = Array.from(groups.entries())
+          .map(([label, total]) => ({
+            label,
+            total: formatDecimal(total)
+          }))
+          .filter(s => s.total !== "0.0000");
+      }
+
+      results.push({
         category: cat.key,
         label: cat.label,
-        total: formatDecimal(val)
-      };
-    });
+        total: formatDecimal(val),
+        subItems
+      });
+    }
+
+    return results;
   }
 
 
@@ -449,7 +541,7 @@ export class FinanceReportService {
    * @param date Optional end date filter for the audit period.
    * @returns Array of transactions with associated bank account metadata.
    */
-  async getPLDetails(year?: number, ledger?: string, date?: string) {
+  async getPLDetails(year?: number, ledger?: string, date?: string, subItem?: string) {
     const where: any = {};
     if (year && year > 0) {
       const start = `${year}-01-01T00:00:00.000Z`;
@@ -461,7 +553,15 @@ export class FinanceReportService {
     
     // Use contains instead of equals to capture sub-categories and generic matches (e.g., 'Other Income - Interest')
     if (ledger) {
-      where.colF = { contains: ledger, mode: 'insensitive' };
+      if (ledger.toUpperCase() === 'COGS') {
+        where.colF = { contains: 'cost of goods', mode: 'insensitive' };
+      } else {
+        where.colF = { contains: ledger, mode: 'insensitive' };
+      }
+    }
+
+    if (subItem) {
+      where.colG = { equals: subItem, mode: 'insensitive' };
     }
 
     const data = await this.prisma.financialTransaction.findMany({
