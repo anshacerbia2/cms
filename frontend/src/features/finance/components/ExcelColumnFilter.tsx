@@ -61,17 +61,20 @@ export function ExcelColumnFilter({
       // Build Date Tree if type is date
       if (type === 'date') {
         const dateVal = dateKey ? item[dateKey] : item[columnKey];
+        let year = "(Blanks)";
+        let month = "(Blanks)";
+
         if (dateVal) {
           const d = new Date(dateVal);
           if (!isNaN(d.getTime())) {
-            const year = d.getFullYear().toString();
-            const month = d.toLocaleString('en-US', { month: 'long' });
-            
-            if (!tree[year]) tree[year] = {};
-            if (!tree[year][month]) tree[year][month] = new Set();
-            tree[year][month].add(displayedVal);
+            year = d.getFullYear().toString();
+            month = d.toLocaleString('en-US', { month: 'long' });
           }
         }
+
+        if (!tree[year]) tree[year] = {};
+        if (!tree[year][month]) tree[year][month] = new Set();
+        tree[year][month].add(displayedVal);
       }
     });
 
