@@ -47,6 +47,7 @@ export function ProfitLossTab() {
   const [showPropertiesModal, setShowPropertiesModal] = useState(false);
   const { getPLStatement, getPLDetails, getSalesCogsDetails, getDepreciationDetails } = useFinance();
   
+  const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
   const { data: plData, isLoading } = getPLStatement(
     year === "all" ? undefined : year, 
     selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined
@@ -212,14 +213,11 @@ export function ProfitLossTab() {
     "Marketing Expense", 
     "Financial Expense", 
     "Other Income", 
-    "Depreciation",
-    "Income Tax"
+    "Depreciation"
   ];
 
   const tableData = plData?.tableData || [];
   
-  const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-
   const totals = useMemo(() => {
     if (isCogs) {
       if (!cogsDetails?.rows || !cogsDetails?.headers) return null;
