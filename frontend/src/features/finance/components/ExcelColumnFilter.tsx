@@ -284,7 +284,7 @@ export function ExcelColumnFilter({
                   <div className="flex items-center p-1.5 rounded-lg hover:bg-primary/5 transition-colors group/year">
                     <button 
                       onClick={() => toggleExpand(year)}
-                      className="p-1 hover:bg-primary/10 rounded mr-1"
+                      className="p-1 hover:bg-primary/10 rounded mr-1 cursor-pointer"
                     >
                       {expandedItems.has(year) ? <ChevronDown size={12} className="text-primary/40" /> : <ChevronRight size={12} className="text-primary/40" />}
                     </button>
@@ -308,7 +308,7 @@ export function ExcelColumnFilter({
                       <div className="flex items-center p-1.5 rounded-lg hover:bg-primary/5 transition-colors group/month">
                         <button 
                           onClick={() => toggleExpand(`${year}-${month}`)}
-                          className="p-1 hover:bg-primary/10 rounded mr-1"
+                          className="p-1 hover:bg-primary/10 rounded mr-1 cursor-pointer"
                         >
                           {expandedItems.has(`${year}-${month}`) ? <ChevronDown size={12} className="text-primary/40" /> : <ChevronRight size={12} className="text-primary/40" />}
                         </button>
