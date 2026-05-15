@@ -288,12 +288,16 @@ export function ExcelColumnFilter({
               Object.keys(dateTree).sort((a, b) => b.localeCompare(a)).map(year => (
                 <div key={year} className="space-y-0.5">
                   <div className="flex items-center p-1.5 rounded-lg hover:bg-primary/5 transition-colors group/year">
-                    <button 
-                      onClick={() => toggleExpand(year)}
-                      className="p-1 hover:bg-primary/10 rounded mr-1 cursor-pointer"
-                    >
-                      {expandedItems.has(year) ? <ChevronDown size={12} className="text-primary/40" /> : <ChevronRight size={12} className="text-primary/40" />}
-                    </button>
+                    {year !== "(Blanks)" ? (
+                      <button 
+                        onClick={() => toggleExpand(year)}
+                        className="p-1 hover:bg-primary/10 rounded mr-1 cursor-pointer"
+                      >
+                        {expandedItems.has(year) ? <ChevronDown size={12} className="text-primary/40" /> : <ChevronRight size={12} className="text-primary/40" />}
+                      </button>
+                    ) : (
+                      <div className="w-6" />
+                    )}
                     <label className="flex items-center space-x-2.5 flex-grow cursor-pointer">
                         <input 
                           type="checkbox" 
@@ -306,7 +310,7 @@ export function ExcelColumnFilter({
                     </label>
                   </div>
 
-                  {expandedItems.has(year) && Object.keys(dateTree[year]).sort((a, b) => {
+                  {year !== "(Blanks)" && expandedItems.has(year) && Object.keys(dateTree[year]).sort((a, b) => {
                     const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                     return months.indexOf(a) - months.indexOf(b);
                   }).map(month => (
