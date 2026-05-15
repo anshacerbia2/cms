@@ -640,7 +640,7 @@ export function ProfitLossTab() {
                     {totals && (
                       <tfoot className="sticky bottom-0 z-50">
                         <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
-                          <td colSpan={3} className="pl-8 py-4 text-left font-bold">
+                          <td colSpan={4} className="pl-8 py-4 text-left font-bold">
                             <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">{totals.label}</span>
                           </td>
                           <td className={cn("pr-8 py-4 text-right whitespace-nowrap font-bold", getAmountColor(totals.amount))}>
