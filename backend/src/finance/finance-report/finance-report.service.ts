@@ -303,7 +303,7 @@ export class FinanceReportService {
       { account: "Other Income", total: formatDecimal(otherIncomeTotal), isSubItem: true, level: 2 /*, ledgerFilter: { contains: 'other income', mode: 'insensitive' }*/ },
       { account: "Depreciation", total: formatDecimal(depreciation), hasInfo: true, isSubItem: true, level: 2 },
       { account: "PROFIT BEFORE TAX", total: formatDecimal(profitBeforeTax), isTotal: true, level: 1 },
-      { account: "Income Tax", total: formatDecimal(incomeTax), isSubItem: true, level: 2 },
+      { account: "Income Tax", total: formatDecimal(incomeTax), isSubItem: true, level: 1 },
       { account: "PROFIT AFTER TAX", total: formatDecimal(netProfit), isTotal: true, level: 1 },
     ];
 

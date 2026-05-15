@@ -212,7 +212,8 @@ export function ProfitLossTab() {
     "Marketing Expense", 
     "Financial Expense", 
     "Other Income", 
-    "Depreciation"
+    "Depreciation",
+    "Income Tax"
   ];
 
   const tableData = plData?.tableData || [];
@@ -806,6 +807,15 @@ export function ProfitLossTab() {
                       ${isExpense || row.level === 3 ? "cursor-pointer group/row" : ""}
                       transition-all duration-200 border-b
                     `}
+                    onClick={() => {
+                      if (isExpense) {
+                        setSelectedLedger(row.account);
+                        setSelectedSubItem(null);
+                      } else if (row.level === 3) {
+                        setSelectedLedger(row.parentLedger);
+                        setSelectedSubItem(row.account);
+                      }
+                    }}
                   >
                     <TableCell 
                       className="py-2 pr-4" 
@@ -837,32 +847,12 @@ export function ProfitLossTab() {
                             row.isSubItem ? "font-medium text-primary/60" : 
                             "font-bold text-primary/70"
                           }`}
-                          onClick={() => {
-                            if (isExpense) {
-                              setSelectedLedger(row.account);
-                              setSelectedSubItem(null);
-                            } else if (row.level === 3) {
-                              setSelectedLedger(row.parentLedger);
-                              setSelectedSubItem(row.account);
-                            }
-                          }}
                         >
                           {row.account === "Other Income" ? "Other Income (Expense)" : row.account}
                         </span>
                         
                         {(isExpense || row.level === 3) && (
-                          <div 
-                            className="flex items-center justify-center opacity-0 group-hover/row:opacity-100 group-hover/row:text-blue-500 transition-all text-primary"
-                            onClick={() => {
-                              if (isExpense) {
-                                setSelectedLedger(row.account);
-                                setSelectedSubItem(null);
-                              } else if (row.level === 3) {
-                                setSelectedLedger(row.parentLedger);
-                                setSelectedSubItem(row.account);
-                              }
-                            }}
-                          >
+                          <div className="flex items-center justify-center opacity-0 group-hover/row:opacity-100 group-hover/row:text-blue-500 transition-all text-primary">
                             <Info size={12} />
                           </div>
                         )}
