@@ -137,7 +137,7 @@ export function ProfitLossTab() {
     clearFilters: clearPlFilters
   } = useExcelFilter({
     data: displayPlDetails,
-    searchFields: ['description', 'ledger', 'bankBrand', 'holderName', 'displayAmount', 'displayDate']
+    searchFields: ['description', 'subItem', 'ledger', 'bankBrand', 'holderName', 'displayAmount', 'displayDate']
   });
 
   const { data: cogsDetails, isLoading: isLoadingCogsDetails } = getSalesCogsDetails(
@@ -556,6 +556,18 @@ export function ProfitLossTab() {
                             />
                           </div>
                         </th>
+                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                          <div className="flex items-center gap-1">
+                            Sub-ledger
+                            <ExcelColumnFilter 
+                              columnKey="subItem" label="Sub-ledger" data={getPlCascadingData("subItem")} 
+                              activeFilters={plFilters["subItem"]} 
+                              onFilterChange={(v) => setPlFilters(p => ({...p, subItem: v}))}
+                              onSort={(d) => setPlSort({key: "subItem", direction: d})}
+                              currentSort={plSort}
+                            />
+                          </div>
+                        </th>
                         <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[200px]">
                           <div className="flex items-center gap-1">
                             Description
@@ -602,6 +614,11 @@ export function ProfitLossTab() {
                             </div>
                           </td>
                           <td className="px-4 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">{item.displayDate}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                             <Badge variant="outline" className="bg-primary/5 text-primary/70 border-primary/10 font-bold uppercase text-[10px] py-0.5 px-2">
+                               {item.subItem || "-"}
+                             </Badge>
+                          </td>
                           <td className="px-4 py-3 whitespace-normal min-w-[200px]">
                             <div className="flex flex-col gap-0.5">
                               <p className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:text-primary transition-colors">{item.description}</p>

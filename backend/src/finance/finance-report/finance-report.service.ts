@@ -590,7 +590,8 @@ export class FinanceReportService {
         branch: trx.internalAccount?.branch || '',
         holderName: trx.internalAccount?.holderName || '',
         accountType: trx.internalAccount?.type,
-        ledger: trx.colF
+        ledger: trx.colF,
+        subItem: trx.colG
       };
     });
   }
