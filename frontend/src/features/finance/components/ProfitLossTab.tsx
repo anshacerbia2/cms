@@ -431,6 +431,8 @@ export function ProfitLossTab() {
                               onFilterChange={(v) => setDeprFilters(p => ({...p, displayPurchaseDate: v}))}
                               onSort={(d) => setDeprSort({key: "displayPurchaseDate", direction: d})}
                               currentSort={deprSort}
+                              type="date"
+                              dateKey="purchaseDate"
                             />
                           </div>
                         </th>
@@ -553,6 +555,8 @@ export function ProfitLossTab() {
                               onFilterChange={(v) => setPlFilters(p => ({...p, displayDate: v}))}
                               onSort={(d) => setPlSort({key: "displayDate", direction: d})}
                               currentSort={plSort}
+                              type="date"
+                              dateKey="date"
                             />
                           </div>
                         </th>

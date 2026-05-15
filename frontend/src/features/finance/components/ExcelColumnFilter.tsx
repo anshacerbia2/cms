@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Filter, Search, ArrowUpAZ, ArrowDownZA } from "lucide-react";
+import { Filter, Search, ArrowUpAZ, ArrowDownZA, ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ExcelColumnFilterProps {
@@ -19,6 +19,14 @@ interface ExcelColumnFilterProps {
   onSort: (direction: 'asc' | 'desc') => void;
   currentSort?: { key: string, direction: 'asc' | 'desc' | null } | null;
   valueFormatter?: (val: any) => string;
+  type?: 'text' | 'date';
+  dateKey?: string;
+}
+
+interface DateTree {
+  [year: string]: {
+    [month: string]: Set<string>;
+  };
 }
 
 export function ExcelColumnFilter({ 
@@ -29,13 +37,18 @@ export function ExcelColumnFilter({
   onFilterChange,
   onSort,
   currentSort,
-  valueFormatter
+  valueFormatter,
+  type = 'text',
+  dateKey
 }: ExcelColumnFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
-  const { uniqueValues, displayToRawMap } = useMemo(() => {
+  const { uniqueValues, displayToRawMap, dateTree } = useMemo(() => {
     const dToR = new Map<string, Set<string>>();
+    const tree: DateTree = {};
+
     data.forEach(item => {
       const rawVal = String(item[columnKey] || "");
       const displayedVal = valueFormatter ? valueFormatter(item[columnKey]) : (rawVal || "(Blanks)");
@@ -44,6 +57,19 @@ export function ExcelColumnFilter({
         dToR.set(displayedVal, new Set());
       }
       dToR.get(displayedVal)!.add(rawVal);
+
+      // Build Date Tree if type is date
+      if (type === 'date') {
+        const d = dateKey ? new Date(item[dateKey]) : new Date(item[columnKey]);
+        if (!isNaN(d.getTime())) {
+          const year = d.getFullYear().toString();
+          const month = d.toLocaleString('en-US', { month: 'long' });
+          
+          if (!tree[year]) tree[year] = {};
+          if (!tree[year][month]) tree[year][month] = new Set();
+          tree[year][month].add(displayedVal);
+        }
+      }
     });
 
     const sortedLabels = Array.from(dToR.keys()).sort((a, b) => {
@@ -53,8 +79,8 @@ export function ExcelColumnFilter({
       return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
     });
 
-    return { uniqueValues: sortedLabels, displayToRawMap: dToR };
-  }, [data, columnKey, valueFormatter]);
+    return { uniqueValues: sortedLabels, displayToRawMap: dToR, dateTree: tree };
+  }, [data, columnKey, valueFormatter, type, dateKey]);
 
   // Handle local checkbox state
   const [tempFilters, setTempFilters] = useState<Set<string>>(new Set());
@@ -115,6 +141,66 @@ export function ExcelColumnFilter({
       onFilterChange(rawToFilter);
     }
     setIsOpen(false);
+  };
+
+  const toggleExpand = (id: string) => {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedItems(newExpanded);
+  };
+
+  const isYearSelected = (year: string) => {
+    const months = dateTree[year];
+    return Object.values(months).every(labels => 
+      Array.from(labels).every(l => tempFilters.has(l))
+    );
+  };
+
+  const isYearIndeterminate = (year: string) => {
+    const months = dateTree[year];
+    const allLabels = Object.values(months).flatMap(s => Array.from(s));
+    const selectedCount = allLabels.filter(l => tempFilters.has(l)).length;
+    return selectedCount > 0 && selectedCount < allLabels.length;
+  };
+
+  const isMonthSelected = (year: string, month: string) => {
+    const labels = dateTree[year][month];
+    return Array.from(labels).every(l => tempFilters.has(l));
+  };
+
+  const isMonthIndeterminate = (year: string, month: string) => {
+    const labels = Array.from(dateTree[year][month]);
+    const selectedCount = labels.filter(l => tempFilters.has(l)).length;
+    return selectedCount > 0 && selectedCount < labels.length;
+  };
+
+  const toggleYear = (year: string) => {
+    const months = dateTree[year];
+    const allLabels = Object.values(months).flatMap(s => Array.from(s));
+    const isSelected = isYearSelected(year);
+    
+    const newFilters = new Set(tempFilters);
+    allLabels.forEach(l => {
+      if (isSelected) newFilters.delete(l);
+      else newFilters.add(l);
+    });
+    setTempFilters(newFilters);
+  };
+
+  const toggleMonth = (year: string, month: string) => {
+    const labels = Array.from(dateTree[year][month]);
+    const isSelected = isMonthSelected(year, month);
+    
+    const newFilters = new Set(tempFilters);
+    labels.forEach(l => {
+      if (isSelected) newFilters.delete(l);
+      else newFilters.add(l);
+    });
+    setTempFilters(newFilters);
   };
 
   return (
@@ -180,7 +266,7 @@ export function ExcelColumnFilter({
           </div>
 
           {/* List */}
-          <div className="max-h-48 overflow-y-auto space-y-0.5 pr-1 custom-scrollbar">
+          <div className="max-h-64 overflow-y-auto space-y-0.5 pr-1 custom-scrollbar">
             <label className="flex items-center space-x-2.5 p-1.5 rounded-lg hover:bg-primary/5 cursor-pointer transition-colors">
               <input 
                 type="checkbox" 
@@ -190,19 +276,91 @@ export function ExcelColumnFilter({
               />
               <span className="text-[12px] font-black uppercase text-primary tracking-tight">(Select All)</span>
             </label>
-            {filteredUniqueValues.map(val => (
-              <label key={val} className="flex items-center space-x-2.5 p-1.5 rounded-lg hover:bg-primary/5 cursor-pointer transition-colors">
-                <input 
-                  type="checkbox" 
-                  className="h-3.5 w-3.5 rounded border-primary/20 text-primary focus:ring-primary/20 accent-primary"
-                  checked={tempFilters.has(val)}
-                  onChange={() => toggleValue(val)}
-                />
-                <span className="text-[12px] font-bold text-primary truncate">
-                  {valueFormatter ? valueFormatter(val) : (val || "(Blanks)")}
-                </span>
-              </label>
-            ))}
+
+            {type === 'date' && !searchTerm ? (
+              // Hierarchical Date Tree
+              Object.keys(dateTree).sort((a, b) => b.localeCompare(a)).map(year => (
+                <div key={year} className="space-y-0.5">
+                  <div className="flex items-center p-1.5 rounded-lg hover:bg-primary/5 transition-colors group/year">
+                    <button 
+                      onClick={() => toggleExpand(year)}
+                      className="p-1 hover:bg-primary/10 rounded mr-1"
+                    >
+                      {expandedItems.has(year) ? <ChevronDown size={12} className="text-primary/40" /> : <ChevronRight size={12} className="text-primary/40" />}
+                    </button>
+                    <label className="flex items-center space-x-2.5 flex-grow cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="h-3.5 w-3.5 rounded border-primary/20 text-primary focus:ring-primary/20 accent-primary"
+                        checked={isYearSelected(year)}
+                        ref={el => el && (el.indeterminate = isYearIndeterminate(year))}
+                        onChange={() => toggleYear(year)}
+                      />
+                      <span className="text-[12px] font-bold text-primary">{year}</span>
+                    </label>
+                  </div>
+
+                  {expandedItems.has(year) && Object.keys(dateTree[year]).sort((a, b) => {
+                    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                    return months.indexOf(a) - months.indexOf(b);
+                  }).map(month => (
+                    <div key={month} className="ml-6 space-y-0.5">
+                      <div className="flex items-center p-1.5 rounded-lg hover:bg-primary/5 transition-colors group/month">
+                        <button 
+                          onClick={() => toggleExpand(`${year}-${month}`)}
+                          className="p-1 hover:bg-primary/10 rounded mr-1"
+                        >
+                          {expandedItems.has(`${year}-${month}`) ? <ChevronDown size={12} className="text-primary/40" /> : <ChevronRight size={12} className="text-primary/40" />}
+                        </button>
+                        <label className="flex items-center space-x-2.5 flex-grow cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            className="h-3.5 w-3.5 rounded border-primary/20 text-primary focus:ring-primary/20 accent-primary"
+                            checked={isMonthSelected(year, month)}
+                            ref={el => el && (el.indeterminate = isMonthIndeterminate(year, month))}
+                            onChange={() => toggleMonth(year, month)}
+                          />
+                          <span className="text-[11px] font-medium text-primary/70">{month}</span>
+                        </label>
+                      </div>
+
+                      {expandedItems.has(`${year}-${month}`) && Array.from(dateTree[year][month]).sort((a, b) => {
+                        const dayA = parseInt(a.split(' ')[0]) || 0;
+                        const dayB = parseInt(b.split(' ')[0]) || 0;
+                        return dayA - dayB;
+                      }).map(val => (
+                        <label key={val} className="flex items-center space-x-2.5 p-1.5 ml-10 rounded-lg hover:bg-primary/5 cursor-pointer transition-colors">
+                          <input 
+                            type="checkbox" 
+                            className="h-3.5 w-3.5 rounded border-primary/20 text-primary focus:ring-primary/20 accent-primary"
+                            checked={tempFilters.has(val)}
+                            onChange={() => toggleValue(val)}
+                          />
+                          <span className="text-[11px] font-medium text-primary/50 truncate">
+                            {val}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ))
+            ) : (
+              // Standard Flat List (Used for text or when searching)
+              filteredUniqueValues.map(val => (
+                <label key={val} className="flex items-center space-x-2.5 p-1.5 rounded-lg hover:bg-primary/5 cursor-pointer transition-colors">
+                  <input 
+                    type="checkbox" 
+                    className="h-3.5 w-3.5 rounded border-primary/20 text-primary focus:ring-primary/20 accent-primary"
+                    checked={tempFilters.has(val)}
+                    onChange={() => toggleValue(val)}
+                  />
+                  <span className="text-[12px] font-bold text-primary truncate">
+                    {valueFormatter ? valueFormatter(val) : (val || "(Blanks)")}
+                  </span>
+                </label>
+              ))
+            )}
           </div>
 
           <DropdownMenuSeparator className="bg-primary/5" />
