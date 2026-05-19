@@ -45,7 +45,7 @@ export function ProfitLossTab() {
   const [year, setYear] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [showPropertiesModal, setShowPropertiesModal] = useState(false);
-  const { getPLStatement, getPLDetails, getSalesCogsDetails, getDepreciationDetails } = useFinance();
+  const { getPLStatement, getPLDetails, getDepreciationDetails } = useFinance();
   
   const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
   const { data: plData, isLoading } = getPLStatement(
@@ -95,6 +95,7 @@ export function ProfitLossTab() {
 
   const [selectedLedger, setSelectedLedger] = useState<string | null>(null);
   const [selectedSubItem, setSelectedSubItem] = useState<string | null>(null);
+  const [selectedSalesCode, setSelectedSalesCode] = useState<string | null>(null);
   const [expandedLedgers, setExpandedLedgers] = useState<Set<string>>(new Set());
 
   const toggleExpand = (ledger: string) => {
@@ -107,15 +108,25 @@ export function ProfitLossTab() {
     setExpandedLedgers(newSet);
   };
 
-  const isCogs = selectedLedger === "Cost of Goods";
   const isDepr = selectedLedger === "Depreciation";
+  const isSales = selectedLedger === "Sales";
 
   const { data: plDetails, isLoading: isLoadingPlDetails } = getPLDetails(
     year === "all" ? undefined : year, 
     selectedLedger || undefined, 
     selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
     selectedSubItem || undefined,
-    { enabled: !!selectedLedger && !isCogs && !isDepr }
+    undefined,
+    { enabled: !!selectedLedger && !isDepr }
+  );
+
+  const { data: salesCodeDetails, isLoading: isLoadingSalesCodeDetails } = getPLDetails(
+    year === "all" ? undefined : year,
+    "Sales",
+    selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
+    undefined,
+    selectedSalesCode || undefined,
+    { enabled: !!selectedSalesCode }
   );
 
   const displayPlDetails = useMemo(() => {
@@ -123,8 +134,22 @@ export function ProfitLossTab() {
       ...row,
       displayDate: formatDate(row.date),
       displayAmount: formatCurrency(row.amount),
+      displayGross: row.gross !== undefined ? formatCurrency(row.gross) : undefined,
+      displayVat: row.vat !== undefined ? formatCurrency(row.vat) : undefined,
+      displayVatWapu: row.vatWapu !== undefined ? formatCurrency(row.vatWapu) : undefined,
+      displayVatNonWapu: row.vatNonWapu !== undefined ? formatCurrency(row.vatNonWapu) : undefined,
     }));
   }, [plDetails]);
+
+  const displaySalesCodeDetails = useMemo(() => {
+    return (salesCodeDetails || []).map((row: any) => ({
+      ...row,
+      displayDate: formatDate(row.date),
+      displayAmount: formatCurrency(row.amount),
+      displayGross: row.gross !== undefined ? formatCurrency(row.gross) : undefined,
+      displayVat: row.vat !== undefined ? formatCurrency(row.vat) : undefined,
+    }));
+  }, [salesCodeDetails]);
 
   const { 
     search: plSearch, 
@@ -137,45 +162,53 @@ export function ProfitLossTab() {
     clearFilters: clearPlFilters
   } = useExcelFilter({
     data: displayPlDetails,
-    searchFields: ['description', 'subItem', 'ledger', 'bankBrand', 'holderName', 'displayAmount', 'displayDate']
+    searchFields: [
+      'description', 
+      'subItem', 
+      'ledger', 
+      'bankBrand', 
+      'holderName', 
+      'displayAmount', 
+      'displayDate',
+      'invoiceNo',
+      'invoiceType',
+      'clientName',
+      'salesCode',
+      'displayGross',
+      'displayVat',
+      'displayVatWapu',
+      'displayVatNonWapu'
+    ]
   });
 
-  const { data: cogsDetails, isLoading: isLoadingCogsDetails } = getSalesCogsDetails(
-    year === "all" ? undefined : year, 
-    selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
-    { enabled: !!selectedLedger && isCogs }
-  );
+  const { 
+    search: salesCodeSearch, 
+    filters: salesCodeFilters, 
+    setFilters: setSalesCodeFilters, 
+    sort: salesCodeSort, 
+    setSort: setSalesCodeSort, 
+    getCascadingData: getSalesCodeCascadingData, 
+    filteredAndSortedData: filteredSalesCodeDetails,
+    clearFilters: clearSalesCodeFilters
+  } = useExcelFilter({
+    data: displaySalesCodeDetails,
+    searchFields: [
+      'description', 
+      'subItem', 
+      'displayAmount', 
+      'displayDate',
+      'invoiceNo',
+      'invoiceType',
+      'clientName',
+      'salesCode',
+      'displayGross',
+      'displayVat'
+    ]
+  });
 
   const { data: deprDetails, isLoading: isLoadingDeprDetails } = getDepreciationDetails(
     { enabled: !!selectedLedger && isDepr }
   );
-
-  // --- COGS Filter Hook ---
-  const normalizedCogs = useMemo(() => {
-    if (!cogsDetails?.rows) return [];
-    return cogsDetails.rows.map((row: any) => {
-      const formatted: any = { ...row };
-      cogsDetails.headers?.forEach((h: any) => {
-        if (row[h.key] !== undefined) {
-          formatted[`display_${h.key}`] = formatCurrency(parseFloat(row[h.key] || "0"));
-        }
-      });
-      return formatted;
-    });
-  }, [cogsDetails]);
-
-
-  const { 
-    search: cogsSearch, 
-    filters: cogsFilters, setFilters: setCogsFilters, 
-    sort: cogsSort, setSort: setCogsSort, 
-    getCascadingData: getCogsCascadingData, 
-    filteredAndSortedData: filteredCogs,
-    clearFilters: clearCogsFilters
-  } = useExcelFilter({
-    data: normalizedCogs,
-    searchFields: ['cogs', ...(cogsDetails?.headers?.map((h: any) => `display_${h.key}`) || [])]
-  });
 
   // --- Depreciation Filter Hook ---
   const normalizedDepr = useMemo(() => {
@@ -204,10 +237,9 @@ export function ProfitLossTab() {
     searchFields: ['assetName', 'displayPurchasePrice', 'displayBookValue']
   });
 
-  const isLoadingDetails = isCogs ? isLoadingCogsDetails : isDepr ? isLoadingDeprDetails : isLoadingPlDetails;
+  const isLoadingDetails = isDepr ? isLoadingDeprDetails : isLoadingPlDetails;
 
   const expenseLedgers = [
-    "Cost of Goods", 
     "Personnel Expense", 
     "Office Expense", 
     "Marketing Expense", 
@@ -219,17 +251,7 @@ export function ProfitLossTab() {
   const tableData = plData?.tableData || [];
   
   const totals = useMemo(() => {
-    if (isCogs) {
-      if (!cogsDetails?.rows || !cogsDetails?.headers) return null;
-      const res: any = { cogs: "TOTAL" };
-      cogsDetails.headers.forEach((h: any) => {
-        const sum = cogsDetails.rows.reduce((acc: number, row: any) => {
-          return acc + parseFloat(row[h.key] || "0");
-        }, 0);
-        res[h.key] = sum.toString();
-      });
-      return res;
-    } else if (isDepr) {
+    if (isDepr) {
       if (!deprDetails || deprDetails.length === 0) return null;
       
       const res: any = { label: "TOTAL" };
@@ -241,6 +263,21 @@ export function ProfitLossTab() {
       });
       
       return res;
+    } else if (isSales) {
+      if (!plDetails || plDetails.length === 0) return null;
+      const sumGross = plDetails.reduce((acc: number, row: any) => acc + parseFloat(row.gross || "0"), 0);
+      const sumVat = plDetails.reduce((acc: number, row: any) => acc + parseFloat(row.vat || "0"), 0);
+      const sumVatWapu = plDetails.reduce((acc: number, row: any) => acc + parseFloat(row.vatWapu || "0"), 0);
+      const sumVatNonWapu = plDetails.reduce((acc: number, row: any) => acc + parseFloat(row.vatNonWapu || "0"), 0);
+      const sumAmount = plDetails.reduce((acc: number, row: any) => acc + parseFloat(row.amount || "0"), 0);
+      return { 
+        gross: sumGross.toString(), 
+        vat: sumVat.toString(), 
+        vatWapu: sumVatWapu.toString(),
+        vatNonWapu: sumVatNonWapu.toString(),
+        amount: sumAmount.toString(), 
+        label: "TOTAL" 
+      };
     } else {
       if (!plDetails || plDetails.length === 0) return null;
       const sum = plDetails.reduce((acc: number, row: any) => {
@@ -248,7 +285,20 @@ export function ProfitLossTab() {
       }, 0);
       return { amount: sum.toString(), label: "TOTAL" };
     }
-  }, [isCogs, isDepr, cogsDetails, plDetails, deprDetails]);
+  }, [isDepr, isSales, plDetails, deprDetails]);
+
+  const salesCodeTotals = useMemo(() => {
+    if (!salesCodeDetails || salesCodeDetails.length === 0) return null;
+    const sumGross = salesCodeDetails.reduce((acc: number, row: any) => acc + parseFloat(row.gross || "0"), 0);
+    const sumVat = salesCodeDetails.reduce((acc: number, row: any) => acc + parseFloat(row.vat || "0"), 0);
+    const sumAmount = salesCodeDetails.reduce((acc: number, row: any) => acc + parseFloat(row.amount || "0"), 0);
+    return {
+      gross: sumGross.toString(),
+      vat: sumVat.toString(),
+      amount: sumAmount.toString(),
+      label: "TOTAL"
+    };
+  }, [salesCodeDetails]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
@@ -285,13 +335,11 @@ export function ProfitLossTab() {
               <div className="flex items-center gap-4">
                 {(
                   (plSearch !== "" || Object.values(plFilters).some(s => s && s.size > 0)) ||
-                  (cogsSearch !== "" || Object.values(cogsFilters).some(s => s && s.size > 0)) ||
                   (deprSearch !== "" || Object.values(deprFilters).some(s => s && s.size > 0))
                 ) && (
                    <button 
                      onClick={() => {
                        clearPlFilters();
-                       clearCogsFilters();
                        clearDeprFilters();
                      }}
                      className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 transition-colors"
@@ -315,98 +363,14 @@ export function ProfitLossTab() {
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 <p className="text-[10px] font-bold uppercase tracking-[0.3em]">Retrieving Records...</p>
               </div>
-            ) : (isCogs && (!cogsDetails?.rows || cogsDetails.rows.length === 0)) || 
-                (isDepr && (!deprDetails || deprDetails.length === 0)) ||
-                (!isCogs && !isDepr && (filteredPlDetails.length === 0)) ? (
+            ) : (isDepr && (!deprDetails || deprDetails.length === 0)) ||
+                (filteredPlDetails.length === 0) ? (
               <div className="h-64 flex items-center justify-center opacity-20 font-bold uppercase tracking-[0.2em]">
                 No Records Found
               </div>
             ) : (
               <table className="w-full border-separate border-spacing-0">
-                {isCogs ? (
-                  <>
-                        <thead>
-                          <tr className="bg-white">
-                            <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 sticky top-0 left-0 z-[60] bg-white border-b border-r border-primary/5 min-w-[350px] max-w-[350px] align-baseline">
-                              <div className="flex items-center gap-1">
-                                COGS
-                                <ExcelColumnFilter 
-                                  columnKey="cogs" label="COGS" data={getCogsCascadingData("cogs")} 
-                                  activeFilters={cogsFilters["cogs"]} 
-                                  onFilterChange={(v) => setCogsFilters(p => ({...p, cogs: v}))}
-                                  onSort={(d) => setCogsSort({key: "cogs", direction: d})}
-                                  currentSort={cogsSort}
-                                />
-                              </div>
-                            </th>
-                            {cogsDetails?.headers?.map((header: any) => (
-                              <th 
-                                key={header.key} 
-                                className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 whitespace-nowrap sticky top-0 z-50 bg-white border-b border-primary/5 align-baseline"
-                              >
-                                {header.label}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-primary/5">
-                          {filteredCogs?.map((item: any) => (
-                            <tr key={item.id} className="bg-white hover:bg-primary/[0.01] transition-colors group">
-                              <td className="pl-8 pr-6 py-2 sticky left-0 z-20 bg-white group-hover:bg-slate-50 transition-colors border-r border-primary/5 min-w-[350px] max-w-[350px] align-baseline">
-                                <span className="text-[12px] font-bold text-primary uppercase tracking-wide whitespace-normal break-words block">
-                                  {item.cogs || "-"}
-                                </span>
-                              </td>
-                              {cogsDetails?.headers?.map((header: any) => {
-                                const isTotal = header.key === 'rowTotal';
-                                return (
-                                  <td 
-                                    key={header.key} 
-                                    className={cn(
-                                      "px-4 py-2 text-right whitespace-nowrap align-baseline",
-                                      isTotal && "bg-slate-50/50 font-bold border-l border-primary/5"
-                                    )}
-                                  >
-                                    <span className={cn(
-                                      "text-[12px] font-bold tabular-nums",
-                                      isTotal ? "text-primary" : "text-primary/70"
-                                    )}>
-                                      {item[`display_${header.key}`]}
-                                    </span>
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                        {totals && (
-                          <tfoot className="sticky bottom-0 z-50">
-                            <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
-                              <td className="pl-8 py-4 sticky left-0 z-[60] bg-[#fdf8ec] border-r border-[#cc9929]/10 min-w-[350px] max-w-[350px] font-bold">
-                                <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">{totals.cogs}</span>
-                              </td>
-                              {cogsDetails?.headers?.map((header: any) => {
-                                const isTotal = header.key === 'rowTotal';
-                                return (
-                                  <td 
-                                    key={header.key} 
-                                    className={cn(
-                                      "px-4 py-4 text-right whitespace-nowrap font-bold",
-                                      isTotal && "bg-[#fdf8ec] border-l border-[#cc9929]/20",
-                                      getAmountColor(totals[header.key])
-                                    )}
-                                  >
-                                    <span className={cn("text-[12px] tabular-nums font-bold", isTotal && "text-[14px]")}>
-                                      {formatCurrency(totals[header.key])}
-                                    </span>
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          </tfoot>
-                        )}
-                      </>
-                ) : isDepr ? (
+                {isDepr ? (
                   <>
                     <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
                       <tr className="border-b border-primary/5 whitespace-nowrap h-12">
@@ -525,6 +489,76 @@ export function ProfitLossTab() {
                           </td>
                           <td className={`pr-8 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[14px] ${getAmountColor(totals.bookValue)}`}>
                             {formatCurrency(totals.bookValue)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </>
+                ) : isSales ? (
+                  <>
+                    <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                      <tr className="border-b border-primary/5 whitespace-nowrap h-12">
+                        <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">
+                          <div className="flex items-center gap-1">
+                            Sales Code
+                            <ExcelColumnFilter 
+                              columnKey="salesCode" label="Sales Code" data={getPlCascadingData("salesCode")} 
+                              activeFilters={plFilters["salesCode"]} 
+                              onFilterChange={(v) => setPlFilters(p => ({...p, salesCode: v}))}
+                              onSort={(d) => setPlSort({key: "salesCode", direction: d})}
+                              currentSort={plSort}
+                            />
+                          </div>
+                        </th>
+                        <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-48">Gross</th>
+                        <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-48">VAT</th>
+                        <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-56">
+                          Net
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-primary/5">
+                      {filteredPlDetails?.map((item: any) => (
+                        <tr 
+                          key={item.id} 
+                          className="bg-white hover:bg-primary/[0.03] active:bg-primary/[0.05] transition-colors group cursor-pointer"
+                          onClick={() => setSelectedSalesCode(item.salesCode)}
+                        >
+                          <td className="pl-8 py-3 whitespace-nowrap">
+                            <span className="text-[12px] font-bold text-primary uppercase hover:underline">
+                              {item.salesCode || "-"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums text-primary/70">
+                            {item.displayGross}
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums text-red-500/70">
+                            {item.displayVat}
+                          </td>
+                          <td className="pr-8 py-3 text-right whitespace-nowrap">
+                            <span className={cn("text-[12px] font-bold tabular-nums", getAmountColor(item.amount))}>
+                              {item.displayAmount}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    {totals && (
+                      <tfoot className="sticky bottom-0 z-50">
+                        <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
+                          <td colSpan={1} className="pl-8 py-4 text-left font-bold">
+                            <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">{totals.label}</span>
+                          </td>
+                          <td className="px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] text-primary/70">
+                            {formatCurrency(totals.gross)}
+                          </td>
+                          <td className="px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] text-red-500/70">
+                            {formatCurrency(totals.vat)}
+                          </td>
+                          <td className={cn("pr-8 py-4 text-right whitespace-nowrap font-bold", getAmountColor(totals.amount))}>
+                            <span className="text-[14px] tabular-nums font-bold">
+                              {formatCurrency(totals.amount)}
+                            </span>
                           </td>
                         </tr>
                       </tfoot>
@@ -655,6 +689,151 @@ export function ProfitLossTab() {
                 )}
                 </table>
               )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sales Code Details Modal (2nd Layer) */}
+      <Dialog open={!!selectedSalesCode} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedSalesCode(null);
+        }
+      }}>
+        <DialogContent className="max-w-6xl w-[90vw] max-h-[85vh] bg-slate-50 border border-slate-200 shadow-2xl rounded-3xl overflow-hidden p-0 gap-0 flex flex-col z-[100]">
+          <div className="py-5 px-8 border-b border-primary/5 bg-white sticky top-0 z-20 shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#fdf8ec] flex items-center justify-center text-[#cc9929] border border-[#cc9929]/20 shadow-premium shrink-0">
+                  <History size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <DialogTitle className="text-xl font-bold text-primary uppercase tracking-tight leading-none">
+                      Sales Code: {selectedSalesCode} Breakdown
+                    </DialogTitle>
+                  </div>
+                  <DialogDescription className="text-[10px] font-bold text-primary/30 uppercase tracking-[0.2em]">
+                    Transaction List for {selectedSalesCode}
+                  </DialogDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                {(salesCodeSearch !== "" || Object.values(salesCodeFilters).some(s => s && s.size > 0)) && (
+                   <button 
+                     onClick={clearSalesCodeFilters}
+                     className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 transition-colors"
+                   >
+                     Clear Filters
+                   </button>
+                )}
+                <button 
+                  onClick={() => setSelectedSalesCode(null)}
+                  className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-50 flex items-center justify-center text-primary/40 hover:text-red-600 transition-all cursor-pointer group"
+                >
+                  <Plus className="w-5 h-5 rotate-45 group-hover:scale-110 transition-transform" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-0 flex-1 overflow-auto custom-scrollbar relative">
+            {isLoadingSalesCodeDetails ? (
+              <div className="h-64 flex flex-col items-center justify-center gap-4 opacity-40">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em]">Retrieving Records...</p>
+              </div>
+            ) : filteredSalesCodeDetails.length === 0 ? (
+              <div className="h-64 flex items-center justify-center opacity-20 font-bold uppercase tracking-[0.2em]">
+                No Records Found
+              </div>
+            ) : (
+              <table className="w-full border-separate border-spacing-0">
+                <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                  <tr className="border-b border-primary/5 whitespace-nowrap h-12">
+                    <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-64">
+                      <div className="flex items-center gap-1">
+                        Invoice
+                        <ExcelColumnFilter 
+                          columnKey="invoiceNo" label="Invoice" data={getSalesCodeCascadingData("invoiceNo")} 
+                          activeFilters={salesCodeFilters["invoiceNo"]} 
+                          onFilterChange={(v) => setSalesCodeFilters(p => ({...p, invoiceNo: v}))}
+                          onSort={(d) => setSalesCodeSort({key: "invoiceNo", direction: d})}
+                          currentSort={salesCodeSort}
+                        />
+                      </div>
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-full">
+                      <div className="flex items-center gap-1">
+                        Customer
+                        <ExcelColumnFilter 
+                          columnKey="clientName" label="Customer" data={getSalesCodeCascadingData("clientName")} 
+                          activeFilters={salesCodeFilters["clientName"]} 
+                          onFilterChange={(v) => setSalesCodeFilters(p => ({...p, clientName: v}))}
+                          onSort={(d) => setSalesCodeSort({key: "clientName", direction: d})}
+                          currentSort={salesCodeSort}
+                        />
+                      </div>
+                    </th>
+                    <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-48">Gross</th>
+                    <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-48">VAT</th>
+                    <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-56">
+                      Net
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-primary/5">
+                  {filteredSalesCodeDetails?.map((item: any) => (
+                    <tr key={item.id} className="bg-white hover:bg-primary/[0.01] transition-colors group">
+                      <td className="pl-8 py-3 whitespace-nowrap align-top">
+                        <span className="text-[12px] font-bold text-primary uppercase">
+                          {item.invoiceNo || "-"}
+                        </span>
+                      </td>
+                       <td className="px-4 py-3 whitespace-normal w-full align-top">
+                        <span className="text-[12px] font-bold text-primary uppercase">
+                          {item.clientName || "-"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap align-top">
+                        <span className="text-[12px] font-bold tabular-nums text-primary/70">
+                          {item.displayGross}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap align-top">
+                        <span className="text-[12px] font-bold tabular-nums text-red-500/70">
+                          {item.displayVat}
+                        </span>
+                      </td>
+                      <td className="pr-8 py-3 text-right whitespace-nowrap align-top">
+                        <span className={cn("text-[12px] font-bold tabular-nums", getAmountColor(item.amount))}>
+                          {item.displayAmount}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                {salesCodeTotals && (
+                  <tfoot className="sticky bottom-0 z-50">
+                    <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
+                      <td colSpan={2} className="pl-8 py-4 text-left font-bold">
+                        <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">{salesCodeTotals.label}</span>
+                      </td>
+                      <td className="px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] text-primary/70">
+                        {formatCurrency(salesCodeTotals.gross)}
+                      </td>
+                      <td className="px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] text-red-500/70">
+                        {formatCurrency(salesCodeTotals.vat)}
+                      </td>
+                      <td className={cn("pr-8 py-4 text-right whitespace-nowrap font-bold", getAmountColor(salesCodeTotals.amount))}>
+                        <span className="text-[14px] tabular-nums font-bold">
+                          {formatCurrency(salesCodeTotals.amount)}
+                        </span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -803,6 +982,8 @@ export function ProfitLossTab() {
                 const isProfitLine = row.isTotal && row.account !== "PROFIT BEFORE TAX";
                 const isGrandTotal = row.account === "PROFIT AFTER TAX";
                 const isExpense = expenseLedgers.includes(row.account);
+                const isSales = row.account === "Sales";
+                const isClickable = isExpense || isSales || row.level === 3;
                 const isSpecialBold = ["Operating Profit", "PROFIT BEFORE TAX"].includes(row.account);
                 const isOtherProfitItem = ["Other Income", "Depreciation", "Income Tax"].includes(row.account);
                 const hasSubItems = tableData.some((r: any) => r.level === 3 && r.parentLedger === row.account);
@@ -823,11 +1004,11 @@ export function ProfitLossTab() {
                             : row.level === 3
                               ? "bg-slate-50/30 hover:bg-slate-50/50 cursor-pointer animate-in fade-in slide-in-from-top-1 duration-200"
                               : "hover:bg-primary/[0.01] border-primary/5"}
-                      ${isExpense || row.level === 3 ? "cursor-pointer group/row" : ""}
+                      ${isClickable ? "cursor-pointer group/row" : ""}
                       transition-all duration-200 border-b
                     `}
                     onClick={() => {
-                      if (isExpense) {
+                      if (isExpense || isSales) {
                         setSelectedLedger(row.account);
                         setSelectedSubItem(null);
                       } else if (row.level === 3) {
@@ -870,7 +1051,7 @@ export function ProfitLossTab() {
                           {row.account === "Other Income" ? "Other Income (Expense)" : row.account}
                         </span>
                         
-                        {(isExpense || row.level === 3) && (
+                        {isClickable && (
                           <div className="flex items-center justify-center opacity-0 group-hover/row:opacity-100 group-hover/row:text-blue-500 transition-all text-primary">
                             <Info size={12} />
                           </div>

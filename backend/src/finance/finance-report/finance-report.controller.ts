@@ -74,13 +74,15 @@ export class FinanceReportController {
     @Query('year') year?: string,
     @Query('ledger') ledger?: string,
     @Query('date') date?: string,
-    @Query('subItem') subItem?: string
+    @Query('subItem') subItem?: string,
+    @Query('salesCode') salesCode?: string
   ) {
     return this.financeService.getPLDetails(
       year ? Number(year) : undefined, 
       ledger,
       date,
-      subItem
+      subItem,
+      salesCode
     );
   }
 

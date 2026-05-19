@@ -222,7 +222,7 @@ export function ExcelColumnFilter({
           />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64 p-3 bg-white/95 backdrop-blur-xl border-primary/10 shadow-2xl rounded-2xl" align="start">
+      <DropdownMenuContent className="w-64 p-3 bg-white/95 backdrop-blur-xl border-primary/10 shadow-2xl rounded-2xl z-[150]" align="start">
         <div className="space-y-3">
           <div className="text-[11px] font-black uppercase text-primary tracking-widest pl-1">Filter: {label}</div>
           

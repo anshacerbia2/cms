@@ -541,7 +541,113 @@ export class FinanceReportService {
    * @param date Optional end date filter for the audit period.
    * @returns Array of transactions with associated bank account metadata.
    */
-  async getPLDetails(year?: number, ledger?: string, date?: string, subItem?: string) {
+  async getPLDetails(year?: number, ledger?: string, date?: string, subItem?: string, salesCode?: string) {
+    if (ledger && ledger.toLowerCase() === 'sales') {
+      const salesWhere: any = {};
+      if (year && year > 0) {
+        const start = `${year}-01-01T00:00:00.000Z`;
+        const end = date ? `${date}T23:59:59.999Z` : `${year}-12-31T23:59:59.999Z`;
+        salesWhere.colC = { gte: new Date(start), lte: new Date(end) };
+      } else if (date) {
+        salesWhere.colC = { lte: new Date(`${date}T23:59:59.999Z`) };
+      }
+
+      if (salesCode) {
+        const trimmedCode = salesCode.trim();
+        if (trimmedCode === '-' || trimmedCode === '') {
+          salesWhere.OR = [
+            { colF: null },
+            { colF: '' },
+            { colF: '-' }
+          ];
+        } else {
+          salesWhere.colF = {
+            equals: trimmedCode,
+            mode: 'insensitive'
+          };
+        }
+
+        const salesData = await this.prisma.salesRecord.findMany({
+          where: salesWhere,
+          orderBy: { colC: 'asc' }
+        });
+
+        return salesData.map(row => {
+          const gross = new Prisma.Decimal(row.colK || 0);
+          const vat = new Prisma.Decimal(row.colJ || 0);
+          const net = gross.minus(vat);
+
+          return {
+            id: row.id.toString(),
+            date: row.colC,
+            invoiceNo: row.colB || '-',
+            invoiceType: row.colA || '-',
+            clientName: row.colE || '-',
+            description: row.colG || '-',
+            salesCode: row.colF || '-',
+            gross: formatDecimal(gross),
+            vat: formatDecimal(vat),
+            amount: formatDecimal(net),
+            ledger: 'Sales',
+            subItem: row.colA || ''
+          };
+        });
+      }
+
+      const salesData = await this.prisma.salesRecord.findMany({
+        where: salesWhere,
+        orderBy: { colC: 'asc' }
+      });
+
+      const groupedMap = new Map<string, {
+        salesCode: string;
+        gross: Prisma.Decimal;
+        vat: Prisma.Decimal;
+        net: Prisma.Decimal;
+      }>();
+
+      for (const row of salesData) {
+        const rawSalesCode = (row.colF || '-').trim();
+        const salesCodeKey = rawSalesCode === '' ? '-' : rawSalesCode.toLowerCase();
+        const salesCodeDisplay = rawSalesCode === '' ? '-' : rawSalesCode;
+
+        const gross = new Prisma.Decimal(row.colK || 0);
+        const vat = new Prisma.Decimal(row.colJ || 0);
+        const net = gross.minus(vat);
+
+        const existing = groupedMap.get(salesCodeKey);
+        if (existing) {
+          existing.gross = existing.gross.plus(gross);
+          existing.vat = existing.vat.plus(vat);
+          existing.net = existing.net.plus(net);
+        } else {
+          groupedMap.set(salesCodeKey, {
+            salesCode: salesCodeDisplay,
+            gross,
+            vat,
+            net
+          });
+        }
+      }
+
+      return Array.from(groupedMap.values()).map((group, idx) => {
+        return {
+          id: `grouped-sales-${idx}`,
+          date: null,
+          invoiceNo: '-',
+          invoiceType: '-',
+          clientName: '-',
+          description: '-',
+          salesCode: group.salesCode,
+          gross: formatDecimal(group.gross),
+          vat: formatDecimal(group.vat),
+          amount: formatDecimal(group.net),
+          ledger: 'Sales',
+          subItem: ''
+        };
+      });
+    }
+
     const where: any = {};
     if (year && year > 0) {
       const start = `${year}-01-01T00:00:00.000Z`;
