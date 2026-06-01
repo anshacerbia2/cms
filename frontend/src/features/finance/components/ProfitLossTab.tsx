@@ -45,7 +45,7 @@ export function ProfitLossTab() {
   const [year, setYear] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [showPropertiesModal, setShowPropertiesModal] = useState(false);
-  const { getPLStatement, getPLDetails, getDepreciationDetails } = useFinance();
+  const { getPLStatement, getPLDetails, getDepreciationDetails, getSalesCogsDetails } = useFinance();
   
   const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
   const { data: plData, isLoading } = getPLStatement(
@@ -96,6 +96,7 @@ export function ProfitLossTab() {
   const [selectedLedger, setSelectedLedger] = useState<string | null>(null);
   const [selectedSubItem, setSelectedSubItem] = useState<string | null>(null);
   const [selectedSalesCode, setSelectedSalesCode] = useState<string | null>(null);
+  const [selectedCogsGroup, setSelectedCogsGroup] = useState<string | null>(null);
   const [expandedLedgers, setExpandedLedgers] = useState<Set<string>>(new Set());
 
   const toggleExpand = (ledger: string) => {
@@ -110,6 +111,7 @@ export function ProfitLossTab() {
 
   const isDepr = selectedLedger === "Depreciation";
   const isSales = selectedLedger === "Sales";
+  const isCogs = selectedLedger === "Cost of Goods";
 
   const { data: plDetails, isLoading: isLoadingPlDetails } = getPLDetails(
     year === "all" ? undefined : year, 
@@ -117,7 +119,7 @@ export function ProfitLossTab() {
     selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
     selectedSubItem || undefined,
     undefined,
-    { enabled: !!selectedLedger && !isDepr }
+    { enabled: !!selectedLedger && !isDepr && !isCogs }
   );
 
   const { data: salesCodeDetails, isLoading: isLoadingSalesCodeDetails } = getPLDetails(
@@ -127,6 +129,15 @@ export function ProfitLossTab() {
     undefined,
     selectedSalesCode || undefined,
     { enabled: !!selectedSalesCode }
+  );
+
+  const { data: cogsGroupDetails, isLoading: isLoadingCogsGroupDetails } = getPLDetails(
+    year === "all" ? undefined : year,
+    "Cost of Goods",
+    selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
+    selectedCogsGroup || undefined,
+    undefined,
+    { enabled: !!selectedCogsGroup }
   );
 
   const displayPlDetails = useMemo(() => {
@@ -150,6 +161,16 @@ export function ProfitLossTab() {
       displayVat: row.vat !== undefined ? formatCurrency(row.vat) : undefined,
     }));
   }, [salesCodeDetails]);
+
+  const displayCogsGroupDetails = useMemo(() => {
+    return (cogsGroupDetails || []).map((row: any) => ({
+      ...row,
+      displayDate: formatDate(row.date),
+      displayDebit: formatCurrency(row.debit),
+      displayCredit: formatCurrency(row.credit),
+      displayAmount: formatCurrency(row.amount),
+    }));
+  }, [cogsGroupDetails]);
 
   const { 
     search: plSearch, 
@@ -206,9 +227,84 @@ export function ProfitLossTab() {
     ]
   });
 
+  const { 
+    search: cogsGroupSearch, 
+    filters: cogsGroupFilters, 
+    setFilters: setCogsGroupFilters, 
+    sort: cogsGroupSort, 
+    setSort: setCogsGroupSort, 
+    getCascadingData: getCogsGroupCascadingData, 
+    filteredAndSortedData: filteredCogsGroupDetails,
+    clearFilters: clearCogsGroupFilters
+  } = useExcelFilter({
+    data: displayCogsGroupDetails,
+    searchFields: [
+      'description', 
+      'displayDebit',
+      'displayCredit',
+      'displayAmount', 
+      'displayDate',
+      'bankBrand',
+      'holderName'
+    ]
+  });
+
   const { data: deprDetails, isLoading: isLoadingDeprDetails } = getDepreciationDetails(
     { enabled: !!selectedLedger && isDepr }
   );
+
+  // --- COGS Details ---
+  const { data: cogsData, isLoading: isLoadingCogs } = getSalesCogsDetails(
+    year === "all" ? undefined : year,
+    selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
+    { enabled: isCogs }
+  );
+
+  const cogsHeaders: { key: string; label: string }[] = useMemo(
+    () => cogsData?.headers ?? [],
+    [cogsData]
+  );
+
+  const normalizedCogs = useMemo(() => {
+    if (!cogsData?.rows) return [];
+    return cogsData.rows.map((row: any) => {
+      const normalized: any = {
+        ...row,
+        id: row.id?.toString(),
+        displayDate: formatDate(row.date),
+      };
+      cogsHeaders.forEach((h) => {
+        normalized[`display_${h.key}`] = formatCurrency(row[h.key] ?? '0');
+      });
+      return normalized;
+    });
+  }, [cogsData, cogsHeaders]);
+
+  const {
+    filters: cogsFilters,
+    setFilters: setCogsFilters,
+    sort: cogsSort,
+    setSort: setCogsSort,
+    getCascadingData: getCogsCascadingData,
+    filteredAndSortedData: filteredCogs,
+    clearFilters: clearCogsFilters,
+  } = useExcelFilter({
+    data: normalizedCogs,
+    searchFields: ['cogs', 'displayDate'],
+  });
+
+  const cogsTotals = useMemo(() => {
+    if (!cogsData?.rows || cogsData.rows.length === 0) return null;
+    const totalsRow: any = { label: 'TOTAL' };
+    cogsHeaders.forEach((h) => {
+      const sum = cogsData.rows.reduce(
+        (acc: number, r: any) => acc + parseFloat(r[h.key] ?? '0'),
+        0
+      );
+      totalsRow[h.key] = sum.toString();
+    });
+    return totalsRow;
+  }, [cogsData, cogsHeaders]);
 
   // --- Depreciation Filter Hook ---
   const normalizedDepr = useMemo(() => {
@@ -300,6 +396,19 @@ export function ProfitLossTab() {
     };
   }, [salesCodeDetails]);
 
+  const cogsGroupTotals = useMemo(() => {
+    if (!cogsGroupDetails || cogsGroupDetails.length === 0) return null;
+    const sumDebit = cogsGroupDetails.reduce((acc: number, row: any) => acc + parseFloat(row.debit || "0"), 0);
+    const sumCredit = cogsGroupDetails.reduce((acc: number, row: any) => acc + parseFloat(row.credit || "0"), 0);
+    const sumAmount = cogsGroupDetails.reduce((acc: number, row: any) => acc + parseFloat(row.amount || "0"), 0);
+    return {
+      debit: sumDebit.toString(),
+      credit: sumCredit.toString(),
+      amount: sumAmount.toString(),
+      label: "TOTAL"
+    };
+  }, [cogsGroupDetails]);
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
       {/* Details Modal */}
@@ -335,12 +444,14 @@ export function ProfitLossTab() {
               <div className="flex items-center gap-4">
                 {(
                   (plSearch !== "" || Object.values(plFilters).some(s => s && s.size > 0)) ||
-                  (deprSearch !== "" || Object.values(deprFilters).some(s => s && s.size > 0))
+                  (deprSearch !== "" || Object.values(deprFilters).some(s => s && s.size > 0)) ||
+                  (Object.values(cogsFilters).some(s => s && s.size > 0))
                 ) && (
                    <button 
                      onClick={() => {
                        clearPlFilters();
                        clearDeprFilters();
+                       clearCogsFilters();
                      }}
                      className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 transition-colors"
                    >
@@ -358,19 +469,130 @@ export function ProfitLossTab() {
           </div>
 
           <div className="p-0 flex-1 overflow-auto custom-scrollbar relative">
-            {isLoadingDetails ? (
+            {(isCogs ? isLoadingCogs : isLoadingDetails) ? (
               <div className="h-64 flex flex-col items-center justify-center gap-4 opacity-40">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 <p className="text-[10px] font-bold uppercase tracking-[0.3em]">Retrieving Records...</p>
               </div>
             ) : (isDepr && (!deprDetails || deprDetails.length === 0)) ||
-                (filteredPlDetails.length === 0) ? (
+                (isCogs && filteredCogs.length === 0) ||
+                (!isDepr && !isCogs && filteredPlDetails.length === 0) ? (
               <div className="h-64 flex items-center justify-center opacity-20 font-bold uppercase tracking-[0.2em]">
                 No Records Found
               </div>
             ) : (
               <table className="w-full border-separate border-spacing-0">
-                {isDepr ? (
+                {isCogs ? (
+                  <>
+                    <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                      <tr className="border-b border-primary/5 whitespace-nowrap h-12">
+                        {/* Date */}
+                        <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-36">
+                          <div className="flex items-center gap-1">
+                            Date
+                            <ExcelColumnFilter
+                              columnKey="displayDate"
+                              label="Date"
+                              data={getCogsCascadingData("displayDate")}
+                              activeFilters={cogsFilters["displayDate"]}
+                              onFilterChange={(v) => setCogsFilters((p) => ({ ...p, displayDate: v }))}
+                              onSort={(d) => setCogsSort({ key: "displayDate", direction: d })}
+                              currentSort={cogsSort}
+                              type="date"
+                              dateKey="date"
+                            />
+                          </div>
+                        </th>
+                        {/* Project/COGS */}
+                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[220px]">
+                          <div className="flex items-center gap-1">
+                            Project/COGS
+                            <ExcelColumnFilter
+                              columnKey="cogs"
+                              label="Project/COGS"
+                              data={getCogsCascadingData("cogs")}
+                              activeFilters={cogsFilters["cogs"]}
+                              onFilterChange={(v) => setCogsFilters((p) => ({ ...p, cogs: v }))}
+                              onSort={(d) => setCogsSort({ key: "cogs", direction: d })}
+                              currentSort={cogsSort}
+                            />
+                          </div>
+                        </th>
+                        {/* Dynamic account columns */}
+                        {cogsHeaders.map((h) => (
+                          <th
+                            key={h.key}
+                            className={`px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white whitespace-nowrap ${
+                              h.key === 'rowTotal' ? 'pr-8 min-w-[140px] text-primary/70' : 'w-36'
+                            }`}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              {h.label}
+                              <ExcelColumnFilter
+                                columnKey={`display_${h.key}`}
+                                label={h.label}
+                                data={getCogsCascadingData(`display_${h.key}`)}
+                                activeFilters={cogsFilters[`display_${h.key}`]}
+                                onFilterChange={(v) => setCogsFilters((p) => ({ ...p, [`display_${h.key}`]: v }))}
+                                onSort={(d) => setCogsSort({ key: `display_${h.key}`, direction: d })}
+                                currentSort={cogsSort}
+                              />
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-primary/5">
+                      {filteredCogs.map((item: any) => (
+                        <tr 
+                          key={item.id} 
+                          className="bg-white hover:bg-primary/[0.03] active:bg-primary/[0.05] transition-colors group cursor-pointer"
+                          onClick={() => setSelectedCogsGroup(item.cogs)}
+                        >
+                          <td className="pl-8 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">{item.displayDate}</td>
+                          <td className="px-4 py-3 whitespace-normal min-w-[220px]">
+                            <p className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:underline">{item.cogs}</p>
+                          </td>
+                          {cogsHeaders.map((h) => (
+                            <td
+                              key={h.key}
+                              className={`px-4 py-3 text-right whitespace-nowrap text-[12px] tabular-nums ${
+                                h.key === 'rowTotal'
+                                  ? `pr-8 font-bold ${getAmountColor(item[h.key])}`
+                                  : parseFloat(item[h.key] ?? '0') !== 0
+                                  ? `font-bold ${getAmountColor(item[h.key])}`
+                                  : 'text-primary/20'
+                              }`}
+                            >
+                              {formatCurrency(item[h.key])}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                    {cogsTotals && (
+                      <tfoot className="sticky bottom-0 z-50">
+                        <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
+                          <td colSpan={2} className="pl-8 py-4 text-left font-bold">
+                            <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">{cogsTotals.label}</span>
+                          </td>
+                          {cogsHeaders.map((h) => (
+                            <td
+                              key={h.key}
+                              className={`px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums ${
+                                h.key === 'rowTotal'
+                                  ? `pr-8 text-[14px] ${getAmountColor(cogsTotals[h.key])}`
+                                  : `text-[12px] ${getAmountColor(cogsTotals[h.key])}`
+                              }`}
+                            >
+                              {formatCurrency(cogsTotals[h.key])}
+                            </td>
+                          ))}
+                        </tr>
+                      </tfoot>
+                    )}
+                  </>
+                ) : isDepr ? (
                   <>
                     <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
                       <tr className="border-b border-primary/5 whitespace-nowrap h-12">
@@ -529,10 +751,10 @@ export function ProfitLossTab() {
                               {item.salesCode || "-"}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums text-primary/70">
+                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums text-primary">
                             {item.displayGross}
                           </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums text-red-500/70">
+                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums text-rose-600">
                             {item.displayVat}
                           </td>
                           <td className="pr-8 py-3 text-right whitespace-nowrap">
@@ -549,10 +771,10 @@ export function ProfitLossTab() {
                           <td colSpan={1} className="pl-8 py-4 text-left font-bold">
                             <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">{totals.label}</span>
                           </td>
-                          <td className="px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] text-primary/70">
+                          <td className="px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] text-primary">
                             {formatCurrency(totals.gross)}
                           </td>
-                          <td className="px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] text-red-500/70">
+                          <td className="px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] text-rose-600">
                             {formatCurrency(totals.vat)}
                           </td>
                           <td className={cn("pr-8 py-4 text-right whitespace-nowrap font-bold", getAmountColor(totals.amount))}>
@@ -795,12 +1017,12 @@ export function ProfitLossTab() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap align-top">
-                        <span className="text-[12px] font-bold tabular-nums text-primary/70">
+                        <span className="text-[12px] font-bold tabular-nums text-primary">
                           {item.displayGross}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap align-top">
-                        <span className="text-[12px] font-bold tabular-nums text-red-500/70">
+                        <span className="text-[12px] font-bold tabular-nums text-rose-600">
                           {item.displayVat}
                         </span>
                       </td>
@@ -818,15 +1040,218 @@ export function ProfitLossTab() {
                       <td colSpan={2} className="pl-8 py-4 text-left font-bold">
                         <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">{salesCodeTotals.label}</span>
                       </td>
-                      <td className="px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] text-primary/70">
+                      <td className="px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] text-primary">
                         {formatCurrency(salesCodeTotals.gross)}
                       </td>
-                      <td className="px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] text-red-500/70">
+                      <td className="px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] text-rose-600">
                         {formatCurrency(salesCodeTotals.vat)}
                       </td>
                       <td className={cn("pr-8 py-4 text-right whitespace-nowrap font-bold", getAmountColor(salesCodeTotals.amount))}>
                         <span className="text-[14px] tabular-nums font-bold">
                           {formatCurrency(salesCodeTotals.amount)}
+                        </span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* COGS Group Details Modal (2nd Layer) */}
+      <Dialog open={!!selectedCogsGroup} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedCogsGroup(null);
+        }
+      }}>
+        <DialogContent className="max-w-6xl w-[90vw] max-h-[85vh] bg-slate-50 border border-slate-200 shadow-2xl rounded-3xl overflow-hidden p-0 gap-0 flex flex-col z-[100]">
+          <div className="py-5 px-8 border-b border-primary/5 bg-white sticky top-0 z-20 shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#fdf8ec] flex items-center justify-center text-[#cc9929] border border-[#cc9929]/20 shadow-premium shrink-0">
+                  <History size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <DialogTitle className="text-xl font-bold text-primary uppercase tracking-tight leading-none">
+                      COGS Group: {selectedCogsGroup} Breakdown
+                    </DialogTitle>
+                  </div>
+                  <DialogDescription className="text-[10px] font-bold text-primary/30 uppercase tracking-[0.2em]">
+                    Transaction List for {selectedCogsGroup}
+                  </DialogDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                {(cogsGroupSearch !== "" || Object.values(cogsGroupFilters).some(s => s && s.size > 0)) && (
+                   <button 
+                     onClick={clearCogsGroupFilters}
+                     className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 transition-colors"
+                   >
+                     Clear Filters
+                   </button>
+                )}
+                <button 
+                  onClick={() => setSelectedCogsGroup(null)}
+                  className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-50 flex items-center justify-center text-primary/40 hover:text-red-600 transition-all cursor-pointer group"
+                >
+                  <Plus className="w-5 h-5 rotate-45 group-hover:scale-110 transition-transform" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-0 flex-1 overflow-auto custom-scrollbar relative">
+            {isLoadingCogsGroupDetails ? (
+              <div className="h-64 flex flex-col items-center justify-center gap-4 opacity-40">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em]">Retrieving Records...</p>
+              </div>
+            ) : filteredCogsGroupDetails.length === 0 ? (
+              <div className="h-64 flex items-center justify-center opacity-20 font-bold uppercase tracking-[0.2em]">
+                No Records Found
+              </div>
+            ) : (
+              <table className="w-full border-separate border-spacing-0">
+                <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                  <tr className="border-b border-primary/5 whitespace-nowrap h-12">
+                    <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                      <div className="flex items-center gap-1">
+                        Channel
+                        <ExcelColumnFilter 
+                          columnKey="bankBrand" label="Channel" data={getCogsGroupCascadingData("bankBrand")} 
+                          activeFilters={cogsGroupFilters["bankBrand"]} 
+                          onFilterChange={(v) => setCogsGroupFilters(p => ({...p, bankBrand: v}))}
+                          onSort={(d) => setCogsGroupSort({key: "bankBrand", direction: d})}
+                          currentSort={cogsGroupSort}
+                        />
+                      </div>
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                      <div className="flex items-center gap-1">
+                        Date
+                        <ExcelColumnFilter 
+                          columnKey="displayDate" label="Date" data={getCogsGroupCascadingData("displayDate")} 
+                          activeFilters={cogsGroupFilters["displayDate"]} 
+                          onFilterChange={(v) => setCogsGroupFilters(p => ({...p, displayDate: v}))}
+                          onSort={(d) => setCogsGroupSort({key: "displayDate", direction: d})}
+                          currentSort={cogsGroupSort}
+                          type="date"
+                          dateKey="date"
+                        />
+                      </div>
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[200px]">
+                      <div className="flex items-center gap-1">
+                        Description
+                        <ExcelColumnFilter 
+                          columnKey="description" label="Description" data={getCogsGroupCascadingData("description")} 
+                          activeFilters={cogsGroupFilters["description"]} 
+                          onFilterChange={(v) => setCogsGroupFilters(p => ({...p, description: v}))}
+                          onSort={(d) => setCogsGroupSort({key: "description", direction: d})}
+                          currentSort={cogsGroupSort}
+                        />
+                      </div>
+                    </th>
+                    <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                      <div className="flex items-center justify-end gap-1">
+                        Debit
+                        <ExcelColumnFilter 
+                          columnKey="displayDebit" label="Debit" data={getCogsGroupCascadingData("displayDebit")} 
+                          activeFilters={cogsGroupFilters["displayDebit"]} 
+                          onFilterChange={(v) => setCogsGroupFilters(p => ({...p, displayDebit: v}))}
+                          onSort={(d) => setCogsGroupSort({key: "displayDebit", direction: d})}
+                          currentSort={cogsGroupSort}
+                        />
+                      </div>
+                    </th>
+                    <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                      <div className="flex items-center justify-end gap-1">
+                        Credit
+                        <ExcelColumnFilter 
+                          columnKey="displayCredit" label="Credit" data={getCogsGroupCascadingData("displayCredit")} 
+                          activeFilters={cogsGroupFilters["displayCredit"]} 
+                          onFilterChange={(v) => setCogsGroupFilters(p => ({...p, displayCredit: v}))}
+                          onSort={(d) => setCogsGroupSort({key: "displayCredit", direction: d})}
+                          currentSort={cogsGroupSort}
+                        />
+                      </div>
+                    </th>
+                    <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
+                      <div className="flex items-center justify-end gap-1">
+                        Amount
+                        <ExcelColumnFilter 
+                          columnKey="displayAmount" label="Amount" data={getCogsGroupCascadingData("displayAmount")} 
+                          activeFilters={cogsGroupFilters["displayAmount"]} 
+                          onFilterChange={(v) => setCogsGroupFilters(p => ({...p, displayAmount: v}))}
+                          onSort={(d) => setCogsGroupSort({key: "displayAmount", direction: d})}
+                          currentSort={cogsGroupSort}
+                        />
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-primary/5">
+                  {filteredCogsGroupDetails?.map((item: any) => (
+                    <tr key={item.id} className="bg-white hover:bg-primary/[0.01] transition-colors group">
+                      <td className="pl-8 py-3 whitespace-nowrap">
+                        <div className="flex flex-col gap-0.5">
+                          {item.accountType === "CASH" ? (
+                             <p className="text-[11px] font-bold text-primary/70 uppercase tracking-wider">CASH</p>
+                          ) : item.accountType === "BANK" ? (
+                            <>
+                              <p className="text-[11px] font-bold text-primary/70 uppercase">
+                                {item.bankBrand || item.bankName} - {item.branch}
+                              </p>
+                              <p className="text-[9px] font-medium text-primary/30">{item.accountNo}</p>
+                            </>
+                          ) : (
+                            <p className="text-[11px] font-bold text-primary/70 uppercase">{item.holderName}</p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">{item.displayDate}</td>
+                      <td className="px-4 py-3 whitespace-normal min-w-[200px]">
+                        <div className="flex flex-col gap-0.5">
+                          <p className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:text-primary transition-colors">{item.description}</p>
+                          <p className="text-[9px] font-bold text-primary/20 uppercase tracking-widest">{item.ledger}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <span className={cn("text-[12px] font-bold tabular-nums", getAmountColor(item.debit ? `-${item.debit}` : "0") || "opacity-20")}>
+                          {item.displayDebit}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <span className={cn("text-[12px] font-bold tabular-nums", getAmountColor(item.credit) || "opacity-20")}>
+                          {item.displayCredit}
+                        </span>
+                      </td>
+                      <td className="pr-8 py-3 text-right whitespace-nowrap">
+                        <span className={cn("text-[12px] font-bold tabular-nums", getAmountColor(item.amount))}>
+                          {item.displayAmount}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                {cogsGroupTotals && (
+                  <tfoot className="sticky bottom-0 z-50">
+                    <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
+                      <td colSpan={3} className="pl-8 py-4 text-left font-bold">
+                        <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">{cogsGroupTotals.label}</span>
+                      </td>
+                      <td className={cn("px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px]", getAmountColor(cogsGroupTotals.debit ? `-${cogsGroupTotals.debit}` : "0") || "text-primary/70")}>
+                        {formatCurrency(cogsGroupTotals.debit)}
+                      </td>
+                      <td className={cn("px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px]", getAmountColor(cogsGroupTotals.credit) || "text-primary/70")}>
+                        {formatCurrency(cogsGroupTotals.credit)}
+                      </td>
+                      <td className={cn("pr-8 py-4 text-right whitespace-nowrap font-bold", getAmountColor(cogsGroupTotals.amount))}>
+                        <span className="text-[14px] tabular-nums font-bold">
+                          {formatCurrency(cogsGroupTotals.amount)}
                         </span>
                       </td>
                     </tr>
@@ -983,7 +1408,8 @@ export function ProfitLossTab() {
                 const isGrandTotal = row.account === "PROFIT AFTER TAX";
                 const isExpense = expenseLedgers.includes(row.account);
                 const isSales = row.account === "Sales";
-                const isClickable = isExpense || isSales || row.level === 3;
+                const isCogs = row.account === "Cost of Goods";
+                const isClickable = isExpense || isSales || isCogs || row.level === 3;
                 const isSpecialBold = ["Operating Profit", "PROFIT BEFORE TAX"].includes(row.account);
                 const isOtherProfitItem = ["Other Income", "Depreciation", "Income Tax"].includes(row.account);
                 const hasSubItems = tableData.some((r: any) => r.level === 3 && r.parentLedger === row.account);
@@ -1008,7 +1434,7 @@ export function ProfitLossTab() {
                       transition-all duration-200 border-b
                     `}
                     onClick={() => {
-                      if (isExpense || isSales) {
+                      if (isExpense || isSales || isCogs) {
                         setSelectedLedger(row.account);
                         setSelectedSubItem(null);
                       } else if (row.level === 3) {

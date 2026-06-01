@@ -648,6 +648,11 @@ export class FinanceReportService {
       });
     }
 
+    const isCogsLedger = ledger && (
+      ledger.toUpperCase() === 'COGS' || 
+      ledger.toLowerCase() === 'cost of goods'
+    );
+
     const where: any = {};
     if (year && year > 0) {
       const start = `${year}-01-01T00:00:00.000Z`;
@@ -659,7 +664,7 @@ export class FinanceReportService {
     
     // Use contains instead of equals to capture sub-categories and generic matches (e.g., 'Other Income - Interest')
     if (ledger) {
-      if (ledger.toUpperCase() === 'COGS') {
+      if (isCogsLedger) {
         where.colF = { contains: 'cost of goods', mode: 'insensitive' };
       } else {
         where.colF = { contains: ledger, mode: 'insensitive' };
@@ -667,7 +672,11 @@ export class FinanceReportService {
     }
 
     if (subItem) {
-      where.colG = { equals: subItem, mode: 'insensitive' };
+      if (isCogsLedger) {
+        where.colH = { equals: subItem, mode: 'insensitive' };
+      } else {
+        where.colG = { equals: subItem, mode: 'insensitive' };
+      }
     }
 
     const data = await this.prisma.financialTransaction.findMany({
@@ -689,6 +698,8 @@ export class FinanceReportService {
         id: trx.id,
         date: trx.colA,
         description: trx.colB,
+        debit: formatDecimal(debit),
+        credit: formatDecimal(credit),
         amount: formatDecimal(net),
         bankBrand: trx.internalAccount?.bank?.bankBrand || '',
         bankName: trx.internalAccount?.bank?.bankName || 'Unknown',
@@ -697,7 +708,7 @@ export class FinanceReportService {
         holderName: trx.internalAccount?.holderName || '',
         accountType: trx.internalAccount?.type,
         ledger: trx.colF,
-        subItem: trx.colG
+        subItem: isCogsLedger ? (trx.colH || '') : (trx.colG || '')
       };
     });
   }
@@ -1071,37 +1082,58 @@ export class FinanceReportService {
       orderBy: { colA: 'asc' }
     });
 
-    // 3. Map transactions to rows
-    // Group by description (colG) and date (colA) or just unique transactions?
-    // User wants "detail", so unique transactions.
-    const rows = trxs.map(trx => {
-      const row: any = {
-        id: trx.id,
-        cogs: trx.colB || '-',
-        date: trx.colA
-      };
+    // 3. Group transactions by colH (Sub Ledger 2)
+    const groupedData = new Map<string, any>();
 
-      // Initialize all keys with 0
-      headers.forEach(h => {
-        row[h.key] = '0';
-      });
+    trxs.forEach(trx => {
+      const rawKey = (trx.colH || 'Other').trim();
+      const groupKey = rawKey.toLowerCase();
 
-      const amount = new Prisma.Decimal(trx.colD || 0).minus(new Prisma.Decimal(trx.colC || 0)).toString();
-      
-      let rowTotal = new Prisma.Decimal(0);
+      if (!groupedData.has(groupKey)) {
+        const initialRow: any = {
+          id: groupKey,
+          cogs: rawKey, // Keep original case for rendering
+          date: null,
+          rowTotal: new Prisma.Decimal(0)
+        };
+        // Initialize all bank keys & arApOthers with 0 as Decimal
+        headers.forEach(h => {
+          if (h.key !== 'rowTotal') {
+            initialRow[h.key] = new Prisma.Decimal(0);
+          }
+        });
+        groupedData.set(groupKey, initialRow);
+      }
+
+      const row = groupedData.get(groupKey);
+      const debit = new Prisma.Decimal(trx.colC || 0);
+      const credit = new Prisma.Decimal(trx.colD || 0);
+      const amount = credit.minus(debit);
 
       if (trx.internalAccountId) {
         const key = `acc_${trx.internalAccountId}`;
-        row[key] = amount;
-        rowTotal = rowTotal.plus(new Prisma.Decimal(amount));
+        if (row[key] !== undefined) {
+          row[key] = row[key].plus(amount);
+        }
       } else {
-        row['arApOthers'] = amount;
-        rowTotal = rowTotal.plus(new Prisma.Decimal(amount));
+        if (row['arApOthers'] !== undefined) {
+          row['arApOthers'] = row['arApOthers'].plus(amount);
+        }
       }
       
-      row['rowTotal'] = rowTotal.toString();
+      row.rowTotal = row.rowTotal.plus(amount);
+    });
 
-      return row;
+    // Convert Decimals to strings for the response
+    const rows = Array.from(groupedData.values()).map(row => {
+      const finalRow: any = { ...row };
+      headers.forEach(h => {
+        if (h.key !== 'rowTotal') {
+          finalRow[h.key] = row[h.key].toString();
+        }
+      });
+      finalRow.rowTotal = row.rowTotal.toString();
+      return finalRow;
     });
 
     return { headers, rows };
