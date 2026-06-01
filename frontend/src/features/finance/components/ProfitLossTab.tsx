@@ -486,25 +486,8 @@ export function ProfitLossTab() {
                   <>
                     <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
                       <tr className="border-b border-primary/5 whitespace-nowrap h-12">
-                        {/* Date */}
-                        <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-36">
-                          <div className="flex items-center gap-1">
-                            Date
-                            <ExcelColumnFilter
-                              columnKey="displayDate"
-                              label="Date"
-                              data={getCogsCascadingData("displayDate")}
-                              activeFilters={cogsFilters["displayDate"]}
-                              onFilterChange={(v) => setCogsFilters((p) => ({ ...p, displayDate: v }))}
-                              onSort={(d) => setCogsSort({ key: "displayDate", direction: d })}
-                              currentSort={cogsSort}
-                              type="date"
-                              dateKey="date"
-                            />
-                          </div>
-                        </th>
                         {/* Project/COGS */}
-                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[220px]">
+                        <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[220px]">
                           <div className="flex items-center gap-1">
                             Project/COGS
                             <ExcelColumnFilter
@@ -549,8 +532,7 @@ export function ProfitLossTab() {
                           className="bg-white hover:bg-primary/[0.03] active:bg-primary/[0.05] transition-colors group cursor-pointer"
                           onClick={() => setSelectedCogsGroup(item.cogs)}
                         >
-                          <td className="pl-8 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">{item.displayDate}</td>
-                          <td className="px-4 py-3 whitespace-normal min-w-[220px]">
+                          <td className="pl-8 py-3 whitespace-normal min-w-[220px]">
                             <p className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:underline">{item.cogs}</p>
                           </td>
                           {cogsHeaders.map((h) => (
@@ -573,7 +555,7 @@ export function ProfitLossTab() {
                     {cogsTotals && (
                       <tfoot className="sticky bottom-0 z-50">
                         <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
-                          <td colSpan={2} className="pl-8 py-4 text-left font-bold">
+                          <td colSpan={1} className="pl-8 py-4 text-left font-bold">
                             <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">{cogsTotals.label}</span>
                           </td>
                           {cogsHeaders.map((h) => (
