@@ -530,12 +530,12 @@ export function BalanceSheetTab() {
         <div className="space-y-8">
           <div className="bg-white rounded-xl border border-slate-200 shadow-premium overflow-hidden">
             {/* Section Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+            <div className="flex items-center justify-between px-6 py-5 bg-slate-900">
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                <h4 className="text-[15px] font-bold text-slate-900 tracking-tight">Assets</h4>
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                <h4 className="text-[15px] font-bold text-white tracking-tight">Assets</h4>
               </div>
-              <span className="text-[16px] font-bold text-slate-900 tabular-nums whitespace-nowrap">{formatCurrency(bsData?.assets?.total)}</span>
+              <span className="text-[16px] font-black text-white tabular-nums whitespace-nowrap">{formatCurrency(bsData?.assets?.total)}</span>
             </div>
 
             {/* Categories Accordion */}
@@ -626,9 +626,10 @@ export function BalanceSheetTab() {
 
         {/* Right Column: Liabilities & Equity */}
         <div className="space-y-8">
-          {/* Total Equity + Liability Card */}
-          <div className="bg-slate-900 rounded-xl shadow-premium overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-5">
+          {/* Combined Total Equity + Liability Card */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-premium overflow-hidden">
+            {/* Card Header */}
+            <div className="flex items-center justify-between px-6 py-5 bg-slate-900">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 <h4 className="text-[15px] font-bold text-white tracking-tight">Total Equity + Liability</h4>
@@ -641,22 +642,22 @@ export function BalanceSheetTab() {
                 })()}
               </span>
             </div>
-          </div>
 
-          {/* Liabilities Section */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-premium overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-rose-600" />
-                <h4 className="text-[15px] font-bold text-slate-900 tracking-tight">Liabilities</h4>
-              </div>
-              <span className="text-[16px] font-bold text-rose-600 tabular-nums whitespace-nowrap">{formatCurrency(bsData?.liabilities?.total)}</span>
-            </div>
-
+            {/* Combined Body List */}
             <div className="divide-y divide-slate-100">
+              {/* Subsection Header: Liabilities */}
+              <div className="bg-slate-50 px-6 py-3 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                  <span className="text-[11px] font-black text-rose-600 uppercase tracking-widest">Liabilities</span>
+                </div>
+                <span className="text-[12px] font-black text-rose-600 tabular-nums">{formatCurrency(bsData?.liabilities?.total)}</span>
+              </div>
+              
+              {/* Liabilities Categories Accordion */}
               {liabilityCategories.map((group: any, idx: number) => (
                 <Collapsible 
-                  key={idx} 
+                  key={`liab-${idx}`} 
                   open={openSections[`liabilities-${group.name}`]} 
                   onOpenChange={() => toggleSection('liabilities', group.name)}
                 >
@@ -722,23 +723,20 @@ export function BalanceSheetTab() {
                   )}
                 </Collapsible>
               ))}
-            </div>
-          </div>
 
-          {/* Equity Section */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-premium overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                <h4 className="text-[15px] font-bold text-slate-900 tracking-tight">Equity</h4>
+              {/* Subsection Header: Equity */}
+              <div className="bg-slate-50 px-6 py-3 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                  <span className="text-[11px] font-black text-emerald-600 uppercase tracking-widest">Equity</span>
+                </div>
+                <span className="text-[12px] font-black text-emerald-600 tabular-nums">{formatCurrency(bsData?.equity?.total)}</span>
               </div>
-              <span className="text-[16px] font-bold text-emerald-600 tabular-nums whitespace-nowrap">{formatCurrency(bsData?.equity?.total)}</span>
-            </div>
 
-            <div className="divide-y divide-slate-100">
+              {/* Equity Categories Accordion */}
               {equityCategories.map((group: any, idx: number) => (
                 <Collapsible 
-                  key={idx} 
+                  key={`eq-${idx}`} 
                   open={openSections[`equity-${group.name}`]} 
                   onOpenChange={() => toggleSection('equity', group.name)}
                 >
@@ -774,7 +772,6 @@ export function BalanceSheetTab() {
                               )}
                               onClick={() => {
                                 if (isNonClickable) return;
-                                // Fixed Assets category is special
                                 const category = group.name === 'Fixed Assets' ? 'Fixed Assets' : 'Equity';
                                 setDrillDown({ 
                                   isOpen: true, 
@@ -822,7 +819,7 @@ export function BalanceSheetTab() {
       </div>
 
       {/* Insights Footer */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+      <div className="hidden grid-cols-1 md:grid-cols-2 gap-6 pt-4">
         {/* Dynamic Insight based on largest asset */}
         {(() => {
           const sortedAssets = [...charts.assetComposition].sort((a, b) => b.value - a.value);

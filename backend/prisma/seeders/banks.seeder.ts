@@ -272,13 +272,17 @@ export async function seedBankMutation(prisma: PrismaClient, workbook?: XLSX.Wor
       // We need to re-read the sheet to get the original Excel balance for the first row of this year
       let openingBalance = 0;
       
-      if (year === 2025 && FISCAL_OPENINGS_2025[sheetName] !== undefined) {
-        openingBalance = FISCAL_OPENINGS_2025[sheetName];
-      } else if (runningBalanceAcrossYears !== null) {
+      if (runningBalanceAcrossYears !== null) {
         openingBalance = runningBalanceAcrossYears;
-      } else if (sheetName === "Non CB" && year === 2024) {
-        // For 2024, default to 0 unless we have a specific opening map
-        openingBalance = 0; 
+      } else {
+        // Initial opening balance: use the first transaction's hardcoded start or derive from Excel
+        // For simplicity and accuracy, we'll use the hardcoded openings if 2025, or derive.
+        if (year === 2025 && FISCAL_OPENINGS_2025[sheetName] !== undefined) {
+           openingBalance = FISCAL_OPENINGS_2025[sheetName];
+        } else if (sheetName === "Non CB" && year === 2024) {
+           // For 2024, default to 0 unless we have a specific opening map
+           openingBalance = 0; 
+        }
       }
 
       let runningBalance = openingBalance;

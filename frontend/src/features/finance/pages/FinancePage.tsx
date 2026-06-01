@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
-import { Calculator, PieChart, FileBarChart, Layers } from "lucide-react";
+import { Calculator, PieChart, FileBarChart } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlPerProjectTab } from "../components/PlPerProjectTab";
+// import { PlPerProjectTab } from "../components/PlPerProjectTab";
 import { ProfitLossTab } from "../components/ProfitLossTab";
 import { BalanceSheetTab } from "../components/BalanceSheetTab";
 
@@ -42,10 +42,10 @@ export default function FinancePage() {
               <Calculator size={14} className="text-secondary" />
               Profit & Loss
             </TabsTrigger>
-            <TabsTrigger value="project" className="gap-2">
+            {/* <TabsTrigger value="project" className="gap-2">
               <Layers size={14} className="text-secondary" />
               PL Per Project
-            </TabsTrigger>
+            </TabsTrigger> */}
             <TabsTrigger value="balance" className="gap-2">
               <PieChart size={14} className="text-secondary" />
               Balance
@@ -56,9 +56,9 @@ export default function FinancePage() {
             <ProfitLossTab />
           </TabsContent>
 
-          <TabsContent value="project" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* <TabsContent value="project" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <PlPerProjectTab />
-          </TabsContent>
+          </TabsContent> */}
 
           <TabsContent value="balance" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <BalanceSheetTab />
