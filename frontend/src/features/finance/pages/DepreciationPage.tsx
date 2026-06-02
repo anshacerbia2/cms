@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
-import { ArrowUpRight, Search, FilterX, Plus } from 'lucide-react';
+import { ArrowUpRight, Search, FilterX, Plus, Pin } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useDepreciation } from "../hooks/useDepreciation";
 import { PaginationControls } from "@/components/common/PaginationControls";
-import { formatCurrency, formatDate, cleanAmount, getAmountColor } from "@/lib/utils";
+import { formatCurrency, formatDate, cleanAmount, getAmountColor, cn } from "@/lib/utils";
 import { ExcelColumnFilter } from "@/features/finance/components/ExcelColumnFilter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,104 @@ export default function DepreciationPage() {
   const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const assetLimit = 10;
+
+  const [pinnedColumns, setPinnedColumns] = useState<string[]>([]);
+
+  const PINNABLE_COLUMNS = useMemo(() => [
+    'category',
+    'purchaseDate',
+    'bankRef',
+    'assetName',
+    'purchasePrice',
+    'usefulLife',
+    'accumulated2020'
+  ], []);
+
+  const COLUMN_WIDTHS = useMemo<Record<string, number>>(() => ({
+    category: 240,
+    purchaseDate: 160,
+    bankRef: 160,
+    assetName: 320,
+    purchasePrice: 200,
+    usefulLife: 120,
+    accumulated2020: 200,
+  }), []);
+
+  const getStickyStyle = (colKey: string, isHeader = false) => {
+    const isPinned = pinnedColumns.includes(colKey);
+    const width = COLUMN_WIDTHS[colKey];
+    
+    const baseStyle = {
+      width: `${width}px`,
+      minWidth: `${width}px`,
+    };
+
+    if (!isPinned) return baseStyle;
+
+    const currentIndex = PINNABLE_COLUMNS.indexOf(colKey);
+    let leftOffset = 0;
+    for (let i = 0; i < currentIndex; i++) {
+      const prevCol = PINNABLE_COLUMNS[i];
+      if (pinnedColumns.includes(prevCol)) {
+        leftOffset += COLUMN_WIDTHS[prevCol];
+      }
+    }
+
+    return {
+      ...baseStyle,
+      position: 'sticky' as const,
+      left: `${leftOffset}px`,
+      zIndex: isHeader ? 30 : 20,
+      boxShadow: 'inset -2px 0 0 0 rgba(15, 23, 42, 0.05)',
+    };
+  };
+
+  const getStickyClass = (colKey: string, type: 'header' | 'body' | 'subtotal' | 'grandtotal') => {
+    const isPinned = pinnedColumns.includes(colKey);
+    if (!isPinned) return '';
+    
+    switch (type) {
+      case 'header':
+        return '!bg-white text-primary shadow-[inset_-2px_0_0_0_rgba(15, 23, 42, 0.08)]';
+      case 'body':
+        return '!bg-white group-hover:!bg-slate-50/90 shadow-[inset_-2px_0_0_0_rgba(15, 23, 42, 0.05)] transition-colors';
+      case 'subtotal':
+        return '!bg-[#faf7f0] shadow-[inset_-2px_0_0_0_rgba(15, 23, 42, 0.05)]';
+      case 'grandtotal':
+        return '!bg-[#f5eedf] shadow-[inset_-2px_0_0_0_rgba(15, 23, 42, 0.05)]';
+      default:
+        return '';
+    }
+  };
+
+  const togglePin = (colKey: string) => {
+    setPinnedColumns(prev => 
+      prev.includes(colKey) 
+        ? prev.filter(k => k !== colKey) 
+        : [...prev, colKey]
+    );
+  };
+
+  const renderPinButton = (colKey: string) => {
+    const isPinned = pinnedColumns.includes(colKey);
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          togglePin(colKey);
+        }}
+        className={cn(
+          "p-1 rounded-md transition-all hover:bg-slate-200/50 cursor-pointer shrink-0",
+          isPinned 
+            ? "text-secondary opacity-100 scale-110" 
+            : "text-primary/40 opacity-70 hover:opacity-100 hover:text-primary/80"
+        )}
+        title={isPinned ? "Unpin column" : "Pin column"}
+      >
+        <Pin size={12} className={cn(isPinned ? "fill-current rotate-45" : "")} />
+      </button>
+    );
+  };
 
   const { getAllAssets } = useDepreciation();
   const assetsQuery = getAllAssets();
@@ -170,29 +268,71 @@ export default function DepreciationPage() {
 
       <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-premium border border-primary/5 overflow-hidden mt-6">
         <div className="overflow-x-auto">
-          <Table className="min-w-[3000px]">
+          <Table className="min-w-[3000px] table-fixed">
             <TableHeader className="bg-slate-50/50">
               <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
-                <TableHead className="pl-8 w-40 px-4">
-                  <div className="flex items-center gap-1">Category <ExcelColumnFilter columnKey="category" label="Category" data={getCascadingData("category")} activeFilters={filters["category"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, category: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "category", direction: d}); setPage(1); }} /></div>
+                <TableHead className={cn("pl-8 w-40 px-4 group select-none", getStickyClass("category", "header"))} style={getStickyStyle("category", true)}>
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span>Category</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <ExcelColumnFilter columnKey="category" label="Category" data={getCascadingData("category")} activeFilters={filters["category"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, category: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "category", direction: d}); setPage(1); }} />
+                      {renderPinButton("category")}
+                    </div>
+                  </div>
                 </TableHead>
-                <TableHead className="w-40 px-4">
-                  <div className="flex items-center gap-1">Date <ExcelColumnFilter columnKey="purchaseDate" label="Purchase Date" data={getCascadingData("purchaseDate")} activeFilters={filters["purchaseDate"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, purchaseDate: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "purchaseDate", direction: d}); setPage(1); }} type="date" dateKey="rawColA" /></div>
+                <TableHead className={cn("w-40 px-4 group select-none", getStickyClass("purchaseDate", "header"))} style={getStickyStyle("purchaseDate", true)}>
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span>Date</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <ExcelColumnFilter columnKey="purchaseDate" label="Purchase Date" data={getCascadingData("purchaseDate")} activeFilters={filters["purchaseDate"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, purchaseDate: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "purchaseDate", direction: d}); setPage(1); }} type="date" dateKey="rawColA" />
+                      {renderPinButton("purchaseDate")}
+                    </div>
+                  </div>
                 </TableHead>
-                <TableHead className="w-40 px-4">
-                  <div className="flex items-center gap-1">Source <ExcelColumnFilter columnKey="bankRef" label="Source" data={getCascadingData("bankRef")} activeFilters={filters["bankRef"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, bankRef: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "bankRef", direction: d}); setPage(1); }} /></div>
+                <TableHead className={cn("w-40 px-4 group select-none", getStickyClass("bankRef", "header"))} style={getStickyStyle("bankRef", true)}>
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span>Source</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <ExcelColumnFilter columnKey="bankRef" label="Source" data={getCascadingData("bankRef")} activeFilters={filters["bankRef"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, bankRef: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "bankRef", direction: d}); setPage(1); }} />
+                      {renderPinButton("bankRef")}
+                    </div>
+                  </div>
                 </TableHead>
-                <TableHead className="w-80 px-4">
-                  <div className="flex items-center gap-1">Description <ExcelColumnFilter columnKey="assetName" label="Description" data={getCascadingData("assetName")} activeFilters={filters["assetName"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, assetName: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "assetName", direction: d}); setPage(1); }} /></div>
+                <TableHead className={cn("w-80 px-4 group select-none", getStickyClass("assetName", "header"))} style={getStickyStyle("assetName", true)}>
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span>Description</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <ExcelColumnFilter columnKey="assetName" label="Description" data={getCascadingData("assetName")} activeFilters={filters["assetName"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, assetName: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "assetName", direction: d}); setPage(1); }} />
+                      {renderPinButton("assetName")}
+                    </div>
+                  </div>
                 </TableHead>
-                <TableHead className="w-44 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">Purchase Price <ExcelColumnFilter columnKey="purchasePrice" label="Purchase Price" data={getCascadingData("purchasePrice")} activeFilters={filters["purchasePrice"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, purchasePrice: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "purchasePrice", direction: d}); setPage(1); }} /></div>
+                <TableHead className={cn("w-44 px-4 text-right group select-none", getStickyClass("purchasePrice", "header"))} style={getStickyStyle("purchasePrice", true)}>
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span className="text-right w-full">Purchase Price</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <ExcelColumnFilter columnKey="purchasePrice" label="Purchase Price" data={getCascadingData("purchasePrice")} activeFilters={filters["purchasePrice"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, purchasePrice: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "purchasePrice", direction: d}); setPage(1); }} />
+                      {renderPinButton("purchasePrice")}
+                    </div>
+                  </div>
                 </TableHead>
-                <TableHead className="w-24 px-4 text-center">
-                  <div className="flex items-center justify-center gap-1">Month <ExcelColumnFilter columnKey="usefulLife" label="Month" data={getCascadingData("usefulLife")} activeFilters={filters["usefulLife"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, usefulLife: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "usefulLife", direction: d}); setPage(1); }} /></div>
+                <TableHead className={cn("w-24 px-4 text-center group select-none", getStickyClass("usefulLife", "header"))} style={getStickyStyle("usefulLife", true)}>
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span className="text-center w-full">Month</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <ExcelColumnFilter columnKey="usefulLife" label="Month" data={getCascadingData("usefulLife")} activeFilters={filters["usefulLife"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, usefulLife: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "usefulLife", direction: d}); setPage(1); }} />
+                      {renderPinButton("usefulLife")}
+                    </div>
+                  </div>
                 </TableHead>
-                <TableHead className="w-44 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">S/D 2024 <ExcelColumnFilter columnKey="accumulated2020" label="S/D 2024" data={getCascadingData("accumulated2020")} activeFilters={filters["accumulated2020"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, accumulated2020: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "accumulated2020", direction: d}); setPage(1); }} /></div>
+                <TableHead className={cn("w-44 px-4 text-right group select-none", getStickyClass("accumulated2020", "header"))} style={getStickyStyle("accumulated2020", true)}>
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span className="text-right w-full">S/D 2024</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <ExcelColumnFilter columnKey="accumulated2020" label="S/D 2024" data={getCascadingData("accumulated2020")} activeFilters={filters["accumulated2020"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, accumulated2020: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "accumulated2020", direction: d}); setPage(1); }} />
+                      {renderPinButton("accumulated2020")}
+                    </div>
+                  </div>
                 </TableHead>
                 
                 {months.map(m => (
@@ -233,17 +373,17 @@ export default function DepreciationPage() {
                 <>
                   {paginatedAssets.map((row: any) => (
                     <TableRow key={row.id} className="border-primary/5 hover:bg-primary/[0.01] transition-colors whitespace-nowrap group">
-                      <TableCell className="pl-8 px-4 w-40">
+                      <TableCell className={cn("pl-8 px-4 w-40", getStickyClass("category", "body"))} style={getStickyStyle("category")}>
                         <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 font-bold uppercase text-[10px] py-0.5 px-2">
                           {row.category}
                         </Badge>
                       </TableCell>
-                      <TableCell className="px-4 w-40">{row.purchaseDate}</TableCell>
-                      <TableCell className="px-4 w-40 font-medium">{row.bankRef}</TableCell>
-                      <TableCell className="px-4 w-80 font-bold text-primary">{row.assetName}</TableCell>
-                      <TableCell className="px-4 w-44 text-right">{row.purchasePrice}</TableCell>
-                      <TableCell className="px-4 w-24 text-center opacity-60 font-medium">{row.usefulLife}</TableCell>
-                      <TableCell className="px-4 w-44 text-right">{row.accumulated2020}</TableCell>
+                      <TableCell className={cn("px-4 w-40", getStickyClass("purchaseDate", "body"))} style={getStickyStyle("purchaseDate")}>{row.purchaseDate}</TableCell>
+                      <TableCell className={cn("px-4 w-40 font-medium", getStickyClass("bankRef", "body"))} style={getStickyStyle("bankRef")}>{row.bankRef}</TableCell>
+                      <TableCell className={cn("px-4 w-80 font-bold text-primary whitespace-normal break-words", getStickyClass("assetName", "body"))} style={getStickyStyle("assetName")}>{row.assetName}</TableCell>
+                      <TableCell className={cn("px-4 w-44 text-right", getStickyClass("purchasePrice", "body"))} style={getStickyStyle("purchasePrice")}>{row.purchasePrice}</TableCell>
+                      <TableCell className={cn("px-4 w-24 text-center font-medium", getStickyClass("usefulLife", "body"))} style={getStickyStyle("usefulLife")}><span className="opacity-60">{row.usefulLife}</span></TableCell>
+                      <TableCell className={cn("px-4 w-44 text-right", getStickyClass("accumulated2020", "body"))} style={getStickyStyle("accumulated2020")}>{row.accumulated2020}</TableCell>
                       
                       {months.map(m => (
                         <TableCell key={m} className="px-4 w-32 text-right">{row[m]}</TableCell>
@@ -258,12 +398,15 @@ export default function DepreciationPage() {
                   {/* Summary Rows */}
                   {/* Subtotal (Current Page) */}
                   <TableRow className="bg-secondary/5 border-t-2 border-secondary/30 hover:bg-secondary/5 transition-none font-bold">
-                    <TableCell colSpan={4} className="pl-8 py-3 text-[11px] text-secondary/80 uppercase tracking-[0.2em]">
+                    <TableCell className={cn("pl-8 py-3 text-[12px] font-bold text-secondary/80 uppercase tracking-normal w-40", getStickyClass("category", "subtotal"))} style={getStickyStyle("category")}>
                       Subtotal (Page {page})
                     </TableCell>
-                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetPageSubtotals.purchasePrice.toString())}`}>{formatCurrency(assetPageSubtotals.purchasePrice.toString())}</TableCell>
-                    <TableCell className="py-3" />
-                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetPageSubtotals.accumulated2020.toString())}`}>{formatCurrency(assetPageSubtotals.accumulated2020.toString())}</TableCell>
+                    <TableCell className={cn("py-3 w-40", getStickyClass("purchaseDate", "subtotal"))} style={getStickyStyle("purchaseDate")} />
+                    <TableCell className={cn("py-3 w-40", getStickyClass("bankRef", "subtotal"))} style={getStickyStyle("bankRef")} />
+                    <TableCell className={cn("py-3 w-80", getStickyClass("assetName", "subtotal"))} style={getStickyStyle("assetName")} />
+                    <TableCell className={cn(`py-3 text-right pr-4 whitespace-nowrap w-44 ${getAmountColor(assetPageSubtotals.purchasePrice.toString())}`, getStickyClass("purchasePrice", "subtotal"))} style={getStickyStyle("purchasePrice")}>{formatCurrency(assetPageSubtotals.purchasePrice.toString())}</TableCell>
+                    <TableCell className={cn("py-3 w-24", getStickyClass("usefulLife", "subtotal"))} style={getStickyStyle("usefulLife")} />
+                    <TableCell className={cn(`py-3 text-right pr-4 whitespace-nowrap w-44 ${getAmountColor(assetPageSubtotals.accumulated2020.toString())}`, getStickyClass("accumulated2020", "subtotal"))} style={getStickyStyle("accumulated2020")}>{formatCurrency(assetPageSubtotals.accumulated2020.toString())}</TableCell>
                     
                     {months.map(m => (
                       <TableCell key={m} className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetPageSubtotals[m].toString())}`}>{formatCurrency(assetPageSubtotals[m].toString())}</TableCell>
@@ -276,12 +419,15 @@ export default function DepreciationPage() {
 
                   {/* Grand Total (All Pages) */}
                   <TableRow className="bg-secondary/10 border-t border-secondary/30 hover:bg-secondary/10 transition-none font-bold">
-                    <TableCell colSpan={4} className="pl-8 py-3 text-[11px] text-secondary uppercase tracking-[0.2em]">
+                    <TableCell className={cn("pl-8 py-3 text-[12px] font-bold text-secondary uppercase tracking-normal w-40", getStickyClass("category", "grandtotal"))} style={getStickyStyle("category")}>
                       Grand Total ({assetMeta.total} records)
                     </TableCell>
-                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetGrandTotals.purchasePrice.toString())}`}>{formatCurrency(assetGrandTotals.purchasePrice.toString())}</TableCell>
-                    <TableCell className="py-3" />
-                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetGrandTotals.accumulated2020.toString())}`}>{formatCurrency(assetGrandTotals.accumulated2020.toString())}</TableCell>
+                    <TableCell className={cn("py-3 w-40", getStickyClass("purchaseDate", "grandtotal"))} style={getStickyStyle("purchaseDate")} />
+                    <TableCell className={cn("py-3 w-40", getStickyClass("bankRef", "grandtotal"))} style={getStickyStyle("bankRef")} />
+                    <TableCell className={cn("py-3 w-80", getStickyClass("assetName", "grandtotal"))} style={getStickyStyle("assetName")} />
+                    <TableCell className={cn(`py-3 text-right pr-4 whitespace-nowrap w-44 ${getAmountColor(assetGrandTotals.purchasePrice.toString())}`, getStickyClass("purchasePrice", "grandtotal"))} style={getStickyStyle("purchasePrice")}>{formatCurrency(assetGrandTotals.purchasePrice.toString())}</TableCell>
+                    <TableCell className={cn("py-3 w-24", getStickyClass("usefulLife", "grandtotal"))} style={getStickyStyle("usefulLife")} />
+                    <TableCell className={cn(`py-3 text-right pr-4 whitespace-nowrap w-44 ${getAmountColor(assetGrandTotals.accumulated2020.toString())}`, getStickyClass("accumulated2020", "grandtotal"))} style={getStickyStyle("accumulated2020")}>{formatCurrency(assetGrandTotals.accumulated2020.toString())}</TableCell>
                     
                     {months.map(m => (
                       <TableCell key={m} className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetGrandTotals[m].toString())}`}>{formatCurrency(assetGrandTotals[m].toString())}</TableCell>

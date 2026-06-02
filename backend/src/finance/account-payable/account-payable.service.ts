@@ -21,21 +21,22 @@ export class AccountPayableService {
         ...item,
         id: Number(item.id),
         colB: item.colB ? Number(item.colB) : null,
-        colE: formatDecimal(item.colE),
-        // colF, colG, colH are strings
-        colI: formatDecimal(item.colI),
-        colJ: formatDecimal(item.colJ),
-        colK: formatDecimal(item.colK),
-        colL: formatDecimal(item.colL),
-        colM: formatDecimal(item.colM),
-        colN: formatDecimal(item.colN),
-        colO: formatDecimal(item.colO),
-        colP: formatDecimal(item.colP),
-        colQ: formatDecimal(item.colQ),
-        // colR is string
-        colS: formatDecimal(item.colS),
-        colT: formatDecimal(item.colT),
-        colU: formatDecimal(item.colU),
+        colE: formatDecimal(item.colE),   // EOY IDR
+        colF: formatDecimal(item.colF),   // EOY USD
+        colG: formatDecimal(item.colG),   // col G
+        // colH, colI, colJ are strings
+        colK: formatDecimal(item.colK),   // BCA Shardjo
+        colL: formatDecimal(item.colL),   // BCA Juanda
+        colM: formatDecimal(item.colM),   // Mandiri Mid Plaza
+        colN: formatDecimal(item.colN),   // BTN
+        colO: formatDecimal(item.colO),   // BRI Shardjo
+        colP: formatDecimal(item.colP),   // BRI Tebet
+        colQ: formatDecimal(item.colQ),   // Cash IDR
+        colR: formatDecimal(item.colR),   // Non CB
+        colS: formatDecimal(item.colS),   // AP In and Out
+        // colT is string
+        colU: formatDecimal(item.colU),   // Outstanding IDR
+        colV: formatDecimal(item.colV),   // Outstanding USD
       })),
       meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
     };
@@ -47,19 +48,22 @@ export class AccountPayableService {
       ...item,
       id: Number(item.id),
       colB: item.colB ? Number(item.colB) : null,
-      colE: formatDecimal(item.colE),
-      colI: formatDecimal(item.colI),
-      colJ: formatDecimal(item.colJ),
-      colK: formatDecimal(item.colK),
-      colL: formatDecimal(item.colL),
-      colM: formatDecimal(item.colM),
-      colN: formatDecimal(item.colN),
-      colO: formatDecimal(item.colO),
-      colP: formatDecimal(item.colP),
-      colQ: formatDecimal(item.colQ),
-      colS: formatDecimal(item.colS),
-      colT: formatDecimal(item.colT),
-      colU: formatDecimal(item.colU),
+      colE: formatDecimal(item.colE),   // EOY IDR
+      colF: formatDecimal(item.colF),   // EOY USD
+      colG: formatDecimal(item.colG),   // col G
+      // colH, colI, colJ are strings
+      colK: formatDecimal(item.colK),   // BCA Shardjo
+      colL: formatDecimal(item.colL),   // BCA Juanda
+      colM: formatDecimal(item.colM),   // Mandiri Mid Plaza
+      colN: formatDecimal(item.colN),   // BTN
+      colO: formatDecimal(item.colO),   // BRI Shardjo
+      colP: formatDecimal(item.colP),   // BRI Tebet
+      colQ: formatDecimal(item.colQ),   // Cash IDR
+      colR: formatDecimal(item.colR),   // Non CB
+      colS: formatDecimal(item.colS),   // AP In and Out
+      // colT is string
+      colU: formatDecimal(item.colU),   // Outstanding IDR
+      colV: formatDecimal(item.colV),   // Outstanding USD
     }));
   }
 
@@ -130,19 +134,22 @@ export class AccountPayableService {
       data: {
         ...data,
         colB: data.colB ? Number(data.colB) : null,
-        colE: data.colE?.toString() || null,
-        colI: data.colI?.toString() || null,
-        colJ: data.colJ?.toString() || null,
-        colK: data.colK?.toString() || null,
-        colL: data.colL?.toString() || null,
-        colM: data.colM?.toString() || null,
-        colN: data.colN?.toString() || null,
-        colO: data.colO?.toString() || null,
-        colP: data.colP?.toString() || null,
-        colQ: data.colQ?.toString() || null,
-        colS: data.colS?.toString() || null,
-        colT: data.colT?.toString() || null,
-        colU: data.colU?.toString() || null,
+        colE: data.colE?.toString() || null,   // EOY IDR
+        colF: data.colF?.toString() || null,   // EOY USD
+        colG: data.colG?.toString() || null,   // col G
+        // colH, colI, colJ are strings (passed as-is)
+        colK: data.colK?.toString() || null,   // BCA Shardjo
+        colL: data.colL?.toString() || null,   // BCA Juanda
+        colM: data.colM?.toString() || null,   // Mandiri Mid Plaza
+        colN: data.colN?.toString() || null,   // BTN
+        colO: data.colO?.toString() || null,   // BRI Shardjo
+        colP: data.colP?.toString() || null,   // BRI Tebet
+        colQ: data.colQ?.toString() || null,   // Cash IDR
+        colR: data.colR?.toString() || null,   // Non CB
+        colS: data.colS?.toString() || null,   // AP In and Out
+        // colT is string (passed as-is)
+        colU: data.colU?.toString() || null,   // Outstanding IDR
+        colV: data.colV?.toString() || null,   // Outstanding USD
       },
     });
   }
@@ -167,23 +174,24 @@ export class AccountPayableService {
       colB: row.colB ? Number(row.colB) : null,
       colC: row.colC || null,
       colD: row.colD || null,
-      colE: row.colE?.toString() || null,
-      colF: row.colF || null,
-      colG: row.colG || null,
-      colH: row.colH || null,
-      colI: row.colI?.toString() || null,
-      colJ: row.colJ?.toString() || null,
-      colK: row.colK?.toString() || null,
-      colL: row.colL?.toString() || null,
-      colM: row.colM?.toString() || null,
-      colN: row.colN?.toString() || null,
-      colO: row.colO?.toString() || null,
-      colP: row.colP?.toString() || null,
-      colQ: row.colQ?.toString() || null,
-      colR: row.colR || null,
-      colS: row.colS?.toString() || null,
-      colT: row.colT?.toString() || null,
-      colU: row.colU?.toString() || null,
+      colE: row.colE?.toString() || null,   // EOY IDR
+      colF: row.colF?.toString() || null,   // EOY USD
+      colG: row.colG?.toString() || null,   // col G
+      colH: row.colH || null,               // col H (string)
+      colI: row.colI || null,               // col I (string)
+      colJ: row.colJ || null,               // col J (string)
+      colK: row.colK?.toString() || null,   // BCA Shardjo
+      colL: row.colL?.toString() || null,   // BCA Juanda
+      colM: row.colM?.toString() || null,   // Mandiri Mid Plaza
+      colN: row.colN?.toString() || null,   // BTN
+      colO: row.colO?.toString() || null,   // BRI Shardjo
+      colP: row.colP?.toString() || null,   // BRI Tebet
+      colQ: row.colQ?.toString() || null,   // Cash IDR
+      colR: row.colR?.toString() || null,   // Non CB
+      colS: row.colS?.toString() || null,   // AP In and Out
+      colT: row.colT || null,               // col T (string)
+      colU: row.colU?.toString() || null,   // Outstanding IDR
+      colV: row.colV?.toString() || null,   // Outstanding USD
     }));
     return this.prisma.accountPayable.createMany({
       data: records,

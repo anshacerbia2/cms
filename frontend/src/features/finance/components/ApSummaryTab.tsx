@@ -35,19 +35,21 @@ export function ApSummaryTab() {
       colB: row.colB || "-",
       colC: row.colC || "-",
       colD: row.colD || "-",
-      colE: formatCurrency(row.colE || 0),
-      colF: row.colF || "-",
-      colG: row.colG || "-",
-      colI: formatCurrency(row.colI),
-      colJ: formatCurrency(row.colJ),
-      colK: formatCurrency(row.colK),
-      colL: formatCurrency(row.colL),
-      colM: formatCurrency(row.colM),
-      colN: formatCurrency(row.colN),
-      colO: formatCurrency(row.colO),
-      colP: formatCurrency(row.colP),
-      colQ: formatCurrency(row.colQ),
-      colS: formatCurrency(row.colS),
+      colE: formatCurrency(row.colE || 0),   // EOY IDR
+      colF: formatCurrency(row.colF || 0),   // EOY USD
+      colG: formatCurrency(row.colG || 0),   // col G
+      // colH, colI, colJ are plain strings
+      colK: formatCurrency(row.colK),        // BCA Shardjo
+      colL: formatCurrency(row.colL),        // BCA Juanda
+      colM: formatCurrency(row.colM),        // Mandiri Mid Plaza
+      colN: formatCurrency(row.colN),        // BTN
+      colO: formatCurrency(row.colO),        // BRI Shardjo
+      colP: formatCurrency(row.colP),        // BRI Tebet
+      colQ: formatCurrency(row.colQ),        // Cash IDR
+      colR: formatCurrency(row.colR),        // Non CB
+      colS: formatCurrency(row.colS),        // AP In and Out
+      colU: formatCurrency(row.colU),        // Outstanding IDR
+      colV: formatCurrency(row.colV),        // Outstanding USD
     }));
   }, [allAPRaw]);
 
@@ -93,8 +95,8 @@ export function ApSummaryTab() {
       };
       return {
         colE: acc.colE.plus(new Decimal(clean(curr.colE))),
-        colI: acc.colI.plus(new Decimal(clean(curr.colI))),
-        colJ: acc.colJ.plus(new Decimal(clean(curr.colJ))),
+        colF: acc.colF.plus(new Decimal(clean(curr.colF))),
+        colG: acc.colG.plus(new Decimal(clean(curr.colG))),
         colK: acc.colK.plus(new Decimal(clean(curr.colK))),
         colL: acc.colL.plus(new Decimal(clean(curr.colL))),
         colM: acc.colM.plus(new Decimal(clean(curr.colM))),
@@ -102,13 +104,17 @@ export function ApSummaryTab() {
         colO: acc.colO.plus(new Decimal(clean(curr.colO))),
         colP: acc.colP.plus(new Decimal(clean(curr.colP))),
         colQ: acc.colQ.plus(new Decimal(clean(curr.colQ))),
+        colR: acc.colR.plus(new Decimal(clean(curr.colR))),
         colS: acc.colS.plus(new Decimal(clean(curr.colS))),
+        colU: acc.colU.plus(new Decimal(clean(curr.colU))),
+        colV: acc.colV.plus(new Decimal(clean(curr.colV))),
       };
-    }, { 
-      colE: new Decimal(0), colI: new Decimal(0), colJ: new Decimal(0), 
-      colK: new Decimal(0), colL: new Decimal(0), colM: new Decimal(0), 
+    }, {
+      colE: new Decimal(0), colF: new Decimal(0), colG: new Decimal(0),
+      colK: new Decimal(0), colL: new Decimal(0), colM: new Decimal(0),
       colN: new Decimal(0), colO: new Decimal(0), colP: new Decimal(0),
-      colQ: new Decimal(0), colS: new Decimal(0)
+      colQ: new Decimal(0), colR: new Decimal(0), colS: new Decimal(0),
+      colU: new Decimal(0), colV: new Decimal(0),
     });
   }, [paginatedAP]);
 
@@ -124,8 +130,8 @@ export function ApSummaryTab() {
       };
       return {
         colE: acc.colE.plus(new Decimal(clean(curr.colE))),
-        colI: acc.colI.plus(new Decimal(clean(curr.colI))),
-        colJ: acc.colJ.plus(new Decimal(clean(curr.colJ))),
+        colF: acc.colF.plus(new Decimal(clean(curr.colF))),
+        colG: acc.colG.plus(new Decimal(clean(curr.colG))),
         colK: acc.colK.plus(new Decimal(clean(curr.colK))),
         colL: acc.colL.plus(new Decimal(clean(curr.colL))),
         colM: acc.colM.plus(new Decimal(clean(curr.colM))),
@@ -133,13 +139,17 @@ export function ApSummaryTab() {
         colO: acc.colO.plus(new Decimal(clean(curr.colO))),
         colP: acc.colP.plus(new Decimal(clean(curr.colP))),
         colQ: acc.colQ.plus(new Decimal(clean(curr.colQ))),
+        colR: acc.colR.plus(new Decimal(clean(curr.colR))),
         colS: acc.colS.plus(new Decimal(clean(curr.colS))),
+        colU: acc.colU.plus(new Decimal(clean(curr.colU))),
+        colV: acc.colV.plus(new Decimal(clean(curr.colV))),
       };
-    }, { 
-      colE: new Decimal(0), colI: new Decimal(0), colJ: new Decimal(0), 
-      colK: new Decimal(0), colL: new Decimal(0), colM: new Decimal(0), 
+    }, {
+      colE: new Decimal(0), colF: new Decimal(0), colG: new Decimal(0),
+      colK: new Decimal(0), colL: new Decimal(0), colM: new Decimal(0),
       colN: new Decimal(0), colO: new Decimal(0), colP: new Decimal(0),
-      colQ: new Decimal(0), colS: new Decimal(0)
+      colQ: new Decimal(0), colR: new Decimal(0), colS: new Decimal(0),
+      colU: new Decimal(0), colV: new Decimal(0),
     });
   }, [filteredAndSortedAP]);
 
@@ -223,28 +233,28 @@ export function ApSummaryTab() {
                   </div>
                 </TableHead>
 
-                <TableHead className="w-56 px-4">
-                    <div className="flex items-center gap-1">
-                    Col F
-                    <ExcelColumnFilter columnKey="colF" label="Col F" data={getCascadingData("colF")} activeFilters={apFilters["colF"]} onFilterChange={(v) => { setApFilters(p => ({...p, colF: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colF", direction: d})} />
+                <TableHead className="text-right w-36 whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-1">
+                    EOY USD
+                    <ExcelColumnFilter columnKey="colF" label="EOY USD" data={getCascadingData("colF")} activeFilters={apFilters["colF"]} onFilterChange={(v) => { setApFilters(p => ({...p, colF: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colF", direction: d})} />
                   </div>
                 </TableHead>
-                <TableHead className="w-56 px-4">
-                    <div className="flex items-center gap-1">
+                <TableHead className="text-right w-36 whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-1">
                     Col G
                     <ExcelColumnFilter columnKey="colG" label="Col G" data={getCascadingData("colG")} activeFilters={apFilters["colG"]} onFilterChange={(v) => { setApFilters(p => ({...p, colG: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colG", direction: d})} />
                   </div>
                 </TableHead>
 
                 {[
-                  { key: 'colI', label: 'BCA Sahardjo' },
-                  { key: 'colJ', label: 'BCA Juanda' },
-                  { key: 'colK', label: 'MANDIRI Mid Plaza' },
-                  { key: 'colL', label: 'BTN' },
-                  { key: 'colM', label: 'BRI Sahardjo' },
-                  { key: 'colN', label: 'BRI Tebet' },
-                  { key: 'colO', label: 'Cash IDR' },
-                  { key: 'colP', label: 'Non CB' }
+                  { key: 'colK', label: 'BCA Shardjo' },
+                  { key: 'colL', label: 'BCA Juanda' },
+                  { key: 'colM', label: 'Mandiri Mid Plaza' },
+                  { key: 'colN', label: 'BTN' },
+                  { key: 'colO', label: 'BRI Shardjo' },
+                  { key: 'colP', label: 'BRI Tebet' },
+                  { key: 'colQ', label: 'Cash IDR' },
+                  { key: 'colR', label: 'Non CB' },
                 ].map((col) => (
                   <TableHead key={col.key} className="text-right w-36 whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
@@ -256,15 +266,21 @@ export function ApSummaryTab() {
 
                 <TableHead className="text-right w-40 whitespace-nowrap">
                   <div className="flex items-center justify-end gap-1">
-                    AP PPN
-                    <ExcelColumnFilter columnKey="colQ" label="AP PPN" data={getCascadingData("colQ")} activeFilters={apFilters["colQ"]} onFilterChange={(v) => { setApFilters(p => ({...p, colQ: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colQ", direction: d})} />
+                    AP In and Out
+                    <ExcelColumnFilter columnKey="colS" label="AP In and Out" data={getCascadingData("colS")} activeFilters={apFilters["colS"]} onFilterChange={(v) => { setApFilters(p => ({...p, colS: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colS", direction: d})} />
                   </div>
                 </TableHead>
 
-                <TableHead className="text-right w-36 pr-8 pl-4 whitespace-nowrap">
+                <TableHead className="text-right w-40 whitespace-nowrap">
                   <div className="flex items-center justify-end gap-1">
                     Outstanding IDR
-                    <ExcelColumnFilter columnKey="colS" label="Outstanding IDR" data={getCascadingData("colS")} activeFilters={apFilters["colS"]} onFilterChange={(v) => { setApFilters(p => ({...p, colS: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colS", direction: d})} />
+                    <ExcelColumnFilter columnKey="colU" label="Outstanding IDR" data={getCascadingData("colU")} activeFilters={apFilters["colU"]} onFilterChange={(v) => { setApFilters(p => ({...p, colU: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colU", direction: d})} />
+                  </div>
+                </TableHead>
+                <TableHead className="text-right w-36 pr-8 pl-4 whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-1">
+                    Outstanding USD
+                    <ExcelColumnFilter columnKey="colV" label="Outstanding USD" data={getCascadingData("colV")} activeFilters={apFilters["colV"]} onFilterChange={(v) => { setApFilters(p => ({...p, colV: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colV", direction: d})} />
                   </div>
                 </TableHead>
               </TableRow>
@@ -290,29 +306,31 @@ export function ApSummaryTab() {
                 <>
                   {paginatedAP.map((row: any) => (
                     <TableRow key={row.id} className="hover:bg-transparent transition-none whitespace-nowrap group">
-                      <TableCell className="pl-8">
-                         <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 text-[10px] font-black uppercase tracking-tight px-1.5 py-0.5">{row.colA}</Badge>
-                      </TableCell>
-                      <TableCell className="px-4 text-primary/60">{row.colB}</TableCell>
-                      <TableCell className="px-4 font-bold text-primary uppercase truncate max-w-[150px]">{row.colC}</TableCell>
-                      <TableCell className="px-4 text-primary/60 truncate max-w-[200px]" title={row.colD}>{row.colD || '-'}</TableCell>
-                      <TableCell className="text-right font-medium text-primary whitespace-nowrap">{row.colE}</TableCell>
-                      <TableCell className="px-4 text-primary/60 truncate max-w-[200px]" title={row.colF}>{row.colF || '-'}</TableCell>
-                      <TableCell className="px-4 text-primary/60 truncate max-w-[200px]" title={row.colG}>{row.colG || '-'}</TableCell>
+                    <TableCell className="pl-8">
+                       <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 text-[10px] font-black uppercase tracking-tight px-1.5 py-0.5">{row.colA}</Badge>
+                    </TableCell>
+                    <TableCell className="px-4 text-primary/60">{row.colB}</TableCell>
+                    <TableCell className="px-4 font-bold text-primary uppercase truncate max-w-[150px]">{row.colC}</TableCell>
+                    <TableCell className="px-4 text-primary/60 truncate max-w-[200px]" title={row.colD}>{row.colD || '-'}</TableCell>
+                    <TableCell className="text-right font-medium text-primary whitespace-nowrap">{row.colE}</TableCell>
+                    <TableCell className={`text-right font-bold whitespace-nowrap ${getValueColor(row.colF)}`}>{row.colF}</TableCell>
+                    <TableCell className={`text-right font-bold whitespace-nowrap ${getValueColor(row.colG)}`}>{row.colG}</TableCell>
 
-                      {['colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP'].map(col => (
-                        <TableCell key={col} className={`text-right font-bold whitespace-nowrap ${getValueColor(row[col])}`}>
-                          {row[col]}
-                        </TableCell>
-                      ))}
+                    {['colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'].map(col => (
+                      <TableCell key={col} className={`text-right font-bold whitespace-nowrap ${getValueColor(row[col])}`}>
+                        {row[col]}
+                      </TableCell>
+                    ))}
 
-                      <TableCell className={`text-right font-bold whitespace-nowrap ${getValueColor(row.colQ)}`}>
-                        {row.colQ}
-                      </TableCell>
-                      
-                      <TableCell className="pr-8 text-right font-medium text-primary whitespace-nowrap">
-                        {row.colS}
-                      </TableCell>
+                    <TableCell className={`text-right font-bold whitespace-nowrap ${getValueColor(row.colS)}`}>
+                      {row.colS}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-primary whitespace-nowrap">
+                      {row.colU}
+                    </TableCell>
+                    <TableCell className="pr-8 text-right font-medium text-primary whitespace-nowrap">
+                      {row.colV}
+                    </TableCell>
                     </TableRow>
                   ))}
 
@@ -322,17 +340,18 @@ export function ApSummaryTab() {
                       Subtotal (Page {apPage})
                     </TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colE.toString())}</TableCell>
-                    <TableCell colSpan={2} className="bg-secondary/[0.02]" />
-                    
-                    {['colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP'].map(col => (
+                    <TableCell className={`text-right whitespace-nowrap ${getValueColor(subtotalTotals.colF.toString())}`}>{formatCurrency(subtotalTotals.colF.toString())}</TableCell>
+                    <TableCell className={`text-right whitespace-nowrap ${getValueColor(subtotalTotals.colG.toString())}`}>{formatCurrency(subtotalTotals.colG.toString())}</TableCell>
+
+                    {['colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'].map(col => (
                       <TableCell key={col} className={`text-right whitespace-nowrap ${getValueColor(subtotalTotals[col as keyof typeof subtotalTotals].toString())}`}>
                         {formatCurrency(subtotalTotals[col as keyof typeof subtotalTotals].toString())}
                       </TableCell>
                     ))}
 
-                    <TableCell className={`text-right whitespace-nowrap ${getValueColor(subtotalTotals.colQ.toString())}`}>{formatCurrency(subtotalTotals.colQ.toString())}</TableCell>
-                    
-                    <TableCell className="pr-8 text-right text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colS.toString())}</TableCell>
+                    <TableCell className={`text-right whitespace-nowrap ${getValueColor(subtotalTotals.colS.toString())}`}>{formatCurrency(subtotalTotals.colS.toString())}</TableCell>
+                    <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colU.toString())}</TableCell>
+                    <TableCell className="pr-8 text-right text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colV.toString())}</TableCell>
                   </TableRow>
 
                   <TableRow className="bg-secondary/10 border-t border-secondary/30 hover:bg-secondary/10 transition-none font-bold whitespace-nowrap">
@@ -340,17 +359,18 @@ export function ApSummaryTab() {
                       Period Totals ({filteredAndSortedAP.length} results)
                     </TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(grandTotals.colE.toString())}</TableCell>
-                    <TableCell colSpan={2} className="bg-secondary/[0.02]" />
-                    
-                    {['colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP'].map(col => (
+                    <TableCell className={`text-right whitespace-nowrap ${getValueColor(grandTotals.colF.toString())}`}>{formatCurrency(grandTotals.colF.toString())}</TableCell>
+                    <TableCell className={`text-right whitespace-nowrap ${getValueColor(grandTotals.colG.toString())}`}>{formatCurrency(grandTotals.colG.toString())}</TableCell>
+
+                    {['colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'].map(col => (
                       <TableCell key={col} className={`text-right whitespace-nowrap ${getValueColor(grandTotals[col as keyof typeof grandTotals].toString())}`}>
                         {formatCurrency(grandTotals[col as keyof typeof grandTotals].toString())}
                       </TableCell>
                     ))}
 
-                    <TableCell className={`text-right whitespace-nowrap ${getValueColor(grandTotals.colQ.toString())}`}>{formatCurrency(grandTotals.colQ.toString())}</TableCell>
-                    
-                    <TableCell className="pr-8 text-right text-primary whitespace-nowrap">{formatCurrency(grandTotals.colS.toString())}</TableCell>
+                    <TableCell className={`text-right whitespace-nowrap ${getValueColor(grandTotals.colS.toString())}`}>{formatCurrency(grandTotals.colS.toString())}</TableCell>
+                    <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(grandTotals.colU.toString())}</TableCell>
+                    <TableCell className="pr-8 text-right text-primary whitespace-nowrap">{formatCurrency(grandTotals.colV.toString())}</TableCell>
                   </TableRow>
                 </>
               )}

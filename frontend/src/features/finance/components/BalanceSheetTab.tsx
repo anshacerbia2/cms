@@ -99,10 +99,16 @@ export function BalanceSheetTab() {
   const normalizedDetails = useMemo(() => {
     return (displayDetails.body || []).map((row: any) => {
       if (isARorTax || drillDown.isLiability) {
+        const vendor = row.colD || "";
+        const desc = row.colE || "";
+        const combinedDesc = vendor && desc && vendor !== "-" && desc !== "-"
+          ? `${vendor} - ${desc}`
+          : (vendor && vendor !== "-" ? vendor : (desc && desc !== "-" ? desc : "-"));
+
         return { 
           ...row, 
           f_col1: row.colC, 
-          f_col2: row.colE, 
+          f_col2: combinedDesc, 
           f_col3: formatCurrency(row.colR) 
         };
       }
@@ -328,7 +334,7 @@ export function BalanceSheetTab() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {summaryCards.map((card, i) => (
-          <Card key={i} className="bg-white/70 backdrop-blur-md border-primary/5 shadow-premium overflow-hidden group transition-all duration-300">
+          <Card key={card.title} className="bg-white/70 backdrop-blur-md border-primary/5 shadow-premium overflow-hidden group transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <p className="text-[10px] font-black text-primary/40 tracking-widest uppercase">{card.title}</p>
@@ -447,8 +453,8 @@ export function BalanceSheetTab() {
                         dataKey="value"
                         stroke="none"
                       >
-                        {charts.assetComposition.map((_: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        {charts.assetComposition.map((item: any, index: number) => (
+                          <Cell key={`cell-${item.name}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip formatter={(value: any) => formatCurrency(value)} />
@@ -458,7 +464,7 @@ export function BalanceSheetTab() {
 
                 <div className="grid grid-cols-2 gap-2">
                   {charts.assetComposition.map((item: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between">
+                    <div key={item.name} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                         <span className="text-[10px] font-bold text-primary/40 uppercase">{item.name}</span>
@@ -506,7 +512,7 @@ export function BalanceSheetTab() {
 
                 <div className="space-y-2">
                   {charts.liabilityEquityComposition.map((item: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between">
+                    <div key={item.name} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: i === 0 ? "#f59e0b" : "#10b981" }} />
                         <span className="text-[10px] font-bold text-primary/40 uppercase">{item.name}</span>
@@ -540,9 +546,9 @@ export function BalanceSheetTab() {
 
             {/* Categories Accordion */}
             <div className="divide-y divide-slate-100">
-              {assetCategories.map((group: any, idx: number) => (
+              {assetCategories.map((group: any) => (
                 <Collapsible 
-                  key={idx} 
+                  key={group.name} 
                   open={openSections[`assets-${group.name}`]} 
                   onOpenChange={() => toggleSection('assets', group.name)}
                 >
@@ -567,11 +573,11 @@ export function BalanceSheetTab() {
                   {group.items?.length > 0 && (
                     <CollapsibleContent>
                       <div className="bg-white px-0 pb-4 space-y-1">
-                          {group.items.map((item: any, i: number) => {
+                          {group.items.map((item: any) => {
                             const isNonClickable = item.accountName.toLowerCase().includes('depreciation');
                             return (
                               <div 
-                                key={i} 
+                                key={item.code} 
                                 className={cn(
                                   "flex items-center py-2 group/item px-6 transition-colors",
                                   isNonClickable ? "" : "hover:bg-slate-50 cursor-pointer"
@@ -655,9 +661,9 @@ export function BalanceSheetTab() {
               </div>
               
               {/* Liabilities Categories Accordion */}
-              {liabilityCategories.map((group: any, idx: number) => (
+              {liabilityCategories.map((group: any) => (
                 <Collapsible 
-                  key={`liab-${idx}`} 
+                  key={group.name} 
                   open={openSections[`liabilities-${group.name}`]} 
                   onOpenChange={() => toggleSection('liabilities', group.name)}
                 >
@@ -682,9 +688,9 @@ export function BalanceSheetTab() {
                   {group.items?.length > 0 && (
                     <CollapsibleContent>
                       <div className="bg-white px-0 pb-4 space-y-1">
-                        {group.items.map((item: any, i: number) => (
+                        {group.items.map((item: any) => (
                           <div 
-                            key={i} 
+                            key={item.code} 
                             className="flex items-center py-2 group/item px-6 hover:bg-rose-50/50 cursor-pointer transition-colors"
                             onClick={() => setDrillDown({ 
                               isOpen: true, 
@@ -761,11 +767,11 @@ export function BalanceSheetTab() {
                   {group.items?.length > 0 && (
                     <CollapsibleContent>
                       <div className="bg-white px-0 pb-4 space-y-1">
-                        {group.items.map((item: any, i: number) => {
+                        {group.items.map((item: any) => {
                           const isNonClickable = item.accountName === 'Previous years' || item.accountName === 'Dividend' || item.accountName.startsWith('Profit (Loss)');
                           return (
                             <div 
-                              key={i} 
+                              key={item.code} 
                               className={cn(
                                 "flex items-center py-2 group/item px-6 transition-colors",
                                 isNonClickable ? "" : "hover:bg-emerald-50/50 cursor-pointer"
@@ -1035,21 +1041,21 @@ export function BalanceSheetTab() {
                   )}
                 </thead>
                 <tbody className="divide-y divide-primary/5">
-                  {filteredBsDetails.map((row: any, i: number) => {
+                  {filteredBsDetails.map((row: any) => {
                     if (isARorTax || drillDown.isLiability) {
                       return (
-                        <tr key={i} className="bg-white hover:bg-primary/[0.01] transition-colors group">
+                        <tr key={row.id} className="bg-white hover:bg-primary/[0.01] transition-colors group">
                           <td className="pl-8 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">
-                            {row.colC}
+                            {row.f_col1}
                           </td>
                           <td className="px-4 py-3 whitespace-normal min-w-[250px]">
                             <span className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:text-primary transition-colors">
-                              {row.colE}
+                              {row.f_col2}
                             </span>
                           </td>
                           <td className="pr-8 py-3 text-right whitespace-nowrap">
                             <span className={cn("text-[12px] font-bold tabular-nums", drillDown.isLiability ? "text-rose-600" : "text-primary")}>
-                              {formatCurrency(row.colR)}
+                              {row.f_col3}
                             </span>
                           </td>
                         </tr>
@@ -1058,7 +1064,7 @@ export function BalanceSheetTab() {
 
                     if (isFixedAsset) {
                       return (
-                        <tr key={i} className="bg-white hover:bg-primary/[0.01] transition-colors group">
+                        <tr key={row.id} className="bg-white hover:bg-primary/[0.01] transition-colors group">
                           <td className="pl-8 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">
                             {formatDate(row.purchaseDate)}
                           </td>
@@ -1083,7 +1089,7 @@ export function BalanceSheetTab() {
                     const amount = isCashOrBank ? row.colE : (row.colR || row.colD || row.amount || row.idr || 0);
 
                     return (
-                      <tr key={i} className="bg-white hover:bg-primary/[0.01] transition-colors group">
+                      <tr key={row.id} className="bg-white hover:bg-primary/[0.01] transition-colors group">
                         <td className="pl-8 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">
                           {formatDate(date)}
                         </td>

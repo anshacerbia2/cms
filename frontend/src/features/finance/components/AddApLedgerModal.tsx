@@ -28,26 +28,42 @@ interface AddApLedgerModalProps {
 }
 
 interface ApRow {
-  colA: string; colB: string | number; colC: string; colD: string; colE: string | number;
-  colF: string; colG: string; colI: string | number; colJ: string | number;
+  colA: string; colB: string | number; colC: string; colD: string;
+  colE: string | number; colF: string | number; colG: string | number;
+  colH: string; colI: string; colJ: string;
   colK: string | number; colL: string | number; colM: string | number;
   colN: string | number; colO: string | number; colP: string | number;
-  colQ: string | number; colS: string | number;
+  colQ: string | number; colR: string | number; colS: string | number;
+  colT: string; colU: string | number; colV: string | number;
 }
 
+// Exact Excel column order (index 0–21)
 const COL_ORDER: (keyof ApRow)[] = [
-  'colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 
-  'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colS'
+  'colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', // 0-6
+  'colH', 'colI', 'colJ',                                   // 7-9 (string cols)
+  'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ',  // 10-16
+  'colR', 'colS', 'colT', 'colU', 'colV',                   // 17-21
+];
+
+const VISIBLE_COLS: (keyof ApRow)[] = [
+  'colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG',
+  'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR', 'colS', 'colU', 'colV',
 ];
 
 const LABELS: Record<keyof ApRow, string> = {
-  colA: 'Payable', colB: 'Year', colC: 'Vendor', colD: 'Keterangan', colE: 'EOY IDR',
-  colF: 'Col F', colG: 'Col G', colI: 'BCA Sahardjo', colJ: 'BCA Juanda',
-  colK: 'MANDIRI MP', colL: 'BTN', colM: 'BRI Sahardjo', colN: 'BRI Tebet',
-  colO: 'Cash IDR', colP: 'Non CB', colQ: 'AP PPN', colS: 'Outstanding IDR'
+  colA: 'Payable', colB: 'Year', colC: 'Vendor', colD: 'Keterangan',
+  colE: 'EOY IDR', colF: 'EOY USD', colG: 'Col G',
+  colH: 'Col H', colI: 'Col I', colJ: 'Col J',
+  colK: 'BCA Shardjo', colL: 'BCA Juanda', colM: 'Mandiri Mid Plaza',
+  colN: 'BTN', colO: 'BRI Shardjo', colP: 'BRI Tebet',
+  colQ: 'Cash IDR', colR: 'Non CB', colS: 'AP In and Out',
+  colT: 'Col T', colU: 'Outstanding IDR', colV: 'Outstanding USD',
 };
 
-const NUMERIC_COLS: (keyof ApRow)[] = ['colE', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colS'];
+const NUMERIC_COLS: (keyof ApRow)[] = [
+  'colE', 'colF', 'colG', 'colK', 'colL', 'colM', 'colN',
+  'colO', 'colP', 'colQ', 'colR', 'colS', 'colU', 'colV',
+];
 
 export default function AddApLedgerModal({ open, onOpenChange, onSuccess }: AddApLedgerModalProps) {
   const { createBulkAP } = useAccountPayable();
@@ -58,7 +74,9 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess }: AddA
     if (open) {
       setRows(Array(5).fill(null).map(() => ({
         colA: '', colB: '', colC: '', colD: '', colE: '', colF: '', colG: '',
-        colI: '', colJ: '', colK: '', colL: '', colM: '', colN: '', colO: '', colP: '', colQ: '', colS: ''
+        colH: '', colI: '', colJ: '',
+        colK: '', colL: '', colM: '', colN: '', colO: '', colP: '', colQ: '',
+        colR: '', colS: '', colT: '', colU: '', colV: '',
       })));
     }
   }, [open]);
@@ -66,7 +84,9 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess }: AddA
   const addRow = () => {
     setRows([...rows, {
       colA: '', colB: '', colC: '', colD: '', colE: '', colF: '', colG: '',
-      colI: '', colJ: '', colK: '', colL: '', colM: '', colN: '', colO: '', colP: '', colQ: '', colS: ''
+      colH: '', colI: '', colJ: '',
+      colK: '', colL: '', colM: '', colN: '', colO: '', colP: '', colQ: '',
+      colR: '', colS: '', colT: '', colU: '', colV: '',
     }]);
   };
 
@@ -121,7 +141,9 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess }: AddA
       if (targetRowIndex >= newRows.length) {
         newRows.push({
           colA: '', colB: '', colC: '', colD: '', colE: '', colF: '', colG: '',
-          colI: '', colJ: '', colK: '', colL: '', colM: '', colN: '', colO: '', colP: '', colQ: '', colS: ''
+          colH: '', colI: '', colJ: '',
+          colK: '', colL: '', colM: '', colN: '', colO: '', colP: '', colQ: '',
+          colR: '', colS: '', colT: '', colU: '', colV: '',
         });
       }
       pasteCols.forEach((cellText, j) => {
@@ -139,7 +161,7 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess }: AddA
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, rowIndex: number, colKey: keyof ApRow) => {
-    const colIndex = COL_ORDER.indexOf(colKey);
+    const colIndex = VISIBLE_COLS.indexOf(colKey);
     if (e.key === 'F2') {
       e.preventDefault();
       const input = e.target as HTMLInputElement;
@@ -168,9 +190,9 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess }: AddA
     } else if (e.key === 'ArrowRight') {
       const input = e.target as HTMLInputElement;
       if (input.selectionStart === input.value.length || input.selectionStart !== input.selectionEnd) {
-        if (colIndex < COL_ORDER.length - 1) {
+        if (colIndex < VISIBLE_COLS.length - 1) {
           e.preventDefault();
-          const nextColKey = COL_ORDER[colIndex + 1];
+          const nextColKey = VISIBLE_COLS[colIndex + 1];
           const nextInput = document.querySelector(`input[data-row="${rowIndex}"][data-col="${nextColKey}"]`) as HTMLInputElement;
           if (nextInput) { nextInput.focus(); nextInput.select(); }
         }
@@ -180,7 +202,7 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess }: AddA
       if (input.selectionStart === 0 || input.selectionStart !== input.selectionEnd) {
         if (colIndex > 0) {
           e.preventDefault();
-          const nextColKey = COL_ORDER[colIndex - 1];
+          const nextColKey = VISIBLE_COLS[colIndex - 1];
           const nextInput = document.querySelector(`input[data-row="${rowIndex}"][data-col="${nextColKey}"]`) as HTMLInputElement;
           if (nextInput) { nextInput.focus(); nextInput.select(); }
         }
@@ -233,7 +255,7 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess }: AddA
             <Table className="min-w-[2200px]">
               <TableHeader className="bg-slate-50/50">
                 <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
-                  {COL_ORDER.map(col => (
+                  {VISIBLE_COLS.map(col => (
                     <TableHead key={col} className={`text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none ${NUMERIC_COLS.includes(col) ? 'text-right' : 'text-left'}`}>
                       {LABELS[col]}
                     </TableHead>
@@ -244,7 +266,7 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess }: AddA
               <TableBody>
                 {rows.map((row, idx) => (
                   <TableRow key={idx} className="hover:bg-primary/[0.02] border-primary/5 transition-colors group h-9">
-                    {COL_ORDER.map(col => {
+                    {VISIBLE_COLS.map(col => {
                       const isNumeric = NUMERIC_COLS.includes(col);
                       return (
                         <TableCell key={col} className="p-0 border-r border-primary/5 relative">

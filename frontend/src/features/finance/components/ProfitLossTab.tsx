@@ -10,7 +10,7 @@ import {
 import { formatCurrency, getAmountColor, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, DollarSign, PieChart, Info, Loader2, History, Plus, Calendar as CalendarIcon, ChevronDown, ChevronRight } from "lucide-react";
+import { TrendingUp, DollarSign, PieChart, Info, Loader2, History, Plus, Calendar as CalendarIcon, ChevronDown, ChevronRight, Pin } from "lucide-react";
 import { useFinance } from "../hooks/useFinance";
 import { useExcelFilter } from "../hooks/useExcelFilter";
 import { ExcelColumnFilter } from "./ExcelColumnFilter";
@@ -61,6 +61,102 @@ export function ProfitLossTab() {
       }
     }
   }, [year]);
+
+  const [pinnedDeprCols, setPinnedDeprCols] = useState<string[]>([]);
+
+  const DEPR_PINNABLE_COLUMNS = useMemo(() => [
+    'category',
+    'purchaseDate',
+    'bankRef',
+    'assetName',
+    'purchasePrice',
+    'usefulLife',
+    'accumulated2024'
+  ], []);
+
+  const DEPR_COLUMN_WIDTHS = useMemo<Record<string, number>>(() => ({
+    category: 160,
+    purchaseDate: 160,
+    bankRef: 160,
+    assetName: 250,
+    purchasePrice: 160,
+    usefulLife: 96,
+    accumulated2024: 160,
+  }), []);
+
+  const getDeprStickyStyle = (colKey: string, isHeader = false) => {
+    const isPinned = pinnedDeprCols.includes(colKey);
+    const width = DEPR_COLUMN_WIDTHS[colKey];
+    
+    const baseStyle = {
+      width: `${width}px`,
+      minWidth: `${width}px`,
+    };
+
+    if (!isPinned) return baseStyle;
+
+    const currentIndex = DEPR_PINNABLE_COLUMNS.indexOf(colKey);
+    let leftOffset = 0;
+    for (let i = 0; i < currentIndex; i++) {
+      const prevCol = DEPR_PINNABLE_COLUMNS[i];
+      if (pinnedDeprCols.includes(prevCol)) {
+        leftOffset += DEPR_COLUMN_WIDTHS[prevCol];
+      }
+    }
+
+    return {
+      ...baseStyle,
+      position: 'sticky' as const,
+      left: `${leftOffset}px`,
+      zIndex: isHeader ? 30 : 20,
+      boxShadow: 'inset -2px 0 0 0 rgba(15, 23, 42, 0.05)',
+    };
+  };
+
+  const getDeprStickyClass = (colKey: string, type: 'header' | 'body' | 'footer') => {
+    const isPinned = pinnedDeprCols.includes(colKey);
+    if (!isPinned) return '';
+    
+    switch (type) {
+      case 'header':
+        return '!bg-white text-primary shadow-[inset_-2px_0_0_0_rgba(15, 23, 42, 0.08)]';
+      case 'body':
+        return '!bg-white group-hover:!bg-slate-50/90 shadow-[inset_-2px_0_0_0_rgba(15, 23, 42, 0.05)] transition-colors';
+      case 'footer':
+        return '!bg-[#fdf8ec] shadow-[inset_-2px_0_0_0_rgba(15, 23, 42, 0.05)]';
+      default:
+        return '';
+    }
+  };
+
+  const toggleDeprPin = (colKey: string) => {
+    setPinnedDeprCols(prev => 
+      prev.includes(colKey) 
+        ? prev.filter(k => k !== colKey) 
+        : [...prev, colKey]
+    );
+  };
+
+  const renderDeprPinButton = (colKey: string) => {
+    const isPinned = pinnedDeprCols.includes(colKey);
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleDeprPin(colKey);
+        }}
+        className={cn(
+          "p-1 rounded-md transition-all hover:bg-slate-200/50 cursor-pointer shrink-0 ml-1",
+          isPinned 
+            ? "text-secondary opacity-100 scale-110" 
+            : "text-primary/40 opacity-70 hover:opacity-100 hover:text-primary/80"
+        )}
+        title={isPinned ? "Unpin column" : "Pin column"}
+      >
+        <Pin size={12} className={cn(isPinned ? "fill-current rotate-45" : "")} />
+      </button>
+    );
+  };
   
   const summaryCards = useMemo(() => {
     if (!plData?.summaryCards) return [];
@@ -481,7 +577,7 @@ export function ProfitLossTab() {
                 No Records Found
               </div>
             ) : (
-              <table className="w-full border-separate border-spacing-0">
+              <table className={cn("w-full border-separate border-spacing-0", isDepr && "table-fixed min-w-[3000px]")}>
                 {isCogs ? (
                   <>
                     <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
@@ -533,7 +629,12 @@ export function ProfitLossTab() {
                           onClick={() => setSelectedCogsGroup(item.cogs)}
                         >
                           <td className="pl-8 py-3 whitespace-normal min-w-[220px]">
-                            <p className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:underline">{item.cogs}</p>
+                            <div className="flex items-center gap-2 w-full">
+                              <p className="text-[12px] font-bold text-primary uppercase leading-tight group-hover:underline flex-1">{item.cogs}</p>
+                              <div className="flex items-center justify-center text-primary/20 group-hover:text-blue-500 transition-all shrink-0">
+                                <Info size={12} className="transition-colors duration-200" />
+                              </div>
+                            </div>
                           </td>
                           {cogsHeaders.map((h) => (
                             <td
@@ -578,48 +679,85 @@ export function ProfitLossTab() {
                   <>
                     <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
                       <tr className="border-b border-primary/5 whitespace-nowrap h-12">
-                        <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">
-                          <div className="flex items-center gap-1">
-                            Category
-                            <ExcelColumnFilter 
-                              columnKey="category" label="Category" data={getDeprCascadingData("category")} 
-                              activeFilters={deprFilters["category"]} 
-                              onFilterChange={(v) => setDeprFilters(p => ({...p, category: v}))}
-                              onSort={(d) => setDeprSort({key: "category", direction: d})}
-                              currentSort={deprSort}
-                            />
+                        <th className={cn("pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40 group select-none", getDeprStickyClass("category", "header"))} style={getDeprStickyStyle("category", true)}>
+                          <div className="flex items-center justify-between gap-1 w-full">
+                            <span>Category</span>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              <ExcelColumnFilter 
+                                columnKey="category" label="Category" data={getDeprCascadingData("category")} 
+                                activeFilters={deprFilters["category"]} 
+                                onFilterChange={(v) => setDeprFilters(p => ({...p, category: v}))}
+                                onSort={(d) => setDeprSort({key: "category", direction: d})}
+                                currentSort={deprSort}
+                              />
+                              {renderDeprPinButton("category")}
+                            </div>
                           </div>
                         </th>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">
-                          <div className="flex items-center gap-1">
-                            Date
-                            <ExcelColumnFilter 
-                              columnKey="displayPurchaseDate" label="Date" data={getDeprCascadingData("displayPurchaseDate")} 
-                              activeFilters={deprFilters["displayPurchaseDate"]} 
-                              onFilterChange={(v) => setDeprFilters(p => ({...p, displayPurchaseDate: v}))}
-                              onSort={(d) => setDeprSort({key: "displayPurchaseDate", direction: d})}
-                              currentSort={deprSort}
-                              type="date"
-                              dateKey="purchaseDate"
-                            />
+                        <th className={cn("px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40 group select-none", getDeprStickyClass("purchaseDate", "header"))} style={getDeprStickyStyle("purchaseDate", true)}>
+                          <div className="flex items-center justify-between gap-1 w-full">
+                            <span>Date</span>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              <ExcelColumnFilter 
+                                columnKey="displayPurchaseDate" label="Date" data={getDeprCascadingData("displayPurchaseDate")} 
+                                activeFilters={deprFilters["displayPurchaseDate"]} 
+                                onFilterChange={(v) => setDeprFilters(p => ({...p, displayPurchaseDate: v}))}
+                                onSort={(d) => setDeprSort({key: "displayPurchaseDate", direction: d})}
+                                currentSort={deprSort}
+                                type="date"
+                                dateKey="purchaseDate"
+                              />
+                              {renderDeprPinButton("purchaseDate")}
+                            </div>
                           </div>
                         </th>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Source</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px]">
-                          <div className="flex items-center gap-1">
-                            Description
-                            <ExcelColumnFilter 
-                              columnKey="assetName" label="Description" data={getDeprCascadingData("assetName")} 
-                              activeFilters={deprFilters["assetName"]} 
-                              onFilterChange={(v) => setDeprFilters(p => ({...p, assetName: v}))}
-                              onSort={(d) => setDeprSort({key: "assetName", direction: d})}
-                              currentSort={deprSort}
-                            />
+                        <th className={cn("px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40 group select-none", getDeprStickyClass("bankRef", "header"))} style={getDeprStickyStyle("bankRef", true)}>
+                          <div className="flex items-center justify-between gap-1 w-full">
+                            <span>Source</span>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              {renderDeprPinButton("bankRef")}
+                            </div>
                           </div>
                         </th>
-                        <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Purchase Price</th>
-                        <th className="px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-24">Month</th>
-                        <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">S/D 2024</th>
+                        <th className={cn("px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[250px] group select-none", getDeprStickyClass("assetName", "header"))} style={getDeprStickyStyle("assetName", true)}>
+                          <div className="flex items-center justify-between gap-1 w-full">
+                            <span>Description</span>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              <ExcelColumnFilter 
+                                columnKey="assetName" label="Description" data={getDeprCascadingData("assetName")} 
+                                activeFilters={deprFilters["assetName"]} 
+                                onFilterChange={(v) => setDeprFilters(p => ({...p, assetName: v}))}
+                                onSort={(d) => setDeprSort({key: "assetName", direction: d})}
+                                currentSort={deprSort}
+                              />
+                              {renderDeprPinButton("assetName")}
+                            </div>
+                          </div>
+                        </th>
+                        <th className={cn("px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40 group select-none", getDeprStickyClass("purchasePrice", "header"))} style={getDeprStickyStyle("purchasePrice", true)}>
+                          <div className="flex items-center justify-between gap-1 w-full">
+                            <span className="text-right w-full">Purchase Price</span>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              {renderDeprPinButton("purchasePrice")}
+                            </div>
+                          </div>
+                        </th>
+                        <th className={cn("px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-24 group select-none", getDeprStickyClass("usefulLife", "header"))} style={getDeprStickyStyle("usefulLife", true)}>
+                          <div className="flex items-center justify-between gap-1 w-full">
+                            <span className="text-center w-full">Month</span>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              {renderDeprPinButton("usefulLife")}
+                            </div>
+                          </div>
+                        </th>
+                        <th className={cn("px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40 group select-none", getDeprStickyClass("accumulated2024", "header"))} style={getDeprStickyStyle("accumulated2024", true)}>
+                          <div className="flex items-center justify-between gap-1 w-full">
+                            <span className="text-right w-full">S/D 2024</span>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              {renderDeprPinButton("accumulated2024")}
+                            </div>
+                          </div>
+                        </th>
                         {months.map(m => (
                           <th key={m} className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-32">{m}</th>
                         ))}
@@ -631,23 +769,23 @@ export function ProfitLossTab() {
                     <tbody className="divide-y divide-primary/5">
                       {filteredDepr?.map((item: any) => (
                         <tr key={item.id} className="bg-white hover:bg-secondary/[0.02] border-primary/5 transition-colors group">
-                          <td className="pl-8 py-3 whitespace-nowrap">
+                          <td className={cn("pl-8 py-3 whitespace-nowrap", getDeprStickyClass("category", "body"))} style={getDeprStickyStyle("category")}>
                             <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 font-bold uppercase text-[10px] py-0.5 px-2">
                               {item.category}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap">{item.displayPurchaseDate}</td>
-                          <td className="px-4 py-3 text-[11px] font-bold text-primary/40 whitespace-nowrap uppercase tracking-wider">{item.bankRef}</td>
-                          <td className="px-4 py-3">
+                          <td className={cn("px-4 py-3 text-[11px] font-bold text-primary/60 whitespace-nowrap", getDeprStickyClass("purchaseDate", "body"))} style={getDeprStickyStyle("purchaseDate")}>{item.displayPurchaseDate}</td>
+                          <td className={cn("px-4 py-3 text-[11px] font-bold text-primary/40 whitespace-nowrap uppercase tracking-wider", getDeprStickyClass("bankRef", "body"))} style={getDeprStickyStyle("bankRef")}>{item.bankRef}</td>
+                          <td className={cn("px-4 py-3 whitespace-normal break-words", getDeprStickyClass("assetName", "body"))} style={getDeprStickyStyle("assetName")}>
                             <p className="text-[12px] font-bold text-primary uppercase leading-tight">{item.assetName}</p>
                           </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums">
+                          <td className={cn("px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums", getDeprStickyClass("purchasePrice", "body"))} style={getDeprStickyStyle("purchasePrice")}>
                             {item.displayPurchasePrice}
                           </td>
-                          <td className="px-4 py-3 text-center opacity-60 font-medium text-[12px]">
-                            {item.usefulLife}
+                          <td className={cn("px-4 py-3 text-center font-medium text-[12px]", getDeprStickyClass("usefulLife", "body"))} style={getDeprStickyStyle("usefulLife")}>
+                            <span className="opacity-60">{item.usefulLife}</span>
                           </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums">
+                          <td className={cn("px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums", getDeprStickyClass("accumulated2024", "body"))} style={getDeprStickyStyle("accumulated2024")}>
                             {item.displayAccumulated2024}
                           </td>
                           {months.map(m => (
@@ -670,14 +808,17 @@ export function ProfitLossTab() {
                     {totals && (
                       <tfoot className="sticky bottom-0 z-50">
                         <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] transition-none font-bold">
-                          <td colSpan={4} className="pl-8 py-4 text-left font-bold">
-                            <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">{totals.label}</span>
+                          <td className={cn("pl-8 py-4 text-left font-bold w-40", getDeprStickyClass("category", "footer"))} style={getDeprStickyStyle("category")}>
+                            <span className="text-[12px] uppercase tracking-normal text-[#cc9929] font-bold">{totals.label}</span>
                           </td>
-                          <td className={`px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] ${getAmountColor(totals.purchasePrice)}`}>
+                          <td className={cn("py-4 w-40", getDeprStickyClass("purchaseDate", "footer"))} style={getDeprStickyStyle("purchaseDate")} />
+                          <td className={cn("py-4 w-40", getDeprStickyClass("bankRef", "footer"))} style={getDeprStickyStyle("bankRef")} />
+                          <td className={cn("py-4 w-80", getDeprStickyClass("assetName", "footer"))} style={getDeprStickyStyle("assetName")} />
+                          <td className={cn(`px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] w-40 ${getAmountColor(totals.purchasePrice)}`, getDeprStickyClass("purchasePrice", "footer"))} style={getDeprStickyStyle("purchasePrice")}>
                             {formatCurrency(totals.purchasePrice)}
                           </td>
-                          <td className="px-4 py-4" />
-                          <td className={`px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] ${getAmountColor(totals.accumulated2024)}`}>
+                          <td className={cn("px-4 py-4 w-24", getDeprStickyClass("usefulLife", "footer"))} style={getDeprStickyStyle("usefulLife")} />
+                          <td className={cn(`px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[12px] w-40 ${getAmountColor(totals.accumulated2024)}`, getDeprStickyClass("accumulated2024", "footer"))} style={getDeprStickyStyle("accumulated2024")}>
                             {formatCurrency(totals.accumulated2024)}
                           </td>
                           {months.map(m => (
@@ -729,9 +870,14 @@ export function ProfitLossTab() {
                           onClick={() => setSelectedSalesCode(item.salesCode)}
                         >
                           <td className="pl-8 py-3 whitespace-nowrap">
-                            <span className="text-[12px] font-bold text-primary uppercase hover:underline">
-                              {item.salesCode || "-"}
-                            </span>
+                            <div className="flex items-center gap-2 w-full">
+                              <span className="text-[12px] font-bold text-primary uppercase hover:underline flex-1">
+                                {item.salesCode || "-"}
+                              </span>
+                              <div className="flex items-center justify-center text-primary/20 group-hover:text-blue-500 transition-all shrink-0">
+                                <Info size={12} className="transition-colors duration-200" />
+                              </div>
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums text-primary">
                             {item.displayGross}
@@ -894,6 +1040,16 @@ export function ProfitLossTab() {
                 </table>
               )}
           </div>
+
+          {/* Footer Info Bar inside Modal */}
+          {(isCogs || isSales) && (
+            <div className="flex items-start gap-2 px-8 py-3.5 bg-white border-t border-primary/5 shrink-0">
+              <Info size={14} className="text-primary/20 shrink-0 mt-0.5" />
+              <p className="text-[10px] font-bold text-primary/40 uppercase tracking-widest">
+                Click on an account row marked with the info icon to view the detailed breakdown.
+              </p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -1460,8 +1616,8 @@ export function ProfitLossTab() {
                         </span>
                         
                         {isClickable && (
-                          <div className="flex items-center justify-center opacity-0 group-hover/row:opacity-100 group-hover/row:text-blue-500 transition-all text-primary">
-                            <Info size={12} />
+                          <div className="flex items-center justify-center text-primary/20 group-hover/row:text-blue-500 transition-all shrink-0">
+                            <Info size={12} className="transition-colors duration-200" />
                           </div>
                         )}
                       </div>

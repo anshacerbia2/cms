@@ -1,0 +1,111 @@
+bank_code;bank_name;bank_address;bank_brand
+2;PT BANK RAKYAT INDONESIA (PERSERO) Tbk;Jl. Jend. Sudirman Kav. 44-46  Jakarta 10210;BRI
+8;PT BANK MANDIRI (PERSERO) Tbk;Plaza Mandiri  Jl. Gatot Subroto Kav. 36-38  Jakarta 12190;MANDIRI
+9;PT BANK NEGARA INDONESIA (PERSERO) Tbk;Jl. Jend. Sudirman Kav. 1  Jakarta 10220;BNI
+200;PT BANK TABUNGAN NEGARA (PERSERO) Tbk;Gedung Menara BTN  Jl. Gajah Mada No. 1  Jakarta 10130;BTN
+11;PT BANK DANAMON INDONESIA Tbk;Menara Bank Danamon  Jl. HR. Rasuna Said Blok C No. 10  Karet Setiabudi  Jakarta Selatan 12940;DANAMON
+13;PT BANK PERMATA Tbk;Gedung World Trade Center (WTC) II  Jl. Jend. Sudirman Kav. 29-31 Jakarta 12920;PERMATA
+14;PT BANK CENTRAL ASIA Tbk;Menara BCA  Grand Indonesia Jl. M.H Thamrin No. 1  Jakarta 10310;BCA
+16;PT BANK MAYBANK  INDONESIA Tbk​;Gedung Sentral Senayan 3  Lt. 26  Jl. Asia Afrika No. 8  Gelora Bung Karno - Senayan  Jakarta Pusat 10270;MAYBANK
+19;PT PAN INDONESIA BANK Tbk;Panin Bank Centre  Jl. Jend. Sudirman Kav. 1 (Senayan)  Jakarta 10270;PAN
+22;PT BANK CIMB NIAGA Tbk;Graha Niaga / Niaga Tower Jl. Jend. Sudirman Kav. 58  Jakarta 12190;CIMB NIAGA
+23;PT BANK UOB INDONESIA;Gedung UOB Plaza  Jl. M.H. Thamrin No. 10 Jakarta 10230;UOB
+28;PT BANK OCBC NISP Tbk;OCBC NISP Tower  Jl. Prof.Dr. Satrio Kav. 25  Jakarta Selatan 12950;OCBC NISP
+37;PT BANK ARTHA GRAHA INTERNASIONAL Tbk;Gedung Arha Graha  Lt. 5  Jl. Sudirman Kav. 52-53  Senayan  Jakarta 12190;ARTHA GRAHA
+76;PT BANK BUMI ARTA Tbk;Jl. KH. Wahid Hasyim No. 234  Jakarta 10250;BUMI ARTA
+87;PT BANK HSBC INDONESIA​;Gedung WTC 1  Lt. 8-9 Jl. Jendral Sudirman Kav.29-31  Jakarta 12920;HSBC
+95;PT BANK JTRUST INDONESIA Tbk;Gedung Sahid Sudirman Center Lt. 33 Jl. Sudirman No. 86  Jakarta Pusat 10220;JTRUST
+97;PT BANK MAYAPADA INTERNATIONAL Tbk;Mayapada Tower - 2nd Floor  Jl. Jend. Sudirman Kav. 28  Jakarta 12920;MAYAPADA
+146;PT BANK OF INDIA INDONESIA Tbk;Jl. H. Samanhudi No. 37  Jakarta 10710;BANK OF INDIA
+147;PT BANK MUAMALAT INDONESIA Tbk;​Gedung Muamalat Tower  Jl. Prof. Dr. Satrio Kav. 18  Jakarta 10220;MUAMALAT
+151;PT BANK MESTIKA DHARMA Tbk;Jl. Zainul Arifin 118  Medan 20153;MESTIKA
+152;PT BANK SHINHAN INDONESIA;Ged. International Financial Centre (IFC) Tower 2 Lt. Dasar  Mezz​anine  30 dan 31 Jl. Jend. Sudirman Kav. 22-23 Jakarta Selatan;SHINHAN
+153;PT BANK SINARMAS Tbk;Sinarmas Land Plaza  Menara I  Lt. 1 &2 Jl. MH. Thamrin Kav. 51  Jakarta 10350;SINARMAS
+157;PT BANK MASPION INDONESIA Tbk;Jl. Basuki Rahmat No. 50 - 54  Surabaya;MASPION
+161;PT BANK GANESHA Tbk;Wisma Hayam Wuruk Lt.1 & 2  Jl. Hayam Wuruk No. 8  Jakarta Pusat;GANESHA
+164;PT BANK ICBC INDONESIA;ICBC Tower Lt. 32  Jl. M.H. Thamrin No. 81  Jakarta Pusat;ICBC
+167;PT BANK QNB INDONESIA Tbk;Revenue Tower District 8 Lt.8 Jl. Jend. Sudirman Kav. 52-53 Jakarta 12190;QNB
+212;PT BANK WOORI SAUDARA INDONESIA 1906 Tbk;Gedung Treasury Tower Lt.26 dan 27 District 8  SCBC Lt.28 Jl. Jend. Sudirman Kav.52 - 53 Jakarta 12190;WOORI
+426;PT BANK MEGA Tbk;Menara Bank Mega Lt.15  Jl. Kapten Tendean Kav. 12-14 A  Jakarta 12790;MEGA
+427;PT BANK BNI SYARIAH ;Gedung Tempo Pavilion 1  Jl. HR Rasuna Said Kav. 11  Jakarta;BNI SYARIAH
+441;PT BANK BUKOPIN Tbk;Jl. MT. Haryono Kav. 50-51  Jakarta 12770;BUKOPIN
+451;PT BANK SYARIAH MANDIRI ;Wisma Mandiri  Jl. M. H. Thamrin No. 5  Jakarta 10340;MANDIRI SYARIAH
+484;PT BANK KEB HANA INDONESIA;Mangkuluhur City Tower One Jl. Jend. Gatot Subroto Kav. 1-3 Kel. Karet Semanggi  Jakarta Selatan​;KEB HANA
+485;PT BANK MNC INTERNASIONAL Tbk;Gedung MNC Financial Center  Lt. 6 7 8 Jl. Kebon Sirih Raya No. 27  Jakarta Pusat 10340;MNC
+494;PT BANK RAKYAT INDONESIA AGRONIAGA Tbk;Gedung BRI Agro Lt. 1-7 Jl. Warung Jati Barat No. 139 RT.010 RW.009 Kel Kalibata  Pancoran Jakarta Selatan 12740​;AGRONIAGA
+498;PT BANK SBI INDONESIA;Graha Mandiri  Jl. Imam Bonjol No.61 Lt. 1  Jakarta Pusat 10310;SBI
+506;PT BANK MEGA SYARIAH;Menara Mega Syariah  Jl. HR Rasuna Said Kav. 19A  Jakarta 12950;MEGA SYARIAH
+555;PT BANK INDEX SELINDO;Plaza Bank Index Lt. 8 Jl. M. H. Thamrin No. 57 Jakarta Pusat;INDEX SELINDO
+553;PT BANK MAYORA;Gedung Mayora  Jl. Tomang Raya Kav. 21-23  Jakarta 11440;MAYORA
+36;PT BANK CHINA CONSTRUCTION BANK INDONESIA Tbk​;Gedung Perkantoran sahid Sudirman Center Lt. 15 Jl. Jenderal Sudirman Kav. 86 ;CHINA CONSTRUCTION
+46;PT BANK DBS INDONESIA;DBS Bank Tower  Lobby Level Lt 33-37 Ciputra World 1  Jl. Prof. Dr. Satrio Kav 3-5 Jakarta 12940;DBS
+47;PT BANK RESONA PERDANIA;Menara Mulia Lt. 5 & 6  Suite 501 & 601 Jl. Gatot Subroto Kav. 9-11  Jakarta;RESONA
+48;PT BANK MIZUHO INDONESIA;Sinarmas Land Plaza  Menara 2 Lt. 24  Jl. MH. Thamrin No. 51  Jakarta 10350;MIZUHO
+54;PT BANK CAPITAL INDONESIA Tbk;Gedung Menara Jamsostek Lt. 1 & 6  Jl. Gatot Subroto No. 38 Jakarta Selatan 12710;CAPITAL
+57;PT BANK BNP PARIBAS INDONESIA;Sequis Tower Lt.28  SCBD Lot 11B Jl. Jenderal Sudirman Kav.71 Jakarta 12190;BNP PARIBAS
+61;PT BANK ANZ INDONESIA;World Trade Centre 3  Lt.30-31 Jl. Jend. Sudirman Kav.29-31  Karet Kuningan  Setiabudi  Jakarta Selatan 12920;ANZ
+945;PT BANK IBK INDONESIA Tbk;Wisma GKBI Suites-UG01 Jl. Jendral Sudirman No. 29  Jakarta;IBK
+947;PT BANK NET INDONESIA SYARIAH Tbk;Sona Topas Tower Lt. 1-3  Jl. Jend. Sudirman Kav. 26  Jakarta 12920;NET SYARIAH
+949;PT BANK CTBC INDONESIA;Tamara Center Lt. 15-17  Jl. Jend. Sudirman Kav. 24  Jakarta 12920;CTBC
+950;PT BANK COMMONWEALTH;World Trade Centre (WTC) 6  Jl. Jend. Sudirman Kav.29-31  Jakarta 12920;COMMONWEALTH
+213;PT BANK BTPN Tbk;Menara BTPN - CBD Mega Kuningan  Jl. Dr. Ide Anak Agung Gde Agung Kav. 5 5 - 5 6 Jakarta Selatan 12950;BTPN
+405;PT BANK VICTORIA SYARIAH;Gedung The Victoria  Jalan Tomang Raya Kav.3  Jakarta Barat;VICTORIA SYARIAH
+422;PT BANK BRISYARIAH Tbk ;Jl. Abdul Muis No. 2-4  Jakarta Pusat;BRI SYARIAH
+425;PT BANK JABAR BANTEN SYARIAH;Jl. Braga No. 135 Bandung;BJB SYARIAH
+459;PT BANK BISNIS INTERNASIONAL;Jl. Ir. H. Djuanda No. 137  Bandung;BISNIS INT
+472;PT BANK JASA JAKARTA;Jl. Tiang Bendera III No. 26-28-30  Jakarta 11230;JASA JKT
+490;PT BANK NEO COMMERCE Tbk;Gd. Gozco   Jl. Raya Pasar Minggu Kav.32 Pancoran  Jakarta Selatan;NEO COMM
+501;PT BANK DIGITAL BCA;Jl. Suryopranoto No. 52  Jakarta 10130;DIGITAL BCA
+503;PT BANK NATIONALNOBU Tbk;Plaza Semanggi Lt. 9  Jl. Jendral Sudirman Kav. 50 Jakarta;NOBU
+513;PT BANK INA PERDANA Tbk;Wisma BSG  Jl. Abdul Muis No. 40  Jakarta Pusat;INA PERDANA
+517;PT BANK PANIN DUBAI SYARIAH Tbk;Gd.Panin Life Centre Lt. 3  Jl. Letjend S. Parman Kav 91 Jakarta 11420;PANIN DUBAI
+520;PT PRIMA MASTER BANK;Jl. Jembatan Merah No. 15-17  Surabaya 60175;MASTER
+521;PT BANK SYARIAH BUKOPIN;Jl. Salemba Raya No. 55  Jakarta;SYARIAH BUKOPIN
+523;PT BANK SAHABAT SAMPOERNA;Gedung Sampoerna Strategic Square Menara Utara  Lt. Mezzanine Jl. Jend. Sudirman Kav 45 Jakarta;SAHABAT SAMPOERNA
+526;PT BANK OKE INDONESIA Tbk;Jl. Ir. H. Juanda No. 12  Jakarta 10120;OKE
+531;PT BANK AMAR INDONESIA;Jl. Basuki Rahmad No. 109  Surabaya;AMAR
+535;PT BANK KESEJAHTERAAN EKONOMI;Gedung IKP RI  Jl. R.P. Suroso No. 21  Jakarta 10330;KESEJAHTERAAN EKONOMI
+536;PT BANK BCA SYARIAH;Jl. Jatinegara Timur No. 72  Jakarta 13310;BCA SYARIAH
+542;PT BANK JAGO TBK;Jl. Otto Iskandardinata No. 18  Bandung 40171;JAGO
+547;PT BANK BTPN SYARIAH Tbk;Menara BTPN  Lt. 12 CBD Mega Kuningan  Jl. Dr. Ide Anak Agung Gde Agung Kav. 5.5-5.6 Kel. Kuningan Timur  Jakarta Selatan;BTPN SYARIAH
+548;PT BANK MULTIARTA SENTOSA;Graha Bank MAS Lt. 3  Jl. Setiabudi Selatan Kav. 7-8  Jakarta Selatan;MULTIARTA
+562;PT BANK FAMA INTERNASIONAL;Jl. Asia Afrika No. 115  Bandung;FAMA
+564;PT BANK MANDIRI TASPEN​;Graha Mantap  Jl Cikini Raya No.42 Jakarta;MANDIRI TASPEN
+566;PT BANK VICTORIA INTERNATIONAL Tbk;Gedung Graha BIP Lt.10 Jl. Gatot Subroto Kav. 23 Karet Semanggi  Setiabudi Jakarta Selatan 12930;VICTORIA
+567;PT BANK HARDA INTERNASIONAL Tbk;Asean Tower Lt 1 dan 3  Jl. KH. Samanhudi No. 10  Jakarta Pusat;HARDA
+110;PT BPD JAWA BARAT DAN BANTEN Tbk;Jl. Naripan No. 12 - 14  Bandung 40111;BJB
+111;PT BPD DKI;Gd. Prasada Sasana Karya Jl. Suryopranoto No. 8  Jakarta Pusat​;DKI
+112;PT BPD DAERAH ISTIMEWA YOGYAKARTA;Jl. Tentara Pelajar No. 7  Yogyakarta;DIY
+113;PT BPD JAWA TENGAH;Gedung Grinatha Jl. Pemuda No. 142  Semarang  Jawa Tengah 50132;JATENG
+114;PT BPD JAWA TIMUR Tbk;Jl. Basuki Rakhmat No. 98-104  Surabaya;JATIM
+115;PT BPD JAMBI;Jl. Jend. A. Yani No. 18  Telanaipura  Jambi;JAMBI
+116;PT BANK ACEH SYARIAH;Jl. Mr. H. T. Mohd. Hasan Gampong Lancot No. 89 Batoh  Banda Aceh;ACEH SYARIAH
+117;PT BPD SUMATERA UTARA;Jl. Imam Bonjol No. 18  Medan 20152;SUMUT
+118;PT BPD SUMATERA BARAT;Jl. Pemuda No. 21  Padang 25117;SUMBAR
+119;PT BPD RIAU KEPRI;Menara Dang Merdu BRK  Jl. Jend. Sudirman No. 462  Kota ​Pekanbaru;RIAU KEPRI
+120;PT BPD SUMATERA SELATAN DAN BANGKA BELITUNG;Jl. Gubernur H. Ahmad Bastari No. 07 Kel. Silaberanti Kec. Seberang Ulu I Jakabaring Palembang;SUMSEL
+121;PT BPD LAMPUNG;Jl. Wolter Monginsidi No. 182  Teluk Betung  Bandar Lampung 35215;LAMPUNG
+122;PT BPD KALIMANTAN SELATAN;Jl. Lambung Mangkurat No. 7  Banjarmasin 70111;KALSEL
+123;PT BPD KALIMANTAN BARAT;Jl. Rahadi Oesman No. 10  Pontianak 78117;KALBAR
+124;PT BPD KALIMANTAN TIMUR DAN KALIMANTAN UTARA​;Jl. Jend. Sudirman No. 33  Samarinda;KALTIM
+125;PT BPD KALIMANTAN TENGAH;Jl. RTA Milono No. 12  Palangka Raya 73111;KALTENG
+126;PT BPD SULAWESI SELATAN DAN SULAWESI BARAT;Jl. Dr. Sam Ratulangi No. 16  Makassar 90125;SULSEL
+127;PT BPD SULAWESI UTARA DAN  GORONTALO​;Jl. Sam Ratulangi No. 9  Manado 95111;SULUT
+128;PT BANK NTB SYARIAH;Jl. Pejanggik No. 30  Mataram;NTB SYARIAH
+129;PT BPD BALI;Jl. Raya Puputan Niti Mandala  Renon  Denpasar;BALI
+130;PT BPD NUSA TENGGARA TIMUR;Jl. W.J. Lalamentik No. 102  Kupang  Nusa Tenggara Timur  85000;NTT
+131;PT BPD MALUKU DAN MALUKU UTARA;Jl. Raya Pattimura 9  Ambon 97124;MALUT
+132;PT BPD PAPUA;Jl. Ahmad Yani 5-7  Jayapura 99111  Kotak Pos 1536;PAPUA
+133;PT BPD BENGKULU​;Jl. Basuki Rachmat 6  Bengkulu;BENGKULU
+134;PT BPD SULAWESI TENGAH;Jl. St. Hasanuddin No. 20  Palu;SULTENG
+135;PT BPD SULAWESI TENGGARA;Jl. May. Jend. Sutoyo No. 95  Kendari  Sulawesi Tenggara;SULTENGGARA
+137;​PT BPD BANTEN Tbk;​Jl. Juhdi 28 RT 005 RW 007 Kel. Cimundang  Serang;BANTEN
+31;CITIBANK N.A.;Citibank Tower Lt. 8-11 Pacific Century Place SCBD Lot. 10 Jl. Jend. Sudirman No.52-53 Jakarta 12190;CITIBANK
+32;JP MORGAN CHASE BANK NA;Gedung The Energy Lt. 5 & 6  SCBD Lot 11A  JL. Jend. Sudirman Kav 52-53  Jakarta 12190;JP MORGAN
+33;BANK OF AMERICA N.A;Gedung Bursa Efek Jakarta  Tower 2  Lt 23  Jl. Sudirman Kav. 52-53  Jakarta;BANK OF AMERICA
+40;BANGKOK BANK PCL;Jl. MH. Thamrin No. 3  Jakarta;BANGKOK
+42;MUFG BANK LTD​;Gedung Mid Plaza Lt.1-3  Jl. Jend Sudirman Kav. 10-11  Jakarta 10220;MUFG
+50;STANDARD CHARTERED BANK;Menara Standard Chartered Bank  Jl. Prof. Dr. Satrio No. 164  Jakarta 12950;STANCHART
+67;DEUTSCHE BANK AG;Deutsche Bank Building  Jl. Imam Bonjol No. 80  Jakarta;DEUTSCHE
+110;BANK OF CHINA (HONG KONG) LIMITED​;Wisma Tamara  Suite 101-201  Jl. Jend. Sudirman Kav. 24  Jakarta;BANK OF CHINA
+494;PT BANK RAYA INDONESIA Tbk;;BANK RAYA

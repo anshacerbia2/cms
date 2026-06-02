@@ -482,8 +482,8 @@ export class FinanceReportService {
       }
     }
 
-    // 2. Profit (Loss) for the target year (Always dynamic from P&L)
-    const plCurrentData = await this.getProfitLossStatement(targetYear, endDate);
+    // 2. Profit (Loss) for the target year (Sourced from targetYear - 1 as requested)
+    const plCurrentData = await this.getProfitLossStatement(targetYear - 1, endDate);
     const profitLossVal = new Prisma.Decimal(plCurrentData.tableData.find(r => r.account?.trim().toLowerCase() === "profit after tax")?.total?.toString().replace(/,/g, '') || "0");
 
     // 3. Previous Years Net RE (Opening balance of RE for the year)
@@ -887,16 +887,12 @@ export class FinanceReportService {
       });
 
       const records = recordsRaw.filter(r => {
-        const val = r.colB?.toString() || "";
-        const year = this.extractYear(val);
+        // colB is Int (Year). Compare directly as a year number.
+        const recordYear = r.colB ?? 0;
 
-        const fullDate = new Date(val);
-        const hasFullDate = !isNaN(fullDate.getTime());
-
-        // Date filtering (matching getBalanceSheet logic)
+        // Date filtering: exclude records from future years
         if (date) {
-          if (hasFullDate && fullDate > endDate) return false;
-          if (year > 0 && year > currentYearVal) return false;
+          if (recordYear > 0 && recordYear > currentYearVal) return false;
         }
 
         const rowCat = r.colA?.toLowerCase() || '';
@@ -915,7 +911,7 @@ export class FinanceReportService {
         colC: (r.colB !== null && r.colB !== undefined) ? String(r.colB) : '-', // Year (colB)
         colD: r.colC || '-', // Vendor (colC)
         colE: r.colD || '-', // Description (colD)
-        colR: formatDecimal(r.colS), // Outstanding (colS)
+        colR: formatDecimal(r.colU), // Outstanding (colU)
       }));
     }
 
@@ -1174,14 +1170,11 @@ export class FinanceReportService {
     });
 
     const apRecordsRaw = apRecordsRawAll.filter(r => {
-      const val = r.colB?.toString() || "";
-      const y = this.extractYear(val); 
-      const fullDate = new Date(val);
-      const hasFullDate = !isNaN(fullDate.getTime());
+      // colB is Int (Year). Compare directly as a year number.
+      const recordYear = r.colB ?? 0;
 
       if (date) {
-        if (hasFullDate && fullDate > endOfDate) return false;
-        if (y > 0 && y > currentYearVal) return false;
+        if (recordYear > 0 && recordYear > currentYearVal) return false;
       }
 
       // No date filter → include ALL records (show full cumulative balance sheet)
@@ -1416,7 +1409,7 @@ export class FinanceReportService {
     );
     const apDepositTotal = apDepositRecords.reduce((acc, r) => {
       processedApIds.add(r.id);
-      return acc.plus(new Prisma.Decimal(r.colS || 0));
+      return acc.plus(new Prisma.Decimal(r.colU || 0));
     }, new Prisma.Decimal(0));
 
     apDepositItems.push({
@@ -1434,7 +1427,7 @@ export class FinanceReportService {
     );
     const apShortTermLoanTotal = apShortTermLoanRecords.reduce((acc, r) => {
       processedApIds.add(r.id);
-      return acc.plus(new Prisma.Decimal(r.colS || 0));
+      return acc.plus(new Prisma.Decimal(r.colU || 0));
     }, new Prisma.Decimal(0));
 
     apShortTermLoanItems.push({
@@ -1460,7 +1453,7 @@ export class FinanceReportService {
       
       const total = records.reduce((acc, r) => {
         processedApIds.add(r.id);
-        return acc.plus(new Prisma.Decimal(r.colS || 0));
+        return acc.plus(new Prisma.Decimal(r.colU || 0));
       }, new Prisma.Decimal(0));
       
       apItems.push({
@@ -1475,7 +1468,7 @@ export class FinanceReportService {
     // Remaining records are not shown in items but are already included in the group total calculation.
 
     // Calculate total from ALL raw records to ensure balance sheet parity
-    const apTotal = apRecordsRaw.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colS || 0)), new Prisma.Decimal(0));
+    const apTotal = apRecordsRaw.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colU || 0)), new Prisma.Decimal(0));
     const finalApItems = [...apItems];
 
     // 6. Equity (Dynamic RE Logic)
@@ -1535,11 +1528,12 @@ export class FinanceReportService {
         return acc;
       }, new Prisma.Decimal(0));
 
-      // AP: Reuse apRecordsRaw (already date-filtered). Sum colS where record date <= monthEnd.
+      // AP: Reuse apRecordsRaw (already date-filtered). Sum colU where record year <= month's year.
       const trendAP = apRecordsRaw.reduce((acc, r) => {
-        const d = new Date(r.colB?.toString() || '');
-        if (!isNaN(d.getTime()) && d <= monthEnd) {
-          return acc.plus(new Prisma.Decimal(r.colS ? String(r.colS) : 0));
+        // colB is Int (Year). Include all AP records up to the current trend year.
+        const recordYear = r.colB ?? 0;
+        if (recordYear > 0 && recordYear <= trendYear) {
+          return acc.plus(new Prisma.Decimal(r.colU ? String(r.colU) : 0));
         }
         return acc;
       }, new Prisma.Decimal(0));
@@ -1602,7 +1596,7 @@ export class FinanceReportService {
             items: [
               { accountName: 'Previous years', idr: formatDecimal(prevYearsVal), code: '3101', tx: 1 },
               { accountName: 'Dividend', idr: formatDecimal(dividendVal), code: '3102', tx: 1 },
-              { accountName: `Profit (Loss) ${currentYearVal}`, idr: formatDecimal(profitLossVal), code: '3103', tx: 1 }
+              { accountName: `Profit (Loss) ${currentYearVal - 1}`, idr: formatDecimal(profitLossVal), code: '3103', tx: 1 }
             ] 
           }
         ]
@@ -1665,9 +1659,10 @@ export class FinanceReportService {
       ...apRecords.map(r => ({
         id: `BILL-${r.id.toString().padStart(4, '0')}`,
         customer: r.colA || 'Unknown Vendor',
-        amount: formatDecimal(new Prisma.Decimal(String(r.colS || 0))),
-        status: Number(r.colS) > 0 ? 'Pending' : 'Paid',
-        date: r.colB ? new Date(r.colB) : new Date()
+        amount: formatDecimal(new Prisma.Decimal(String(r.colU || 0))),
+        status: Number(r.colU) > 0 ? 'Pending' : 'Paid',
+        // colB is Int (Year) — construct Jan 1 of that year as the date
+        date: r.colB ? new Date(r.colB, 0, 1) : new Date()
       }))
     ];
 

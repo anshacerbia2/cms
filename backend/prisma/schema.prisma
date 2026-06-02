@@ -437,27 +437,28 @@ model AccountReceivable {
 
 model AccountPayable {
   id              BigInt   @id @default(autoincrement())
-  colA            String?  @db.VarChar(100)   // Payable (Supplier, Deposit, 
+  colA            String?  @db.VarChar(100)   // Payable (Supplier, Deposit) 
   colB            Int?                        // Year
   colC            String?  @db.Text           // Vendor
   colD            String?  @db.Text           // Description
   colE            Decimal? @db.Decimal(19, 4) // EOY IDR
-  colF            String?  @db.Text           // Col F
-  colG            String?  @db.Text           // Col G
-  colH            String?  @db.Text           // Col H
-  colI            Decimal? @db.Decimal(19, 4) // BCA Shardjo
-  colJ            Decimal? @db.Decimal(19, 4) // BCA Juanda
-  colK            Decimal? @db.Decimal(19, 4) // Mandiri Mid Plaza
-  colL            Decimal? @db.Decimal(19, 4) // BTN
-  colM            Decimal? @db.Decimal(19, 4) // BRI Shardjo
-  colN            Decimal? @db.Decimal(19, 4) // BRI Tebet
-  colO            Decimal? @db.Decimal(19, 4) // Cash IDR
-  colP            Decimal? @db.Decimal(19, 4) // Non CB 
-  colQ            Decimal? @db.Decimal(19, 4) // AP PPN
-  colR            String?  @db.Text
-  colS            Decimal? @db.Decimal(19, 4) // OUTSTANDING IDR
-  colT            Decimal? @db.Decimal(19, 4) // COL T
-  colU            Decimal? @db.Decimal(19, 4) // COL U
+  colF            Decimal? @db.Decimal(19, 4) // EOY USD
+  colG            Decimal? @db.Decimal(19, 4) // col G (USD Rate)
+  colH            String?  @db.Text           // col H
+  colI            String?  @db.Text           // col I
+  colJ            String?  @db.Text           // col J (Blank)
+  colK            Decimal? @db.Decimal(19, 4) // BCA Shardjo
+  colL            Decimal? @db.Decimal(19, 4) // BCA Juanda
+  colM            Decimal? @db.Decimal(19, 4) // Mandiri Mid Plaza
+  colN            Decimal? @db.Decimal(19, 4) // BTN
+  colO            Decimal? @db.Decimal(19, 4) // BRI Shardjo
+  colP            Decimal? @db.Decimal(19, 4) // BRI Tebet
+  colQ            Decimal? @db.Decimal(19, 4) // Cash IDR
+  colR            Decimal? @db.Decimal(19, 4) // Non CB 
+  colS            Decimal? @db.Decimal(19, 4) // AP In and Out
+  colT            String?  @db.Text           // col T (Blank)
+  colU            Decimal? @db.Decimal(19, 4) // OUTSTANDING IDR
+  colV            Decimal? @db.Decimal(19, 4) // OUTSTANDING USD
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
