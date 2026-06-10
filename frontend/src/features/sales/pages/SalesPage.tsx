@@ -16,14 +16,36 @@ import AddSalesModal from "../components/AddSalesModal";
 import { useAuthStore } from "@/store/authStore";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function SalesPage() {
   const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const salesLimit = 10;
 
+  const [salesYearFilter, setSalesYearFilter] = useState(new Date().getFullYear().toString());
+  const yearNum = useMemo(() => Number(salesYearFilter), [salesYearFilter]);
+
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = currentYear; y >= 2025; y--) {
+      years.push(y.toString());
+    }
+    return years;
+  }, []);
+
   const { getAllSales } = useSales();
-  const { data: allSalesRaw, isLoading: salesLoading, refetch: refetchSales } = getAllSales();
+  const { data: allSalesRaw, isLoading: salesLoading, refetch: refetchSales } = getAllSales(
+    salesYearFilter !== "all" ? yearNum : undefined,
+    { enabled: !!salesYearFilter }
+  );
 
   const displaySales = useMemo(() => {
     return (allSalesRaw || []).map((row: any) => ({
@@ -171,6 +193,21 @@ export default function SalesPage() {
             onChange={(e) => { setSalesSearch(e.target.value); setSalesPage(1); }}
           />
         </div>
+        <Select value={salesYearFilter} onValueChange={(v) => { setSalesYearFilter(v); setSalesPage(1); }}>
+          <SelectTrigger className="w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
+            <SelectValue placeholder="Year" />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden">
+            <SelectItem value="all" className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">
+              All Years
+            </SelectItem>
+            {availableYears.map(year => (
+              <SelectItem key={year} value={year} className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">
+                {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
           {isAnyFilterActive && (
             <Button 

@@ -7,8 +7,8 @@ export const accountPayableService = {
     return data;
   },
 
-  getAllAP: async (): Promise<any[]> => {
-    const { data } = await api.get("/finance/account-payable/all");
+  getAllAP: async (year?: number): Promise<any[]> => {
+    const { data } = await api.get("/finance/account-payable/all", { params: { year } });
     return Array.isArray(data) ? data : (data as any).data || [];
   },
 

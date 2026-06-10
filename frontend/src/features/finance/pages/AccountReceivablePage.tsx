@@ -20,6 +20,14 @@ import { formatCurrency, formatDate, cleanAmount, getAmountColor } from "@/lib/u
 import { useAuthStore } from "@/store/authStore";
 import { Decimal } from "decimal.js";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
 
@@ -28,8 +36,23 @@ export default function AccountReceivablePage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const limit = 10;
 
+  const [arYearFilter, setArYearFilter] = useState(new Date().getFullYear().toString());
+  const yearNum = useMemo(() => Number(arYearFilter), [arYearFilter]);
+
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = currentYear; y >= 2025; y--) {
+      years.push(y.toString());
+    }
+    return years;
+  }, []);
+
   const { getAllAR } = useAccountReceivable();
-  const { data: allARRaw = [], isLoading, refetch } = getAllAR();
+  const { data: allARRaw = [], isLoading, refetch } = getAllAR(
+    arYearFilter !== "all" ? yearNum : undefined,
+    { enabled: !!arYearFilter }
+  );
 
   const displayAR = useMemo(() => {
     return (allARRaw || []).map((row: any) => ({
@@ -133,6 +156,21 @@ export default function AccountReceivablePage() {
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
+        <Select value={arYearFilter} onValueChange={(v) => { setArYearFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
+            <SelectValue placeholder="Year" />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden">
+            <SelectItem value="all" className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">
+              All Years
+            </SelectItem>
+            {availableYears.map(year => (
+              <SelectItem key={year} value={year} className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">
+                {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="flex items-center gap-2">
            {isAnyFilterActive && (
             <Button 

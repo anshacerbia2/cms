@@ -14,10 +14,10 @@ export function useSales() {
       ...options,
     });
 
-  const getAllSales = (options?: any) =>
+  const getAllSales = (year?: number, options?: any) =>
     useQuery<any[]>({
-      queryKey: ["finance", "sales", "all"],
-      queryFn: () => salesService.getAllSales(),
+      queryKey: ["finance", "sales", "all", year],
+      queryFn: () => salesService.getAllSales(year),
       ...options,
     });
 

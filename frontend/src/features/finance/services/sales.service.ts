@@ -7,8 +7,8 @@ export const salesService = {
     return data;
   },
 
-  getAllSales: async (): Promise<any[]> => {
-    const { data } = await api.get("/finance/sales/all");
+  getAllSales: async (year?: number): Promise<any[]> => {
+    const { data } = await api.get("/finance/sales/all", { params: { year } });
     return Array.isArray(data) ? data : (data as any).data || [];
   },
 

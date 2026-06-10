@@ -21,7 +21,7 @@ export function useEquity(year: number) {
   });
 
   return {
-    properties: propertiesQuery.data || {},
+    properties: propertiesQuery.data,
     isLoading: propertiesQuery.isLoading,
     updateProperties: updatePropertiesMutation.mutateAsync,
     isUpdating: updatePropertiesMutation.isPending,

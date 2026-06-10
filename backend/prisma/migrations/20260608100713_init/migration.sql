@@ -278,10 +278,7 @@ CREATE TABLE "financial_transactions" (
     "col_g" TEXT,
     "col_h" TEXT,
     "col_i" TEXT,
-    "col_j" TEXT,
-    "col_k" TEXT,
-    "col_l" TEXT,
-    "col_m" TEXT,
+    "tagYear" INTEGER,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -321,6 +318,7 @@ CREATE TABLE "sales_records" (
     "colAB" DECIMAL(19,4),
     "colAC" DECIMAL(19,4),
     "colAD" TEXT,
+    "tagYear" INTEGER,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -348,6 +346,7 @@ CREATE TABLE "account_receivables" (
     "colP" DECIMAL(19,4),
     "colQ" TEXT,
     "colR" DECIMAL(19,4),
+    "tagYear" INTEGER,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -379,6 +378,7 @@ CREATE TABLE "account_payables" (
     "colT" TEXT,
     "colU" DECIMAL(19,4),
     "colV" DECIMAL(19,4),
+    "tagYear" INTEGER,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -435,6 +435,7 @@ CREATE TABLE "depreciation" (
     "col_t" DECIMAL(19,4) DEFAULT 0,
     "col_u" DECIMAL(19,4) DEFAULT 0,
     "type" "DepreciationType" NOT NULL DEFAULT 'OFFICE_EQUIPMENT',
+    "tagYear" INTEGER,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 

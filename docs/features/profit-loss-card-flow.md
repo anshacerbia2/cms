@@ -186,3 +186,66 @@ CROSS JOIN properties prop;
 * Pendapatan (**Net Sales** & **Other Income**) bernilai **positif**.
 * Beban (**COGS**, **Expenses**, **Depreciation**, **Income Tax**) dihitung sebagai nilai **negatif** di dalam query (`Credit - Debit` menghasilkan nilai negatif karena porsi Debit lebih besar untuk transaksi beban).
 * Formula penjumlahan pada baris akhir otomatis menyesuaikan nilai negatif tersebut (misal: `Gross Profit = Net Sales + cogs_total` yang secara matematis melakukan pengurangan `Net Sales - |cogs_total|`).
+
+---
+
+## ⚖️ 4. Sumber Data Setiap Card (Deskripsi Bisnis)
+
+Berikut adalah ringkasan asal-usul data dan rumus perhitungan untuk setiap card pada tab **Profit & Loss**:
+
+### A. Net Sales (Penjualan Bersih)
+Penjualan bersih perusahaan setelah dikurangi pajak pertambahan nilai (PPN).
+
+| Komponen / Prioritas | Tabel Sumber | Keterangan Nilai / Perhitungan | Filter / Kondisi |
+|---|---|---|---|
+| **Override Net Sales (Prioritas 1)** | Properti Ekuitas (*Equity Properties*) | Menggunakan nilai override manual jika dikonfigurasi | Key: `PL_NET_SALES` pada tahun berjalan |
+| **Kalkulasi Transaksi (Prioritas 2)** | Catatan Penjualan (*Sales Records*) | `Penjualan Kotor (Gross Sales) - Nilai PPN (VAT)` | Tanggal transaksi berada dalam rentang tahun berjalan |
+
+---
+
+### B. Gross Profit (Laba Kotor)
+Laba kotor setelah dikurangi dengan Harga Pokok Penjualan (COGS).
+
+| Komponen | Tabel Sumber | Keterangan Nilai / Perhitungan | Filter / Kondisi |
+|---|---|---|---|
+| **Net Sales** | — | Penjualan Bersih (hasil dari langkah A) | — |
+| **COGS (Harga Pokok Penjualan)** | Transaksi Finansial (*Financial Transactions*) | Jumlah pengeluaran untuk pokok penjualan | Kategori transaksi mengandung kata "Cost of Goods Sold", tahun berjalan |
+
+```text
+Gross Profit = Net Sales - COGS
+```
+
+---
+
+### C. Operating Profit (Laba Usaha)
+Laba operasional setelah dikurangi seluruh biaya operasional (OPEX).
+
+| Komponen | Tabel Sumber | Keterangan Nilai / Perhitungan | Filter / Kondisi / Override Key |
+|---|---|---|---|
+| **Gross Profit** | — | Laba Kotor (hasil dari langkah B) | — |
+| **Personnel Expense** | Transaksi Finansial / Override | Biaya gaji dan kepegawaian | Kategori "Personnel Expense" (Override Key: `PL_PERSONNEL_EXP`) |
+| **Office Expense** | Transaksi Finansial / Override | Biaya utilitas dan operasional kantor | Kategori "Office Expense" (Override Key: `PL_OFFICE_EXP`) |
+| **Marketing Expense** | Transaksi Finansial / Override | Biaya pemasaran dan iklan | Kategori "Marketing Expense" (Override Key: `PL_MARKETING_EXP`) |
+| **Financial Expense** | Transaksi Finansial / Override | Biaya admin bank, bunga, dsb. | Kategori "Financial Expense" (Override Key: `PL_FINANCIAL_EXP`) |
+
+```text
+Operating Profit = Gross Profit - (Personnel + Office + Marketing + Financial Expenses)
+```
+
+---
+
+### D. Profit After Tax (Laba Bersih Setelah Pajak)
+Laba bersih akhir perusahaan setelah memperhitungkan pendapatan/biaya lain, penyusutan aset, dan pajak.
+
+| Komponen / Prioritas | Tabel Sumber | Keterangan Nilai / Perhitungan | Filter / Kondisi / Override Key |
+|---|---|---|---|
+| **Override Net Profit (Prioritas 1)** | Properti Ekuitas (*Equity Properties*) | Menggunakan nilai laba bersih manual secara langsung | Key: `PL_NET_PROFIT` pada tahun berjalan |
+| **Kalkulasi Bertingkat (Prioritas 2)** | — | Dihitung dari Laba Usaha ditambah pendapatan lain-lain, lalu dikurangi penyusutan dan pajak | — |
+| **Other Income** | Transaksi Finansial / Override | Pendapatan lain di luar operasional utama | Kategori "Other Income" (Override Key: `PL_OTHER_INCOME`) |
+| **Depreciation** | Daftar Penyusutan (*Depreciation*) / Override | Akumulasi biaya penyusutan nilai aset | Total penyusutan tahun berjalan (Override Key: `PL_DEPRECIATION`) |
+| **Income Tax** | Transaksi Finansial / Override | Pemotongan pajak PPh 23 non-kas | Kategori "Account Receivable", Sub-kategori "AR Prepaid Tax", deskripsi transaksi mengandung "pph 23" atau "pph-23", melalui akun bertipe "OTHER" nama "non cash & bank" (Override Key: `PL_INCOME_TAX`) |
+
+```text
+Profit After Tax = Operating Profit + Other Income - Depreciation - Income Tax
+```
+

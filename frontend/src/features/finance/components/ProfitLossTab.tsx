@@ -37,14 +37,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Settings } from "lucide-react";
-import PLPropertiesModal from "./PLPropertiesModal";
-
 
 export function ProfitLossTab() {
-  const [year, setYear] = useState("all");
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState(currentYear.toString());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [showPropertiesModal, setShowPropertiesModal] = useState(false);
   const { getPLStatement, getPLDetails, getDepreciationDetails, getSalesCogsDetails } = useFinance();
   
   const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
@@ -346,6 +343,8 @@ export function ProfitLossTab() {
   });
 
   const { data: deprDetails, isLoading: isLoadingDeprDetails } = getDepreciationDetails(
+    year !== "all" ? Number(year) : undefined,
+    selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
     { enabled: !!selectedLedger && isDepr }
   );
 
@@ -762,8 +761,8 @@ export function ProfitLossTab() {
                           <th key={m} className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-32">{m}</th>
                         ))}
                         <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Total 2025</th>
-                        <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">S/D 2025</th>
-                        <th className="pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Book Value</th>
+                        {/* <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">S/D 2025</th> */}
+                        <th className="pl-4 pr-8 py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">Book Value</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-primary/5">
@@ -796,10 +795,10 @@ export function ProfitLossTab() {
                           <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold text-primary tabular-nums">
                             {item.displayTotal2025}
                           </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold text-primary tabular-nums">
+                          {/* <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold text-primary tabular-nums">
                             {item.displayAccumulated2025}
-                          </td>
-                          <td className="pr-8 py-3 text-right whitespace-nowrap text-[12px] font-bold text-primary tabular-nums">
+                          </td> */}
+                          <td className="pl-4 pr-8 py-3 text-right whitespace-nowrap text-[12px] font-bold text-primary tabular-nums">
                             {item.displayBookValue}
                           </td>
                         </tr>
@@ -829,10 +828,10 @@ export function ProfitLossTab() {
                           <td className={`px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[13px] ${getAmountColor(totals.total2025)}`}>
                             {formatCurrency(totals.total2025)}
                           </td>
-                          <td className={`px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[13px] ${getAmountColor(totals.accumulated2025)}`}>
+                          {/* <td className={`px-4 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[13px] ${getAmountColor(totals.accumulated2025)}`}>
                             {formatCurrency(totals.accumulated2025)}
-                          </td>
-                          <td className={`pr-8 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[14px] ${getAmountColor(totals.bookValue)}`}>
+                          </td> */}
+                          <td className={`pl-4 pr-8 py-4 text-right whitespace-nowrap font-bold tabular-nums text-[14px] ${getAmountColor(totals.bookValue)}`}>
                             {formatCurrency(totals.bookValue)}
                           </td>
                         </tr>
@@ -1458,33 +1457,14 @@ export function ProfitLossTab() {
                 <SelectValue placeholder="Select Year" />
               </SelectTrigger>
               <SelectContent className="border-primary/5 shadow-2xl">
-                <SelectItem value="all" className="text-[11px] font-bold uppercase tracking-widest py-3 cursor-pointer">All Time</SelectItem>
-                <SelectItem value="2024" className="text-[11px] font-bold uppercase tracking-widest py-3 cursor-pointer">2024</SelectItem>
-                <SelectItem value="2025" className="text-[11px] font-bold uppercase tracking-widest py-3 cursor-pointer">2025</SelectItem>
-                <SelectItem value="2026" className="text-[11px] font-bold uppercase tracking-widest py-3 cursor-pointer">2026</SelectItem>
+                {Array.from({ length: currentYear - 2025 + 1 }, (_, i) => 2025 + i).map(y => (
+                  <SelectItem key={y} value={y.toString()} className="text-[11px] font-bold uppercase tracking-widest py-3 cursor-pointer">{y}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          {year !== "all" && (
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => setShowPropertiesModal(true)}
-              className="h-12 w-12 bg-white border-0 shadow-sm rounded-xl text-primary/40 hover:text-primary transition-all hover:bg-white hover:shadow-sm"
-            >
-              <Settings size={20} />
-            </Button>
-          )}
         </div>
       </div>
-
-      {year !== "all" && (
-        <PLPropertiesModal 
-          open={showPropertiesModal}
-          onOpenChange={setShowPropertiesModal}
-          year={parseInt(year)}
-        />
-      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1605,10 +1585,11 @@ export function ProfitLossTab() {
                           className={`text-[12px] uppercase tracking-wide flex-grow ${
                             isGrandTotal ? "font-bold text-secondary" :
                             isSpecialBold ? "font-bold text-primary/70" :
-                            isOtherProfitItem ? "font-medium text-primary/60" :
+                            isOtherProfitItem ? "font-normal text-primary/60" :
                             isProfitLine ? "font-bold text-secondary" : 
-                            row.level === 3 ? "font-bold text-primary/40 text-[11px]" :
-                            row.isSubItem ? "font-medium text-primary/60" : 
+                            row.level === 3 ? "font-normal text-primary/60 text-[11px]" :
+                            isExpense ? "font-bold text-primary/70" :
+                            row.isSubItem ? "font-normal text-primary/60" : 
                             "font-bold text-primary/70"
                           }`}
                         >

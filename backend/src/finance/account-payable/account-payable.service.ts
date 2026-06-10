@@ -42,8 +42,12 @@ export class AccountPayableService {
     };
   }
 
-  async getAllAccountPayables(): Promise<any[]> {
-    const data = await this.prisma.accountPayable.findMany({ orderBy: [{ id: 'asc' }] });
+  async getAllAccountPayables(year?: number): Promise<any[]> {
+    const where: any = {};
+    if (year && !isNaN(year)) {
+      where.tagYear = year;
+    }
+    const data = await this.prisma.accountPayable.findMany({ where, orderBy: [{ id: 'asc' }] });
     return data.map((item: any) => ({
       ...item,
       id: Number(item.id),

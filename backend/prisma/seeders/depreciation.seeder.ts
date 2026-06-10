@@ -46,6 +46,7 @@ export async function seedDepreciation(prisma: PrismaClient) {
         colT: cleanCurrency(row[19]),
         colU: cleanCurrency(row[20]),
         type: DepreciationType.OFFICE_EQUIPMENT,
+        tagYear: 2025,
       });
     }
 
@@ -77,6 +78,7 @@ export async function seedDepreciation(prisma: PrismaClient) {
         colT: cleanCurrency(row[19]),
         colU: cleanCurrency(row[20]),
         type: DepreciationType.VEHICLE,
+        tagYear: 2025,
       });
     }
 

@@ -134,7 +134,6 @@ export default function BankMutationPage() {
       colG: row.colG || "-",
       colH: row.colH || "-",
       colI: row.colI || "-",
-      colJ: row.colJ || "-",
     }));
   }, [allTransactionsRaw]);
 
@@ -154,7 +153,7 @@ export default function BankMutationPage() {
     isAnyFilterActive: isExcelFilterActive 
   } = useExcelFilter({
     data: displayTransactions,
-    searchFields: ['colB', 'colF', 'colG', 'colH', 'colI', 'colJ']
+    searchFields: ['colB', 'colF', 'colG', 'colH', 'colI']
   });
 
   const handleClearFilters = () => {
@@ -205,7 +204,7 @@ export default function BankMutationPage() {
   const availableYears = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const years = [];
-    for (let y = currentYear; y >= 2020; y--) {
+    for (let y = currentYear; y >= 2025; y--) {
       years.push(y.toString());
     }
     return years;
@@ -740,17 +739,6 @@ export default function BankMutationPage() {
                     />
                   </div>
                 </TableHead>
-                <TableHead className="py-3 w-48 pl-4">
-                  <div className="flex items-center gap-1">
-                    Sub Ledger - 4
-                    <ExcelColumnFilter 
-                      columnKey="colJ" label="Sub Ledger - 4" data={getCascadingData("colJ")} 
-                      activeFilters={ledgerFilters["colJ"]} 
-                      onFilterChange={(v) => { setLedgerFilters(p => ({...p, colJ: v})); setLedgerPage(1); }}
-                      onSort={(d) => setLedgerSort({key: "colJ", direction: d})}
-                    />
-                  </div>
-                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -785,7 +773,6 @@ export default function BankMutationPage() {
                       <TableCell className="text-primary truncate max-w-[150px]" title={row.colG}>{row.colG}</TableCell>
                       <TableCell className="text-primary truncate max-w-[150px]" title={row.colH}>{row.colH}</TableCell>
                       <TableCell className="text-primary truncate max-w-[150px]" title={row.colI}>{row.colI}</TableCell>
-                      <TableCell className="text-primary truncate max-w-[150px]" title={row.colJ}>{row.colJ}</TableCell>
                     </TableRow>
                   ))}
                   

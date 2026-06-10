@@ -173,3 +173,48 @@ Sesuai dengan ketentuan data akuntansi korporat pada sistem ini:
 
 * **Optimalisasi Jaringan**: Pendekatan client-side sebelumnya memanggil 3 endpoint terpisah (`getFiscalPeriods`, `getAnchorBalance`, dan `getAllTransactions`). Dengan Native Query ini, visual card dapat diisi menggunakan **satu round-trip query** tunggal.
 * **Dukungan Indeks**: Query memanfaatkan indeks unik pada `fiscal_periods` `(internal_account_id, year)` serta indeks komposit waktu pada `financial_transactions` `(internal_account_id, col_a, id)` untuk pencarian *O(log N)* yang instan.
+
+---
+
+## ⚖️ 5. Sumber Data Setiap Card (Deskripsi Bisnis)
+
+Berikut adalah ringkasan asal-usul data dan rumus perhitungan untuk setiap card pada modul **Bank Mutation**:
+
+### A. Opening Balance (Saldo Awal)
+Saldo awal rekening dihitung secara berjenjang berdasarkan prioritas berikut:
+
+| Komponen / Prioritas | Tabel Sumber | Keterangan Nilai | Filter / Kondisi |
+|---|---|---|---|
+| **Saldo Awal Audit (Prioritas 1)** | Periode Fiskal (*Fiscal Periods*) | Nilai Saldo Awal yang disetup untuk rekening tersebut pada tahun berjalan | Akun dan Tahun terpilih |
+| **Transaksi Terakhir (Prioritas 2 / Anchor)** | Transaksi Finansial (*Financial Transactions*) | **Saldo Berjalan (Running Balance)** dari transaksi terakhir | Tanggal transaksi < Awal tahun berjalan (misal sebelum 1 Januari) |
+| **Periode Fiskal Sebelumnya (Prioritas 3)** | Periode Fiskal (*Fiscal Periods*) | **Saldo Akhir** atau **Saldo Awal** dari tahun sebelum tahun berjalan | Tahun transaksi < Tahun target (diambil tahun terdekat) |
+| **Default (Prioritas 4)** | — | **0** | Jika tidak ditemukan data historis apa pun |
+
+---
+
+### B. Total Debit (Mutasi Keluar)
+Total pengeluaran dari rekening terpilih selama periode filter.
+
+| Komponen | Tabel Sumber | Keterangan Nilai | Filter / Kondisi |
+|---|---|---|---|
+| **Total Debit** | Transaksi Finansial (*Financial Transactions*) | **Jumlah Total Pengeluaran (Debit)** | Rekening terpilih, Tanggal transaksi berada dalam tahun berjalan |
+
+---
+
+### C. Total Credit (Mutasi Masuk)
+Total penerimaan ke rekening terpilih selama periode filter.
+
+| Komponen | Tabel Sumber | Keterangan Nilai | Filter / Kondisi |
+|---|---|---|---|
+| **Total Credit** | Transaksi Finansial (*Financial Transactions*) | **Jumlah Total Penerimaan (Credit)** | Rekening terpilih, Tanggal transaksi berada dalam tahun berjalan |
+
+---
+
+### D. Closing Balance (Saldo Akhir)
+Saldo akhir rekening pada akhir periode filter, ditentukan berdasarkan status audit tahun fiskal:
+
+| Skenario | Tabel Sumber / Metode | Keterangan Perhitungan | Filter / Kondisi |
+|---|---|---|---|
+| **Tahun Fiskal CLOSED (Terkunci/Audit)** | Periode Fiskal (*Fiscal Periods*) | **Saldo Akhir (Closing Balance)** langsung dari snapshot data audit | Akun dan Tahun terpilih, status periode adalah `CLOSED` |
+| **Tahun Fiskal OPEN / INITIAL (Berjalan)** | Perhitungan Dinamis | `Saldo Awal - Total Mutasi Keluar (Debit) + Total Mutasi Masuk (Credit)` | Jika status periode belum ditutup / di-audit |
+

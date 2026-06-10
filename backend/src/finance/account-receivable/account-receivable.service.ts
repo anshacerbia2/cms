@@ -38,8 +38,12 @@ export class AccountReceivableService {
     };
   }
 
-  async getAllAR(): Promise<any[]> {
-    const data = await this.prisma.accountReceivable.findMany({ orderBy: [{ id: 'asc' }] });
+  async getAllAR(year?: number): Promise<any[]> {
+    const where: any = {};
+    if (year && !isNaN(year)) {
+      where.tagYear = year;
+    }
+    const data = await this.prisma.accountReceivable.findMany({ where, orderBy: [{ id: 'asc' }] });
     return data.map(item => ({
       ...item,
       id: Number(item.id),

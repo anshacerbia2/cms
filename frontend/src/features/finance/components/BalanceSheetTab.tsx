@@ -49,16 +49,26 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format } from "date-fns";
 
 export function BalanceSheetTab() {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState(currentYear.toString());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { getBalanceSheet, getBSDetails } = useFinance();
   
   // Year for UI Display only
-  const displayYear = selectedDate ? selectedDate.getFullYear().toString() : new Date().getFullYear().toString();
+  const displayYear = year;
 
   const { data: bsData, isLoading } = getBalanceSheet(
+    year,
     selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined
   );
 
@@ -79,6 +89,7 @@ export function BalanceSheetTab() {
   const { data: detailData, isLoading: isLoadingDetails } = getBSDetails(
     drillDown.category!,
     drillDown.subItem,
+    year,
     selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
     drillDown.accountId,
     { enabled: drillDown.isOpen }
@@ -291,12 +302,35 @@ export function BalanceSheetTab() {
                 <Calendar
                   mode="single"
                   captionLayout="dropdown"
+                  startMonth={new Date(parseInt(year), 0)}
+                  endMonth={new Date(parseInt(year), 11)}
+                  defaultMonth={!selectedDate ? new Date(parseInt(year), 11) : undefined}
                   selected={selectedDate}
                   onSelect={setSelectedDate}
                   initialFocus
                 />
               </PopoverContent>
             </Popover>
+          </div>
+
+          <div className="flex flex-col items-end">
+            <Select value={year} onValueChange={(val) => {
+              setYear(val);
+              if (parseInt(val) === currentYear) {
+                setSelectedDate(new Date());
+              } else {
+                setSelectedDate(new Date(parseInt(val), 11, 31));
+              }
+            }}>
+              <SelectTrigger className="h-12 w-32 bg-white border-0 shadow-sm rounded-xl text-[11px] font-bold uppercase tracking-widest focus:ring-0 focus:ring-offset-0 transition-all hover:bg-white hover:shadow-sm">
+                <SelectValue placeholder="Select Year" />
+              </SelectTrigger>
+              <SelectContent className="border-primary/5 shadow-2xl">
+                {Array.from({ length: currentYear - 2025 + 1 }, (_, i) => 2025 + i).map(y => (
+                  <SelectItem key={y} value={y.toString()} className="text-[11px] font-bold uppercase tracking-widest py-3 cursor-pointer">{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>

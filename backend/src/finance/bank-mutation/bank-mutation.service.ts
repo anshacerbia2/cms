@@ -14,22 +14,19 @@ export class BankMutationService {
       where.internalAccountId = BigInt(accountId);
     }
     
-    // Smart Date Range Logic
+    if (year && !isNaN(year)) {
+      where.tagYear = year;
+    }
+
     let finalStart: Date | undefined;
     let finalEnd: Date | undefined;
 
-    if (startDate) {
+    if (startDate && startDate !== 'null' && startDate !== 'undefined') {
       finalStart = new Date(`${startDate}T00:00:00.000Z`);
-    } else if (year && !isNaN(year)) {
-      finalStart = new Date(`${year}-01-01T00:00:00.000Z`);
     }
 
-    if (endDate) {
+    if (endDate && endDate !== 'null' && endDate !== 'undefined') {
       finalEnd = new Date(`${endDate}T23:59:59.999Z`);
-    } else if (year && !isNaN(year)) {
-      finalEnd = new Date(`${year}-12-31T23:59:59.999Z`);
-    } else {
-      finalEnd = new Date(); // Fallback to current date
     }
 
     if (finalStart || finalEnd) {
@@ -96,7 +93,7 @@ export class BankMutationService {
         colG: item.colG || "",
         colH: item.colH || "",
         colI: item.colI || "",
-        colJ: item.colJ || "",
+        tagYear: year,
       })),
     });
 
@@ -158,7 +155,7 @@ export class BankMutationService {
       
       // ONGOING: Find latest transaction of CURRENT year
       const lastTrans = await this.prisma.financialTransaction.findFirst({
-        where: { internalAccountId: accountIdBig, colA: { gte: new Date(`${year}-01-01`), lte: new Date(`${year}-12-31`) } },
+        where: { internalAccountId: accountIdBig, tagYear: year },
         orderBy: [{ colA: 'desc' }, { id: 'desc' }],
       });
 
@@ -183,13 +180,13 @@ export class BankMutationService {
         orderBy: { year: 'desc' }
       }),
       this.prisma.financialTransaction.findFirst({
-        where: { internalAccountId: accountIdBig, colA: { lt: new Date(`${year}-01-01`) } },
+        where: { internalAccountId: accountIdBig, tagYear: { lt: year } },
         orderBy: [{ colA: 'desc' }, { id: 'desc' }]
       })
     ]);
 
     const fiscalYear = lastFiscal?.year || 0;
-    const transYear = lastTransaction?.colA ? new Date(lastTransaction.colA).getFullYear() : 0;
+    const transYear = lastTransaction?.tagYear || 0;
     const searchYear = Math.max(fiscalYear, transYear);
 
     if (searchYear > 0) {
@@ -198,10 +195,10 @@ export class BankMutationService {
         where: { internalAccountId_year: { internalAccountId: accountIdBig, year: searchYear } }
       });
 
-      const lastTransInYear = lastTransaction?.colA && new Date(lastTransaction.colA).getFullYear() === searchYear 
+      const lastTransInYear = lastTransaction?.tagYear === searchYear 
         ? lastTransaction 
         : await this.prisma.financialTransaction.findFirst({
-            where: { internalAccountId: accountIdBig, colA: { gte: new Date(`${searchYear}-01-01`), lte: new Date(`${searchYear}-12-31`) } },
+            where: { internalAccountId: accountIdBig, tagYear: searchYear },
             orderBy: [{ colA: 'desc' }, { id: 'desc' }],
           });
 
@@ -362,10 +359,7 @@ export class BankMutationService {
     const transactions = await this.prisma.financialTransaction.findMany({
       where: {
         internalAccountId: accountIdBig,
-        colA: {
-          gte: new Date(`${year}-01-01`),
-          lte: new Date(`${year}-12-31`)
-        }
+        tagYear: year
       },
       orderBy: [
         { colA: 'asc' },
@@ -406,13 +400,13 @@ export class BankMutationService {
         orderBy: { year: 'asc' }
       }),
       this.prisma.financialTransaction.findFirst({
-        where: { internalAccountId: accountIdBig, colA: { gte: new Date(`${year + 1}-01-01`) } },
+        where: { internalAccountId: accountIdBig, tagYear: { gte: year + 1 } },
         orderBy: [{ colA: 'asc' }, { id: 'asc' }]
       })
     ]);
 
     const nextFiscalYear = nextFiscal?.year || Infinity;
-    const nextTransYear = nextTrans?.colA ? new Date(nextTrans.colA).getFullYear() : Infinity;
+    const nextTransYear = nextTrans?.tagYear || Infinity;
     const nextDataYear = Math.min(nextFiscalYear, nextTransYear);
 
     if (nextDataYear !== Infinity) {

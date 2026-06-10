@@ -110,15 +110,19 @@ export class FinanceReportService {
     
     // Construct cumulative date range filters
     if (year && year > 0) {
-      const start = `${year}-01-01T00:00:00.000Z`;
-      const end = endDate ? `${endDate}T23:59:59.999Z` : `${year}-12-31T23:59:59.999Z`;
-        
-      where.colA = { gte: new Date(start), lte: new Date(end) };
-      salesWhere.colC = { gte: new Date(start), lte: new Date(end) };
+      where.tagYear = year;
+      salesWhere.tagYear = year;
+      if (endDate) {
+        const end = new Date(`${endDate}T23:59:59.999Z`);
+        where.OR = [{ colA: { lte: end } }, { colA: null }];
+        salesWhere.OR = [{ colC: { lte: end } }, { colC: null }];
+      }
     } else if (endDate) {
-      const end = `${endDate}T23:59:59.999Z`;
-      where.colA = { lte: new Date(end) };
-      salesWhere.colC = { lte: new Date(end) };
+      const end = new Date(`${endDate}T23:59:59.999Z`);
+      where.tagYear = yearNum;
+      salesWhere.tagYear = yearNum;
+      where.OR = [{ colA: { lte: end } }, { colA: null }];
+      salesWhere.OR = [{ colC: { lte: end } }, { colC: null }];
     }
 
     // 1. Calculate Dynamic COGS (Cost of Goods Sold)
@@ -158,10 +162,7 @@ export class FinanceReportService {
     const vatAmount = new Prisma.Decimal(salesStats._sum.colJ || 0);
     const vatAdj = vatAmount.negated(); // VAT is subtracted from Gross to get Net
     
-    // Net Sales Override
-    const netSales = props['PL_NET_SALES'] 
-      ? new Prisma.Decimal(props['PL_NET_SALES']) 
-      : grossSales.plus(vatAdj);
+    const netSales = grossSales.plus(vatAdj);
 
     // 3. Calculate Operating Expenses from Bank Mutations (FinancialTransaction)
     // Filtered by specific ledger categories in colF.
@@ -196,12 +197,7 @@ export class FinanceReportService {
       else if (ledger.includes('financial')) financialExpense = financialExpense.plus(net);
     }
 
-    // Apply Expense Overrides
-    if (props['PL_PERSONNEL_EXP']) personnelExpense = new Prisma.Decimal(props['PL_PERSONNEL_EXP']).negated();
-    if (props['PL_OFFICE_EXP']) officeExpense = new Prisma.Decimal(props['PL_OFFICE_EXP']).negated();
-    if (props['PL_MARKETING_EXP']) marketingExpense = new Prisma.Decimal(props['PL_MARKETING_EXP']).negated();
-    if (props['PL_FINANCIAL_EXP']) financialExpense = new Prisma.Decimal(props['PL_FINANCIAL_EXP']).negated();
-
+    // Expense overrides removed for pure calculation
     // 4. Calculate Other Income from Bank Mutations
     const otherIncomeTransactions = await this.prisma.financialTransaction.findMany({
       where: {
@@ -219,16 +215,11 @@ export class FinanceReportService {
       otherIncomeTotal = otherIncomeTotal.plus(credit).minus(debit);
     }
 
-    // Other Income Override
-    if (props['PL_OTHER_INCOME']) otherIncomeTotal = new Prisma.Decimal(props['PL_OTHER_INCOME']);
-
+    // Other Income override removed for pure calculation
     // 5. Calculate Depreciation Expense (Summary Only)
     const totalDepreciation = await this.processDepreciationSummary(year, endDate);
     
-    // Depreciation Override
-    const depreciation = props['PL_DEPRECIATION']
-      ? new Prisma.Decimal(props['PL_DEPRECIATION']).negated()
-      : totalDepreciation.negated();
+    const depreciation = totalDepreciation.negated();
     
     // 6. Calculate Income Tax (PPH-23)
     const incomeTaxTransactions = await this.prisma.financialTransaction.findMany({
@@ -259,9 +250,7 @@ export class FinanceReportService {
       incomeTax = incomeTax.minus(debit);
     }
 
-    // Income Tax Override
-    if (props['PL_INCOME_TAX']) incomeTax = new Prisma.Decimal(props['PL_INCOME_TAX']).negated();
-
+    // Income Tax override removed for pure calculation
     // 7. Final Financial Logic
     const grossProfit = netSales.plus(cogsTotal); 
     const operatingExpenses = personnelExpense.plus(officeExpense).plus(marketingExpense).plus(financialExpense);
@@ -269,19 +258,20 @@ export class FinanceReportService {
     const otherIncomeNet = otherIncomeTotal.plus(depreciation);
     const profitBeforeTax = operatingProfit.plus(otherIncomeNet);
     
-    // Final Net Profit Override
-    const netProfit = props['PL_NET_PROFIT']
-      ? new Prisma.Decimal(props['PL_NET_PROFIT'])
-      : profitBeforeTax.plus(incomeTax);
+    const netProfit = profitBeforeTax.plus(incomeTax);
 
     // Temporal filter for sub-item fetching
     const subWhere: any = {};
     if (year && year > 0) {
-      const start = `${year}-01-01T00:00:00.000Z`;
-      const end = endDate ? `${endDate}T23:59:59.999Z` : `${year}-12-31T23:59:59.999Z`;
-      subWhere.colA = { gte: new Date(start), lte: new Date(end) };
+      subWhere.tagYear = year;
+      if (endDate) {
+        const end = new Date(`${endDate}T23:59:59.999Z`);
+        subWhere.OR = [{ colA: { lte: end } }, { colA: null }];
+      }
     } else if (endDate) {
-      subWhere.colA = { lte: new Date(`${endDate}T23:59:59.999Z`) };
+      const end = new Date(`${endDate}T23:59:59.999Z`);
+      subWhere.tagYear = yearNum;
+      subWhere.OR = [{ colA: { lte: end } }, { colA: null }];
     }
 
     // 8. Construct Response
@@ -387,12 +377,18 @@ export class FinanceReportService {
     
     // Construct temporal filter for sub-item fetching
     const where: any = {};
+    const yearNum = year || (date ? new Date(date).getFullYear() : 0);
+
     if (year && year > 0) {
-      const start = `${year}-01-01T00:00:00.000Z`;
-      const end = date ? `${date}T23:59:59.999Z` : `${year}-12-31T23:59:59.999Z`;
-      where.colA = { gte: new Date(start), lte: new Date(end) };
+      where.tagYear = year;
+      if (date) {
+        const end = new Date(`${date}T23:59:59.999Z`);
+        where.OR = [{ colA: { lte: end } }, { colA: null }];
+      }
     } else if (date) {
-      where.colA = { lte: new Date(`${date}T23:59:59.999Z`) };
+      const end = new Date(`${date}T23:59:59.999Z`);
+      where.tagYear = yearNum;
+      where.OR = [{ colA: { lte: end } }, { colA: null }];
     }
 
     // Categories to extract from the P&L statement for the summary view
@@ -466,12 +462,11 @@ export class FinanceReportService {
    * @param targetYear The fiscal year to calculate the breakdown for.
    * @returns Object containing prevYearsVal, dividendVal, profitLossVal, sharedCapitalVal, and totalEquity.
    */
-  private async getRetainedEarningsBreakdown(targetYear: number, endDate?: string) {
-    const startOfYear = new Date(`${targetYear}-01-01T00:00:00.000Z`);
-    const endOfYear = endDate ? new Date(`${endDate}T23:59:59.999Z`) : new Date(`${targetYear}-12-31T23:59:59.999Z`);
+  private async getRetainedEarningsBreakdown(targetYear?: string | number, endDate?: string) {
+    const yearNum = targetYear ? Number(targetYear) : (endDate ? new Date(endDate).getFullYear() : new Date().getFullYear());
 
     // 1. Fetch properties for this year (with fallback to most recent if missing)
-    let props = await this.equityPropertyService.getProperties(targetYear);
+    let props = await this.equityPropertyService.getProperties(yearNum);
     if (Object.keys(props).length === 0) {
       // Try to find any most recent properties to avoid 0 fallbacks
       const mostRecent = await this.prisma.equityProperty.findFirst({
@@ -482,39 +477,73 @@ export class FinanceReportService {
       }
     }
 
-    // 2. Profit (Loss) for the target year (Sourced from targetYear - 1 as requested)
-    const plCurrentData = await this.getProfitLossStatement(targetYear - 1, endDate);
+    // 2. Profit (Loss) for the target year
+    const plCurrentData = await this.getProfitLossStatement(yearNum, endDate);
     const profitLossVal = new Prisma.Decimal(plCurrentData.tableData.find(r => r.account?.trim().toLowerCase() === "profit after tax")?.total?.toString().replace(/,/g, '') || "0");
 
+    const hasProps = Object.keys(props).length > 0;
+
     // 3. Previous Years Net RE (Opening balance of RE for the year)
-    let prevYearsVal = new Prisma.Decimal(props['RE_PREV_YEARS'] || "0");
-    if (!props['RE_PREV_YEARS']) {
+    let prevYearsVal = new Prisma.Decimal(0);
+    if (!hasProps) {
        // Fallback to dynamic calculation if not set
-       const lastDayOfPrevYear = `${targetYear - 1}-12-31`;
-       const plUpToPrevYear = await this.getProfitLossStatement(undefined, lastDayOfPrevYear);
+       // Karena plCurrentData sekarang memakai selected year (yearNum), 
+       // kita harus nge-query ulang P&L khusus untuk tahun sebelumnya (yearNum - 1)
+       const lastDayOfPrevYear = `${yearNum - 1}-12-31`;
+       const plUpToPrevYear = await this.getProfitLossStatement(yearNum - 1, lastDayOfPrevYear);
        const profitLegacyTotal = new Prisma.Decimal(plUpToPrevYear.tableData.find(r => r.account?.toLowerCase() === "profit after tax")?.total?.toString().replace(/,/g, '') || "0");
        
-       const dividendTrxLegacy = await this.prisma.financialTransaction.findMany({
-         where: {
-           colA: { lt: startOfYear },
-           colF: { contains: 'Retained Earning', mode: 'insensitive' },
-           colG: { contains: 'Dividend', mode: 'insensitive' }
+       const legacyWhere: any = {
+         colF: { contains: 'Retained Earning', mode: 'insensitive' },
+         colG: { contains: 'Dividend', mode: 'insensitive' }
+       };
+
+       if (targetYear && yearNum > 0) {
+         legacyWhere.tagYear = { lt: yearNum };
+         if (endDate) {
+           const end = new Date(`${endDate}T23:59:59.999Z`);
+           legacyWhere.OR = [{ colA: { lte: end } }, { colA: null }];
          }
+       } else if (endDate) {
+         const end = new Date(`${endDate}T23:59:59.999Z`);
+         legacyWhere.tagYear = { lt: yearNum };
+         legacyWhere.OR = [{ colA: { lte: end } }, { colA: null }];
+       }
+
+       const dividendTrxLegacy = await this.prisma.financialTransaction.findMany({
+         where: legacyWhere
        });
        const dividendLegacyTotal = dividendTrxLegacy.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colC || 0)), new Prisma.Decimal(0));
        prevYearsVal = profitLegacyTotal.minus(dividendLegacyTotal);
+    } else {
+       prevYearsVal = new Prisma.Decimal(props['RE_PREV_YEARS'] || "0");
     }
 
     // 4. Current Year Dividends
-    let dividendVal = new Prisma.Decimal(props['DIVIDENDS'] || "0");
-    if (!props['DIVIDENDS']) {
-      const dividendTrxCurrent = await this.prisma.financialTransaction.findMany({
-        where: {
-          colA: { gte: startOfYear, lte: endOfYear },
-          colG: { contains: 'Dividend', mode: 'insensitive' }
+    let dividendVal = new Prisma.Decimal(0);
+    if (!hasProps) {
+      const currentWhere: any = {
+        colG: { contains: 'Dividend', mode: 'insensitive' }
+      };
+      
+      if (targetYear && yearNum > 0) {
+        currentWhere.tagYear = yearNum;
+        if (endDate) {
+          const end = new Date(`${endDate}T23:59:59.999Z`);
+          currentWhere.OR = [{ colA: { lte: end } }, { colA: null }];
         }
+      } else if (endDate) {
+        const end = new Date(`${endDate}T23:59:59.999Z`);
+        currentWhere.tagYear = yearNum;
+        currentWhere.OR = [{ colA: { lte: end } }, { colA: null }];
+      }
+
+      const dividendTrxCurrent = await this.prisma.financialTransaction.findMany({
+        where: currentWhere
       });
       dividendVal = dividendTrxCurrent.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colC || 0)), new Prisma.Decimal(0)).mul(-1);
+    } else {
+      dividendVal = new Prisma.Decimal(props['DIVIDENDS'] || "0");
     }
 
     // 5. Shared Capital
@@ -543,29 +572,40 @@ export class FinanceReportService {
    */
   async getPLDetails(year?: number, ledger?: string, date?: string, subItem?: string, salesCode?: string) {
     if (ledger && ledger.toLowerCase() === 'sales') {
-      const salesWhere: any = {};
+      const salesWhere: any = { AND: [] };
+      const yearNum = year || (date ? new Date(date).getFullYear() : 0);
+
       if (year && year > 0) {
-        const start = `${year}-01-01T00:00:00.000Z`;
-        const end = date ? `${date}T23:59:59.999Z` : `${year}-12-31T23:59:59.999Z`;
-        salesWhere.colC = { gte: new Date(start), lte: new Date(end) };
+        salesWhere.tagYear = year;
+        if (date) {
+          const end = new Date(`${date}T23:59:59.999Z`);
+          salesWhere.AND.push({ OR: [{ colC: { lte: end } }, { colC: null }] });
+        }
       } else if (date) {
-        salesWhere.colC = { lte: new Date(`${date}T23:59:59.999Z`) };
+        const end = new Date(`${date}T23:59:59.999Z`);
+        salesWhere.tagYear = yearNum;
+        salesWhere.AND.push({ OR: [{ colC: { lte: end } }, { colC: null }] });
       }
 
       if (salesCode) {
         const trimmedCode = salesCode.trim();
         if (trimmedCode === '-' || trimmedCode === '') {
-          salesWhere.OR = [
-            { colF: null },
-            { colF: '' },
-            { colF: '-' }
-          ];
+          salesWhere.AND.push({
+            OR: [
+              { colF: null },
+              { colF: '' },
+              { colF: '-' }
+            ]
+          });
         } else {
           salesWhere.colF = {
             equals: trimmedCode,
             mode: 'insensitive'
           };
         }
+
+        // Clean up empty AND array
+        if (salesWhere.AND.length === 0) delete salesWhere.AND;
 
         const salesData = await this.prisma.salesRecord.findMany({
           where: salesWhere,
@@ -653,14 +693,22 @@ export class FinanceReportService {
       ledger.toLowerCase() === 'cost of goods'
     );
 
-    const where: any = {};
+    const where: any = { AND: [] };
+    const yearNum = year || (date ? new Date(date).getFullYear() : 0);
+
     if (year && year > 0) {
-      const start = `${year}-01-01T00:00:00.000Z`;
-      const end = date ? `${date}T23:59:59.999Z` : `${year}-12-31T23:59:59.999Z`;
-      where.colA = { gte: new Date(start), lte: new Date(end) };
+      where.tagYear = year;
+      if (date) {
+        const end = new Date(`${date}T23:59:59.999Z`);
+        where.AND.push({ OR: [{ colA: { lte: end } }, { colA: null }] });
+      }
     } else if (date) {
-      where.colA = { lte: new Date(`${date}T23:59:59.999Z`) };
+      const end = new Date(`${date}T23:59:59.999Z`);
+      where.tagYear = yearNum;
+      where.AND.push({ OR: [{ colA: { lte: end } }, { colA: null }] });
     }
+
+    if (where.AND.length === 0) delete where.AND;
     
     // Use contains instead of equals to capture sub-categories and generic matches (e.g., 'Other Income - Interest')
     if (ledger) {
@@ -721,10 +769,10 @@ export class FinanceReportService {
    * @param subItem The specific item name (e.g., 'BCA', 'AR Trade')
    * @param date Optional end date for cumulative reports
    */
-  async getBSDetails(category: string, subItem?: string, date?: string, accountId?: string) {
-    const endDateStr = date ? `${date}T23:59:59.999Z` : new Date().toISOString();
-    const endDate = new Date(endDateStr);
-    const currentYearVal = endDate.getFullYear();
+  async getBSDetails(category: string, subItem?: string, year?: string | number, date?: string, accountId?: string) {
+    const yearNum = year ? Number(year) : undefined;
+    const endOfDate = date ? new Date(`${date}T23:59:59.999Z`) : (yearNum ? new Date(`${yearNum}-12-31T23:59:59.999Z`) : new Date());
+    const currentYearVal = yearNum || (date ? endOfDate.getFullYear() : new Date().getFullYear());
 
     // 1. CASH & BANK
     if (category === 'Cash' || category === 'Bank Accounts') {
@@ -766,7 +814,13 @@ export class FinanceReportService {
       const transactions = await this.prisma.financialTransaction.findMany({
         where: {
           internalAccountId: account.id,
-          colA: { lte: endDate }
+          ...(yearNum ? { tagYear: { lte: yearNum } } : {}),
+          ...(date ? {
+            OR: [
+              { colA: { lte: endOfDate } },
+              { colA: null }
+            ]
+          } : {})
         },
         orderBy: [{ colA: 'asc' }, { id: 'asc' }]
       });
@@ -806,13 +860,12 @@ export class FinanceReportService {
 
       const records = recordsRaw.filter(r => {
         const val = r.colC || "";
-        const year = this.extractYear(val);
         const fullDate = new Date(val);
         const hasFullDate = !isNaN(fullDate.getTime());
+        const year = r.tagYear ?? 0;
 
         // 1. Date Filtering (Strict S/D)
-        if (date) {
-          if (hasFullDate && fullDate > endDate) return false;
+        if (year || date) {
           if (year > 0 && year > currentYearVal) return false;
         }
 
@@ -860,7 +913,7 @@ export class FinanceReportService {
         
         // 2. Filter by date (match getBalanceSheet: colA <= endOfDate)
         if (date && r.colA) {
-          return r.colA <= endDate;
+          return r.colA <= endOfDate;
         }
         
         return true;
@@ -887,11 +940,11 @@ export class FinanceReportService {
       });
 
       const records = recordsRaw.filter(r => {
-        // colB is Int (Year). Compare directly as a year number.
-        const recordYear = r.colB ?? 0;
+        // Compare directly as a year number.
+        const recordYear = r.tagYear ?? 0;
 
         // Date filtering: exclude records from future years
-        if (date) {
+        if (year || date) {
           if (recordYear > 0 && recordYear > currentYearVal) return false;
         }
 
@@ -931,8 +984,24 @@ export class FinanceReportService {
    * @param date Optional cumulative end date to determine the visible month range.
    * @returns Array of assets with dynamic monthly depreciation columns and recalculated totals.
    */
-  async getDepreciationDetails() {
+  async getDepreciationDetails(year?: number, endDate?: string) {
+    const where: any = {};
+    const yearNum = year || (endDate ? new Date(endDate).getFullYear() : 0);
+    
+    if (year && year > 0) {
+      where.tagYear = year;
+      if (endDate) {
+        const end = new Date(`${endDate}T23:59:59.999Z`);
+        where.OR = [{ colA: { lte: end } }, { colA: null }];
+      }
+    } else if (endDate) {
+      const end = new Date(`${endDate}T23:59:59.999Z`);
+      where.tagYear = yearNum;
+      where.OR = [{ colA: { lte: end } }, { colA: null }];
+    }
+
     const raw = await this.prisma.depreciation.findMany({
+      where,
       orderBy: { colA: 'asc' }
     });
 
@@ -971,48 +1040,38 @@ export class FinanceReportService {
   }
 
   private async processDepreciationSummary(year?: number, endDate?: string) {
-    const raw = await this.prisma.depreciation.findMany();
+    const where: any = {};
+    const yearNum = year || (endDate ? new Date(endDate).getFullYear() : 0);
+    
+    if (year && year > 0) {
+      where.tagYear = year;
+      if (endDate) {
+        const end = new Date(`${endDate}T23:59:59.999Z`);
+        where.OR = [{ colA: { lte: end } }, { colA: null }];
+      }
+    } else if (endDate) {
+      const end = new Date(`${endDate}T23:59:59.999Z`);
+      where.tagYear = yearNum;
+      where.OR = [{ colA: { lte: end } }, { colA: null }];
+    }
+
+    const raw = await this.prisma.depreciation.findMany({ where });
 
     const monthCols = ['colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'];
-    const dYear = endDate ? new Date(endDate).getFullYear() : null;
-    const dMonth = endDate ? new Date(endDate).getMonth() + 1 : 0;
+    const dMonth = endDate ? new Date(endDate).getMonth() + 1 : 12;
     
     let totalDepreciation = new Prisma.Decimal(0);
     
     raw.forEach(record => {
       let rowDepr = new Prisma.Decimal(0);
 
-      if (year) {
-        if (year <= 2024) {
-          rowDepr = new Prisma.Decimal(record.colF ? String(record.colF) : 0);
-        } else if (year === 2025) {
-          if (!endDate) {
-            rowDepr = new Prisma.Decimal(record.colS ? String(record.colS) : 0);
-          } else {
-            for (let i = 0; i < dMonth; i++) {
-              const val = record[monthCols[i] as keyof typeof record];
-              rowDepr = rowDepr.plus(new Prisma.Decimal(val ? String(val) : 0));
-            }
-          }
-        } else {
-          rowDepr = new Prisma.Decimal(0); // 2026+ Empty
-        }
-      } else if (endDate && dYear) {
-        if (dYear <= 2024) {
-          rowDepr = new Prisma.Decimal(record.colF ? String(record.colF) : 0);
-        } else if (dYear === 2025) {
-          const accF = new Prisma.Decimal(record.colF ? String(record.colF) : 0);
-          let curMonths = new Prisma.Decimal(0);
-          for (let i = 0; i < dMonth; i++) {
-            const val = record[monthCols[i] as keyof typeof record];
-            curMonths = curMonths.plus(new Prisma.Decimal(val ? String(val) : 0));
-          }
-          rowDepr = accF.plus(curMonths);
-        } else {
-          rowDepr = new Prisma.Decimal(record.colT ? String(record.colT) : 0);
-        }
+      if (!endDate) {
+        rowDepr = new Prisma.Decimal(record.colS ? String(record.colS) : 0);
       } else {
-        rowDepr = new Prisma.Decimal(record.colT ? String(record.colT) : 0);
+        for (let i = 0; i < dMonth; i++) {
+          const val = record[monthCols[i] as keyof typeof record];
+          rowDepr = rowDepr.plus(new Prisma.Decimal(val ? String(val) : 0));
+        }
       }
 
       totalDepreciation = totalDepreciation.plus(rowDepr);
@@ -1062,12 +1121,18 @@ export class FinanceReportService {
 
     // 2. Fetch transactions with date filter
     const where: any = {};
+    const yearNum = year || (date ? new Date(date).getFullYear() : 0);
+    
     if (year && year > 0) {
-      const start = new Date(Date.UTC(year, 0, 1, 0, 0, 0));
-      const end = date ? new Date(`${date}T23:59:59.999Z`) : new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
-      where.colA = { gte: start, lte: end };
+      where.tagYear = year;
+      if (date) {
+        const end = new Date(`${date}T23:59:59.999Z`);
+        where.OR = [{ colA: { lte: end } }, { colA: null }];
+      }
     } else if (date) {
-      where.colA = { lte: new Date(`${date}T23:59:59.999Z`) };
+      const end = new Date(`${date}T23:59:59.999Z`);
+      where.tagYear = yearNum;
+      where.OR = [{ colA: { lte: end } }, { colA: null }];
     }
 
     where.colF = { contains: 'cost of goods', mode: 'insensitive' };
@@ -1135,12 +1200,13 @@ export class FinanceReportService {
     return { headers, rows };
   }
   
-  async getBalanceSheet(date?: string) {
+  async getBalanceSheet(year?: string | number, date?: string) {
+    const yearNum = year ? Number(year) : undefined;
     // Standardize to UTC Full Year to ensure consistency and avoid timezone-related year jumps
-    const currentYearVal = date ? new Date(`${date}T00:00:00.000Z`).getUTCFullYear() : new Date().getUTCFullYear();
+    const currentYearVal = yearNum || (date ? new Date(`${date}T00:00:00.000Z`).getUTCFullYear() : new Date().getUTCFullYear());
     
     // 1. Fetch Dynamic Data in Parallel (Fetch all to handle messy legacy strings)
-    const endOfDate = date ? new Date(`${date}T23:59:59.999Z`) : new Date();
+    const endOfDate = date ? new Date(`${date}T23:59:59.999Z`) : (yearNum ? new Date(`${yearNum}-12-31T23:59:59.999Z`) : new Date());
     
     const [accounts, arRecordsRawAll, apRecordsRawAll, depreciationRawAll] = await Promise.all([
       this.prisma.internalAccount.findMany({ 
@@ -1155,14 +1221,10 @@ export class FinanceReportService {
 
     // Filter in-memory to handle the "Kacau" data
     const arRecordsRaw = arRecordsRawAll.filter(r => {
-      const val = r.colC || "";
-      const y = this.extractYear(val); 
-      const fullDate = new Date(val);
-      const hasFullDate = !isNaN(fullDate.getTime());
+      const recordYear = r.tagYear ?? 0; 
 
-      if (date) {
-        if (hasFullDate && fullDate > endOfDate) return false;
-        if (y > 0 && y > currentYearVal) return false;
+      if (year || date) {
+        if (recordYear > 0 && recordYear > currentYearVal) return false;
       }
 
       // No date filter → include ALL records (show full cumulative balance sheet)
@@ -1170,10 +1232,10 @@ export class FinanceReportService {
     });
 
     const apRecordsRaw = apRecordsRawAll.filter(r => {
-      // colB is Int (Year). Compare directly as a year number.
-      const recordYear = r.colB ?? 0;
+      // Compare directly as a year number.
+      const recordYear = r.tagYear ?? 0;
 
-      if (date) {
+      if (year || date) {
         if (recordYear > 0 && recordYear > currentYearVal) return false;
       }
 
@@ -1182,8 +1244,10 @@ export class FinanceReportService {
     });
 
     const depreciationRaw = depreciationRawAll.filter(r => {
-      if (!date) return true;
-      if (r.colA) return r.colA <= endOfDate;
+      const y = r.tagYear ?? 0;
+      if (!(year || date)) return true;
+      if (y > 0 && y > currentYearVal) return false;
+      if (date && r.colA) return r.colA <= endOfDate;
       return true;
     });
 
@@ -1199,7 +1263,13 @@ export class FinanceReportService {
       const latestTx = await this.prisma.financialTransaction.findFirst({
         where: { 
           internalAccountId: acc.id,
-          ...(date ? { colA: { lte: endOfDate } } : {}) // Only filter date if provided
+          ...(yearNum ? { tagYear: { lte: yearNum } } : {}),
+          ...(date ? {
+            OR: [
+              { colA: { lte: endOfDate } },
+              { colA: null }
+            ]
+          } : {}) // Only filter date if provided
         },
         orderBy: [
           { colA: 'desc' },
@@ -1234,7 +1304,13 @@ export class FinanceReportService {
       const txCount = await this.prisma.financialTransaction.count({ 
         where: { 
           internalAccountId: acc.id,
-          ...(date ? { colA: { lte: endOfDate } } : {})
+          ...(yearNum ? { tagYear: { lte: yearNum } } : {}),
+          ...(date ? {
+            OR: [
+              { colA: { lte: endOfDate } },
+              { colA: null }
+            ]
+          } : {})
         } 
       });
 
@@ -1472,7 +1548,7 @@ export class FinanceReportService {
     const finalApItems = [...apItems];
 
     // 6. Equity (Dynamic RE Logic)
-    const reBreakdown = await this.getRetainedEarningsBreakdown(currentYearVal, date);
+    const reBreakdown = await this.getRetainedEarningsBreakdown(year, date);
     const { prevYearsVal, dividendVal, profitLossVal, totalRE, sharedCapitalVal, totalEquity } = reBreakdown;
 
     // 7. Calculate Real Monthly Trend
@@ -1490,10 +1566,7 @@ export class FinanceReportService {
     // Only fetch bank/cash transactions for the trend year (still needed for monthly colE snapshots)
     const trendBankTrx = await this.prisma.financialTransaction.findMany({
       where: {
-        colA: {
-          gte: new Date(`${trendYear}-01-01T00:00:00.000Z`),
-          lte: new Date(`${trendYear}-12-31T23:59:59.999Z`)
-        },
+        tagYear: trendYear,
         internalAccount: { type: { in: ['BANK', 'CASH'] } }
       },
       select: { colA: true, colE: true, internalAccountId: true },
@@ -1530,8 +1603,8 @@ export class FinanceReportService {
 
       // AP: Reuse apRecordsRaw (already date-filtered). Sum colU where record year <= month's year.
       const trendAP = apRecordsRaw.reduce((acc, r) => {
-        // colB is Int (Year). Include all AP records up to the current trend year.
-        const recordYear = r.colB ?? 0;
+        // Include all AP records up to the current trend year.
+        const recordYear = r.tagYear ?? 0;
         if (recordYear > 0 && recordYear <= trendYear) {
           return acc.plus(new Prisma.Decimal(r.colU ? String(r.colU) : 0));
         }
@@ -1596,7 +1669,7 @@ export class FinanceReportService {
             items: [
               { accountName: 'Previous years', idr: formatDecimal(prevYearsVal), code: '3101', tx: 1 },
               { accountName: 'Dividend', idr: formatDecimal(dividendVal), code: '3102', tx: 1 },
-              { accountName: `Profit (Loss) ${currentYearVal - 1}`, idr: formatDecimal(profitLossVal), code: '3103', tx: 1 }
+              { accountName: `Profit (Loss) ${currentYearVal}`, idr: formatDecimal(profitLossVal), code: '3103', tx: 1 }
             ] 
           }
         ]

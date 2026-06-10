@@ -357,10 +357,7 @@ model FinancialTransaction {
   colG              String?   @map("col_g") @db.Text // Sub Ledger 1
   colH              String?   @map("col_h") @db.Text // Sub Ledger 2
   colI              String?   @map("col_i") @db.Text // Sub Ledger 3
-  colJ              String?   @map("col_j") @db.Text // Sub Ledger 4
-  colK              String?   @map("col_k") @db.Text // Sub Ledger 5
-  colL              String?   @map("col_l") @db.Text // Sub Ledger 6
-  colM              String?   @map("col_m") @db.Text // Sub Ledger 7
+  tagYear           Int?
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
@@ -403,6 +400,7 @@ model SalesRecord {
   colAB           Decimal? @db.Decimal(19, 4)
   colAC           Decimal? @db.Decimal(19, 4)
   colAD           String?  @db.Text
+  tagYear         Int?
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -429,6 +427,7 @@ model AccountReceivable {
   colP            Decimal? @db.Decimal(19, 4)
   colQ            String?  @db.Text
   colR            Decimal? @db.Decimal(19, 4)
+  tagYear         Int?
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -459,6 +458,7 @@ model AccountPayable {
   colT            String?  @db.Text           // col T (Blank)
   colU            Decimal? @db.Decimal(19, 4) // OUTSTANDING IDR
   colV            Decimal? @db.Decimal(19, 4) // OUTSTANDING USD
+  tagYear         Int?
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -526,6 +526,7 @@ model Depreciation {
   colT            Decimal?  @default(0) @map("col_t") @db.Decimal(19, 4)
   colU            Decimal?  @default(0) @map("col_u") @db.Decimal(19, 4)
   type            DepreciationType @default(OFFICE_EQUIPMENT)
+  tagYear         Int?
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 

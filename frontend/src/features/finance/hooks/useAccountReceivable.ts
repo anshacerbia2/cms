@@ -14,10 +14,10 @@ export function useAccountReceivable() {
       ...options,
     });
 
-  const getAllAR = (options?: any) =>
+  const getAllAR = (year?: number, options?: any) =>
     useQuery<any[]>({
-      queryKey: ["finance", "account-receivable", "all"],
-      queryFn: () => accountReceivableService.getAllAR(),
+      queryKey: ["finance", "account-receivable", "all", year],
+      queryFn: () => accountReceivableService.getAllAR(year),
       ...options,
     });
 

@@ -18,8 +18,8 @@ export class SalesController {
 
   @Get('all')
   @Permissions('sales.index')
-  async getAllSales() {
-    return this.salesService.getAllSales();
+  async getAllSales(@Query('year') year?: string) {
+    return this.salesService.getAllSales(year ? Number(year) : undefined);
   }
 
   @Post('bulk')

@@ -47,8 +47,12 @@ export class SalesService {
     };
   }
 
-  async getAllSales(): Promise<any[]> {
-    const data = await this.prisma.salesRecord.findMany({ orderBy: [{ id: 'asc' }] });
+  async getAllSales(year?: number): Promise<any[]> {
+    const where: any = {};
+    if (year && !isNaN(year)) {
+      where.tagYear = year;
+    }
+    const data = await this.prisma.salesRecord.findMany({ where, orderBy: [{ id: 'asc' }] });
     return data.map(item => ({
       ...item,
       id: Number(item.id),
@@ -106,6 +110,7 @@ export class SalesService {
       colAB: row.colAB || 0,
       colAC: row.colAC || 0,
       colAD: row.colAD ? String(row.colAD) : null,
+      tagYear: row.colD ? parseInt(String(row.colD)) : null,
     }));
 
     return this.prisma.salesRecord.createMany({ data });

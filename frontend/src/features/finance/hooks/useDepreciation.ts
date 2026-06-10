@@ -11,15 +11,15 @@ export function useDepreciation() {
       ...options,
     });
 
-  const getAllAssets = (options?: any) =>
+  const getAllAssets = (year?: number, options?: any) =>
     useQuery<any[]>({
-      queryKey: ["finance", "assets", "all"],
-      queryFn: () => depreciationService.getAllAssets(),
+      queryKey: ["finance", "assets", "all", year],
+      queryFn: () => depreciationService.getAllAssets(year),
       ...options,
     });
 
   const createBulkAssets = useMutation({
-    mutationFn: (data: any[]) => depreciationService.createBulkAssets(data),
+    mutationFn: (payload: { data: any[], tagYear: number }) => depreciationService.createBulkAssets(payload),
   });
 
   return {

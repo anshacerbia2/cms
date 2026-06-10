@@ -48,6 +48,7 @@ export async function seedAccountPayable(prisma: PrismaClient) {
         colT: cleanString(row[19]),          // col T (Blank, string)
         colU: cleanCurrency(row[20]),        // Outstanding IDR
         colV: cleanCurrency(row[21]),        // Outstanding USD
+        tagYear: 2025,
       });
     }
     await prisma.accountPayable.createMany({ data: ap });

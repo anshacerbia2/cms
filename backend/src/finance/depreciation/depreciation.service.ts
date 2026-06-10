@@ -56,8 +56,13 @@ export class DepreciationService {
     };
   }
 
-  async getAllDepreciations() {
+  async getAllDepreciations(year?: number) {
+    const where: any = {};
+    if (year && !isNaN(year)) {
+      where.tagYear = year;
+    }
     const data = await this.prisma.depreciation.findMany({ 
+      where,
       orderBy: [{ id: 'asc' }] 
     });
 
@@ -110,7 +115,7 @@ export class DepreciationService {
     });
   }
 
-  async createBulkDepreciations(data: any[]) {
+  async createBulkDepreciations(data: any[], tagYear: number) {
     const records = data.map(row => ({
       colA: row.colA ? new Date(row.colA) : null,
       colB: row.colB || null,
@@ -133,6 +138,7 @@ export class DepreciationService {
       colS: row.colS?.toString() || null,
       colT: row.colT?.toString() || null,
       colU: row.colU?.toString() || null,
+      tagYear: tagYear,
     }));
 
     return this.prisma.depreciation.createMany({

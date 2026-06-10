@@ -36,10 +36,10 @@ export function useFinance() {
       ...options,
     });
 
-  const getBalanceSheet = (date?: string, options?: any) =>
+  const getBalanceSheet = (year?: string, date?: string, options?: any) =>
     useQuery<any>({
-      queryKey: ["finance", "balance-sheet", date],
-      queryFn: () => financeService.getBalanceSheet(date),
+      queryKey: ["finance", "balance-sheet", year, date],
+      queryFn: () => financeService.getBalanceSheet(year, date),
       ...options,
     });
 
@@ -79,17 +79,17 @@ export function useFinance() {
       ...options,
     });
 
-  const getDepreciationDetails = (options?: any) =>
+  const getDepreciationDetails = (year?: number, date?: string, options?: any) =>
     useQuery<any[]>({
-      queryKey: ["finance", "depreciation-details"],
-      queryFn: () => financeService.getDepreciationDetails(),
+      queryKey: ["finance", "reports", "depreciation-details", year, date],
+      queryFn: () => financeService.getDepreciationDetails(year, date),
       ...options,
     });
 
-  const getBSDetails = (category: string, subItem?: string, date?: string, accountId?: string, options?: any) =>
+  const getBSDetails = (category: string, subItem?: string, year?: string, date?: string, accountId?: string, options?: any) =>
     useQuery<any[]>({
-      queryKey: ["finance", "balance-sheet-details", category, subItem, date || "now", accountId],
-      queryFn: () => financeService.getBSDetails(category, subItem, date, accountId),
+      queryKey: ["finance", "balance-sheet-details", category, subItem, year, date || "now", accountId],
+      queryFn: () => financeService.getBSDetails(category, subItem, year, date, accountId),
       enabled: !!category,
       ...options,
     });

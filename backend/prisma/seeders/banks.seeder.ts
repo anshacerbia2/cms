@@ -202,7 +202,7 @@ export async function seedBankMutation(prisma: PrismaClient, workbook?: XLSX.Wor
     // Assuming headers are at the top, data starts from index 4
     for (let i = 4; i < data.length; i++) {
       const row = data[i];
-      if (isRowEmpty(row)) break;
+      if (isRowEmpty(row)) continue;
 
       const rowDate = excelDateToJSDate(row[0]);
       if (rowDate) {
@@ -220,10 +220,7 @@ export async function seedBankMutation(prisma: PrismaClient, workbook?: XLSX.Wor
         colG: cleanString(row[6]),
         colH: cleanString(row[7]),
         colI: cleanString(row[8]),
-        colJ: cleanString(row[9]),
-        colK: cleanString(row[10]),
-        colL: cleanString(row[11]),
-        colM: cleanString(row[12]),
+        tagYear: 2025,
       });
     }
 
@@ -265,6 +262,7 @@ export async function seedBankMutation(prisma: PrismaClient, workbook?: XLSX.Wor
     
     let runningBalanceAcrossYears: number | null = null;
 
+    /* --- LEGACY BLOCK START ---
     for (const year of years) {
       const yearTxs = dbTxs.filter(tx => tx.colA?.getUTCFullYear() === year);
       
@@ -313,5 +311,36 @@ export async function seedBankMutation(prisma: PrismaClient, workbook?: XLSX.Wor
 
       console.log(`✅ Stage 2: ${sheetName} ${year} Manual Calc. Opening: ${openingBalance}, Closing: ${runningBalance}`);
     }
+    --- LEGACY BLOCK END --- */
+
+    // NEW LOGIC: Force all transactions from the Excel sheet into fiscal year 2025
+    const forcedYear = 2025;
+    let openingBalance = FISCAL_OPENINGS_2025[sheetName] !== undefined ? FISCAL_OPENINGS_2025[sheetName] : 0;
+    
+    // Upsert Fiscal Period for 2025
+    const fiscal = await prisma.fiscalPeriod.upsert({
+      where: { internalAccountId_year: { internalAccountId: internalAccount.id, year: forcedYear } },
+      update: { openingBalance, status: 'OPEN' },
+      create: { internalAccountId: internalAccount.id, year: forcedYear, openingBalance, status: 'OPEN' }
+    });
+
+    let runningBalance = openingBalance;
+
+    // MANUALLY CALCULATE EACH ROW (Treating all dbTxs as part of 2025)
+    for (const tx of dbTxs) {
+      runningBalance = runningBalance + (Number(tx.colD) || 0) - (Number(tx.colC) || 0);
+      await prisma.financialTransaction.update({
+        where: { id: tx.id },
+        data: { colE: new Prisma.Decimal(runningBalance) }
+      });
+    }
+
+    // Close Fiscal with final calculated balance
+    await prisma.fiscalPeriod.update({
+      where: { id: fiscal.id },
+      data: { closingBalance: new Prisma.Decimal(runningBalance), status: 'CLOSED' }
+    });
+
+    console.log(`✅ Stage 2: ${sheetName} ${forcedYear} Manual Calc. Opening: ${openingBalance}, Closing: ${runningBalance}`);
   }
 }

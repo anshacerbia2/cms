@@ -17,8 +17,8 @@ export class AccountPayableController {
 
   @Get('all')
   @Permissions('account-payable.index')
-  async getAllAccountPayables() {
-    return this.accountPayableService.getAllAccountPayables();
+  async getAllAccountPayables(@Query('year') year?: string) {
+    return this.accountPayableService.getAllAccountPayables(year ? Number(year) : undefined);
   }
 
   @Get('tax-ledger')

@@ -19,6 +19,13 @@ import { formatCurrency } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { Plus } from "lucide-react";
 import { Decimal } from "decimal.js";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useExcelFilter } from "../hooks/useExcelFilter";
 
 export function ApSummaryTab() {
@@ -26,8 +33,23 @@ export function ApSummaryTab() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const apLimit = 10;
 
+  const [apYearFilter, setApYearFilter] = useState(new Date().getFullYear().toString());
+  const yearNum = useMemo(() => Number(apYearFilter), [apYearFilter]);
+
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = currentYear; y >= 2025; y--) {
+      years.push(y.toString());
+    }
+    return years;
+  }, []);
+
   const { getAllAP } = useAccountPayable();
-  const { data: allAPRaw, isLoading: apLoading, refetch } = getAllAP();
+  const { data: allAPRaw, isLoading: apLoading, refetch } = getAllAP(
+    apYearFilter !== "all" ? yearNum : undefined,
+    { enabled: !!apYearFilter }
+  );
   const displayAP = useMemo(() => {
     return (allAPRaw || []).map((row: any) => ({
       ...row,
@@ -174,6 +196,21 @@ export function ApSummaryTab() {
             onChange={(e) => { setApSearch(e.target.value); setApPage(1); }}
           />
         </div>
+        <Select value={apYearFilter} onValueChange={(v) => { setApYearFilter(v); setApPage(1); }}>
+          <SelectTrigger className="w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
+            <SelectValue placeholder="Year" />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden">
+            <SelectItem value="all" className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">
+              All Years
+            </SelectItem>
+            {availableYears.map(year => (
+              <SelectItem key={year} value={year} className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">
+                {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="flex items-center gap-2">
            {isAnyFilterActive && (
             <Button 

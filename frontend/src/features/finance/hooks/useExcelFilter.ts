@@ -83,23 +83,46 @@ export function useExcelFilter<T extends Record<string, any>>({
                           sort.key === 'colL';   // For Sales
 
         if (isDateKey) {
-          // Try to parse. If it fails (like "Mei"), we might need a better parser 
-          // or just fallback to string sort which usually works for DD MMM YYYY if months are numeric, 
-          // but here they are strings. 
-          // However, for now, we'll keep the basic Date parse but add a fallback.
-          const dateA = new Date(valA).getTime();
-          const dateB = new Date(valB).getTime();
-          if (!isNaN(dateA) && !isNaN(dateB)) {
-             return sort.direction === 'asc' ? dateA - dateB : dateB - dateA;
+          const rawKey = `raw${sort.key.charAt(0).toUpperCase()}${sort.key.slice(1)}`;
+          const rawA = a[rawKey] !== undefined ? a[rawKey] : valA;
+          const rawB = b[rawKey] !== undefined ? b[rawKey] : valB;
+
+          const isValidA = rawA !== null && rawA !== undefined && rawA !== '';
+          const isValidB = rawB !== null && rawB !== undefined && rawB !== '';
+
+          if (isValidA && isValidB) {
+            const dateA = new Date(rawA).getTime();
+            const dateB = new Date(rawB).getTime();
+            if (!isNaN(dateA) && !isNaN(dateB)) {
+              return sort.direction === 'asc' ? dateA - dateB : dateB - dateA;
+            }
+          } else if (isValidA && !isValidB) {
+            return sort.direction === 'asc' ? -1 : 1;
+          } else if (!isValidA && isValidB) {
+            return sort.direction === 'asc' ? 1 : -1;
           }
         }
 
         // 2. Numeric Sort (Handle currencies/numbers)
-        const numA = typeof valA === 'number' ? valA : parseFloat(String(valA).replace(/[^0-9.-]+/g, ""));
-        const numB = typeof valB === 'number' ? valB : parseFloat(String(valB).replace(/[^0-9.-]+/g, ""));
-        
-        if (!isNaN(numA) && !isNaN(numB) && String(valA).match(/[0-9]/)) {
-          return sort.direction === 'asc' ? numA - numB : numB - numA;
+        const isStrictlyNumeric = (v: any) => {
+          if (typeof v === 'number') return true;
+          const s = String(v || "").trim();
+          if (s === '-' || s === '') return true;
+          return /^[-+]?[Rp$€£]?\s*[\d.,\s]+$/.test(s);
+        };
+
+        if (isStrictlyNumeric(valA) && isStrictlyNumeric(valB)) {
+          const parseNum = (v: any) => {
+             const s = String(v || "").trim();
+             if (s === '-' || s === '') return 0;
+             return parseFloat(s.replace(/[^0-9.-]+/g, ""));
+          };
+          const numA = typeof valA === 'number' ? valA : parseNum(valA);
+          const numB = typeof valB === 'number' ? valB : parseNum(valB);
+          
+          if (!isNaN(numA) && !isNaN(numB)) {
+            return sort.direction === 'asc' ? numA - numB : numB - numA;
+          }
         }
         
         // 3. String Sort Fallback

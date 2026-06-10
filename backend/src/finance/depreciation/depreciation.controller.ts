@@ -17,8 +17,8 @@ export class DepreciationController {
 
   @Get('all')
   @Permissions('depreciation.index')
-  async getAllDepreciations() {
-    return this.depreciationService.getAllDepreciations();
+  async getAllDepreciations(@Query('year') year?: string) {
+    return this.depreciationService.getAllDepreciations(year ? Number(year) : undefined);
   }
 
   @Post()
@@ -29,7 +29,7 @@ export class DepreciationController {
 
   @Post('bulk')
   @Permissions('depreciation.bulk')
-  async createBulk(@Body() data: any[]) {
-    return this.depreciationService.createBulkDepreciations(data);
+  async createBulk(@Body() body: { data: any[], tagYear: number }) {
+    return this.depreciationService.createBulkDepreciations(body.data, body.tagYear);
   }
 }

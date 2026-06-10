@@ -88,8 +88,14 @@ export class FinanceReportController {
 
   @Get('depreciation-details')
   @Permissions('finance.reports')
-  async getDepreciationDetails() {
-    return this.financeService.getDepreciationDetails();
+  async getDepreciationDetails(
+    @Query('year') year?: string,
+    @Query('date') date?: string
+  ) {
+    return this.financeService.getDepreciationDetails(
+      year ? Number(year) : undefined,
+      date
+    );
   }
 
   @Get('sales-cogs-details')
@@ -110,16 +116,18 @@ export class FinanceReportController {
     @Query('category') category: string,
     @Query('subItem') subItem?: string,
     @Query('date') date?: string,
-    @Query('accountId') accountId?: string
+    @Query('accountId') accountId?: string,
+    @Query('year') year?: string
   ) {
-    return this.financeService.getBSDetails(category, subItem, date, accountId);
+    return this.financeService.getBSDetails(category, subItem, year, date, accountId);
   }
 
   @Get('balance-sheet')
   @Permissions('finance.reports')
   async getBalanceSheet(
-    @Query('date') date?: string
+    @Query('date') date?: string,
+    @Query('year') year?: string
   ) {
-    return this.financeService.getBalanceSheet(date);
+    return this.financeService.getBalanceSheet(year, date);
   }
 }

@@ -14,11 +14,29 @@ import { useAuthStore } from "@/store/authStore";
 import { Decimal } from "decimal.js";
 import { Badge } from "@/components/ui/badge";
 import AddDepreciationModal from "../components/AddDepreciationModal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function DepreciationPage() {
   const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const assetLimit = 10;
+  const [depYearFilter, setDepYearFilter] = useState(new Date().getFullYear().toString());
+  const yearNum = useMemo(() => Number(depYearFilter), [depYearFilter]);
+
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = currentYear; y >= 2025; y--) {
+      years.push(y.toString());
+    }
+    return years;
+  }, []);
 
   const [pinnedColumns, setPinnedColumns] = useState<string[]>([]);
 
@@ -119,7 +137,10 @@ export default function DepreciationPage() {
   };
 
   const { getAllAssets } = useDepreciation();
-  const assetsQuery = getAllAssets();
+  const assetsQuery = getAllAssets(
+    depYearFilter !== "all" ? yearNum : undefined,
+    { enabled: !!depYearFilter }
+  );
   const { data: allAssetsRaw, isLoading: assetsLoading } = assetsQuery;
   
   const displayAssets = useMemo(() => {
@@ -243,6 +264,21 @@ export default function DepreciationPage() {
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
+        <Select value={depYearFilter} onValueChange={(v) => { setDepYearFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
+            <SelectValue placeholder="Year" />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden">
+            <SelectItem value="all" className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">
+              All Years
+            </SelectItem>
+            {availableYears.map(year => (
+              <SelectItem key={year} value={year} className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 focus:text-primary rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-muted-foreground transition-colors">
+                {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
           {isAnyFilterActive && (
             <Button 

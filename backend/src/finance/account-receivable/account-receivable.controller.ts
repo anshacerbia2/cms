@@ -18,8 +18,8 @@ export class AccountReceivableController {
 
   @Get('all')
   @Permissions('account-receivable.index')
-  async getAllAR() {
-    return this.arService.getAllAR();
+  async getAllAR(@Query('year') year?: string) {
+    return this.arService.getAllAR(year ? Number(year) : undefined);
   }
 
   @Post()

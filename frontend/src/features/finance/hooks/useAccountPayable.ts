@@ -14,10 +14,10 @@ export function useAccountPayable() {
       ...options,
     });
 
-  const getAllAP = (options?: any) =>
+  const getAllAP = (year?: number, options?: any) =>
     useQuery<any[]>({
-      queryKey: ["finance", "account-payable", "all"],
-      queryFn: () => accountPayableService.getAllAP(),
+      queryKey: ["finance", "account-payable", "all", year],
+      queryFn: () => accountPayableService.getAllAP(year),
       ...options,
     });
 

@@ -63,6 +63,7 @@ export async function seedSales(prisma: PrismaClient) {
       colAB: cleanCurrency(row[27]),           // WAPU
       colAC: cleanCurrency(row[28]),           // NON WAPU
       colAD: cleanString(row[29]),             // Remarks
+      tagYear: 2025,
     });
   }
 

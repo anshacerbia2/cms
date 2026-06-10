@@ -22,8 +22,8 @@ export const financeService = {
     return data;
   },
 
-  getBalanceSheet: async (date?: string): Promise<any> => {
-    const { data } = await api.get("/finance/balance-sheet", { params: { date } });
+  getBalanceSheet: async (year?: string, date?: string): Promise<any> => {
+    const { data } = await api.get("/finance/balance-sheet", { params: { year, date } });
     return data;
   },
 
@@ -57,13 +57,13 @@ export const financeService = {
     return data;
   },
 
-  getDepreciationDetails: async (): Promise<any[]> => {
-    const { data } = await api.get("/finance/depreciation-details");
+  getDepreciationDetails: async (year?: number, date?: string): Promise<any[]> => {
+    const { data } = await api.get("/finance/depreciation-details", { params: { year, date } });
     return data;
   },
 
-  getBSDetails: async (category: string, subItem?: string, date?: string, accountId?: string): Promise<any[]> => {
-    const { data } = await api.get("/finance/balance-sheet-details", { params: { category, subItem, date, accountId } });
+  getBSDetails: async (category: string, subItem?: string, year?: string, date?: string, accountId?: string): Promise<any[]> => {
+    const { data } = await api.get("/finance/balance-sheet-details", { params: { category, subItem, year, date, accountId } });
     return data;
   },
 };

@@ -7,8 +7,8 @@ export const accountReceivableService = {
     return data;
   },
 
-  getAllAR: async (): Promise<any[]> => {
-    const { data } = await api.get("/finance/account-receivable/all");
+  getAllAR: async (year?: number): Promise<any[]> => {
+    const { data } = await api.get("/finance/account-receivable/all", { params: { year } });
     return Array.isArray(data) ? data : (data as any).data || [];
   },
 
