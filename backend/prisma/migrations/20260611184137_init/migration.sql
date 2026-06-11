@@ -278,7 +278,7 @@ CREATE TABLE "financial_transactions" (
     "col_g" TEXT,
     "col_h" TEXT,
     "col_i" TEXT,
-    "tagYear" INTEGER,
+    "tagYear" INTEGER NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -346,7 +346,8 @@ CREATE TABLE "account_receivables" (
     "colP" DECIMAL(19,4),
     "colQ" TEXT,
     "colR" DECIMAL(19,4),
-    "tagYear" INTEGER,
+    "colS" DECIMAL(19,4),
+    "tagYear" INTEGER NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 

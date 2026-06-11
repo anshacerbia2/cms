@@ -33,6 +33,7 @@ export class AccountReceivableService {
         colO: formatDecimal(item.colO),
         colP: formatDecimal(item.colP),
         colR: formatDecimal(item.colR),
+        colS: formatDecimal(item.colS),
       })),
       meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
     };
@@ -58,6 +59,7 @@ export class AccountReceivableService {
       colO: formatDecimal(item.colO),
       colP: formatDecimal(item.colP),
       colR: formatDecimal(item.colR),
+      colS: formatDecimal(item.colS),
     }));
   }
 
@@ -76,6 +78,7 @@ export class AccountReceivableService {
         colO: data.colO?.toString() || null,
         colP: data.colP?.toString() || null,
         colR: data.colR?.toString() || null,
+        colS: data.colS?.toString() || null,
       },
     });
   }
@@ -100,6 +103,7 @@ export class AccountReceivableService {
       colP: row.colP?.toString() || null,
       colQ: row.colQ || null,
       colR: row.colR?.toString() || null,
+      colS: row.colS?.toString() || null,
       tagYear: tagYear,
     }));
 

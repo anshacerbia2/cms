@@ -29,27 +29,27 @@ interface AddArLedgerModalProps {
 }
 
 interface ArRow {
-  colA: string; colB: string; colC: string; colD: string; colE: string;
+  colB: string; colC: string; colD: string; colE: string;
   colF: string | number; colG: string | number; colH: string | number;
-  colI: string; colJ: string | number; colK: string | number;
+  colJ: string | number; colK: string | number;
   colL: string | number; colM: string | number; colN: string | number;
-  colO: string | number; colP: string | number; colQ: string;
-  colR: string | number;
+  colO: string | number; colP: string | number;
+  colR: string | number; colS: string | number;
 }
 
 const COL_ORDER: (keyof ArRow)[] = [
-  'colB', 'colC', 'colD', 'colE', 'colF', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colR'
+  'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colR', 'colS'
 ];
 
 const LABELS: Record<keyof ArRow, string> = {
-  colA: 'Masa', colB: 'Type', colC: 'Year', colD: 'Name', colE: 'Description',
-  colF: 'EOY IDR', colG: 'G', colH: 'H', colI: 'I',
+  colB: 'Type', colC: 'Year', colD: 'Name', colE: 'Description',
+  colF: 'EOY IDR', colG: 'EOY USD', colH: 'USD Rate',
   colJ: 'BCA Suhardjo', colK: 'BCA Juanda', colL: 'MANDIRI MP',
   colM: 'BRI Suhardjo', colN: 'Cash IDR', colO: 'Non CB',
-  colP: 'Balance', colQ: 'Q', colR: 'Outstanding IDR'
+  colP: 'PPn In and Out', colR: 'Outstanding IDR', colS: 'Outstanding USD'
 };
 
-const NUMERIC_COLS: (keyof ArRow)[] = ['colF', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colR'];
+const NUMERIC_COLS: (keyof ArRow)[] = ['colF', 'colG', 'colH', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colR', 'colS'];
 
 export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }: AddArLedgerModalProps) {
   const { createBulkAR } = useAccountReceivable();
@@ -60,8 +60,8 @@ export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }
     if (open) {
       setRows(Array(5).fill(null).map(() => ({
         colB: '', colC: '', colD: '', colE: '',
-        colF: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
-        colO: '', colP: '', colR: ''
+        colF: '', colG: '', colH: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
+        colO: '', colP: '', colR: '', colS: ''
       } as ArRow)));
     }
   }, [open]);
@@ -69,8 +69,8 @@ export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }
   const addRow = () => {
     setRows([...rows, {
       colB: '', colC: '', colD: '', colE: '',
-      colF: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
-      colO: '', colP: '', colR: ''
+      colF: '', colG: '', colH: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
+      colO: '', colP: '', colR: '', colS: ''
     } as ArRow]);
   };
 
@@ -87,27 +87,49 @@ export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }
 
 
   const cleanNumber = (val: string) => {
-    if (!val || val === '-' || val.trim() === '') return '0';
-    let cleaned = val.replace(/\./g, '');
+    if (val === undefined || val === null) return '0';
+    let strVal = val.toString().trim();
+    if (strVal === '') return '0';
+    const hasMinus = strVal.includes('-') || (strVal.startsWith('(') && strVal.endsWith(')'));
+    let cleaned = strVal.replace(/\./g, '');
     cleaned = cleaned.replace(/,/g, '.');
-    return cleaned.replace(/[^0-9.]/g, '');
+    cleaned = cleaned.replace(/[^0-9.]/g, '');
+    if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.') {
+      cleaned = cleaned.replace(/^0+/, '');
+      if (cleaned === '' || cleaned.startsWith('.')) cleaned = '0' + cleaned;
+    }
+    if (hasMinus) cleaned = '-' + cleaned;
+    return cleaned === '-' ? '0' : cleaned;
   };
 
   const formatInput = (val: string | number) => {
     if (val === undefined || val === null || val === '') return '';
     const str = val.toString();
-    const [int, dec] = str.split('.');
+    if (str === '-') return '-';
+    const isNegative = str.startsWith('-');
+    const numStr = isNegative ? str.slice(1) : str;
+    const [int, dec] = numStr.split('.');
     const formattedInt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    return dec !== undefined ? `${formattedInt},${dec}` : formattedInt;
+    const formatted = dec !== undefined ? `${formattedInt},${dec}` : formattedInt;
+    return isNegative ? `-${formatted}` : formatted;
   };
 
   const parseDisplay = (val: string) => {
-    let cleaned = val.replace(/\./g, '');
+    if (val === undefined || val === null) return '';
+    let strVal = val.toString().trim();
+    const hasMinus = strVal.includes('-') || (strVal.startsWith('(') && strVal.endsWith(')'));
+    let cleaned = strVal.replace(/\./g, '');
     cleaned = cleaned.replace(/,/g, '.');
+    cleaned = cleaned.replace(/[^0-9.]/g, '');
     const parts = cleaned.split(".");
-    if (parts.length > 2) cleaned = parts[0] + "." + parts.slice(1).join("");
+    cleaned = parts[0] + (parts.length > 1 ? "." + parts.slice(1).join("") : "");
+    if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.') {
+      cleaned = cleaned.replace(/^0+/, '');
+      if (cleaned === '' || cleaned.startsWith('.')) cleaned = '0' + cleaned;
+    }
     if (cleaned.startsWith('.')) cleaned = '0' + cleaned;
-    return cleaned.replace(/[^0-9.]/g, '');
+    const result = hasMinus ? '-' + cleaned : cleaned;
+    return result === '-' ? '-' : result;
   };
 
   const handlePaste = (e: React.ClipboardEvent, rowIndex: number, colKey: keyof ArRow) => {
@@ -125,8 +147,8 @@ export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }
       if (targetRowIndex >= newRows.length) {
         newRows.push({
           colB: '', colC: '', colD: '', colE: '',
-          colF: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
-          colO: '', colP: '', colR: ''
+          colF: '', colG: '', colH: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
+          colO: '', colP: '', colR: '', colS: ''
         } as ArRow);
       }
       pasteCols.forEach((cellText, j) => {

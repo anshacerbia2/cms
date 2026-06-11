@@ -145,27 +145,49 @@ export default function AddDepreciationModal({ open, onOpenChange, onSuccess, ye
   };
 
   const cleanNumber = (val: string) => {
-    if (!val || val === '-' || val.trim() === '') return '0';
-    let cleaned = val.replace(/\./g, '');
+    if (val === undefined || val === null) return '0';
+    let strVal = val.toString().trim();
+    if (strVal === '') return '0';
+    const hasMinus = strVal.includes('-') || (strVal.startsWith('(') && strVal.endsWith(')'));
+    let cleaned = strVal.replace(/\./g, '');
     cleaned = cleaned.replace(/,/g, '.');
-    return cleaned.replace(/[^0-9.]/g, '');
+    cleaned = cleaned.replace(/[^0-9.]/g, '');
+    if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.') {
+      cleaned = cleaned.replace(/^0+/, '');
+      if (cleaned === '' || cleaned.startsWith('.')) cleaned = '0' + cleaned;
+    }
+    if (hasMinus) cleaned = '-' + cleaned;
+    return cleaned === '-' ? '0' : cleaned;
   };
 
   const formatInput = (val: string | number) => {
     if (val === undefined || val === null || val === '') return '';
     const str = val.toString();
-    const [int, dec] = str.split('.');
+    if (str === '-') return '-';
+    const isNegative = str.startsWith('-');
+    const numStr = isNegative ? str.slice(1) : str;
+    const [int, dec] = numStr.split('.');
     const formattedInt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    return dec !== undefined ? `${formattedInt},${dec}` : formattedInt;
+    const formatted = dec !== undefined ? `${formattedInt},${dec}` : formattedInt;
+    return isNegative ? `-${formatted}` : formatted;
   };
 
   const parseDisplay = (val: string) => {
-    let cleaned = val.replace(/\./g, '');
+    if (val === undefined || val === null) return '';
+    let strVal = val.toString().trim();
+    const hasMinus = strVal.includes('-') || (strVal.startsWith('(') && strVal.endsWith(')'));
+    let cleaned = strVal.replace(/\./g, '');
     cleaned = cleaned.replace(/,/g, '.');
+    cleaned = cleaned.replace(/[^0-9.]/g, '');
     const parts = cleaned.split(".");
-    if (parts.length > 2) cleaned = parts[0] + "." + parts.slice(1).join("");
+    cleaned = parts[0] + (parts.length > 1 ? "." + parts.slice(1).join("") : "");
+    if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.') {
+      cleaned = cleaned.replace(/^0+/, '');
+      if (cleaned === '' || cleaned.startsWith('.')) cleaned = '0' + cleaned;
+    }
     if (cleaned.startsWith('.')) cleaned = '0' + cleaned;
-    return cleaned.replace(/[^0-9.]/g, '');
+    const result = hasMinus ? '-' + cleaned : cleaned;
+    return result === '-' ? '-' : result;
   };
 
   const handlePaste = (e: React.ClipboardEvent, rowIndex: number, colKey: keyof DepreciationRow) => {
@@ -327,7 +349,7 @@ export default function AddDepreciationModal({ open, onOpenChange, onSuccess, ye
                                     <CalendarIcon size={14} />
                                   </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
+                                <PopoverContent className="w-auto p-0 overflow-hidden" align="start">
                                   <Calendar mode="single" selected={row[col] ? parseISO(row[col] as string) : undefined} onSelect={(date) => date && updateRow(idx, col, format(date, 'yyyy-MM-dd'))} initialFocus />
                                 </PopoverContent>
                               </Popover>

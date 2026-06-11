@@ -13,6 +13,8 @@ import {
   ArrowDown,
   History,
   ShieldCheck,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -26,6 +28,7 @@ import { useBanks } from "@/features/banks/hooks/useBanks";
 import { useAuthStore } from "@/store/authStore";
 import { formatCurrency, formatDate, cleanAmount, cn } from "@/lib/utils";
 import AddLedgerModal from "../components/AddLedgerModal";
+import EditTransactionModal from "../components/EditTransactionModal";
 import {
   Table,
   TableBody,
@@ -78,6 +81,10 @@ export default function BankMutationPage() {
   }, [ledgerYearFilter]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<number | null>(null);
+  const [transactionToDelete, setTransactionToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const ledgerLimit = 10;
 
@@ -93,9 +100,34 @@ export default function BankMutationPage() {
   }, [internalAccounts, selectedAccount]);
 
   const { user, can } = useAuthStore();
-  const { getAllTransactions, getFiscalPeriods, recalculateLedger, closeYear, getAnchorBalance } = useBankMutation();
+  const { getAllTransactions, getFiscalPeriods, recalculateLedger, closeYear, getAnchorBalance, deleteTransaction } = useBankMutation();
   
   const yearNum = useMemo(() => Number(ledgerYearFilter), [ledgerYearFilter]);
+
+  const handleEditTransaction = (row: any) => {
+    setSelectedTransactionId(row.id);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteTransaction = (id: number) => {
+    setTransactionToDelete(id);
+  };
+
+  const executeDelete = async () => {
+    if (!transactionToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteTransaction()(transactionToDelete);
+      toast.success("Transaction deleted successfully.");
+      refetchTransactions();
+      refetchFiscal();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to delete transaction.");
+    } finally {
+      setIsDeleting(false);
+      setTransactionToDelete(null);
+    }
+  };
 
   // 1. Fetch Period Status & Fiscal Data
   const { data: fiscalData, isLoading: fiscalLoading, refetch: refetchFiscal } = getFiscalPeriods(
@@ -619,7 +651,7 @@ export default function BankMutationPage() {
           )}
 
           {can('bank-mutation.create') && (
-            <Button onClick={() => setIsAddModalOpen(true)} className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold transition-all active:scale-95">
+            <Button onClick={(e) => { e.stopPropagation(); setIsAddModalOpen(true); }} className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold transition-all active:scale-95">
               <Plus size={20} strokeWidth={3} />
               <span className="text-[13px]">Add Mutation</span>
             </Button>
@@ -739,12 +771,13 @@ export default function BankMutationPage() {
                     />
                   </div>
                 </TableHead>
+                <TableHead className="py-3 w-24 pr-4 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {transLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="h-96 text-center">
+                  <TableCell colSpan={11} className="h-96 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin"></div>
                       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 animate-pulse">Synchronizing Global Ledger Data...</p>
@@ -753,7 +786,7 @@ export default function BankMutationPage() {
                 </TableRow>
               ) : paginatedLedger.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="h-64 text-center opacity-20">
+                  <TableCell colSpan={11} className="h-64 text-center opacity-20">
                     <Search size={48} className="mx-auto" />
                     <p className="mt-4 font-black uppercase tracking-widest">No mutation records found</p>
                   </TableCell>
@@ -761,7 +794,7 @@ export default function BankMutationPage() {
               ) : (
                 <>
                   {paginatedLedger.map((row: any) => (
-                    <TableRow key={row.id} className="hover:bg-transparent transition-none whitespace-nowrap">
+                    <TableRow key={row.id} className="hover:bg-slate-50 transition-colors whitespace-nowrap group">
                       <TableCell className="text-primary/60">{row.colA}</TableCell>
                       <TableCell className="font-medium text-primary transition-colors max-w-md truncate" title={row.colB}>
                         {row.colB}
@@ -773,6 +806,26 @@ export default function BankMutationPage() {
                       <TableCell className="text-primary truncate max-w-[150px]" title={row.colG}>{row.colG}</TableCell>
                       <TableCell className="text-primary truncate max-w-[150px]" title={row.colH}>{row.colH}</TableCell>
                       <TableCell className="text-primary truncate max-w-[150px]" title={row.colI}>{row.colI}</TableCell>
+                      <TableCell className="pr-4">
+                        <div className="flex items-center justify-end gap-1 transition-opacity">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
+                            onClick={(e) => { e.stopPropagation(); handleEditTransaction(row); }}
+                          >
+                            <Edit2 size={12} strokeWidth={2.5} />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(row.id); }}
+                          >
+                            <Trash2 size={12} strokeWidth={2.5} />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                   
@@ -787,7 +840,7 @@ export default function BankMutationPage() {
                     <TableCell className="text-right text-emerald-600 pr-4">
                       {formatCurrency(accumulatedTotals.deposit)}
                     </TableCell>
-                    <TableCell colSpan={6} />
+                    <TableCell colSpan={7} />
                   </TableRow>
 
                   {/* Grand Total Row (Optional, but good for consistency) */}
@@ -801,7 +854,7 @@ export default function BankMutationPage() {
                     <TableCell className="text-right text-emerald-600 pr-4">
                       {formatCurrency(grandTotals.deposit)}
                     </TableCell>
-                    <TableCell colSpan={6} />
+                    <TableCell colSpan={7} />
                   </TableRow>
                 </>
               )}
@@ -829,6 +882,58 @@ export default function BankMutationPage() {
           refetchTransactions();
         }}
       />
+
+      <EditTransactionModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        transactionId={selectedTransactionId}
+        onSuccess={() => {
+          refetchFiscal();
+          refetchTransactions();
+        }}
+      />
+
+      <Dialog 
+        open={transactionToDelete !== null} 
+        onOpenChange={(open) => {
+          if (isDeleting) return;
+          if (!open) setTransactionToDelete(null);
+        }}
+      >
+        <DialogContent 
+          className="max-w-[400px] p-0 overflow-hidden bg-white rounded-3xl border-0 shadow-2xl [&>button]:hidden"
+          onInteractOutside={(e) => { if (isDeleting) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (isDeleting) e.preventDefault(); }}
+        >
+          <div className="bg-destructive/5 p-8 flex flex-col items-center justify-center text-center border-b border-primary/5">
+            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-6">
+              <AlertCircle className="w-8 h-8 text-destructive" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-primary mb-2">Delete Transaction?</DialogTitle>
+            <DialogDescription className="text-[13px] font-medium text-muted-foreground leading-relaxed px-4">
+              This action cannot be undone. All subsequent ledger balances will be automatically recalculated.
+            </DialogDescription>
+          </div>
+          <DialogFooter className="p-6 bg-white gap-3 flex-row justify-center sm:justify-center">
+            <Button
+              variant="ghost"
+              onClick={() => setTransactionToDelete(null)}
+              disabled={isDeleting}
+              className="flex-1 h-12 rounded-xl font-bold uppercase tracking-widest text-[10px] text-muted-foreground transition-all"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={executeDelete}
+              disabled={isDeleting}
+              className="flex-1 h-12 rounded-xl font-bold shadow-lg shadow-destructive/20 transition-all"
+            >
+              {isDeleting ? "Deleting..." : "Yes, Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </div>
     </PageContainer>
   );

@@ -120,6 +120,105 @@ export class BankMutationService {
     return { success: true, count: data.length };
   }
 
+  async getTransaction(id: number) {
+    const trxId = BigInt(id);
+    const existing = await this.prisma.financialTransaction.findUnique({
+      where: { id: trxId }
+    });
+    if (!existing) throw new NotFoundException(`Transaction ${id} not found`);
+    return {
+      ...existing,
+      id: existing.id.toString(),
+      internalAccountId: existing.internalAccountId?.toString(),
+      colC: existing.colC?.toString() || '0',
+      colD: existing.colD?.toString() || '0',
+      colE: existing.colE?.toString() || '0',
+    };
+  }
+
+  async updateTransaction(id: number, data: any) {
+    const trxId = BigInt(id);
+    const existing = await this.prisma.financialTransaction.findUnique({
+      where: { id: trxId }
+    });
+    if (!existing) throw new NotFoundException(`Transaction ${id} not found`);
+
+    const accountIdBig = existing.internalAccountId;
+    if (!accountIdBig) throw new BadRequestException(`Transaction ${id} has no associated account`);
+    const tagYear = existing.tagYear;
+
+    let newDate = existing.colA;
+
+    if (data.colA) {
+      newDate = new Date(data.colA);
+    }
+
+    // Check if year is CLOSED
+    const fiscal = await this.prisma.fiscalPeriod.findUnique({
+      where: { internalAccountId_year: { internalAccountId: accountIdBig, year: tagYear } }
+    });
+
+    await this.prisma.financialTransaction.update({
+      where: { id: trxId },
+      data: {
+        colA: newDate,
+        colB: data.colB ?? existing.colB,
+        colC: data.colC !== undefined ? data.colC.toString() : existing.colC,
+        colD: data.colD !== undefined ? data.colD.toString() : existing.colD,
+        colF: data.colF ?? existing.colF,
+        colG: data.colG ?? existing.colG,
+        colH: data.colH ?? existing.colH,
+        colI: data.colI ?? existing.colI,
+      }
+    });
+
+    // Mark years as stale
+    await this.prisma.fiscalPeriod.updateMany({
+      where: {
+        internalAccountId: accountIdBig,
+        year: { gte: tagYear }
+      },
+      data: { isStale: true }
+    });
+
+    // Trigger recalculation starting from the affected year
+    await this.recalculateLedger(accountIdBig.toString(), tagYear, true);
+
+    return { success: true };
+  }
+
+  async deleteTransaction(id: number) {
+    const trxId = BigInt(id);
+    const existing = await this.prisma.financialTransaction.findUnique({
+      where: { id: trxId }
+    });
+    if (!existing) throw new NotFoundException(`Transaction ${id} not found`);
+
+    const accountIdBig = existing.internalAccountId;
+    if (!accountIdBig) throw new BadRequestException(`Transaction ${id} has no associated account`);
+    const tagYear = existing.tagYear;
+
+    const fiscal = await this.prisma.fiscalPeriod.findUnique({
+      where: { internalAccountId_year: { internalAccountId: accountIdBig, year: tagYear } }
+    });
+
+    await this.prisma.financialTransaction.delete({
+      where: { id: trxId }
+    });
+
+    await this.prisma.fiscalPeriod.updateMany({
+      where: {
+        internalAccountId: accountIdBig,
+        year: { gte: tagYear }
+      },
+      data: { isStale: true }
+    });
+
+    await this.recalculateLedger(accountIdBig.toString(), tagYear, true);
+
+    return { success: true };
+  }
+
   // --- Opening Balance & Anchor Logic ---
 
   async getLatestAnchor(accountId: string, year: number) {

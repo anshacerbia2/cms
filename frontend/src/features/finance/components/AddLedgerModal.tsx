@@ -49,7 +49,6 @@ interface LedgerRow {
   colG: string; // Sub Ledger 1
   colH: string; // Sub Ledger 2
   colI: string; // Sub Ledger 3
-  colJ: string; // Sub Ledger 4
 }
 
 export default function AddLedgerModal({ open, onOpenChange, onSuccess, selectedAccount, year }: AddLedgerModalProps) {
@@ -76,7 +75,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
 
   // Saldo (colE) is now calculated during render (Derived State) to avoid state sync issues.
 
-  const colOrder: (keyof LedgerRow)[] = ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ'];
+  const colOrder: (keyof LedgerRow)[] = ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI'];
 
   // Initialize with some empty rows
   useEffect(() => {
@@ -91,7 +90,6 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
         colG: '',
         colH: '',
         colI: '',
-        colJ: '',
       })));
     }
   }, [open]);
@@ -107,7 +105,6 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
       colG: '',
       colH: '',
       colI: '',
-      colJ: '',
     }]);
   };
 
@@ -176,11 +173,21 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
   };
 
   const cleanNumber = (val: string) => {
-    if (!val || val === '-' || val.trim() === '') return '0';
-    // Indonesian Excel: 75.000.000,00 -> 75000000.00
+    if (!val || val.trim() === '') return '0';
     let cleaned = val.replace(/\./g, ''); // Remove thousand dots
     cleaned = cleaned.replace(/,/g, '.'); // Convert decimal comma to dot
-    return cleaned.replace(/[^0-9.]/g, ''); // Final safety strip
+    const hasMinus = cleaned.startsWith('-');
+    cleaned = cleaned.replace(/[^0-9.]/g, ''); // Final safety strip
+
+    if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.') {
+      cleaned = cleaned.replace(/^0+/, '');
+      if (cleaned === '' || cleaned.startsWith('.')) {
+        cleaned = '0' + cleaned;
+      }
+    }
+    if (hasMinus) cleaned = '-' + cleaned;
+    if (cleaned === '-') return '0';
+    return cleaned || '0';
   };
 
   // FOR INPUTS: Clean thousands separator but NO forced decimals (so user can type easily)
@@ -260,7 +267,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
       // Ensure we have a row in our state
       if (targetRowIndex >= newRows.length) {
         newRows.push({
-          colA: '', colB: '', colC: 0, colD: 0, colE: 0, colF: '', colG: '', colH: '', colI: '', colJ: ''
+          colA: '', colB: '', colC: 0, colD: 0, colE: 0, colF: '', colG: '', colH: '', colI: ''
         });
       }
 
@@ -527,16 +534,15 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
             <Table>
               <TableHeader className="bg-slate-50/50">
                 <TableRow className="hover:bg-transparent border-primary/5">
-                  <TableHead className="w-44 min-w-[176px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 pl-8 border-r border-primary/5 leading-none">Tanggal</TableHead>
-                  <TableHead className="min-w-[300px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Keterangan</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 text-right px-4 border-r border-primary/5 leading-none">Debet</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 text-right px-4 border-r border-primary/5 leading-none">Kredit</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 text-right px-4 border-r border-primary/5 leading-none">Saldo</TableHead>
+                  <TableHead className="w-44 min-w-[176px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 pl-8 border-r border-primary/5 leading-none">Date</TableHead>
+                  <TableHead className="min-w-[300px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Description</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 text-right px-4 border-r border-primary/5 leading-none">Debit</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 text-right px-4 border-r border-primary/5 leading-none">Credit</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 text-right px-4 border-r border-primary/5 leading-none">Balance</TableHead>
                   <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Ledger</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Sub Ledger 1</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Sub Ledger 2</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Sub Ledger 3</TableHead>
-                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Sub Ledger 4</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Sub Ledger - 1</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Sub Ledger - 2</TableHead>
+                  <TableHead className="w-40 min-w-[160px] shrink-0 text-[10px] font-black uppercase tracking-widest text-primary/40 px-4 border-r border-primary/5 leading-none">Sub Ledger - 3</TableHead>
                   <TableHead className="w-16 shrink-0 text-center pr-8"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -569,7 +575,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
                                   <CalendarIcon size={14} />
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
+                              <PopoverContent className="w-auto p-0 overflow-hidden" align="start">
                                 <Calendar
                                   mode="single"
                                   selected={row.colA ? parseISO(row.colA) : undefined}
@@ -693,19 +699,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
                             className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
                           />
                         </TableCell>
-                        <TableCell className="p-0 border-r border-primary/5">
-                          <Input 
-                            placeholder="SL 4" 
-                            value={row.colJ} 
-                            onChange={(e) => updateRow(index, 'colJ', e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(e, index, 'colJ')}
-                            onPaste={(e) => handlePaste(e, index, 'colJ')}
-                            data-row={index}
-                            data-col="colJ"
-                            className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
-                          />
-                        </TableCell>
-                        <TableCell className="p-0 text-center pr-8">
+                        <TableCell className="p-0 text-center pl-4 pr-8">
                           <div className="flex items-center justify-center h-9">
                             <Button 
                               variant="ghost" 
@@ -733,7 +727,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
                         <TableCell className="text-right px-4 text-sm text-emerald-600 border-r border-secondary/20 whitespace-nowrap">
                           {formatAccounting(totalCredit.toString())}
                         </TableCell>
-                        <TableCell colSpan={7} className="pr-8 bg-secondary/[0.03]" />
+                        <TableCell colSpan={6} className="pr-8 bg-secondary/[0.03]" />
                       </TableRow>
                     </>
                   );

@@ -30,4 +30,19 @@ export const bankMutationService = {
     const { data } = await api.post("/bank-mutation/close-year", payload);
     return data;
   },
+
+  updateTransaction: async (id: number, payload: any): Promise<any> => {
+    const { data } = await api.put(`/bank-mutation/transactions/${id}`, payload);
+    return data;
+  },
+
+  getTransaction: async (id: number): Promise<any> => {
+    const { data } = await api.get(`/bank-mutation/transactions/${id}`);
+    return data;
+  },
+
+  deleteTransaction: async (id: number): Promise<any> => {
+    const { data } = await api.delete(`/bank-mutation/transactions/${id}`);
+    return data;
+  },
 };

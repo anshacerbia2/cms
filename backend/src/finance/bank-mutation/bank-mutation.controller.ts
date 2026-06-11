@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Query, ParseIntPipe, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, UseGuards, Query, ParseIntPipe, Param } from '@nestjs/common';
 import { BankMutationService } from './bank-mutation.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -60,5 +60,30 @@ export class BankMutationController {
     @Body() body: { accountId: string; year: number; userId: string }
   ) {
     return this.bankMutationService.closeYear(body.accountId, body.year, body.userId);
+  }
+
+  @Get('transactions/:id')
+  @Permissions('bank-mutation.index')
+  async getTransaction(
+    @Param('id', ParseIntPipe) id: number
+  ) {
+    return this.bankMutationService.getTransaction(id);
+  }
+
+  @Put('transactions/:id')
+  @Permissions('bank-mutation.edit')
+  async updateTransaction(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any
+  ) {
+    return this.bankMutationService.updateTransaction(id, body);
+  }
+
+  @Delete('transactions/:id')
+  @Permissions('bank-mutation.delete')
+  async deleteTransaction(
+    @Param('id', ParseIntPipe) id: number
+  ) {
+    return this.bankMutationService.deleteTransaction(id);
   }
 }

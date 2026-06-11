@@ -35,6 +35,14 @@ export function useBankMutation() {
       ...options,
     });
 
+  const getTransaction = (id: number | null, options?: any) =>
+    useQuery<any | null>({
+      queryKey: ["finance", "bank-mutation", "transaction", id],
+      queryFn: () => bankMutationService.getTransaction(id!),
+      enabled: !!id,
+      ...options,
+    });
+
   const recalculateLedger = () => {
     return async (payload: { accountId: string; year: number }) => {
       const data = await bankMutationService.recalculateLedger(payload);
@@ -51,6 +59,22 @@ export function useBankMutation() {
     };
   };
 
+  const updateTransaction = () => {
+    return async (payload: { id: number; data: any }) => {
+      const data = await bankMutationService.updateTransaction(payload.id, payload.data);
+      queryClient.invalidateQueries({ queryKey: ["finance", "bank-mutation"] });
+      return data;
+    };
+  };
+
+  const deleteTransaction = () => {
+    return async (id: number) => {
+      const data = await bankMutationService.deleteTransaction(id);
+      queryClient.invalidateQueries({ queryKey: ["finance", "bank-mutation"] });
+      return data;
+    };
+  };
+
   return {
     getAllTransactions,
     createBulkTransactions,
@@ -58,5 +82,8 @@ export function useBankMutation() {
     getFiscalPeriods,
     recalculateLedger,
     closeYear,
+    updateTransaction,
+    deleteTransaction,
+    getTransaction,
   };
 }

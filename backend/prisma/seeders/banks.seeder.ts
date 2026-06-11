@@ -202,7 +202,7 @@ export async function seedBankMutation(prisma: PrismaClient, workbook?: XLSX.Wor
     // Assuming headers are at the top, data starts from index 4
     for (let i = 4; i < data.length; i++) {
       const row = data[i];
-      if (isRowEmpty(row)) continue;
+      if (isRowEmpty(row)) break;
 
       const rowDate = excelDateToJSDate(row[0]);
       if (rowDate) {

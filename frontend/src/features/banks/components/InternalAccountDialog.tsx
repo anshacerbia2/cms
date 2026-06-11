@@ -93,8 +93,8 @@ export function InternalAccountDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px] rounded-3xl border-primary/5 shadow-premium overflow-hidden p-0">
-        <div className="bg-primary/5 px-8 pt-8 pb-6 border-b border-primary/5">
+      <DialogContent className="sm:max-w-[550px] rounded-3xl border-primary/5 shadow-premium overflow-hidden p-0 bg-white">
+        <div className="bg-white px-8 pt-8 pb-6 border-b border-primary/5">
           <DialogHeader>
             <DialogTitle className="text-2xl font-extrabold text-primary tracking-tight uppercase flex items-center gap-3">
               <Landmark className="w-8 h-8" strokeWidth={2.5} />
@@ -122,7 +122,7 @@ export function InternalAccountDialog({
                       disabled={form.watch("type") === "CASH" || form.watch("type") === "OTHER"}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="shadow-none bg-muted/20 border border-primary/10 h-11 rounded-xl focus-visible:border-primary/30 transition-all">
                           <SelectValue placeholder={form.watch("type") === "CASH" || form.watch("type") === "OTHER" ? "N/A FOR CASH/OTHER" : "Select Parent Bank"} />
                         </SelectTrigger>
                       </FormControl>
@@ -166,7 +166,7 @@ export function InternalAccountDialog({
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="shadow-none bg-muted/20 border border-primary/10 h-11 rounded-xl focus-visible:border-primary/30 transition-all font-black tracking-widest text-[10px] uppercase">
                           <SelectValue placeholder="Select Type" />
                         </SelectTrigger>
                       </FormControl>
@@ -189,7 +189,7 @@ export function InternalAccountDialog({
                       <Hash size={12} /> Account Identifier
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} className="h-11 rounded-xl bg-muted/20 border-primary/5 font-black tracking-widest" />
+                      <Input {...field} className="h-11 rounded-xl bg-muted/20 border border-primary/10 shadow-none font-black tracking-widest focus-visible:border-primary/30 transition-all" />
                     </FormControl>
                     <FormMessage className="text-[10px] uppercase font-bold text-destructive" />
                   </FormItem>
@@ -206,7 +206,7 @@ export function InternalAccountDialog({
                     <User size={12} /> Registered Holder
                   </FormLabel>
                   <FormControl>
-                    <Input {...field} className="h-11 rounded-xl bg-muted/20 border-primary/5 font-extrabold uppercase tracking-tight" />
+                    <Input {...field} className="h-11 rounded-xl bg-muted/20 border border-primary/10 shadow-none font-extrabold uppercase tracking-tight focus-visible:border-primary/30 transition-all" />
                   </FormControl>
                 </FormItem>
               )}
@@ -222,7 +222,7 @@ export function InternalAccountDialog({
                       <MapPin size={12} /> Branch Name
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} className="h-11 rounded-xl bg-muted/20 border-primary/5 font-bold uppercase text-[10px]" />
+                      <Input {...field} className="h-11 rounded-xl bg-muted/20 border border-primary/10 shadow-none font-bold uppercase text-[10px] focus-visible:border-primary/30 transition-all" />
                     </FormControl>
                   </FormItem>
                 )}
@@ -237,7 +237,7 @@ export function InternalAccountDialog({
                       <Globe size={12} /> SWIFT Code
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} className="h-11 rounded-xl bg-muted/20 border-primary/5 font-bold tracking-widest" />
+                      <Input {...field} className="h-11 rounded-xl bg-muted/20 border border-primary/10 shadow-none font-bold tracking-widest focus-visible:border-primary/30 transition-all" />
                     </FormControl>
                   </FormItem>
                 )}

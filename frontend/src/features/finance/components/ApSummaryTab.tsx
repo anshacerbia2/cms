@@ -60,7 +60,9 @@ export function ApSummaryTab() {
       colE: formatCurrency(row.colE || 0),   // EOY IDR
       colF: formatCurrency(row.colF || 0),   // EOY USD
       colG: formatCurrency(row.colG || 0),   // col G
-      // colH, colI, colJ are plain strings
+      colH: row.colH || "-",
+      colI: row.colI || "-",
+      // colJ are plain strings
       colK: formatCurrency(row.colK),        // BCA Shardjo
       colL: formatCurrency(row.colL),        // BCA Juanda
       colM: formatCurrency(row.colM),        // Mandiri Mid Plaza
@@ -90,7 +92,7 @@ export function ApSummaryTab() {
     isAnyFilterActive
   } = useExcelFilter({
     data: displayAP,
-    searchFields: ['colC', 'colD', 'colA']
+    searchFields: ['colC', 'colD', 'colA', 'colH', 'colI']
   });
 
   const paginatedAP = useMemo(() => {
@@ -282,6 +284,18 @@ export function ApSummaryTab() {
                     <ExcelColumnFilter columnKey="colG" label="Col G" data={getCascadingData("colG")} activeFilters={apFilters["colG"]} onFilterChange={(v) => { setApFilters(p => ({...p, colG: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colG", direction: d})} />
                   </div>
                 </TableHead>
+                <TableHead className="w-48 px-4">
+                  <div className="flex items-center gap-1">
+                    Col H
+                    <ExcelColumnFilter columnKey="colH" label="Col H" data={getCascadingData("colH")} activeFilters={apFilters["colH"]} onFilterChange={(v) => { setApFilters(p => ({...p, colH: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colH", direction: d})} />
+                  </div>
+                </TableHead>
+                <TableHead className="w-48 px-4">
+                  <div className="flex items-center gap-1">
+                    Col I
+                    <ExcelColumnFilter columnKey="colI" label="Col I" data={getCascadingData("colI")} activeFilters={apFilters["colI"]} onFilterChange={(v) => { setApFilters(p => ({...p, colI: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colI", direction: d})} />
+                  </div>
+                </TableHead>
 
                 {[
                   { key: 'colK', label: 'BCA Shardjo' },
@@ -352,6 +366,8 @@ export function ApSummaryTab() {
                     <TableCell className="text-right font-medium text-primary whitespace-nowrap">{row.colE}</TableCell>
                     <TableCell className={`text-right font-bold whitespace-nowrap ${getValueColor(row.colF)}`}>{row.colF}</TableCell>
                     <TableCell className={`text-right font-bold whitespace-nowrap ${getValueColor(row.colG)}`}>{row.colG}</TableCell>
+                    <TableCell className="px-4 text-primary/60 truncate max-w-[150px]" title={row.colH}>{row.colH}</TableCell>
+                    <TableCell className="px-4 text-primary/60 truncate max-w-[150px]" title={row.colI}>{row.colI}</TableCell>
 
                     {['colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'].map(col => (
                       <TableCell key={col} className={`text-right font-bold whitespace-nowrap ${getValueColor(row[col])}`}>
@@ -379,6 +395,8 @@ export function ApSummaryTab() {
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colE.toString())}</TableCell>
                     <TableCell className={`text-right whitespace-nowrap ${getValueColor(subtotalTotals.colF.toString())}`}>{formatCurrency(subtotalTotals.colF.toString())}</TableCell>
                     <TableCell className={`text-right whitespace-nowrap ${getValueColor(subtotalTotals.colG.toString())}`}>{formatCurrency(subtotalTotals.colG.toString())}</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell></TableCell>
 
                     {['colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'].map(col => (
                       <TableCell key={col} className={`text-right whitespace-nowrap ${getValueColor(subtotalTotals[col as keyof typeof subtotalTotals].toString())}`}>
@@ -398,6 +416,8 @@ export function ApSummaryTab() {
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(grandTotals.colE.toString())}</TableCell>
                     <TableCell className={`text-right whitespace-nowrap ${getValueColor(grandTotals.colF.toString())}`}>{formatCurrency(grandTotals.colF.toString())}</TableCell>
                     <TableCell className={`text-right whitespace-nowrap ${getValueColor(grandTotals.colG.toString())}`}>{formatCurrency(grandTotals.colG.toString())}</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell></TableCell>
 
                     {['colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'].map(col => (
                       <TableCell key={col} className={`text-right whitespace-nowrap ${getValueColor(grandTotals[col as keyof typeof grandTotals].toString())}`}>

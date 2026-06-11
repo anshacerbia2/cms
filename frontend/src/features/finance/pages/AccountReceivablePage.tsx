@@ -63,6 +63,8 @@ export default function AccountReceivablePage() {
       colD: row.colD || "-",
       colE: row.colE || "-",
       colF: formatCurrency(row.colF),
+      colG: formatCurrency(row.colG),
+      colH: formatCurrency(row.colH),
       colJ: formatCurrency(row.colJ),
       colK: formatCurrency(row.colK),
       colL: formatCurrency(row.colL),
@@ -71,6 +73,7 @@ export default function AccountReceivablePage() {
       colO: formatCurrency(row.colO),
       colP: formatCurrency(row.colP),
       colR: formatCurrency(row.colR),
+      colS: formatCurrency(row.colS),
     }));
   }, [allARRaw]);
 
@@ -89,7 +92,7 @@ export default function AccountReceivablePage() {
     isAnyFilterActive
   } = useExcelFilter({
     data: displayAR,
-    searchFields: ['colA', 'colD', 'colE', 'colB']
+    searchFields: ['colD', 'colE', 'colB']
   });
 
   const paginatedData = useMemo(() => {
@@ -101,6 +104,8 @@ export default function AccountReceivablePage() {
     return paginatedData.reduce((acc, curr) => {
       return {
         colF: acc.colF.plus(new Decimal(cleanAmount(curr.colF))),
+        colG: acc.colG.plus(new Decimal(cleanAmount(curr.colG))),
+        colH: acc.colH.plus(new Decimal(cleanAmount(curr.colH))),
         colJ: acc.colJ.plus(new Decimal(cleanAmount(curr.colJ))),
         colK: acc.colK.plus(new Decimal(cleanAmount(curr.colK))),
         colL: acc.colL.plus(new Decimal(cleanAmount(curr.colL))),
@@ -109,11 +114,12 @@ export default function AccountReceivablePage() {
         colO: acc.colO.plus(new Decimal(cleanAmount(curr.colO))),
         colP: acc.colP.plus(new Decimal(cleanAmount(curr.colP))),
         colR: acc.colR.plus(new Decimal(cleanAmount(curr.colR))),
+        colS: acc.colS.plus(new Decimal(cleanAmount(curr.colS))),
       };
     }, { 
-      colF: new Decimal(0), colJ: new Decimal(0), colK: new Decimal(0), 
+      colF: new Decimal(0), colG: new Decimal(0), colH: new Decimal(0), colJ: new Decimal(0), colK: new Decimal(0), 
       colL: new Decimal(0), colM: new Decimal(0), colN: new Decimal(0), 
-      colO: new Decimal(0), colP: new Decimal(0), colR: new Decimal(0) 
+      colO: new Decimal(0), colP: new Decimal(0), colR: new Decimal(0), colS: new Decimal(0)
     });
   }, [paginatedData]);
 
@@ -121,6 +127,8 @@ export default function AccountReceivablePage() {
     return filteredAndSortedData.reduce((acc, curr) => {
       return {
         colF: acc.colF.plus(new Decimal(cleanAmount(curr.colF))),
+        colG: acc.colG.plus(new Decimal(cleanAmount(curr.colG))),
+        colH: acc.colH.plus(new Decimal(cleanAmount(curr.colH))),
         colJ: acc.colJ.plus(new Decimal(cleanAmount(curr.colJ))),
         colK: acc.colK.plus(new Decimal(cleanAmount(curr.colK))),
         colL: acc.colL.plus(new Decimal(cleanAmount(curr.colL))),
@@ -129,11 +137,12 @@ export default function AccountReceivablePage() {
         colO: acc.colO.plus(new Decimal(cleanAmount(curr.colO))),
         colP: acc.colP.plus(new Decimal(cleanAmount(curr.colP))),
         colR: acc.colR.plus(new Decimal(cleanAmount(curr.colR))),
+        colS: acc.colS.plus(new Decimal(cleanAmount(curr.colS))),
       };
     }, { 
-      colF: new Decimal(0), colJ: new Decimal(0), colK: new Decimal(0), 
+      colF: new Decimal(0), colG: new Decimal(0), colH: new Decimal(0), colJ: new Decimal(0), colK: new Decimal(0), 
       colL: new Decimal(0), colM: new Decimal(0), colN: new Decimal(0), 
-      colO: new Decimal(0), colP: new Decimal(0), colR: new Decimal(0) 
+      colO: new Decimal(0), colP: new Decimal(0), colR: new Decimal(0), colS: new Decimal(0)
     });
   }, [filteredAndSortedData]);
 
@@ -230,6 +239,18 @@ export default function AccountReceivablePage() {
                     <ExcelColumnFilter columnKey="colF" label="EOY IDR" data={getCascadingData("colF")} activeFilters={filters["colF"]} onFilterChange={(v) => { setFilters(p => ({...p, colF: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colF", direction: d})} />
                   </div>
                 </TableHead>
+                <TableHead className="text-right w-36">
+                  <div className="flex items-center justify-end gap-1">
+                    EOY USD
+                    <ExcelColumnFilter columnKey="colG" label="EOY USD" data={getCascadingData("colG")} activeFilters={filters["colG"]} onFilterChange={(v) => { setFilters(p => ({...p, colG: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colG", direction: d})} />
+                  </div>
+                </TableHead>
+                <TableHead className="text-right w-36">
+                  <div className="flex items-center justify-end gap-1">
+                    USD Rate
+                    <ExcelColumnFilter columnKey="colH" label="USD Rate" data={getCascadingData("colH")} activeFilters={filters["colH"]} onFilterChange={(v) => { setFilters(p => ({...p, colH: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colH", direction: d})} />
+                  </div>
+                </TableHead>
 
                 {[
                   { key: 'colJ', label: 'BCA Suhardjo' },
@@ -238,7 +259,7 @@ export default function AccountReceivablePage() {
                   { key: 'colM', label: 'BRI Suhardjo' },
                   { key: 'colN', label: 'Cash IDR' },
                   { key: 'colO', label: 'Non CB' },
-                  { key: 'colP', label: 'Balance' }
+                  { key: 'colP', label: 'PPn In and Out' }
                 ].map((col) => (
                   <TableHead key={col.key} className="text-right w-36 whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
@@ -252,6 +273,12 @@ export default function AccountReceivablePage() {
                   <div className="flex items-center justify-end gap-1">
                     Outstanding IDR
                     <ExcelColumnFilter columnKey="colR" label="Outstanding IDR" data={getCascadingData("colR")} activeFilters={filters["colR"]} onFilterChange={(v) => { setFilters(p => ({...p, colR: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colR", direction: d})} />
+                  </div>
+                </TableHead>
+                <TableHead className="text-right w-36">
+                  <div className="flex items-center justify-end gap-1">
+                    Outstanding USD
+                    <ExcelColumnFilter columnKey="colS" label="Outstanding USD" data={getCascadingData("colS")} activeFilters={filters["colS"]} onFilterChange={(v) => { setFilters(p => ({...p, colS: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colS", direction: d})} />
                   </div>
                 </TableHead>
               </TableRow>
@@ -288,6 +315,12 @@ export default function AccountReceivablePage() {
                       <TableCell className={`text-right font-bold ${getAmountColor(row.colF, true)}`}>
                         {row.colF}
                       </TableCell>
+                      <TableCell className={`text-right font-bold ${getAmountColor(row.colG, true)}`}>
+                        {row.colG}
+                      </TableCell>
+                      <TableCell className={`text-right font-bold ${getAmountColor(row.colH, true)}`}>
+                        {row.colH}
+                      </TableCell>
                       
                       {['colJ', 'colK', 'colL', 'colM', 'colN', 'colO'].map(col => (
                         <TableCell key={col} className={`text-right font-bold ${getAmountColor(row[col], true)}`}>
@@ -302,6 +335,9 @@ export default function AccountReceivablePage() {
                       <TableCell className={`text-right font-black ${getAmountColor(row.colR, false)}`}>
                         {row.colR}
                       </TableCell>
+                      <TableCell className={`text-right font-black ${getAmountColor(row.colS, false)}`}>
+                        {row.colS}
+                      </TableCell>
                     </TableRow>
                   ))}
 
@@ -312,6 +348,12 @@ export default function AccountReceivablePage() {
                     </TableCell>
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colF.toString(), true)}`}>
                       {formatCurrency(subtotalTotals.colF.toString())}
+                    </TableCell>
+                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colG.toString(), true)}`}>
+                      {formatCurrency(subtotalTotals.colG.toString())}
+                    </TableCell>
+                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colH.toString(), true)}`}>
+                      {formatCurrency(subtotalTotals.colH.toString())}
                     </TableCell>
                     
                     {['colJ', 'colK', 'colL', 'colM', 'colN', 'colO'].map(col => (
@@ -327,6 +369,9 @@ export default function AccountReceivablePage() {
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colR.toString(), false)}`}>
                       {formatCurrency(subtotalTotals.colR.toString())}
                     </TableCell>
+                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colS.toString(), false)}`}>
+                      {formatCurrency(subtotalTotals.colS.toString())}
+                    </TableCell>
                   </TableRow>
 
                   {/* Grand Total Row */}
@@ -336,6 +381,12 @@ export default function AccountReceivablePage() {
                     </TableCell>
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colF.toString(), true)}`}>
                       {formatCurrency(grandTotals.colF.toString())}
+                    </TableCell>
+                    <TableCell className={`text-right ${getAmountColor(grandTotals.colG.toString(), true)}`}>
+                      {formatCurrency(grandTotals.colG.toString())}
+                    </TableCell>
+                    <TableCell className={`text-right ${getAmountColor(grandTotals.colH.toString(), true)}`}>
+                      {formatCurrency(grandTotals.colH.toString())}
                     </TableCell>
                     
                     {['colJ', 'colK', 'colL', 'colM', 'colN', 'colO'].map(col => (
@@ -350,6 +401,9 @@ export default function AccountReceivablePage() {
                     
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colR.toString(), false)}`}>
                       {formatCurrency(grandTotals.colR.toString())}
+                    </TableCell>
+                    <TableCell className={`text-right ${getAmountColor(grandTotals.colS.toString(), false)}`}>
+                      {formatCurrency(grandTotals.colS.toString())}
                     </TableCell>
                   </TableRow>
                 </>

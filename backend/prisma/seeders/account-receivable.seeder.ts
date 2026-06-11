@@ -42,6 +42,7 @@ export async function seedAccountReceivable(prisma: PrismaClient) {
       colP: cleanCurrency(row[15]), // AP PPN Non WAPU
       colQ: cleanString(row[16]),   
       colR: cleanCurrency(row[17]), // OUTSTANDING IDR
+      colS: cleanCurrency(row[18]), // OUTSTANDING USD
       tagYear: 2025,
     });
   }

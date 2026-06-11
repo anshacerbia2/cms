@@ -74,6 +74,8 @@ export async function seedAuth(prisma: PrismaClient) {
     { name: 'Bulk Create Depreciation', route: 'depreciation.bulk' },
     { name: 'View Bank Mutation', route: 'bank-mutation.index' },
     { name: 'Create Bank Mutation', route: 'bank-mutation.create' },
+    { name: 'Edit Bank Mutation', route: 'bank-mutation.edit' },
+    { name: 'Delete Bank Mutation', route: 'bank-mutation.delete' },
     { name: 'Bulk Create Bank Mutation', route: 'bank-mutation.bulk' },
     // Sales Module Permissions
     { name: 'View Sales', route: 'sales.index' },
