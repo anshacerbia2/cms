@@ -26,8 +26,8 @@ export class BankMutationController {
 
   @Post('transactions/bulk')
   @Permissions('bank-mutation.bulk')
-  async createBulkTransactions(@Body() body: { data: any[]; accountId: string; year: number; startingBalance?: string }) {
-    return this.bankMutationService.createBulkTransactions(body.data, body.accountId, body.year, body.startingBalance);
+  async createBulkTransactions(@Body() body: { data: any[]; accountId: string; tagYear: number; startingBalance?: string }) {
+    return this.bankMutationService.createBulkTransactions(body.data, body.accountId, body.tagYear, body.startingBalance);
   }
 
   @Get('anchor-balance/:accountId/:year')

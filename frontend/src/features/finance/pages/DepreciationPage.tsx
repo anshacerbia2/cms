@@ -483,6 +483,7 @@ export default function DepreciationPage() {
       <AddDepreciationModal 
         open={isAddModalOpen} 
         onOpenChange={setIsAddModalOpen} 
+        year={yearNum}
         onSuccess={() => assetsQuery.refetch()} 
       />
     </PageContainer>

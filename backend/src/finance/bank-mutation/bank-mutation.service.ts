@@ -50,7 +50,7 @@ export class BankMutationService {
     }));
   }
 
-  async createBulkTransactions(data: any[], accountId: string, year: number, startingBalance?: string) {
+  async createBulkTransactions(data: any[], accountId: string, tagYear: number, startingBalance?: string) {
     // 1. Find Account & Audit Protection
     const accountIdBig = BigInt(accountId);
     const [account] = await Promise.all([
@@ -65,19 +65,19 @@ export class BankMutationService {
     for (const item of data) {
       if (item.colA) {
         const txDate = new Date(item.colA);
-        if (txDate.getFullYear() !== year) {
-          throw new Error(`Transaction date ${item.colA} does not match the target year ${year}.`);
+        if (txDate.getFullYear() !== tagYear) {
+          throw new Error(`Transaction date ${item.colA} does not match the target year ${tagYear}.`);
         }
       }
     }
 
     // 3. Handle Starting Balance ONLY if explicitly provided (Initial Migration)
     if (startingBalance) {
-      await this.updateOpeningBalance(accountId, year, startingBalance);
+      await this.updateOpeningBalance(accountId, tagYear, startingBalance);
     }
 
     const currentFiscal = await this.prisma.fiscalPeriod.findUnique({
-      where: { internalAccountId_year: { internalAccountId: accountIdBig, year } }
+      where: { internalAccountId_year: { internalAccountId: accountIdBig, year: tagYear } }
     });
 
     // 4. Insert transactions with LINKING to internalAccountId
@@ -93,7 +93,7 @@ export class BankMutationService {
         colG: item.colG || "",
         colH: item.colH || "",
         colI: item.colI || "",
-        tagYear: year,
+        tagYear: tagYear,
       })),
     });
 
@@ -109,13 +109,13 @@ export class BankMutationService {
     await this.prisma.fiscalPeriod.updateMany({
       where: {
         internalAccountId: accountIdBig,
-        year: { gte: year }
+        year: { gte: tagYear }
       },
       data: { isStale: true }
     });
 
     // 7. Trigger Cascading Recalculation (FORCE recursion for bulk imports to auto-heal future years)
-    await this.recalculateLedger(accountId, year, true);
+    await this.recalculateLedger(accountId, tagYear, true);
 
     return { success: true, count: data.length };
   }

@@ -47,13 +47,13 @@ export class AccountPayableController {
 
   @Post('bulk')
   @Permissions('account-payable.bulk')
-  async createBulk(@Body() data: any[]) {
-    return this.accountPayableService.createBulkAccountPayables(data);
+  async createBulk(@Body() body: { data: any[], tagYear: number }) {
+    return this.accountPayableService.createBulkAccountPayables(body.data, body.tagYear);
   }
 
   @Post('tax-ledger/bulk')
   @Permissions('account-payable.bulk')
-  async createBulkTax(@Body() data: any[]) {
-    return this.accountPayableService.createBulkTaxLedgers(data);
+  async createBulkTax(@Body() body: { data: any[], tagYear: number }) {
+    return this.accountPayableService.createBulkTaxLedgers(body.data, body.tagYear);
   }
 }

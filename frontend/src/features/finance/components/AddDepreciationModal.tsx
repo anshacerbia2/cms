@@ -39,6 +39,7 @@ interface AddDepreciationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  year: number;
 }
 
 interface DepreciationRow {
@@ -86,11 +87,10 @@ const NUMERIC_COLS: (keyof DepreciationRow)[] = [
 
 const DATE_COLS: (keyof DepreciationRow)[] = ['colA'];
 
-export default function AddDepreciationModal({ open, onOpenChange, onSuccess }: AddDepreciationModalProps) {
+export default function AddDepreciationModal({ open, onOpenChange, onSuccess, year }: AddDepreciationModalProps) {
   const { createBulkAssets } = useDepreciation();
   const [rows, setRows] = useState<DepreciationRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [tagYear, setTagYear] = useState(new Date().getFullYear().toString());
 
   useEffect(() => {
     if (open) {
@@ -262,7 +262,7 @@ export default function AddDepreciationModal({ open, onOpenChange, onSuccess }: 
     }
     setLoading(true);
     try {
-      await createBulkAssets.mutateAsync({ data: validRows, tagYear: Number(tagYear) });
+      await createBulkAssets.mutateAsync({ data: validRows, tagYear: year });
       onSuccess();
       onOpenChange(false);
       toast.success("Depreciation records saved successfully");
@@ -289,16 +289,6 @@ export default function AddDepreciationModal({ open, onOpenChange, onSuccess }: 
               </div>
             </div>
             <div className="flex items-center gap-2 w-full md:w-auto">
-               <Select value={tagYear} onValueChange={setTagYear}>
-                 <SelectTrigger className="w-[120px] rounded-xl text-[11px] font-bold uppercase tracking-widest border-primary/20 bg-white">
-                   <SelectValue placeholder="Year" />
-                 </SelectTrigger>
-                 <SelectContent>
-                   <SelectItem value="2024">2024</SelectItem>
-                   <SelectItem value="2025">2025</SelectItem>
-                   <SelectItem value="2026">2026</SelectItem>
-                 </SelectContent>
-               </Select>
                <Button variant="outline" size="sm" onClick={addRow} className="w-full md:w-auto rounded-xl font-bold uppercase text-[10px] tracking-widest gap-2 cursor-pointer py-5 md:py-0">
                  <Plus size={14} /> Add Row
                </Button>

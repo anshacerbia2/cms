@@ -373,6 +373,7 @@ export default function AccountReceivablePage() {
       <AddArLedgerModal 
         open={isAddModalOpen} 
         onOpenChange={setIsAddModalOpen} 
+        year={yearNum}
         onSuccess={() => refetch()} 
       />
     </PageContainer>

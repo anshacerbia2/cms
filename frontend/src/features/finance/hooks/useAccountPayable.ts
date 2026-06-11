@@ -44,7 +44,7 @@ export function useAccountPayable() {
   });
 
   const createBulkAP = useMutation({
-    mutationFn: (payload: any[]) => accountPayableService.createBulkAP(payload),
+    mutationFn: (payload: { data: any[], tagYear: number }) => accountPayableService.createBulkAP(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance", "account-payable"] });
       toast.success("Bulk Account Payables created successfully");
@@ -62,7 +62,7 @@ export function useAccountPayable() {
   });
 
   const createBulkTaxLedger = useMutation({
-    mutationFn: (payload: any[]) => accountPayableService.createBulkTaxLedger(payload),
+    mutationFn: (payload: { data: any[], tagYear: number }) => accountPayableService.createBulkTaxLedger(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance", "account-payable", "tax-ledger"] });
       toast.success("Bulk Tax Ledger records created successfully");

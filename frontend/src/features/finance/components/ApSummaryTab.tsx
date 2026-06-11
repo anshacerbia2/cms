@@ -421,6 +421,7 @@ export function ApSummaryTab() {
       <AddApLedgerModal 
         open={isAddModalOpen} 
         onOpenChange={setIsAddModalOpen} 
+        year={yearNum}
         onSuccess={() => refetch()} 
       />
     </div>

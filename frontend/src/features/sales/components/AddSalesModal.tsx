@@ -32,6 +32,7 @@ interface AddSalesModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  year: number;
 }
 
 interface SalesRow {
@@ -69,7 +70,7 @@ const NUMERIC_COLS: (keyof SalesRow)[] = [
 
 const DATE_COLS: (keyof SalesRow)[] = ['colC', 'colL'];
 
-export default function AddSalesModal({ open, onOpenChange, onSuccess }: AddSalesModalProps) {
+export default function AddSalesModal({ open, onOpenChange, onSuccess, year }: AddSalesModalProps) {
   const { createBulkSales } = useSales();
   const [rows, setRows] = useState<SalesRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -249,7 +250,7 @@ export default function AddSalesModal({ open, onOpenChange, onSuccess }: AddSale
     }
     setLoading(true);
     try {
-      await createBulkSales.mutateAsync(validRows);
+      await createBulkSales.mutateAsync({ data: validRows, tagYear: year });
       onSuccess();
       onOpenChange(false);
     } catch (error) {

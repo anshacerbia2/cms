@@ -24,7 +24,7 @@ export class SalesController {
 
   @Post('bulk')
   @Permissions('sales.create')
-  async createBulkSales(@Body() body: any[]) {
-    return this.salesService.createBulkSales(body);
+  async createBulkSales(@Body() body: { data: any[], tagYear: number }) {
+    return this.salesService.createBulkSales(body.data, body.tagYear);
   }
 }

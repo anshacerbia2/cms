@@ -6,7 +6,7 @@ export const bankMutationService = {
     return Array.isArray(data) ? data : (data as any).data || [];
   },
 
-  createBulkTransactions: async (payload: { data: any[]; accountId: string; year: number; startingBalance?: string }): Promise<any> => {
+  createBulkTransactions: async (payload: { data: any[]; accountId: string; tagYear: number; startingBalance?: string }): Promise<any> => {
     const { data } = await api.post("/bank-mutation/transactions/bulk", payload);
     return data;
   },

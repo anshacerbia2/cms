@@ -17,7 +17,7 @@ export const accountReceivableService = {
     return data;
   },
 
-  createBulkAR: async (payload: any[]): Promise<any> => {
+  createBulkAR: async (payload: { data: any[], tagYear: number }): Promise<any> => {
     const { data } = await api.post("/finance/account-receivable/bulk", payload);
     return data;
   },

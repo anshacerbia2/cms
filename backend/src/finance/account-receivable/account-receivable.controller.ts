@@ -30,7 +30,7 @@ export class AccountReceivableController {
 
   @Post('bulk')
   @Permissions('account-receivable.bulk')
-  async createBulk(@Body() data: any[]) {
-    return this.arService.createBulkAR(data);
+  async createBulk(@Body() body: { data: any[], tagYear: number }) {
+    return this.arService.createBulkAR(body.data, body.tagYear);
   }
 }

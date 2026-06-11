@@ -404,7 +404,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
       await createBulkTransactions()({
         data: validRows,
         accountId: selectedAccount.id,
-        year: Number(year),
+        tagYear: Number(year),
         // CRITICAL: Only send startingBalance if the user is allowed to edit it (Initial Migration/Setup).
         // If not editable, we rely on backend's carry-forward calculation.
         startingBalance: anchorData?.canEdit ? startingBalance.toString() : undefined

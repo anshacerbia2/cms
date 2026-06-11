@@ -29,7 +29,7 @@ export function useSales() {
   });
 
   const createBulkSales = useMutation({
-    mutationFn: (payload: any[]) => salesService.createBulkSales(payload),
+    mutationFn: (payload: { data: any[], tagYear: number }) => salesService.createBulkSales(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance", "sales"] });
       toast.success("Bulk Sales records created successfully");

@@ -80,7 +80,7 @@ export class AccountReceivableService {
     });
   }
 
-  async createBulkAR(data: any[]) {
+  async createBulkAR(data: any[], tagYear: number) {
     const records = data.map(row => ({
       colA: row.colA || null,
       colB: row.colB || null,
@@ -100,6 +100,7 @@ export class AccountReceivableService {
       colP: row.colP?.toString() || null,
       colQ: row.colQ || null,
       colR: row.colR?.toString() || null,
+      tagYear: tagYear,
     }));
 
     return this.prisma.accountReceivable.createMany({

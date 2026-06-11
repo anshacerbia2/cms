@@ -25,6 +25,7 @@ interface AddArLedgerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  year: number;
 }
 
 interface ArRow {
@@ -50,7 +51,7 @@ const LABELS: Record<keyof ArRow, string> = {
 
 const NUMERIC_COLS: (keyof ArRow)[] = ['colF', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colR'];
 
-export default function AddArLedgerModal({ open, onOpenChange, onSuccess }: AddArLedgerModalProps) {
+export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }: AddArLedgerModalProps) {
   const { createBulkAR } = useAccountReceivable();
   const [rows, setRows] = useState<ArRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -200,7 +201,7 @@ export default function AddArLedgerModal({ open, onOpenChange, onSuccess }: AddA
     }
     setLoading(true);
     try {
-      await createBulkAR.mutateAsync(validRows);
+      await createBulkAR.mutateAsync({ data: validRows, tagYear: year });
       onSuccess();
       onOpenChange(false);
     } catch (error) {

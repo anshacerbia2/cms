@@ -27,7 +27,7 @@ export const accountPayableService = {
     return data;
   },
 
-  createBulkAP: async (payload: any[]): Promise<any> => {
+  createBulkAP: async (payload: { data: any[], tagYear: number }): Promise<any> => {
     const { data } = await api.post("/finance/account-payable/bulk", payload);
     return data;
   },
@@ -37,7 +37,7 @@ export const accountPayableService = {
     return data;
   },
 
-  createBulkTaxLedger: async (payload: any[]): Promise<any> => {
+  createBulkTaxLedger: async (payload: { data: any[], tagYear: number }): Promise<any> => {
     const { data } = await api.post("/finance/account-payable/tax-ledger/bulk", payload);
     return data;
   },

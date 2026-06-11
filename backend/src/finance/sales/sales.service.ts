@@ -79,7 +79,7 @@ export class SalesService {
     }));
   }
 
-  async createBulkSales(payload: any[]): Promise<any> {
+  async createBulkSales(payload: any[], tagYear: number): Promise<any> {
     const data = payload.map(row => ({
       colA: row.colA ? String(row.colA) : null,
       colB: row.colB ? String(row.colB) : null,
@@ -110,7 +110,7 @@ export class SalesService {
       colAB: row.colAB || 0,
       colAC: row.colAC || 0,
       colAD: row.colAD ? String(row.colAD) : null,
-      tagYear: row.colD ? parseInt(String(row.colD)) : null,
+      tagYear: tagYear,
     }));
 
     return this.prisma.salesRecord.createMany({ data });

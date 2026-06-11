@@ -17,7 +17,7 @@ export const salesService = {
     return data;
   },
 
-  createBulkSales: async (payload: any[]): Promise<any> => {
+  createBulkSales: async (payload: { data: any[], tagYear: number }): Promise<any> => {
     const { data } = await api.post("/finance/sales/bulk", payload);
     return data;
   },

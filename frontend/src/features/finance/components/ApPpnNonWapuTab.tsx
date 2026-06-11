@@ -365,6 +365,7 @@ export function ApPpnNonWapuTab() {
         open={isAddModalOpen} 
         onOpenChange={setIsAddModalOpen} 
         type="NON_WAPU"
+        year={new Date().getFullYear()}
         onSuccess={() => refetch()} 
       />
     </div>

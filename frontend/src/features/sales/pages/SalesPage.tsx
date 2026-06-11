@@ -446,6 +446,7 @@ export default function SalesPage() {
       <AddSalesModal 
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
+        year={yearNum}
         onSuccess={() => {
           refetchSales();
           toast.success("Sales data refreshed successfully");

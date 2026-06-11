@@ -172,7 +172,7 @@ export class AccountPayableService {
     });
   }
 
-  async createBulkAccountPayables(data: any[]) {
+  async createBulkAccountPayables(data: any[], tagYear: number) {
     const records = data.map(row => ({
       colA: row.colA || null,
       colB: row.colB ? Number(row.colB) : null,
@@ -196,13 +196,14 @@ export class AccountPayableService {
       colT: row.colT || null,               // col T (string)
       colU: row.colU?.toString() || null,   // Outstanding IDR
       colV: row.colV?.toString() || null,   // Outstanding USD
+      tagYear: tagYear,
     }));
     return this.prisma.accountPayable.createMany({
       data: records,
     });
   }
 
-  async createBulkTaxLedgers(data: any[]) {
+  async createBulkTaxLedgers(data: any[], tagYear: number) {
     const records = data.map(row => ({
       type: row.type,
       colA: row.colA ? new Date(row.colA) : null,
@@ -219,6 +220,7 @@ export class AccountPayableService {
       colL: row.colL || null,
       colM: row.colM || null,
       colN: row.colN || null,
+      tagYear: tagYear,
     }));
 
     return this.prisma.taxLedger.createMany({

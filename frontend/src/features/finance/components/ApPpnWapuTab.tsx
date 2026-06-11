@@ -369,6 +369,7 @@ export function ApPpnWapuTab() {
         open={isAddModalOpen} 
         onOpenChange={setIsAddModalOpen} 
         type="WAPU"
+        year={new Date().getFullYear()}
         onSuccess={() => refetch()} 
       />
     </div>

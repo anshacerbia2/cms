@@ -33,6 +33,7 @@ interface AddTaxLedgerModalProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   type: 'WAPU' | 'NON_WAPU';
+  year: number;
 }
 
 interface TaxRow {
@@ -42,7 +43,7 @@ interface TaxRow {
   colM: string; colN: string;
 }
 
-export default function AddTaxLedgerModal({ open, onOpenChange, onSuccess, type }: AddTaxLedgerModalProps) {
+export default function AddTaxLedgerModal({ open, onOpenChange, onSuccess, type, year }: AddTaxLedgerModalProps) {
   const { createBulkTaxLedger } = useAccountPayable();
   const [rows, setRows] = useState<TaxRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -235,7 +236,7 @@ export default function AddTaxLedgerModal({ open, onOpenChange, onSuccess, type 
         ...row,
         type,
       }));
-      await createBulkTaxLedger.mutateAsync(payload);
+      await createBulkTaxLedger.mutateAsync({ data: payload, tagYear: year });
       onSuccess();
       onOpenChange(false);
     } catch (error) {

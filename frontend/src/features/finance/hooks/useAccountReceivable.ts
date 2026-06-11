@@ -29,7 +29,7 @@ export function useAccountReceivable() {
   });
 
   const createBulkAR = useMutation({
-    mutationFn: (payload: any[]) => accountReceivableService.createBulkAR(payload),
+    mutationFn: (payload: { data: any[], tagYear: number }) => accountReceivableService.createBulkAR(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance", "account-receivable"] });
       toast.success("Bulk Account Receivables created successfully");

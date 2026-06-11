@@ -25,6 +25,7 @@ interface AddApLedgerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  year: number;
 }
 
 interface ApRow {
@@ -65,7 +66,7 @@ const NUMERIC_COLS: (keyof ApRow)[] = [
   'colO', 'colP', 'colQ', 'colR', 'colS', 'colU', 'colV',
 ];
 
-export default function AddApLedgerModal({ open, onOpenChange, onSuccess }: AddApLedgerModalProps) {
+export default function AddApLedgerModal({ open, onOpenChange, onSuccess, year }: AddApLedgerModalProps) {
   const { createBulkAP } = useAccountPayable();
   const [rows, setRows] = useState<ApRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -218,7 +219,7 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess }: AddA
     }
     setLoading(true);
     try {
-      await createBulkAP.mutateAsync(validRows);
+      await createBulkAP.mutateAsync({ data: validRows, tagYear: year });
       onSuccess();
       onOpenChange(false);
     } catch (error) {
