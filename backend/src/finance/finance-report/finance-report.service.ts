@@ -16,17 +16,6 @@ export class FinanceReportService {
     private equityPropertyService: EquityPropertyService
   ) {}
   
-  /**
-   * Helper to extract a 4-digit year from inconsistent legacy strings.
-   * Returns the year as a number, or 0 if no valid year is found.
-   */
-  private extractYear(val: any): number {
-    if (!val) return 0;
-    const str = String(val);
-    const match = str.match(/\b(19|20)\d{2}\b/);
-    return match ? parseInt(match[0], 10) : 0;
-  }
-
   async getRevenue(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
     const data = await this.prisma.financeRevenue.findMany({ orderBy: [{ id: 'asc' }] });
     const total = data.length;
@@ -762,9 +751,8 @@ export class FinanceReportService {
    * @param date Optional end date for cumulative reports
    */
   async getBSDetails(category: string, subItem?: string, year?: string | number, date?: string, accountId?: string) {
-    const yearNum = year ? Number(year) : undefined;
-    const endOfDate = date ? new Date(`${date}T23:59:59.999Z`) : (yearNum ? new Date(`${yearNum}-12-31T23:59:59.999Z`) : new Date());
-    const currentYearVal = yearNum || (date ? endOfDate.getFullYear() : new Date().getFullYear());
+    const yearNum = year ? Number(year) : (date ? new Date(`${date}T00:00:00.000Z`).getUTCFullYear() : null);
+    const endOfDate = date ? new Date(`${date}T23:59:59.999Z`) : null;
 
     // 1. CASH & BANK
     if (category === 'Cash' || category === 'Bank Accounts') {
@@ -776,40 +764,15 @@ export class FinanceReportService {
         });
       }
 
-      if (!account) {
-        // Fallback to fuzzy search if ID is missing
-        const words = subItem?.split(' ').filter(w => w.length > 2) || [];
-        
-        account = await this.prisma.internalAccount.findFirst({
-          where: {
-            OR: [
-              { holderName: { contains: subItem, mode: 'insensitive' as any } },
-              { branch: { contains: subItem, mode: 'insensitive' as any } },
-              { bank: { bankBrand: { contains: subItem, mode: 'insensitive' as any } } },
-              // If subItem is a combined name like "BCA Tebet", try matching both
-              ...(words.length > 0 ? [{
-                AND: words.map(w => ({
-                  OR: [
-                    { holderName: { contains: w, mode: 'insensitive' as any } },
-                    { branch: { contains: w, mode: 'insensitive' as any } },
-                    { bank: { bankBrand: { contains: w, mode: 'insensitive' as any } } }
-                  ]
-                }))
-              }] : [])
-            ]
-          }
-        });
-      }
-
       if (!account) return [];
 
       const transactions = await this.prisma.financialTransaction.findMany({
         where: {
           internalAccountId: account.id,
-          ...(yearNum ? { tagYear: { lte: yearNum } } : {}),
-          ...(date ? {
+          ...(yearNum ? { tagYear: yearNum } : {}),
+          ...(endOfDate ? {
             OR: [
-              { colA: { lte: endOfDate! } },
+              { colA: { lte: endOfDate } },
               { colA: null }
             ]
           } : {})
@@ -852,14 +815,10 @@ export class FinanceReportService {
 
       const records = recordsRaw.filter(r => {
         const val = r.colC || "";
-        const fullDate = new Date(val);
-        const hasFullDate = !isNaN(fullDate.getTime());
         const year = r.tagYear ?? 0;
 
-        // 1. Date Filtering (Strict S/D)
-        if (year || date) {
-          if (year > 0 && year > currentYearVal) return false;
-        }
+        // 1. Date Filtering (Strict Per Year - Non-Cumulative)
+        if (yearNum && year !== yearNum) return false;
 
         // 2. Category/SubItem Filtering
         const colB = (r.colB || '').toLowerCase();
@@ -879,7 +838,7 @@ export class FinanceReportService {
 
       return records.map(r => ({
         id: r.id.toString(),
-        colC: r.colC || '-', // Date/Desc
+        colC: r.colC || '-', // Year
         colD: r.colD || '-', // Vendor/Subject
         colE: r.colE || '-', // Description
         colR: formatDecimal(r.colR), // Amount
@@ -901,10 +860,16 @@ export class FinanceReportService {
 
       const records = dataRaw.filter(r => {
         // 1. Filter by category
-        if (targetType && r.type !== targetType) return false;
+        if (targetType && r.type?.toUpperCase() !== String(targetType).toUpperCase()) return false;
         
-        // 2. Filter by date (match getBalanceSheet: colA <= endOfDate)
-        if (date && r.colA) {
+        // 2. Filter by Year (Match getBalanceSheet)
+        if (yearNum) {
+          const y = r.tagYear ?? 0;
+          if (y !== yearNum) return false;
+        }
+        
+        // 3. Filter by date
+        if (endOfDate && r.colA) {
           return r.colA <= endOfDate;
         }
         
@@ -935,10 +900,8 @@ export class FinanceReportService {
         // Compare directly as a year number.
         const recordYear = r.tagYear ?? 0;
 
-        // Date filtering: exclude records from future years
-        if (year || date) {
-          if (recordYear > 0 && recordYear > currentYearVal) return false;
-        }
+        // Date filtering: strictly match year (non-cumulative)
+        if (yearNum && recordYear !== yearNum) return false;
 
         const rowCat = r.colA?.toLowerCase() || '';
         if (subLower.includes('from customer')) {
@@ -965,6 +928,7 @@ export class FinanceReportService {
 
   /**
    * Fetches the dynamic depreciation audit trail for all registered assets.
+   * [SPECIFICALLY USED FOR PROFIT & LOSS DETAILS]
    * 
    * SPECIAL LOGIC:
    * - Trims future months: If the filter date is May, columns from June to December are zeroed out.

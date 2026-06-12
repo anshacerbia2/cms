@@ -412,7 +412,7 @@ model AccountReceivable {
   colA            String?  @db.VarChar(100) // Blank
   colB            String?  @db.VarChar(100) // Receiveable
   colC            String?  @db.Text // Year
-  colD            String?  @db.Text // col D
+  colD            String?  @db.Text // col D (Subject)
   colE            String?  @db.Text // Description
   colF            Decimal? @db.Decimal(19, 4) // EOY IDR
   colG            Decimal? @db.Decimal(19, 4) // EOY USD
