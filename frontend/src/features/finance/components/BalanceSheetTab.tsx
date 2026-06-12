@@ -193,8 +193,6 @@ export function BalanceSheetTab() {
   
   
 
-  const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
-
   const summaryCards = [
     { 
       title: "TOTAL ASSETS", 
