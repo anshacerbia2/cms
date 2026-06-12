@@ -393,7 +393,7 @@ export default function AddTaxLedgerModal({ open, onOpenChange, onSuccess, type,
               </div>
             </div>
             <div className="flex items-center gap-2 italic normal-case opacity-80 pt-1 border-t border-primary/[0.03]">
-              <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
               Tip: Copy any rectangular range from Excel and paste — rows/cols expand automatically.
             </div>
           </div>

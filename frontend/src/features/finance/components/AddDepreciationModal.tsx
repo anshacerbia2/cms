@@ -404,6 +404,14 @@ export default function AddDepreciationModal({ open, onOpenChange, onSuccess, ye
                 <span>Next Cell</span>
               </div>
               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 rounded border border-primary/10 bg-white shadow-sm font-mono text-primary/80">SHIFT</kbd>
+                  <span>+</span>
+                  <kbd className="px-1.5 py-0.5 rounded border border-primary/10 bg-white shadow-sm font-mono text-primary/80">TAB</kbd>
+                </div>
+                <span>Prev Cell</span>
+              </div>
+              <div className="flex items-center gap-2">
                 <kbd className="px-1.5 py-0.5 rounded border border-primary/10 bg-white shadow-sm font-mono text-primary/80">ENTER</kbd>
                 <span>Next Row</span>
               </div>
@@ -415,6 +423,10 @@ export default function AddDepreciationModal({ open, onOpenChange, onSuccess, ye
                 <span>Move Vertical</span>
               </div>
               <div className="flex items-center gap-2">
+                <kbd className="px-1.5 py-0.5 rounded border border-primary/10 bg-white shadow-sm font-mono text-primary/80">F2</kbd>
+                <span>Edit Cell</span>
+              </div>
+              <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
                   <kbd className="px-1.5 py-0.5 rounded border border-primary/10 bg-white shadow-sm font-mono text-primary/80">CTRL</kbd>
                   <span>+</span>
@@ -422,6 +434,10 @@ export default function AddDepreciationModal({ open, onOpenChange, onSuccess, ye
                 </div>
                 <span>Paste Excel</span>
               </div>
+            </div>
+            <div className="flex items-center gap-2 italic normal-case opacity-80 pt-1 border-t border-primary/[0.03]">
+              <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
+              Tip: Copy any rectangular range from Excel and paste — rows/cols expand automatically.
             </div>
           </div>
           <div className="px-8 py-4 flex items-center justify-end w-full gap-3">
