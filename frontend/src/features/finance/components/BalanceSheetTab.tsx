@@ -5,18 +5,7 @@ import { useExcelFilter } from "../hooks/useExcelFilter";
 import { ExcelColumnFilter } from "./ExcelColumnFilter";
 import EquityPropertiesModal from "./EquityPropertiesModal";
 import { Card, CardContent } from "@/components/ui/card";
-import { 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  AreaChart, 
-  Area,
-  PieChart,
-  Pie,
-  Cell
-} from "recharts";
+
 import { 
   TrendingUp, 
   ShieldCheck, 
@@ -61,7 +50,7 @@ import { format } from "date-fns";
 export function BalanceSheetTab() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear.toString());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const { getBalanceSheet, getBSDetails } = useFinance();
   
   // Year for UI Display only
@@ -295,7 +284,7 @@ export function BalanceSheetTab() {
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4 text-secondary" />
-                  {selectedDate ? format(selectedDate, "PPP") : <span>As of Today</span>}
+                  {selectedDate ? format(selectedDate, "PPP") : <span>Pick a Date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 shadow-premium border-primary/5 overflow-hidden" align="end">
@@ -316,11 +305,6 @@ export function BalanceSheetTab() {
           <div className="flex flex-col items-end">
             <Select value={year} onValueChange={(val) => {
               setYear(val);
-              if (parseInt(val) === currentYear) {
-                setSelectedDate(new Date());
-              } else {
-                setSelectedDate(new Date(parseInt(val), 11, 31));
-              }
             }}>
               <SelectTrigger className="h-12 w-32 bg-white border-0 shadow-sm rounded-xl text-[11px] font-bold uppercase tracking-widest focus:ring-0 focus:ring-offset-0 transition-all hover:bg-white hover:shadow-sm">
                 <SelectValue placeholder="Select Year" />
@@ -396,172 +380,6 @@ export function BalanceSheetTab() {
         ))}
       </div>
 
-      {/* Charts Section */}
-      <div className="hidden grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Position Trend */}
-        <Card className="lg:col-span-2 bg-white/70 backdrop-blur-md border-primary/5 shadow-premium">
-          <CardContent className="p-8">
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h3 className="text-[15px] font-black text-primary uppercase tracking-widest">Position Trend</h3>
-                <p className="text-[11px] text-primary/40 uppercase font-bold mt-1">Quarterly evolution · 2025</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                  <span className="text-[10px] font-black uppercase text-primary/50">Assets</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span className="text-[10px] font-black uppercase text-primary/50">Liabilities</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="text-[10px] font-black uppercase text-primary/50">Equity</span>
-                </div>
-              </div>
-            </div>
-            <div className="h-[280px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={charts.trend}>
-                  <defs>
-                    <linearGradient id="colorAssets" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{fontSize: 10, fontWeight: 900, fill: 'rgba(0,0,0,0.3)'}} 
-                    dy={10}
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{fontSize: 10, fontWeight: 900, fill: 'rgba(0,0,0,0.3)'}}
-                    tickFormatter={(val: number) => `Rp ${(val/1e9).toFixed(1)}B`}
-                  />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
-                    itemStyle={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase' }}
-                    formatter={(value: any) => formatCurrency(value)}
-                  />
-                  <Area type="monotone" dataKey="assets" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorAssets)" />
-                  <Area type="monotone" dataKey="liabilities" stroke="#f59e0b" strokeWidth={3} fill="transparent" />
-                  <Area type="monotone" dataKey="equity" stroke="#10b981" strokeWidth={3} fill="transparent" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Compositions Section */}
-        <Card className="bg-white/70 backdrop-blur-md border-primary/5 shadow-premium">
-          <CardContent className="p-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Asset Composition */}
-              <div>
-                <h3 className="text-[15px] font-black text-primary uppercase tracking-widest mb-1">Asset Composition</h3>
-                <p className="text-[11px] text-primary/40 uppercase font-bold mb-6">Allocation of resources</p>
-                
-                <div className="h-[200px] w-full relative mb-6">
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none translate-y-1">
-                    <span className="text-[8px] font-black text-primary/30 uppercase tracking-[0.2em] mb-0.5">Total Assets</span>
-                    <span className="text-sm font-black text-primary tabular-nums">
-                      {formatCurrency(bsData?.assets?.total).split(',')[0]}
-                    </span>
-                  </div>
-
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={charts.assetComposition}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={6}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {charts.assetComposition.map((item: any, index: number) => (
-                          <Cell key={`cell-${item.name}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value: any) => formatCurrency(value)} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  {charts.assetComposition.map((item: any, i: number) => (
-                    <div key={item.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                        <span className="text-[10px] font-bold text-primary/40 uppercase">{item.name}</span>
-                      </div>
-                      <span className="text-[10px] font-black text-primary/80">
-                        {((item.value / (Number(bsData?.assets?.total?.toString().replace(/,/g, '')) || 1)) * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* L & E Structure */}
-              <div>
-                <h3 className="text-[15px] font-black text-primary uppercase tracking-widest mb-1">Financial Structure</h3>
-                <p className="text-[11px] text-primary/40 uppercase font-bold mb-6">Liabilities vs Equity</p>
-                
-                <div className="h-[200px] w-full relative mb-6">
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none translate-y-1">
-                    <span className="text-[8px] font-black text-primary/30 uppercase tracking-[0.2em] mb-0.5">Solvency</span>
-                    <span className="text-sm font-black text-primary tabular-nums">
-                      {summary.deRatio}x
-                    </span>
-                  </div>
-
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={charts.liabilityEquityComposition}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={6}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        <Cell fill="#f59e0b" /> {/* Liabilities */}
-                        <Cell fill="#10b981" /> {/* Equity */}
-                      </Pie>
-                      <Tooltip formatter={(value: any) => formatCurrency(value)} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="space-y-2">
-                  {charts.liabilityEquityComposition.map((item: any, i: number) => (
-                    <div key={item.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: i === 0 ? "#f59e0b" : "#10b981" }} />
-                        <span className="text-[10px] font-bold text-primary/40 uppercase">{item.name}</span>
-                      </div>
-                      <span className="text-[10px] font-black text-primary/80">
-                        {formatCurrency(item.value)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Main Two-Column Table */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">

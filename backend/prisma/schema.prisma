@@ -505,27 +505,27 @@ model TaxLedger {
 
 model Depreciation {
   id              BigInt   @id @default(autoincrement())
-  colA            DateTime? @map("col_a")
-  colB            String?   @map("col_b") @db.VarChar(100)
-  colC            String?   @map("col_c") @db.Text
-  colD            Decimal?  @default(0) @map("col_d") @db.Decimal(19, 4)
-  colE            Int?      @map("col_e")
-  colF            Decimal?  @default(0) @map("col_f") @db.Decimal(19, 4)
-  colG            Decimal?  @default(0) @map("col_g") @db.Decimal(19, 4)
-  colH            Decimal?  @default(0) @map("col_h") @db.Decimal(19, 4)
-  colI            Decimal?  @default(0) @map("col_i") @db.Decimal(19, 4)
-  colJ            Decimal?  @default(0) @map("col_j") @db.Decimal(19, 4)
-  colK            Decimal?  @default(0) @map("col_k") @db.Decimal(19, 4)
-  colL            Decimal?  @default(0) @map("col_l") @db.Decimal(19, 4)
-  colM            Decimal?  @default(0) @map("col_m") @db.Decimal(19, 4)
-  colN            Decimal?  @default(0) @map("col_n") @db.Decimal(19, 4)
-  colO            Decimal?  @default(0) @map("col_o") @db.Decimal(19, 4)
-  colP            Decimal?  @default(0) @map("col_p") @db.Decimal(19, 4)
-  colQ            Decimal?  @default(0) @map("col_q") @db.Decimal(19, 4)
-  colR            Decimal?  @default(0) @map("col_r") @db.Decimal(19, 4)
-  colS            Decimal?  @default(0) @map("col_s") @db.Decimal(19, 4)
-  colT            Decimal?  @default(0) @map("col_t") @db.Decimal(19, 4)
-  colU            Decimal?  @default(0) @map("col_u") @db.Decimal(19, 4)
+  colA            DateTime? @map("col_a") // Date
+  colB            String?   @map("col_b") @db.VarChar(100) // Bank Source
+  colC            String?   @map("col_c") @db.Text // Description
+  colD            Decimal?  @default(0) @map("col_d") @db.Decimal(19, 4) // Buy Price 
+  colE            Int?      @map("col_e") // Month count (e.g, 36)
+  colF            Decimal?  @default(0) @map("col_f") @db.Decimal(19, 4) // s/d 2024
+  colG            Decimal?  @default(0) @map("col_g") @db.Decimal(19, 4) // Jan-25
+  colH            Decimal?  @default(0) @map("col_h") @db.Decimal(19, 4) // Feb-25
+  colI            Decimal?  @default(0) @map("col_i") @db.Decimal(19, 4) // Mar-25
+  colJ            Decimal?  @default(0) @map("col_j") @db.Decimal(19, 4) // Apr-25
+  colK            Decimal?  @default(0) @map("col_k") @db.Decimal(19, 4) // May-25
+  colL            Decimal?  @default(0) @map("col_l") @db.Decimal(19, 4) // Jun-25
+  colM            Decimal?  @default(0) @map("col_m") @db.Decimal(19, 4) // Jul-25
+  colN            Decimal?  @default(0) @map("col_n") @db.Decimal(19, 4) // Aug-25
+  colO            Decimal?  @default(0) @map("col_o") @db.Decimal(19, 4) // Sep-25
+  colP            Decimal?  @default(0) @map("col_p") @db.Decimal(19, 4) // Oct-25
+  colQ            Decimal?  @default(0) @map("col_q") @db.Decimal(19, 4) // Nov-25
+  colR            Decimal?  @default(0) @map("col_r") @db.Decimal(19, 4) // Dec-25
+  colS            Decimal?  @default(0) @map("col_s") @db.Decimal(19, 4) // 2025 (Total)
+  colT            Decimal?  @default(0) @map("col_t") @db.Decimal(19, 4) // s/d 2025
+  colU            Decimal?  @default(0) @map("col_u") @db.Decimal(19, 4) // Book Value 
   type            DepreciationType @default(OFFICE_EQUIPMENT)
   tagYear         Int?
   createdAt       DateTime @default(now()) @map("created_at")
