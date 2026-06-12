@@ -477,11 +477,19 @@ export class FinanceReportService {
       }
     }
 
+    const hasProps = Object.keys(props).length > 0;
+
     // 2. Profit (Loss) for the target year
     const plCurrentData = await this.getProfitLossStatement(yearNum, endDate);
-    const profitLossVal = new Prisma.Decimal(plCurrentData.tableData.find(r => r.account?.trim().toLowerCase() === "profit after tax")?.total?.toString().replace(/,/g, '') || "0");
-
-    const hasProps = Object.keys(props).length > 0;
+    let profitLossVal = new Prisma.Decimal(0);
+    
+    // UI Override takes precedence. If the user set it in the Equity Properties, use it.
+    if (hasProps && props['PL_NET_PROFIT'] && props['PL_NET_PROFIT'] !== "0") {
+      profitLossVal = new Prisma.Decimal(props['PL_NET_PROFIT']);
+    } else {
+      // Dynamic fallback (per user requirement, use Profit Before Tax)
+      profitLossVal = new Prisma.Decimal(plCurrentData.tableData.find(r => r.account?.trim().toLowerCase() === "profit before tax")?.total?.toString().replace(/,/g, '') || "0");
+    }
 
     // 3. Previous Years Net RE (Opening balance of RE for the year)
     let prevYearsVal = new Prisma.Decimal(0);
@@ -491,7 +499,7 @@ export class FinanceReportService {
        // kita harus nge-query ulang P&L khusus untuk tahun sebelumnya (yearNum - 1)
        const lastDayOfPrevYear = `${yearNum - 1}-12-31`;
        const plUpToPrevYear = await this.getProfitLossStatement(yearNum - 1, lastDayOfPrevYear);
-       const profitLegacyTotal = new Prisma.Decimal(plUpToPrevYear.tableData.find(r => r.account?.toLowerCase() === "profit after tax")?.total?.toString().replace(/,/g, '') || "0");
+       const profitLegacyTotal = new Prisma.Decimal(plUpToPrevYear.tableData.find(r => r.account?.toLowerCase() === "profit before tax")?.total?.toString().replace(/,/g, '') || "0");
        
        const legacyWhere: any = {
          colF: { contains: 'Retained Earning', mode: 'insensitive' },
