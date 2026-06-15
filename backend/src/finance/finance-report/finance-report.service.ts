@@ -463,7 +463,7 @@ export class FinanceReportService {
     const plCurrentData = await this.getProfitLossStatement(yearNum || undefined, endDate);
     let profitLossVal = new Prisma.Decimal(0);
     
-    if (hasProps && props['PL_NET_PROFIT'] && props['PL_NET_PROFIT'] !== "0") {
+    if (props && props['PL_NET_PROFIT'] !== undefined && props['PL_NET_PROFIT'] !== null) {
       profitLossVal = new Prisma.Decimal(props['PL_NET_PROFIT']);
     } else {
       // Dynamic fallback (per user requirement, use Profit Before Tax)
@@ -472,14 +472,23 @@ export class FinanceReportService {
 
     // 3. Previous Years Net RE (Opening balance of RE for the year)
     let prevYearsVal = new Prisma.Decimal(0);
-    if (!hasProps && yearNum !== null) {
+    if (props && props['RE_PREV_YEARS'] !== undefined && props['RE_PREV_YEARS'] !== null) {
+       prevYearsVal = new Prisma.Decimal(props['RE_PREV_YEARS']);
+    } else if (yearNum !== null) {
       let prevProps = await this.equityPropertyService.getProperties(yearNum - 1);
-      const hasPrevProps = Object.keys(prevProps).length > 0;
 
-      if(!hasPrevProps) {
+      let prevProfit = new Prisma.Decimal(0);
+      if (prevProps && prevProps['PL_NET_PROFIT'] !== undefined && prevProps['PL_NET_PROFIT'] !== null) {
+        prevProfit = new Prisma.Decimal(prevProps['PL_NET_PROFIT']);
+      } else {
         const plUpToPrevYear = await this.getProfitLossStatement(yearNum - 1);
-        const profitLegacyTotal = new Prisma.Decimal(plUpToPrevYear.tableData.find(r => r.account?.toLowerCase() === "profit before tax")?.total?.toString().replace(/,/g, '') || "0");
-        
+        prevProfit = new Prisma.Decimal(plUpToPrevYear.tableData.find(r => r.account?.toLowerCase() === "profit before tax")?.total?.toString().replace(/,/g, '') || "0");
+      }
+
+      let prevDividend = new Prisma.Decimal(0);
+      if (prevProps && prevProps['DIVIDENDS'] !== undefined && prevProps['DIVIDENDS'] !== null) {
+        prevDividend = new Prisma.Decimal(prevProps['DIVIDENDS']);
+      } else {
         const legacyWhere: any = {
           colF: { contains: 'Retained Earning', mode: 'insensitive' },
           colG: { contains: 'Dividend', mode: 'insensitive' },
@@ -493,20 +502,17 @@ export class FinanceReportService {
         const dividendTrxLegacy = await this.prisma.financialTransaction.findMany({
           where: legacyWhere
         });
-        const dividendLegacyTotal = dividendTrxLegacy.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colC || 0)), new Prisma.Decimal(0));
-        prevYearsVal = profitLegacyTotal.minus(dividendLegacyTotal);
-      } else {
-         const prevProfit = new Prisma.Decimal(prevProps['PL_NET_PROFIT'] || "0");
-         const prevDividend = new Prisma.Decimal(prevProps['DIVIDENDS'] || "0");
-         prevYearsVal = prevProfit.minus(prevDividend);
+        prevDividend = dividendTrxLegacy.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colC || 0)), new Prisma.Decimal(0));
       }
-    } else {
-       prevYearsVal = new Prisma.Decimal(props['RE_PREV_YEARS'] || "0");
+
+      prevYearsVal = prevProfit.minus(prevDividend);
     }
 
     // 4. Current Year Dividends
     let dividendVal = new Prisma.Decimal(0);
-    if (!hasProps) {
+    if (props && props['DIVIDENDS'] !== undefined && props['DIVIDENDS'] !== null) {
+      dividendVal = new Prisma.Decimal(props['DIVIDENDS']);
+    } else {
       const currentWhere: any = {
         colG: { contains: 'Dividend', mode: 'insensitive' }
       };
@@ -523,8 +529,6 @@ export class FinanceReportService {
         where: currentWhere
       });
       dividendVal = dividendTrxCurrent.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colC || 0)), new Prisma.Decimal(0)).mul(-1);
-    } else {
-      dividendVal = new Prisma.Decimal(props['DIVIDENDS'] || "0");
     }
 
     // 5. Shared Capital

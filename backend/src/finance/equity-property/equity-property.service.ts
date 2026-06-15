@@ -13,22 +13,23 @@ export class EquityPropertyService {
 
     // Convert to a convenient object mapping
     return props.reduce((acc, p) => {
-      acc[p.key] = p.value.toString();
+      acc[p.key] = p.value !== null ? p.value.toString() : null;
       return acc;
-    }, {} as Record<string, string>);
+    }, {} as Record<string, string | null>);
   }
 
-  async setProperties(year: number, properties: Record<string, string>) {
+  async setProperties(year: number, properties: Record<string, string | null>) {
     const updates = Object.entries(properties).map(([key, value]) => {
+      const val = value === null ? null : new Prisma.Decimal(value);
       return this.prisma.equityProperty.upsert({
         where: {
           year_key: { year, key }
         },
-        update: { value: new Prisma.Decimal(value) },
+        update: { value: val },
         create: {
           year,
           key,
-          value: new Prisma.Decimal(value)
+          value: val
         }
       });
     });

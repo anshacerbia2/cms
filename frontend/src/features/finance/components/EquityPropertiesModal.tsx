@@ -23,33 +23,37 @@ interface EquityPropertiesModalProps {
 export default function EquityPropertiesModal({ open, onOpenChange, year }: EquityPropertiesModalProps) {
   const { properties, isLoading, updateProperties, isUpdating } = useEquity(year);
   const [form, setForm] = useState<Record<string, string>>({
-    SHARED_CAPITAL: '0',
-    RE_PREV_YEARS: '0',
-    DIVIDENDS: '0',
-    PL_NET_PROFIT: '0',
+    SHARED_CAPITAL: '',
+    RE_PREV_YEARS: '',
+    DIVIDENDS: '',
+    PL_NET_PROFIT: '',
   });
 
   useEffect(() => {
     if (properties && Object.keys(properties).length > 0) {
       setForm({
-        SHARED_CAPITAL: properties.SHARED_CAPITAL || '0',
-        RE_PREV_YEARS: properties.RE_PREV_YEARS || '0',
-        DIVIDENDS: properties.DIVIDENDS || '0',
-        PL_NET_PROFIT: properties.PL_NET_PROFIT || '0',
+        SHARED_CAPITAL: properties.SHARED_CAPITAL ?? '',
+        RE_PREV_YEARS: properties.RE_PREV_YEARS ?? '',
+        DIVIDENDS: properties.DIVIDENDS ?? '',
+        PL_NET_PROFIT: properties.PL_NET_PROFIT ?? '',
       });
     } else {
        setForm({
-        SHARED_CAPITAL: '0',
-        RE_PREV_YEARS: '0',
-        DIVIDENDS: '0',
-        PL_NET_PROFIT: '0',
+        SHARED_CAPITAL: '',
+        RE_PREV_YEARS: '',
+        DIVIDENDS: '',
+        PL_NET_PROFIT: '',
       });
     }
   }, [properties, open]);
 
   const handleSave = async () => {
     try {
-      await updateProperties(form);
+      const payload: Record<string, string | null> = {};
+      for (const [key, value] of Object.entries(form)) {
+        payload[key] = value === '' ? null : value;
+      }
+      await updateProperties(payload);
       toast.success("Equity properties updated successfully");
       onOpenChange(false);
     } catch (error: any) {

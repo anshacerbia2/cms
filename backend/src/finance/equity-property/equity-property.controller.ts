@@ -23,7 +23,7 @@ export class EquityPropertyController {
   @Permissions('finance.reports')
   async setProperties(
     @Body('year', ParseIntPipe) year: number,
-    @Body('properties') properties: Record<string, string>,
+    @Body('properties') properties: Record<string, string | null>,
   ) {
     return this.equityPropertyService.setProperties(year, properties);
   }

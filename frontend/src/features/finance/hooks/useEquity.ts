@@ -11,7 +11,7 @@ export function useEquity(year: number) {
   });
 
   const updatePropertiesMutation = useMutation({
-    mutationFn: (properties: Record<string, string>) => equityService.setProperties(year, properties),
+    mutationFn: (properties: Record<string, string | null>) => equityService.setProperties(year, properties),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance", "equity-properties"] });
       queryClient.invalidateQueries({ queryKey: ["finance", "balance-sheet"] });

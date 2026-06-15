@@ -6,7 +6,7 @@ export const equityService = {
     return data;
   },
 
-  setProperties: async (year: number, properties: Record<string, string>): Promise<any> => {
+  setProperties: async (year: number, properties: Record<string, string | null>): Promise<any> => {
     const { data } = await api.post("/finance/equity-properties", { year, properties });
     return data;
   },
