@@ -14,6 +14,8 @@ import { AccountReceivableModule } from './finance/account-receivable/account-re
 import { DepreciationModule } from './finance/depreciation/depreciation.module';
 import { SalesModule } from './finance/sales/sales.module';
 import { EquityPropertyModule } from './finance/equity-property/equity-property.module';
+import { PpnInOutModule } from './finance/ppn-in-out/ppn-in-out.module';
+import { InterAccountModule } from './finance/inter-account/inter-account.module';
 
 @Module({
   imports: [
@@ -34,6 +36,8 @@ import { EquityPropertyModule } from './finance/equity-property/equity-property.
     DepreciationModule,
     SalesModule,
     EquityPropertyModule,
+    PpnInOutModule,
+    InterAccountModule,
   ],
   controllers: [],
   providers: [],

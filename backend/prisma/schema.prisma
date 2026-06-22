@@ -592,3 +592,55 @@ model EquityProperty {
   @@map("equity_properties")
 }
 
+model PpnInOut {
+  id        BigInt    @id @default(autoincrement())
+  colA      DateTime? @db.Date            // Masa (Date)
+  colB      String?   @db.Text            // col B
+  colC      String?   @db.Text            // No Faktur
+  colD      String?   @db.Text            // Client/Suplier
+  colE      String?   @db.Text            // Invoice No
+  colF      Int?                          // Sales (Year integer)
+  colG      Decimal?  @db.Decimal(19, 4)  // Status
+  colH      Decimal?  @db.Decimal(19, 4)  // PPN
+  colI      Decimal?  @db.Decimal(19, 4)  // WAPU
+  colJ      Decimal?  @db.Decimal(19, 4)  // PAID
+  colK      Decimal?  @db.Decimal(19, 4)  // AP PPN WAPU
+  colL      String?   @db.Text            // Blank
+  colM      Decimal?  @db.Decimal(19, 4)  // Non WAPU
+  colN      Decimal?  @db.Decimal(19, 4)  // Masukan
+  colO      Decimal?  @db.Decimal(19, 4)  // AP PPN Non WAPU
+  colP      String?   @db.Text            // Ledger
+  colQ      String?   @db.Text            // Sub Ledger-1
+  colR      String?   @db.Text            // Sub Ledger-2
+  colS      String?   @db.Text            // Sub Ledger-3
+  tagYear   Int?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@map("ppn_in_out")
+}
+
+model InterAccount {
+  id        BigInt    @id @default(autoincrement())
+  colA      String?   @db.Text            // blank
+  colB      String?   @db.Text            // colB
+  colC      Decimal?  @db.Decimal(19, 4)  // BCA Sahardjo
+  colD      Decimal?  @db.Decimal(19, 4)  // BCA Juanda
+  colE      Decimal?  @db.Decimal(19, 4)  // Mandiri Mid Plaza
+  colF      Decimal?  @db.Decimal(19, 4)  // BRI Sahardjo
+  colG      Decimal?  @db.Decimal(19, 4)  // BTN
+  colH      Decimal?  @db.Decimal(19, 4)  // BJB
+  colI      Decimal?  @db.Decimal(19, 4)  // Bank Raya
+  colJ      Decimal?  @db.Decimal(19, 4)  // BRI Tebet
+  colK      Decimal?  @db.Decimal(19, 4)  // Manidiri Plaza Mandiri
+  colL      Decimal?  @db.Decimal(19, 4)  // BNI
+  colM      Decimal?  @db.Decimal(19, 4)  // Cash IDR
+  colN      Decimal?  @db.Decimal(19, 4)  // Non Cash Bank
+  colO      Decimal?  @db.Decimal(19, 4)  // PPn In and Out
+  colP      Decimal?  @db.Decimal(19, 4)  // Blank
+  tagYear   Int
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@map("inter_account")
+}

@@ -16,7 +16,7 @@ interface ExcelColumnFilterProps {
   data: any[];
   activeFilters: Set<string> | null;
   onFilterChange: (values: Set<string> | null) => void;
-  onSort: (direction: 'asc' | 'desc') => void;
+  onSort?: (direction: 'asc' | 'desc') => void;
   currentSort?: { key: string, direction: 'asc' | 'desc' | null } | null;
   valueFormatter?: (val: any) => string;
   type?: 'text' | 'date';
@@ -227,36 +227,40 @@ export function ExcelColumnFilter({
           <div className="text-[11px] font-black uppercase text-primary tracking-widest pl-1">Filter: {label}</div>
           
           {/* Sorting */}
-          <div className="grid grid-cols-2 gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className={cn(
-                "h-9 text-[10px] font-black uppercase tracking-tight bg-white border-0 hover:bg-primary/[0.03] justify-start px-2.5 rounded-xl shadow-sm transition-none",
-                currentSort?.key === columnKey && currentSort?.direction === 'asc' && "bg-secondary/10 text-secondary hover:bg-secondary/15"
-              )}
-              onClick={() => { onSort('asc'); setIsOpen(false); }}
-            >
-              <ArrowUpAZ className={cn(
-                "mr-1 h-3.5 w-3.5",
-                currentSort?.key === columnKey && currentSort?.direction === 'asc' ? "text-secondary" : "text-primary/40"
-              )} /> Sort A to Z
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className={cn(
-                "h-9 text-[10px] font-black uppercase tracking-tight bg-white border-0 hover:bg-primary/[0.03] justify-start px-2.5 rounded-xl shadow-sm transition-none",
-                currentSort?.key === columnKey && currentSort?.direction === 'desc' && "bg-secondary/10 text-secondary hover:bg-secondary/15"
-              )}
-              onClick={() => { onSort('desc'); setIsOpen(false); }}
-            >
-              <ArrowDownZA className={cn(
-                "mr-1 h-3.5 w-3.5",
-                currentSort?.key === columnKey && currentSort?.direction === 'desc' ? "text-secondary" : "text-primary/40"
-              )} /> Sort Z to A
-            </Button>
-          </div>
+          {onSort && (
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={cn(
+                  "h-9 text-[10px] font-black uppercase tracking-tight bg-white border-0 hover:bg-primary/[0.03] justify-start px-2.5 rounded-xl shadow-sm transition-none",
+                  currentSort?.key === columnKey && currentSort?.direction === 'asc' && "bg-secondary/10 text-secondary hover:bg-secondary/15"
+                )}
+                onClick={() => { onSort('asc'); setIsOpen(false); }}
+              >
+                <ArrowUpAZ className={cn(
+                  "mr-1.5 h-3.5 w-3.5 opacity-60",
+                  currentSort?.key === columnKey && currentSort?.direction === 'asc' && "opacity-100 text-secondary"
+                )} />
+                A to Z
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={cn(
+                  "h-9 text-[10px] font-black uppercase tracking-tight bg-white border-0 hover:bg-primary/[0.03] justify-start px-2.5 rounded-xl shadow-sm transition-none",
+                  currentSort?.key === columnKey && currentSort?.direction === 'desc' && "bg-secondary/10 text-secondary hover:bg-secondary/15"
+                )}
+                onClick={() => { onSort('desc'); setIsOpen(false); }}
+              >
+                <ArrowDownZA className={cn(
+                  "mr-1.5 h-3.5 w-3.5 opacity-60",
+                  currentSort?.key === columnKey && currentSort?.direction === 'desc' && "opacity-100 text-secondary"
+                )} />
+                Z to A
+              </Button>
+            </div>
+          )}
 
           <DropdownMenuSeparator className="bg-primary/5" />
 

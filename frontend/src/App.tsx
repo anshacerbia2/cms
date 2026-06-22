@@ -14,8 +14,10 @@ import FinancePage from './features/finance/pages/FinancePage';
 import BankMutationPage from './features/finance/pages/BankMutationPage';
 import AccountPayablePage from './features/finance/pages/AccountPayablePage';
 import AccountReceivablePage from './features/finance/pages/AccountReceivablePage';
+import PpnInOutPage from './features/finance/pages/PpnInOutPage';
 import DepreciationPage from './features/finance/pages/DepreciationPage';
 import SalesPage from './features/sales/pages/SalesPage';
+import InterAccountPage from './features/finance/pages/InterAccountPage';
 
 const queryClient = new QueryClient();
 
@@ -51,6 +53,8 @@ function App() {
             <Route path="account-payable" element={<AccountPayablePage />} />
             <Route path="account-receivable" element={<AccountReceivablePage />} />
             <Route path="depreciation" element={<DepreciationPage />} />
+            <Route path="ppn-in-out" element={<PpnInOutPage />} />
+            <Route path="inter-account" element={<InterAccountPage />} />
             <Route path="sales" element={<SalesPage />} />
           </Route>
         </Routes>
