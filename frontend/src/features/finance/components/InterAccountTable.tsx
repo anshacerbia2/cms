@@ -7,12 +7,12 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { formatCurrency, getAmountColor, formatDate } from '@/lib/utils';
+import { formatCurrency, getAmountColor } from '@/lib/utils';
 import { useExcelFilter } from '../hooks/useExcelFilter';
 import { ExcelColumnFilter } from './ExcelColumnFilter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, X, FilterX } from 'lucide-react';
+import { Search, FilterX } from 'lucide-react';
 import Decimal from 'decimal.js';
 
 import { useInterAccount } from '../hooks/useInterAccount';
@@ -46,7 +46,7 @@ export const InterAccountTable: React.FC = () => {
   const allDataRaw = interAccountData?.data || [];
 
   const displayData = useMemo(() => {
-    return allDataRaw.map(row => ({
+    return allDataRaw.map((row: any) => ({
       ...row,
       colA: row.colA || "-",
       colB: row.colB || "-",
@@ -89,8 +89,6 @@ export const InterAccountTable: React.FC = () => {
     isAnyFilterActive,
     filters,
     setFilters,
-    sort,
-    setSort,
     getCascadingData
   } = useExcelFilter({
     data: displayData,
@@ -144,7 +142,7 @@ export const InterAccountTable: React.FC = () => {
   const grandTotals = useMemo(() => calcTotals(filteredAndSortedData), [filteredAndSortedData]);
 
 
-  const cols = [
+  const cols: { k: string; l: string; num?: boolean; isDate?: boolean }[] = [
     { k: 'colB', l: 'Col B' },
     { k: 'colC', l: 'BCA Sahardjo', num: true },
     { k: 'colD', l: 'BCA Juanda', num: true },
