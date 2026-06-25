@@ -4,6 +4,24 @@ import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../common/interfaces/paginated-result.interface';
 import { formatDecimal } from '../../common/utils/format.utils';
 
+const parseDecimal = (val: any) => {
+  if (val === undefined || val === null || val === '') return 0;
+  const num = Number(val);
+  return isNaN(num) ? 0 : num;
+};
+
+const parseIntSafe = (val: any) => {
+  if (!val) return null;
+  const parsed = parseInt(String(val));
+  return isNaN(parsed) ? null : parsed;
+};
+
+const parseDateSafe = (val: any) => {
+  if (!val) return null;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+};
+
 @Injectable()
 export class SalesService {
   constructor(private prisma: PrismaService) {}
@@ -83,32 +101,32 @@ export class SalesService {
     const data = payload.map(row => ({
       colA: row.colA ? String(row.colA) : null,
       colB: row.colB ? String(row.colB) : null,
-      colC: row.colC ? new Date(row.colC) : null,
-      colD: row.colD ? parseInt(String(row.colD)) : null,
+      colC: parseDateSafe(row.colC),
+      colD: parseIntSafe(row.colD),
       colE: row.colE ? String(row.colE) : null,
       colF: row.colF ? String(row.colF) : null,
       colG: row.colG ? String(row.colG) : null,
-      colH: row.colH || 0,
-      colI: row.colI || 0,
-      colJ: row.colJ || 0,
-      colK: row.colK || 0,
-      colL: row.colL ? new Date(row.colL) : null,
-      colM: row.colM || 0,
-      colN: row.colN || 0,
-      colO: row.colO || 0,
-      colP: row.colP || 0,
-      colQ: row.colQ || 0,
-      colR: row.colR || 0,
-      colS: row.colS || 0,
-      colT: row.colT || 0,
-      colU: row.colU || 0,
-      colV: row.colV || 0,
-      colW: row.colW || 0,
-      colX: row.colX || 0,
-      colZ: row.colZ || 0,
-      colAA: row.colAA || 0,
-      colAB: row.colAB || 0,
-      colAC: row.colAC || 0,
+      colH: parseDecimal(row.colH),
+      colI: parseDecimal(row.colI),
+      colJ: parseDecimal(row.colJ),
+      colK: parseDecimal(row.colK),
+      colL: parseDateSafe(row.colL),
+      colM: parseDecimal(row.colM),
+      colN: parseDecimal(row.colN),
+      colO: parseDecimal(row.colO),
+      colP: parseDecimal(row.colP),
+      colQ: parseDecimal(row.colQ),
+      colR: parseDecimal(row.colR),
+      colS: parseDecimal(row.colS),
+      colT: parseDecimal(row.colT),
+      colU: parseDecimal(row.colU),
+      colV: parseDecimal(row.colV),
+      colW: parseDecimal(row.colW),
+      colX: parseDecimal(row.colX),
+      colZ: parseDecimal(row.colZ),
+      colAA: parseDecimal(row.colAA),
+      colAB: parseDecimal(row.colAB),
+      colAC: parseDecimal(row.colAC),
       colAD: row.colAD ? String(row.colAD) : null,
       tagYear: tagYear,
     }));
