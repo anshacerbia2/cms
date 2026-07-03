@@ -20,7 +20,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useBankMutation } from '../hooks/useBankMutation';
-import { cn } from '@/lib/utils';
+import { cn, formatInputAmount, cleanInputAmount } from '@/lib/utils';
 
 interface EditTransactionModalProps {
   open: boolean;
@@ -63,34 +63,7 @@ export default function EditTransactionModal({ open, onOpenChange, transactionId
     }
   }, [open, transaction]);
 
-  const cleanNumber = (val: string) => {
-    if (!val || val === '-' || val.trim() === '') return '0';
-    let cleaned = val.replace(/\./g, ''); // Remove thousand dots
-    cleaned = cleaned.replace(/,/g, '.'); // Convert decimal comma to dot
-    const hasMinus = cleaned.startsWith('-');
-    cleaned = cleaned.replace(/[^0-9.]/g, ''); // Final safety strip
 
-    if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.') {
-      cleaned = cleaned.replace(/^0+/, '');
-      if (cleaned === '' || cleaned.startsWith('.')) {
-        cleaned = '0' + cleaned;
-      }
-    }
-    if (hasMinus) cleaned = '-' + cleaned;
-    return cleaned || '0';
-  };
-
-  const formatInput = (val: string | number) => {
-    if (val === undefined || val === null || val === '') return '';
-    let str = val.toString();
-    const isNegative = str.startsWith('-');
-    if (isNegative) str = str.slice(1);
-
-    const [int, dec] = str.split('.');
-    const formattedInt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    const result = dec !== undefined ? `${formattedInt},${dec}` : formattedInt;
-    return isNegative ? `-${result}` : result;
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -188,9 +161,9 @@ export default function EditTransactionModal({ open, onOpenChange, transactionId
             <Label className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">Debit</Label>
             <Input 
               name="colC" 
-              value={formatInput(formData.colC)} 
+              value={formatInputAmount(formData.colC)} 
               onChange={(e) => {
-                const cleaned = cleanNumber(e.target.value);
+                const cleaned = cleanInputAmount(e.target.value);
                 setFormData(prev => ({...prev, colC: cleaned}));
               }} 
               className="h-11 rounded-xl bg-muted/20 border border-primary/10 shadow-none font-medium text-[13px] text-right focus-visible:border-primary/30 transition-all"
@@ -201,9 +174,9 @@ export default function EditTransactionModal({ open, onOpenChange, transactionId
             <Label className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">Credit</Label>
             <Input 
               name="colD" 
-              value={formatInput(formData.colD)} 
+              value={formatInputAmount(formData.colD)} 
               onChange={(e) => {
-                const cleaned = cleanNumber(e.target.value);
+                const cleaned = cleanInputAmount(e.target.value);
                 setFormData(prev => ({...prev, colD: cleaned}));
               }} 
               className="h-11 rounded-xl bg-muted/20 border border-primary/10 shadow-none font-medium text-[13px] text-right focus-visible:border-primary/30 transition-all"

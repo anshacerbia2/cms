@@ -72,6 +72,28 @@ export function useAccountPayable() {
     }
   });
 
+  const updateAP = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => accountPayableService.updateAP(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["finance", "account-payable"] });
+      toast.success("Account Payable updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to update record");
+    }
+  });
+
+  const deleteAP = useMutation({
+    mutationFn: (id: number) => accountPayableService.deleteAP(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["finance", "account-payable"] });
+      toast.success("Account Payable deleted successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to delete record");
+    }
+  });
+
   return {
     getAP,
     getAllAP,
@@ -81,5 +103,7 @@ export function useAccountPayable() {
     createBulkAP,
     createTaxLedger,
     createBulkTaxLedger,
+    updateAP,
+    deleteAP,
   };
 }

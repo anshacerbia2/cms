@@ -21,4 +21,14 @@ export const accountReceivableService = {
     const { data } = await api.post("/finance/account-receivable/bulk", payload);
     return data;
   },
+
+  updateAR: async (id: number, payload: any): Promise<any> => {
+    const { data } = await api.put(`/finance/account-receivable/${id}`, payload);
+    return data;
+  },
+
+  deleteAR: async (id: number): Promise<any> => {
+    const { data } = await api.delete(`/finance/account-receivable/${id}`);
+    return data;
+  },
 };

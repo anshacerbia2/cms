@@ -83,6 +83,33 @@ export class AccountReceivableService {
     });
   }
 
+  async updateAR(id: number, data: any): Promise<any> {
+    return this.prisma.accountReceivable.update({
+      where: { id },
+      data: {
+        ...data,
+        colF: data.colF?.toString() || null,
+        colG: data.colG?.toString() || null,
+        colH: data.colH?.toString() || null,
+        colJ: data.colJ?.toString() || null,
+        colK: data.colK?.toString() || null,
+        colL: data.colL?.toString() || null,
+        colM: data.colM?.toString() || null,
+        colN: data.colN?.toString() || null,
+        colO: data.colO?.toString() || null,
+        colP: data.colP?.toString() || null,
+        colR: data.colR?.toString() || null,
+        colS: data.colS?.toString() || null,
+      },
+    });
+  }
+
+  async deleteAR(id: number): Promise<any> {
+    return this.prisma.accountReceivable.delete({
+      where: { id },
+    });
+  }
+
   async createBulkAR(data: any[], tagYear: number) {
     const records = data.map(row => ({
       colA: row.colA || null,

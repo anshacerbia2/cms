@@ -158,6 +158,40 @@ export class AccountPayableService {
     });
   }
 
+  async updateAccountPayable(id: number, data: any) {
+    return this.prisma.accountPayable.update({
+      where: { id },
+      data: {
+        ...data,
+        colB: data.colB ? Number(data.colB) : null,
+        colE: data.colE?.toString() || null,   // EOY IDR
+        colF: data.colF?.toString() || null,   // EOY USD
+        colG: data.colG?.toString() || null,   // col G
+        colH: data.colH || null,               // col H (string)
+        colI: data.colI || null,               // col I (string)
+        colJ: data.colJ || null,               // col J (string)
+        colK: data.colK?.toString() || null,   // BCA Shardjo
+        colL: data.colL?.toString() || null,   // BCA Juanda
+        colM: data.colM?.toString() || null,   // Mandiri Mid Plaza
+        colN: data.colN?.toString() || null,   // BTN
+        colO: data.colO?.toString() || null,   // BRI Shardjo
+        colP: data.colP?.toString() || null,   // BRI Tebet
+        colQ: data.colQ?.toString() || null,   // Cash IDR
+        colR: data.colR?.toString() || null,   // Non CB
+        colS: data.colS?.toString() || null,   // AP In and Out
+        // colT is string (passed as-is)
+        colU: data.colU?.toString() || null,   // Outstanding IDR
+        colV: data.colV?.toString() || null,   // Outstanding USD
+      },
+    });
+  }
+
+  async deleteAccountPayable(id: number) {
+    return this.prisma.accountPayable.delete({
+      where: { id },
+    });
+  }
+
   async createTaxLedger(data: any) {
     return this.prisma.taxLedger.create({
       data: {

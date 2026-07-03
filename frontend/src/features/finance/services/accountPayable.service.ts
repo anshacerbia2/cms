@@ -41,4 +41,14 @@ export const accountPayableService = {
     const { data } = await api.post("/finance/account-payable/tax-ledger/bulk", payload);
     return data;
   },
+
+  updateAP: async (id: number, payload: any): Promise<any> => {
+    const { data } = await api.put(`/finance/account-payable/${id}`, payload);
+    return data;
+  },
+
+  deleteAP: async (id: number): Promise<any> => {
+    const { data } = await api.delete(`/finance/account-payable/${id}`);
+    return data;
+  },
 };

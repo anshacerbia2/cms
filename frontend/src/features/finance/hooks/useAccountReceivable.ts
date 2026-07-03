@@ -39,10 +39,34 @@ export function useAccountReceivable() {
     }
   });
 
+  const updateAR = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => accountReceivableService.updateAR(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["finance", "account-receivable"] });
+      toast.success("Account Receivable updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to update record");
+    }
+  });
+
+  const deleteAR = useMutation({
+    mutationFn: (id: number) => accountReceivableService.deleteAR(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["finance", "account-receivable"] });
+      toast.success("Account Receivable deleted successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to delete record");
+    }
+  });
+
   return {
     getAR,
     getAllAR,
     createAR,
     createBulkAR,
+    updateAR,
+    deleteAR,
   };
 }

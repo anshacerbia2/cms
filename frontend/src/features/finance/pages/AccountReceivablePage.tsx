@@ -19,6 +19,15 @@ import AddArLedgerModal from "../components/AddArLedgerModal";
 import { formatCurrency, formatDate, cleanAmount, getAmountColor } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { Decimal } from "decimal.js";
+import { Edit2, Trash2, AlertCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import EditArLedgerModal from "../components/EditArLedgerModal";
 
 import {
   Select,
@@ -48,7 +57,12 @@ export default function AccountReceivablePage() {
     return years;
   }, []);
 
-  const { getAllAR } = useAccountReceivable();
+  const { getAllAR, deleteAR } = useAccountReceivable();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const { data: allARRaw = [], isLoading, refetch } = getAllAR(
     arYearFilter !== "all" ? yearNum : undefined,
     { enabled: !!arYearFilter }
@@ -145,6 +159,30 @@ export default function AccountReceivablePage() {
       colO: new Decimal(0), colP: new Decimal(0), colR: new Decimal(0), colS: new Decimal(0)
     });
   }, [filteredAndSortedData]);
+
+  const handleEdit = (row: any) => {
+    const rawRecord = allARRaw?.find((r: any) => r.id === row.id) || row;
+    setSelectedRecord(rawRecord);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = (id: number) => {
+    setRecordToDelete(id);
+  };
+
+  const executeDelete = async () => {
+    if (!recordToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteAR.mutateAsync(recordToDelete);
+      refetch();
+    } catch (error: any) {
+      // toast is handled in hook
+    } finally {
+      setIsDeleting(false);
+      setRecordToDelete(null);
+    }
+  };
 
 
   return (
@@ -281,6 +319,7 @@ export default function AccountReceivablePage() {
                     <ExcelColumnFilter columnKey="colS" label="Outstanding USD" data={getCascadingData("colS")} activeFilters={filters["colS"]} onFilterChange={(v) => { setFilters(p => ({...p, colS: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colS", direction: d})} />
                   </div>
                 </TableHead>
+                <TableHead className="w-24 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -337,6 +376,26 @@ export default function AccountReceivablePage() {
                       </TableCell>
                       <TableCell className={`text-right font-black ${getAmountColor(row.colS, false)}`}>
                         {row.colS}
+                      </TableCell>
+                      <TableCell className="px-4 text-center">
+                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
+                            onClick={() => handleEdit(row)}
+                          >
+                            <Edit2 size={12} strokeWidth={2.5} />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm"
+                            onClick={() => handleDelete(row.id)}
+                          >
+                            <Trash2 size={12} strokeWidth={2.5} />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -430,6 +489,51 @@ export default function AccountReceivablePage() {
         year={yearNum}
         onSuccess={() => refetch()} 
       />
+
+      <EditArLedgerModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        record={selectedRecord}
+        onSuccess={() => refetch()}
+      />
+
+      <Dialog 
+        open={recordToDelete !== null} 
+        onOpenChange={(open) => {
+          if (isDeleting) return;
+          if (!open) setRecordToDelete(null);
+        }}
+      >
+        <DialogContent className="max-w-[400px] p-0 overflow-hidden bg-white rounded-3xl border-0 shadow-2xl [&>button]:hidden">
+          <div className="bg-destructive/5 p-8 flex flex-col items-center justify-center text-center border-b border-primary/5">
+            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-6">
+              <AlertCircle className="w-8 h-8 text-destructive" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-primary mb-2">Delete Record?</DialogTitle>
+            <DialogDescription className="text-[13px] font-medium text-muted-foreground leading-relaxed px-4">
+              This action cannot be undone. Are you sure you want to delete this receivable record?
+            </DialogDescription>
+          </div>
+          <DialogFooter className="p-6 bg-white gap-3 flex-row justify-center sm:justify-center">
+            <Button
+              variant="ghost"
+              onClick={() => setRecordToDelete(null)}
+              disabled={isDeleting}
+              className="flex-1 h-12 rounded-xl font-bold uppercase tracking-widest text-[10px] text-muted-foreground transition-all"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={executeDelete}
+              disabled={isDeleting}
+              className="flex-1 h-12 rounded-xl font-bold shadow-lg shadow-destructive/20 transition-all"
+            >
+              {isDeleting ? "Deleting..." : "Yes, Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }

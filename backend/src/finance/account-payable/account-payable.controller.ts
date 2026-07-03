@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { AccountPayableService } from './account-payable.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -55,5 +55,17 @@ export class AccountPayableController {
   @Permissions('account-payable.bulk')
   async createBulkTax(@Body() body: { data: any[], tagYear: number }) {
     return this.accountPayableService.createBulkTaxLedgers(body.data, body.tagYear);
+  }
+
+  @Put(':id')
+  @Permissions('account-payable.update')
+  async updateAccountPayable(@Param('id') id: string, @Body() data: any) {
+    return this.accountPayableService.updateAccountPayable(Number(id), data);
+  }
+
+  @Delete(':id')
+  @Permissions('account-payable.delete')
+  async deleteAccountPayable(@Param('id') id: string) {
+    return this.accountPayableService.deleteAccountPayable(Number(id));
   }
 }

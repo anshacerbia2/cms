@@ -17,8 +17,16 @@ import { ExcelColumnFilter } from "./ExcelColumnFilter";
 import AddApLedgerModal from "./AddApLedgerModal";
 import { formatCurrency } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
-import { Plus } from "lucide-react";
+import { Plus, Edit2, Trash2, AlertCircle } from "lucide-react";
 import { Decimal } from "decimal.js";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import EditApLedgerModal from "./EditApLedgerModal";
 import {
   Select,
   SelectContent,
@@ -45,7 +53,12 @@ export function ApSummaryTab() {
     return years;
   }, []);
 
-  const { getAllAP } = useAccountPayable();
+  const { getAllAP, deleteAP } = useAccountPayable();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const { data: allAPRaw, isLoading: apLoading, refetch } = getAllAP(
     apYearFilter !== "all" ? yearNum : undefined,
     { enabled: !!apYearFilter }
@@ -177,8 +190,29 @@ export function ApSummaryTab() {
     });
   }, [filteredAndSortedAP]);
 
+  const handleEdit = (row: any) => {
+    const rawRecord = allAPRaw?.find((r: any) => r.id === row.id) || row;
+    setSelectedRecord(rawRecord);
+    setIsEditModalOpen(true);
+  };
 
+  const handleDelete = (id: number) => {
+    setRecordToDelete(id);
+  };
 
+  const executeDelete = async () => {
+    if (!recordToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteAP.mutateAsync(recordToDelete);
+      refetch();
+    } catch (error: any) {
+      // toast is handled in hook
+    } finally {
+      setIsDeleting(false);
+      setRecordToDelete(null);
+    }
+  };
   const getValueColor = (val: any) => {
     const num = Number(String(val || "0").replace(/[^0-9.-]+/g, ""));
     if (num > 0) return "text-emerald-600";
@@ -334,6 +368,7 @@ export function ApSummaryTab() {
                     <ExcelColumnFilter columnKey="colV" label="Outstanding USD" data={getCascadingData("colV")} activeFilters={apFilters["colV"]} onFilterChange={(v) => { setApFilters(p => ({...p, colV: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colV", direction: d})} />
                   </div>
                 </TableHead>
+                <TableHead className="w-24 px-4 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -383,6 +418,26 @@ export function ApSummaryTab() {
                     </TableCell>
                     <TableCell className="pr-8 text-right font-medium text-primary whitespace-nowrap">
                       {row.colV}
+                    </TableCell>
+                    <TableCell className="px-4 text-center">
+                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
+                            onClick={() => handleEdit(row)}
+                          >
+                            <Edit2 size={12} strokeWidth={2.5} />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm"
+                            onClick={() => handleDelete(row.id)}
+                          >
+                            <Trash2 size={12} strokeWidth={2.5} />
+                          </Button>
+                        </div>
                     </TableCell>
                     </TableRow>
                   ))}
@@ -444,6 +499,51 @@ export function ApSummaryTab() {
         year={yearNum}
         onSuccess={() => refetch()} 
       />
+
+      <EditApLedgerModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        record={selectedRecord}
+        onSuccess={() => refetch()}
+      />
+
+      <Dialog 
+        open={recordToDelete !== null} 
+        onOpenChange={(open) => {
+          if (isDeleting) return;
+          if (!open) setRecordToDelete(null);
+        }}
+      >
+        <DialogContent className="max-w-[400px] p-0 overflow-hidden bg-white rounded-3xl border-0 shadow-2xl [&>button]:hidden">
+          <div className="bg-destructive/5 p-8 flex flex-col items-center justify-center text-center border-b border-primary/5">
+            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-6">
+              <AlertCircle className="w-8 h-8 text-destructive" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-primary mb-2">Delete Record?</DialogTitle>
+            <DialogDescription className="text-[13px] font-medium text-muted-foreground leading-relaxed px-4">
+              This action cannot be undone. Are you sure you want to delete this payable record?
+            </DialogDescription>
+          </div>
+          <DialogFooter className="p-6 bg-white gap-3 flex-row justify-center sm:justify-center">
+            <Button
+              variant="ghost"
+              onClick={() => setRecordToDelete(null)}
+              disabled={isDeleting}
+              className="flex-1 h-12 rounded-xl font-bold uppercase tracking-widest text-[10px] text-muted-foreground transition-all"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={executeDelete}
+              disabled={isDeleting}
+              className="flex-1 h-12 rounded-xl font-bold shadow-lg shadow-destructive/20 transition-all"
+            >
+              {isDeleting ? "Deleting..." : "Yes, Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
