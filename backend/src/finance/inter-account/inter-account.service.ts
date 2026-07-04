@@ -71,4 +71,43 @@ export class InterAccountService {
       },
     };
   }
+
+  async getInterAccountById(id: number) {
+    const item = await this.prisma.interAccount.findUnique({
+      where: { id }
+    });
+    if (!item) return null;
+    return this.mapDecimals(item);
+  }
+
+  async updateInterAccount(id: number, data: any) {
+    const updateData: any = {};
+    if ('colA' in data) updateData.colA = data.colA || null;
+    if ('colB' in data) updateData.colB = data.colB || null;
+    if ('colC' in data) updateData.colC = data.colC ? Number(data.colC) : null;
+    if ('colD' in data) updateData.colD = data.colD ? Number(data.colD) : null;
+    if ('colE' in data) updateData.colE = data.colE ? Number(data.colE) : null;
+    if ('colF' in data) updateData.colF = data.colF ? Number(data.colF) : null;
+    if ('colG' in data) updateData.colG = data.colG ? Number(data.colG) : null;
+    if ('colH' in data) updateData.colH = data.colH ? Number(data.colH) : null;
+    if ('colI' in data) updateData.colI = data.colI ? Number(data.colI) : null;
+    if ('colJ' in data) updateData.colJ = data.colJ ? Number(data.colJ) : null;
+    if ('colK' in data) updateData.colK = data.colK ? Number(data.colK) : null;
+    if ('colL' in data) updateData.colL = data.colL ? Number(data.colL) : null;
+    if ('colM' in data) updateData.colM = data.colM ? Number(data.colM) : null;
+    if ('colN' in data) updateData.colN = data.colN ? Number(data.colN) : null;
+    if ('colO' in data) updateData.colO = data.colO ? Number(data.colO) : null;
+    if ('colP' in data) updateData.colP = data.colP ? Number(data.colP) : null;
+
+    return this.prisma.interAccount.update({
+      where: { id },
+      data: updateData
+    });
+  }
+
+  async deleteInterAccount(id: number) {
+    return this.prisma.interAccount.delete({
+      where: { id }
+    });
+  }
 }

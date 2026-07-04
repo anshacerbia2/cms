@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Param, ParseIntPipe, Patch, Delete, Body } from '@nestjs/common';
 import { InterAccountService } from './inter-account.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 
@@ -15,5 +15,20 @@ export class InterAccountController {
   @Get('paginated')
   async getPaginated(@Query() query: any) {
     return this.interAccountService.getPaginatedInterAccount(query);
+  }
+
+  @Get(':id')
+  async getInterAccountById(@Param('id', ParseIntPipe) id: number) {
+    return this.interAccountService.getInterAccountById(id);
+  }
+
+  @Patch(':id')
+  async updateInterAccount(@Param('id', ParseIntPipe) id: number, @Body() data: any) {
+    return this.interAccountService.updateInterAccount(id, data);
+  }
+
+  @Delete(':id')
+  async deleteInterAccount(@Param('id', ParseIntPipe) id: number) {
+    return this.interAccountService.deleteInterAccount(id);
   }
 }

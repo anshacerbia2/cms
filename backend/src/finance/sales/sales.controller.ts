@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Query, Param, ParseIntPipe, Patch, Delete } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -26,5 +26,23 @@ export class SalesController {
   @Permissions('sales.create')
   async createBulkSales(@Body() body: { data: any[], tagYear: number }) {
     return this.salesService.createBulkSales(body.data, body.tagYear);
+  }
+
+  @Get(':id')
+  @Permissions('sales.index')
+  async getSalesById(@Param('id', ParseIntPipe) id: number) {
+    return this.salesService.getSalesById(id);
+  }
+
+  @Patch(':id')
+  @Permissions('sales.update')
+  async updateSales(@Param('id', ParseIntPipe) id: number, @Body() data: any) {
+    return this.salesService.updateSales(id, data);
+  }
+
+  @Delete(':id')
+  @Permissions('sales.delete')
+  async deleteSales(@Param('id', ParseIntPipe) id: number) {
+    return this.salesService.deleteSales(id);
   }
 }

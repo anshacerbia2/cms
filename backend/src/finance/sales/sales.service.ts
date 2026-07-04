@@ -133,4 +133,79 @@ export class SalesService {
 
     return this.prisma.salesRecord.createMany({ data });
   }
+
+  async getSalesById(id: number): Promise<any> {
+    const item = await this.prisma.salesRecord.findUnique({
+      where: { id }
+    });
+    if (!item) return null;
+    return {
+      ...item,
+      id: Number(item.id),
+      colH: formatDecimal(item.colH),
+      colI: formatDecimal(item.colI),
+      colJ: formatDecimal(item.colJ),
+      colK: formatDecimal(item.colK),
+      colM: formatDecimal(item.colM),
+      colN: formatDecimal(item.colN),
+      colO: formatDecimal(item.colO),
+      colP: formatDecimal(item.colP),
+      colQ: formatDecimal(item.colQ),
+      colR: formatDecimal(item.colR),
+      colS: formatDecimal(item.colS),
+      colT: formatDecimal(item.colT),
+      colU: formatDecimal(item.colU),
+      colV: formatDecimal(item.colV),
+      colW: formatDecimal(item.colW),
+      colX: formatDecimal(item.colX),
+      colZ: formatDecimal(item.colZ),
+      colAA: formatDecimal(item.colAA),
+      colAB: formatDecimal(item.colAB),
+      colAC: formatDecimal(item.colAC),
+    };
+  }
+
+  async updateSales(id: number, data: any): Promise<any> {
+    const updateData: any = {};
+    if ('colA' in data) updateData.colA = data.colA ? String(data.colA) : null;
+    if ('colB' in data) updateData.colB = data.colB ? String(data.colB) : null;
+    if ('colC' in data) updateData.colC = parseDateSafe(data.colC);
+    if ('colD' in data) updateData.colD = parseIntSafe(data.colD);
+    if ('colE' in data) updateData.colE = data.colE ? String(data.colE) : null;
+    if ('colF' in data) updateData.colF = data.colF ? String(data.colF) : null;
+    if ('colG' in data) updateData.colG = data.colG ? String(data.colG) : null;
+    if ('colH' in data) updateData.colH = parseDecimal(data.colH);
+    if ('colI' in data) updateData.colI = parseDecimal(data.colI);
+    if ('colJ' in data) updateData.colJ = parseDecimal(data.colJ);
+    if ('colK' in data) updateData.colK = parseDecimal(data.colK);
+    if ('colL' in data) updateData.colL = parseDateSafe(data.colL);
+    if ('colM' in data) updateData.colM = parseDecimal(data.colM);
+    if ('colN' in data) updateData.colN = parseDecimal(data.colN);
+    if ('colO' in data) updateData.colO = parseDecimal(data.colO);
+    if ('colP' in data) updateData.colP = parseDecimal(data.colP);
+    if ('colQ' in data) updateData.colQ = parseDecimal(data.colQ);
+    if ('colR' in data) updateData.colR = parseDecimal(data.colR);
+    if ('colS' in data) updateData.colS = parseDecimal(data.colS);
+    if ('colT' in data) updateData.colT = parseDecimal(data.colT);
+    if ('colU' in data) updateData.colU = parseDecimal(data.colU);
+    if ('colV' in data) updateData.colV = parseDecimal(data.colV);
+    if ('colW' in data) updateData.colW = parseDecimal(data.colW);
+    if ('colX' in data) updateData.colX = parseDecimal(data.colX);
+    if ('colZ' in data) updateData.colZ = parseDecimal(data.colZ);
+    if ('colAA' in data) updateData.colAA = parseDecimal(data.colAA);
+    if ('colAB' in data) updateData.colAB = parseDecimal(data.colAB);
+    if ('colAC' in data) updateData.colAC = parseDecimal(data.colAC);
+    if ('colAD' in data) updateData.colAD = data.colAD ? String(data.colAD) : null;
+
+    return this.prisma.salesRecord.update({
+      where: { id },
+      data: updateData
+    });
+  }
+
+  async deleteSales(id: number): Promise<any> {
+    return this.prisma.salesRecord.delete({
+      where: { id }
+    });
+  }
 }

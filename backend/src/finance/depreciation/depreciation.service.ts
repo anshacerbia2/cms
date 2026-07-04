@@ -145,4 +145,68 @@ export class DepreciationService {
       data: records,
     });
   }
+
+  async getDepreciationById(id: number) {
+    const item = await this.prisma.depreciation.findUnique({
+      where: { id }
+    });
+    if (!item) return null;
+    return {
+      ...item,
+      id: Number(item.id),
+      colD: formatDecimal(item.colD),
+      colF: formatDecimal(item.colF),
+      colG: formatDecimal(item.colG),
+      colH: formatDecimal(item.colH),
+      colI: formatDecimal(item.colI),
+      colJ: formatDecimal(item.colJ),
+      colK: formatDecimal(item.colK),
+      colL: formatDecimal(item.colL),
+      colM: formatDecimal(item.colM),
+      colN: formatDecimal(item.colN),
+      colO: formatDecimal(item.colO),
+      colP: formatDecimal(item.colP),
+      colQ: formatDecimal(item.colQ),
+      colR: formatDecimal(item.colR),
+      colS: formatDecimal(item.colS),
+      colT: formatDecimal(item.colT),
+      colU: formatDecimal(item.colU),
+    };
+  }
+
+  async updateDepreciation(id: number, data: any) {
+    const updateData: any = {};
+    if ('colA' in data) updateData.colA = data.colA ? new Date(data.colA) : null;
+    if ('colB' in data) updateData.colB = data.colB || null;
+    if ('colC' in data) updateData.colC = data.colC || null;
+    if ('colD' in data) updateData.colD = data.colD?.toString() || null;
+    if ('colE' in data) updateData.colE = data.colE ? Number(data.colE) : null;
+    if ('colF' in data) updateData.colF = data.colF?.toString() || null;
+    if ('colG' in data) updateData.colG = data.colG?.toString() || null;
+    if ('colH' in data) updateData.colH = data.colH?.toString() || null;
+    if ('colI' in data) updateData.colI = data.colI?.toString() || null;
+    if ('colJ' in data) updateData.colJ = data.colJ?.toString() || null;
+    if ('colK' in data) updateData.colK = data.colK?.toString() || null;
+    if ('colL' in data) updateData.colL = data.colL?.toString() || null;
+    if ('colM' in data) updateData.colM = data.colM?.toString() || null;
+    if ('colN' in data) updateData.colN = data.colN?.toString() || null;
+    if ('colO' in data) updateData.colO = data.colO?.toString() || null;
+    if ('colP' in data) updateData.colP = data.colP?.toString() || null;
+    if ('colQ' in data) updateData.colQ = data.colQ?.toString() || null;
+    if ('colR' in data) updateData.colR = data.colR?.toString() || null;
+    if ('colS' in data) updateData.colS = data.colS?.toString() || null;
+    if ('colT' in data) updateData.colT = data.colT?.toString() || null;
+    if ('colU' in data) updateData.colU = data.colU?.toString() || null;
+
+    return this.prisma.depreciation.update({
+      where: { id },
+      data: updateData
+    });
+  }
+
+  async deleteDepreciation(id: number) {
+    return this.prisma.depreciation.delete({
+      where: { id }
+    });
+  }
 }

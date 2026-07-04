@@ -39,10 +39,41 @@ export function useSales() {
     }
   });
 
+  const getSalesById = (id: number | null, options?: any) => 
+    useQuery<any>({
+      queryKey: ["finance", "sales", id],
+      queryFn: () => salesService.getSalesById(id!),
+      enabled: !!id,
+      ...options,
+    });
+
+  const updateSales = () => 
+    useMutation({
+      mutationFn: ({ id, data }: { id: number, data: any }) => salesService.updateSales(id, data),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["finance", "sales"] });
+      }
+    });
+
+  const deleteSales = () => 
+    useMutation({
+      mutationFn: (id: number) => salesService.deleteSales(id),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["finance", "sales"] });
+        toast.success("Sales record deleted successfully");
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.message || "Failed to delete sales record");
+      }
+    });
+
   return {
     getSales,
     getAllSales,
     createSales,
     createBulkSales,
+    getSalesById,
+    updateSales,
+    deleteSales,
   };
 }

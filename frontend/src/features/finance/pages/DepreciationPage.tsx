@@ -14,6 +14,17 @@ import { useAuthStore } from "@/store/authStore";
 import { Decimal } from "decimal.js";
 import { Badge } from "@/components/ui/badge";
 import AddDepreciationModal from "../components/AddDepreciationModal";
+import { toast } from "sonner";
+import { Edit2, Trash2, AlertCircle } from "lucide-react";
+import EditDepreciationModal from "../components/EditDepreciationModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -25,6 +36,10 @@ import {
 export default function DepreciationPage() {
   const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const assetLimit = 10;
   const [depYearFilter, setDepYearFilter] = useState(new Date().getFullYear().toString());
   const yearNum = useMemo(() => Number(depYearFilter), [depYearFilter]);
@@ -136,7 +151,7 @@ export default function DepreciationPage() {
     );
   };
 
-  const { getAllAssets } = useDepreciation();
+  const { getAllAssets, deleteAsset } = useDepreciation();
   const assetsQuery = getAllAssets(
     depYearFilter !== "all" ? yearNum : undefined,
     { enabled: !!depYearFilter }
@@ -200,6 +215,26 @@ export default function DepreciationPage() {
     page: page,
     limit: assetLimit,
     lastPage: Math.ceil(filteredAndSortedData.length / assetLimit) || 1
+  };
+
+  const handleEdit = (id: number) => {
+    setSelectedRecordId(id);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!recordToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteAsset().mutateAsync(recordToDelete);
+      toast.success("Depreciation record deleted successfully.");
+      assetsQuery.refetch();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to delete record.");
+    } finally {
+      setIsDeleting(false);
+      setRecordToDelete(null);
+    }
   };
 
 
@@ -383,9 +418,10 @@ export default function DepreciationPage() {
                 <TableHead className="w-44 px-4 text-right">
                   <div className="flex items-center justify-end gap-1">S/D 2025 <ExcelColumnFilter columnKey="accumulated2021" label="S/D 2025" data={getCascadingData("accumulated2021")} activeFilters={filters["accumulated2021"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, accumulated2021: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "accumulated2021", direction: d}); setPage(1); }} /></div>
                 </TableHead>
-                <TableHead className="pr-8 w-44 px-4 text-right">
+                <TableHead className="w-44 px-4 text-right">
                   <div className="flex items-center justify-end gap-1">Book Value <ExcelColumnFilter columnKey="bookValue" label="Book Value" data={getCascadingData("bookValue")} activeFilters={filters["bookValue"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, bookValue: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "bookValue", direction: d}); setPage(1); }} /></div>
                 </TableHead>
+                <TableHead className="w-24 px-4 text-center pr-8">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -427,7 +463,17 @@ export default function DepreciationPage() {
 
                       <TableCell className="px-4 w-44 text-right font-bold">{row.total2021}</TableCell>
                       <TableCell className="px-4 w-44 text-right font-bold">{row.accumulated2021}</TableCell>
-                      <TableCell className="pr-8 px-4 w-44 text-right font-black text-primary">{row.bookValue}</TableCell>
+                      <TableCell className="px-4 w-44 text-right font-black text-primary">{row.bookValue}</TableCell>
+                      <TableCell className="px-4 text-center pr-8">
+                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
+                            <Edit2 size={12} strokeWidth={2.5} />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
+                            <Trash2 size={12} strokeWidth={2.5} />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
 
@@ -450,7 +496,8 @@ export default function DepreciationPage() {
 
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetPageSubtotals.total2021.toString())}`}>{formatCurrency(assetPageSubtotals.total2021.toString())}</TableCell>
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetPageSubtotals.accumulated2021.toString())}`}>{formatCurrency(assetPageSubtotals.accumulated2021.toString())}</TableCell>
-                    <TableCell className={`pr-8 py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetPageSubtotals.bookValue.toString())}`}>{formatCurrency(assetPageSubtotals.bookValue.toString())}</TableCell>
+                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetPageSubtotals.bookValue.toString())}`}>{formatCurrency(assetPageSubtotals.bookValue.toString())}</TableCell>
+                    <TableCell className="py-3 bg-secondary/[0.02] pr-8" />
                   </TableRow>
 
                   {/* Grand Total (All Pages) */}
@@ -471,7 +518,8 @@ export default function DepreciationPage() {
 
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetGrandTotals.total2021.toString())}`}>{formatCurrency(assetGrandTotals.total2021.toString())}</TableCell>
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetGrandTotals.accumulated2021.toString())}`}>{formatCurrency(assetGrandTotals.accumulated2021.toString())}</TableCell>
-                    <TableCell className={`pr-8 py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetGrandTotals.bookValue.toString())}`}>{formatCurrency(assetGrandTotals.bookValue.toString())}</TableCell>
+                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetGrandTotals.bookValue.toString())}`}>{formatCurrency(assetGrandTotals.bookValue.toString())}</TableCell>
+                    <TableCell className="py-3 bg-secondary/[0.02] pr-8" />
                   </TableRow>
                 </>
               )}
@@ -486,6 +534,37 @@ export default function DepreciationPage() {
         year={yearNum}
         onSuccess={() => assetsQuery.refetch()} 
       />
+      <EditDepreciationModal 
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        recordId={selectedRecordId}
+        onSuccess={() => assetsQuery.refetch()}
+      />
+      <Dialog 
+        open={recordToDelete !== null} 
+        onOpenChange={(open) => {
+          if (isDeleting) return;
+          if (!open) setRecordToDelete(null);
+        }}
+      >
+        <DialogContent className="rounded-3xl border-0 shadow-premium">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">
+              <AlertCircle className="text-rose-500" size={24} />
+              Confirm Deletion
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium leading-relaxed">
+              Are you sure you want to delete this depreciation record? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-3 mt-4">
+            <Button variant="ghost" onClick={() => setRecordToDelete(null)} disabled={isDeleting} className="rounded-xl font-bold uppercase tracking-widest text-[11px]">Cancel</Button>
+            <Button onClick={handleDelete} disabled={isDeleting} className="rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold uppercase tracking-widest text-[11px]">
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }

@@ -16,6 +16,17 @@ import { Search, FilterX } from 'lucide-react';
 import Decimal from 'decimal.js';
 
 import { useInterAccount } from '../hooks/useInterAccount';
+import { toast } from "sonner";
+import { Edit2, Trash2, AlertCircle } from "lucide-react";
+import EditInterAccountModal from "./EditInterAccountModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -27,6 +38,10 @@ import {
 export const InterAccountTable: React.FC = () => {
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString());
   const yearNum = useMemo(() => Number(yearFilter), [yearFilter]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const availableYears = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -37,11 +52,13 @@ export const InterAccountTable: React.FC = () => {
     return years;
   }, []);
 
-  const { data: interAccountData, isLoading } = useInterAccount({ 
+  const { getInterAccountData, deleteInterAccount } = useInterAccount();
+  const interAccountQuery = getInterAccountData({ 
     page: 1, 
     limit: 10000,
     year: yearFilter !== "all" ? yearNum : undefined
   });
+  const { data: interAccountData, isLoading } = interAccountQuery;
 
   const allDataRaw = interAccountData?.data || [];
 
@@ -141,6 +158,26 @@ export const InterAccountTable: React.FC = () => {
 
   const grandTotals = useMemo(() => calcTotals(filteredAndSortedData), [filteredAndSortedData]);
 
+  const handleEdit = (id: number) => {
+    setSelectedRecordId(id);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!recordToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteInterAccount().mutateAsync(recordToDelete);
+      toast.success("Inter Account record deleted successfully.");
+      interAccountQuery.refetch();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to delete record.");
+    } finally {
+      setIsDeleting(false);
+      setRecordToDelete(null);
+    }
+  };
+
 
   const cols: { k: string; l: string; num?: boolean; isDate?: boolean }[] = [
     { k: 'colB', l: 'Col B' },
@@ -220,6 +257,7 @@ export const InterAccountTable: React.FC = () => {
                     </div>
                   </TableHead>
                 ))}
+                <TableHead className="px-4 text-center w-24">Actions</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -248,6 +286,16 @@ export const InterAccountTable: React.FC = () => {
                           {row[c.k]}
                         </TableCell>
                       ))}
+                      <TableCell className="px-4 text-center">
+                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
+                            <Edit2 size={12} strokeWidth={2.5} />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
+                            <Trash2 size={12} strokeWidth={2.5} />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
 
@@ -261,6 +309,7 @@ export const InterAccountTable: React.FC = () => {
                         {formatCurrency((grandTotals as any)[c.k].toString())}
                       </TableCell>
                     ))}
+                    <TableCell className="bg-secondary/[0.02]" />
                   </TableRow>
                 </>
               )}
@@ -268,6 +317,37 @@ export const InterAccountTable: React.FC = () => {
           </Table>
         </div>
       </div>
+      <EditInterAccountModal 
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        recordId={selectedRecordId}
+        onSuccess={() => interAccountQuery.refetch()}
+      />
+      <Dialog 
+        open={recordToDelete !== null} 
+        onOpenChange={(open) => {
+          if (isDeleting) return;
+          if (!open) setRecordToDelete(null);
+        }}
+      >
+        <DialogContent className="rounded-3xl border-0 shadow-premium">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">
+              <AlertCircle className="text-rose-500" size={24} />
+              Confirm Deletion
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium leading-relaxed">
+              Are you sure you want to delete this Inter Account record? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-3 mt-4">
+            <Button variant="ghost" onClick={() => setRecordToDelete(null)} disabled={isDeleting} className="rounded-xl font-bold uppercase tracking-widest text-[11px]">Cancel</Button>
+            <Button onClick={handleDelete} disabled={isDeleting} className="rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold uppercase tracking-widest text-[11px]">
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

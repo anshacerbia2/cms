@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import api from '@/lib/api';
 
 interface FetchParams {
@@ -8,8 +9,24 @@ interface FetchParams {
   year?: number;
 }
 
+export const interAccountService = {
+  getInterAccountById: async (id: number): Promise<any> => {
+    const { data } = await api.get(`/finance/inter-account/${id}`);
+    return data;
+  },
+  updateInterAccount: async (id: number, payload: any): Promise<any> => {
+    const { data } = await api.patch(`/finance/inter-account/${id}`, payload);
+    return data;
+  },
+  deleteInterAccount: async (id: number): Promise<any> => {
+    const { data } = await api.delete(`/finance/inter-account/${id}`);
+    return data;
+  }
+};
+
 export const useInterAccount = ({ page, limit = 10, search, year }: FetchParams) => {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const getInterAccount = useQuery({
     queryKey: ['inter-account', page, limit, search, year],
     queryFn: async () => {
       const { data } = await api.get('/finance/inter-account/paginated', {
@@ -18,4 +35,40 @@ export const useInterAccount = ({ page, limit = 10, search, year }: FetchParams)
       return data;
     },
   });
+
+  const getInterAccountById = (id: number | null, options?: any) => 
+    useQuery<any>({
+      queryKey: ["inter-account", id],
+      queryFn: () => interAccountService.getInterAccountById(id!),
+      enabled: !!id,
+      ...options,
+    });
+
+  const updateInterAccount = () => 
+    useMutation({
+      mutationFn: ({ id, data }: { id: number, data: any }) => interAccountService.updateInterAccount(id, data),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["inter-account"] });
+      }
+    });
+
+  const deleteInterAccount = () => 
+    useMutation({
+      mutationFn: (id: number) => interAccountService.deleteInterAccount(id),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["inter-account"] });
+        toast.success("Inter-Account record deleted successfully");
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.message || "Failed to delete record");
+      }
+    });
+
+  return {
+    data: getInterAccount.data,
+    isLoading: getInterAccount.isLoading,
+    getInterAccountById,
+    updateInterAccount,
+    deleteInterAccount
+  };
 };

@@ -17,6 +17,17 @@ import { PaginationControls } from "@/components/common/PaginationControls";
 import { ExcelColumnFilter } from "./ExcelColumnFilter";
 import { formatCurrency, formatDate, getAmountColor } from "@/lib/utils";
 import { Decimal } from "decimal.js";
+import { toast } from "sonner";
+import { Edit2, Trash2, AlertCircle } from "lucide-react";
+import EditPpnInOutModal from "./EditPpnInOutModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -27,6 +38,10 @@ import {
 
 export function PpnInOutTable() {
   const limit = 10;
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString());
   const yearNum = useMemo(() => Number(yearFilter), [yearFilter]);
 
@@ -39,11 +54,12 @@ export function PpnInOutTable() {
     return years;
   }, []);
 
-  const { getAllPpnInOut } = usePpnInOut();
-  const { data: allDataRaw, isLoading } = getAllPpnInOut(
+  const { getAllPpnInOut, deletePpnInOut } = usePpnInOut();
+  const ppnInOutQuery = getAllPpnInOut(
     yearFilter !== "all" ? yearNum : undefined,
     { enabled: !!yearFilter }
   );
+  const { data: allDataRaw, isLoading } = ppnInOutQuery;
 
   const displayData = useMemo(() => {
     return (allDataRaw || []).map((row: any) => ({
@@ -143,6 +159,26 @@ export function PpnInOutTable() {
   const subtotalTotals = useMemo(() => calcTotals(paginatedData), [paginatedData]);
   const grandTotals = useMemo(() => calcTotals(filteredAndSortedData), [filteredAndSortedData]);
 
+  const handleEdit = (id: number) => {
+    setSelectedRecordId(id);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!recordToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deletePpnInOut().mutateAsync(recordToDelete);
+      toast.success("PPN In/Out record deleted successfully.");
+      ppnInOutQuery.refetch();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to delete record.");
+    } finally {
+      setIsDeleting(false);
+      setRecordToDelete(null);
+    }
+  };
+
 
   const cols = [
     { k: 'colA', l: 'Masa', isDate: true },
@@ -229,6 +265,7 @@ export function PpnInOutTable() {
                     </div>
                   </TableHead>
                 ))}
+                <TableHead className="px-4 text-center w-24">Actions</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -257,6 +294,16 @@ export function PpnInOutTable() {
                           {row[c.k]}
                         </TableCell>
                       ))}
+                      <TableCell className="px-4 text-center">
+                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
+                            <Edit2 size={12} strokeWidth={2.5} />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
+                            <Trash2 size={12} strokeWidth={2.5} />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
 
@@ -274,7 +321,7 @@ export function PpnInOutTable() {
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colM.toString())}`}>{formatCurrency(subtotalTotals.colM.toString())}</TableCell>
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colN.toString())}`}>{formatCurrency(subtotalTotals.colN.toString())}</TableCell>
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colO.toString())}`}>{formatCurrency(subtotalTotals.colO.toString())}</TableCell>
-                    <TableCell colSpan={4} className="bg-secondary/[0.02]" />
+                    <TableCell colSpan={5} className="bg-secondary/[0.02]" />
                   </TableRow>
 
                   {/* Grand Total Row */}
@@ -291,7 +338,7 @@ export function PpnInOutTable() {
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colM.toString())}`}>{formatCurrency(grandTotals.colM.toString())}</TableCell>
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colN.toString())}`}>{formatCurrency(grandTotals.colN.toString())}</TableCell>
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colO.toString())}`}>{formatCurrency(grandTotals.colO.toString())}</TableCell>
-                    <TableCell colSpan={4} className="bg-secondary/[0.02]" />
+                    <TableCell colSpan={5} className="bg-secondary/[0.02]" />
                   </TableRow>
                 </>
               )}
@@ -310,6 +357,38 @@ export function PpnInOutTable() {
         onPageChange={setPage} 
         isFetching={isLoading} 
       />
+
+      <EditPpnInOutModal 
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        recordId={selectedRecordId}
+        onSuccess={() => ppnInOutQuery.refetch()}
+      />
+      <Dialog 
+        open={recordToDelete !== null} 
+        onOpenChange={(open) => {
+          if (isDeleting) return;
+          if (!open) setRecordToDelete(null);
+        }}
+      >
+        <DialogContent className="rounded-3xl border-0 shadow-premium">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">
+              <AlertCircle className="text-rose-500" size={24} />
+              Confirm Deletion
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium leading-relaxed">
+              Are you sure you want to delete this PPN In/Out record? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-3 mt-4">
+            <Button variant="ghost" onClick={() => setRecordToDelete(null)} disabled={isDeleting} className="rounded-xl font-bold uppercase tracking-widest text-[11px]">Cancel</Button>
+            <Button onClick={handleDelete} disabled={isDeleting} className="rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold uppercase tracking-widest text-[11px]">
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

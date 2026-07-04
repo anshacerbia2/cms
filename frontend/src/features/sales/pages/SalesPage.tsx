@@ -16,6 +16,16 @@ import AddSalesModal from "../components/AddSalesModal";
 import { useAuthStore } from "@/store/authStore";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import { Edit2, Trash2, AlertCircle } from "lucide-react";
+import EditSalesModal from "../components/EditSalesModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -27,6 +37,10 @@ import {
 export default function SalesPage() {
   const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const salesLimit = 10;
 
   const [salesYearFilter, setSalesYearFilter] = useState(new Date().getFullYear().toString());
@@ -41,7 +55,7 @@ export default function SalesPage() {
     return years;
   }, []);
 
-  const { getAllSales } = useSales();
+  const { getAllSales, deleteSales } = useSales();
   const { data: allSalesRaw, isLoading: salesLoading, refetch: refetchSales } = getAllSales(
     salesYearFilter !== "all" ? yearNum : undefined,
     { enabled: !!salesYearFilter }
@@ -111,6 +125,26 @@ export default function SalesPage() {
     page: salesPage,
     limit: salesLimit,
     lastPage: Math.ceil(filteredAndSortedSales.length / salesLimit) || 1
+  };
+
+  const handleEdit = (id: number) => {
+    setSelectedRecordId(id);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!recordToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteSales().mutateAsync(recordToDelete);
+      toast.success("Sales record deleted successfully.");
+      refetchSales();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to delete record.");
+    } finally {
+      setIsDeleting(false);
+      setRecordToDelete(null);
+    }
   };
 
 
@@ -322,6 +356,7 @@ export default function SalesPage() {
                 <TableHead className="w-64 px-4 pr-8">
                   <div className="flex items-center gap-1">Remarks <ExcelColumnFilter columnKey="colAD" label="Remarks" data={getCascadingData("colAD")} activeFilters={salesFilters["colAD"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colAD: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colAD", direction: d}); setSalesPage(1); }} /></div>
                 </TableHead>
+                <TableHead className="w-24 px-4 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -376,6 +411,16 @@ export default function SalesPage() {
                       <TableCell className="px-4 w-40 text-right">{row.colAB}</TableCell>
                       <TableCell className="px-4 w-40 text-right">{row.colAC}</TableCell>
                       <TableCell className="pr-8 w-64">{row.colAD}</TableCell>
+                      <TableCell className="px-4 text-center">
+                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
+                            <Edit2 size={12} strokeWidth={2.5} />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
+                            <Trash2 size={12} strokeWidth={2.5} />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {/* Summary Rows */}
@@ -452,6 +497,39 @@ export default function SalesPage() {
           toast.success("Sales data refreshed successfully");
         }}
       />
+      <EditSalesModal 
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        recordId={selectedRecordId}
+        onSuccess={() => {
+          refetchSales();
+        }}
+      />
+      <Dialog 
+        open={recordToDelete !== null} 
+        onOpenChange={(open) => {
+          if (isDeleting) return;
+          if (!open) setRecordToDelete(null);
+        }}
+      >
+        <DialogContent className="rounded-3xl border-0 shadow-premium">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">
+              <AlertCircle className="text-rose-500" size={24} />
+              Confirm Deletion
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium leading-relaxed">
+              Are you sure you want to delete this sales record? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-3 mt-4">
+            <Button variant="ghost" onClick={() => setRecordToDelete(null)} disabled={isDeleting} className="rounded-xl font-bold uppercase tracking-widest text-[11px]">Cancel</Button>
+            <Button onClick={handleDelete} disabled={isDeleting} className="rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold uppercase tracking-widest text-[11px]">
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }

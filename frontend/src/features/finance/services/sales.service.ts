@@ -21,4 +21,19 @@ export const salesService = {
     const { data } = await api.post("/finance/sales/bulk", payload);
     return data;
   },
+
+  getSalesById: async (id: number): Promise<any> => {
+    const { data } = await api.get(`/finance/sales/${id}`);
+    return data;
+  },
+
+  updateSales: async (id: number, payload: any): Promise<any> => {
+    const { data } = await api.patch(`/finance/sales/${id}`, payload);
+    return data;
+  },
+
+  deleteSales: async (id: number): Promise<any> => {
+    const { data } = await api.delete(`/finance/sales/${id}`);
+    return data;
+  },
 };
