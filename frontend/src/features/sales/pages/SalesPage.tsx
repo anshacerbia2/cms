@@ -17,7 +17,7 @@ import { useAuthStore } from "@/store/authStore";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Edit2, Trash2, AlertCircle } from "lucide-react";
-import EditSalesModal from "../components/EditSalesModal";
+import EditSalesModal from "../../finance/components/EditSalesModal";
 import {
   Dialog,
   DialogContent,
@@ -136,7 +136,7 @@ export default function SalesPage() {
     if (!recordToDelete) return;
     setIsDeleting(true);
     try {
-      await deleteSales().mutateAsync(recordToDelete);
+      await deleteSales.mutateAsync(recordToDelete);
       toast.success("Sales record deleted successfully.");
       refetchSales();
     } catch (error: any) {
@@ -412,13 +412,17 @@ export default function SalesPage() {
                       <TableCell className="px-4 w-40 text-right">{row.colAC}</TableCell>
                       <TableCell className="pr-8 w-64">{row.colAD}</TableCell>
                       <TableCell className="px-4 text-center">
-                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
-                            <Edit2 size={12} strokeWidth={2.5} />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
-                            <Trash2 size={12} strokeWidth={2.5} />
-                          </Button>
+                        <div className="flex items-center justify-center gap-1">
+                          {can('sales.update') && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
+                              <Edit2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
+                          {can('sales.delete') && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
+                              <Trash2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

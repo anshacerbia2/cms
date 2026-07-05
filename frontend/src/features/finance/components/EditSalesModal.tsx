@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Save, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { useSales } from '../finance/hooks/useSales';
+import { useSales } from '../hooks/useSales';
 import { cn, formatInputAmount, cleanInputAmount } from '@/lib/utils';
 import { format, parseISO, isValid } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -66,7 +66,13 @@ export default function EditSalesModal({ open, onOpenChange, recordId, onSuccess
         if (DATE_COLS.includes(col)) {
           initialData[col] = record[col] ? format(new Date(record[col]), 'yyyy-MM-dd') : '';
         } else if (NUMERIC_COLS.includes(col)) {
-          initialData[col] = record[col] !== null && record[col] !== undefined ? record[col].toString() : '0';
+          let val = record[col];
+          if (val !== null && val !== undefined) {
+             const parsed = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+             initialData[col] = isNaN(parsed) ? '' : parsed.toString();
+          } else {
+             initialData[col] = '';
+          }
         } else {
           initialData[col] = record[col] || '';
         }
@@ -79,7 +85,11 @@ export default function EditSalesModal({ open, onOpenChange, recordId, onSuccess
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (NUMERIC_COLS.includes(name)) {
+      setFormData((prev) => ({ ...prev, [name]: cleanInputAmount(value) }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleDateSelect = (colName: string, date: Date | undefined) => {
@@ -99,9 +109,15 @@ export default function EditSalesModal({ open, onOpenChange, recordId, onSuccess
 
     try {
       setLoading(true);
-      await updateSales().mutateAsync({
+      const payload: any = { ...formData };
+      NUMERIC_COLS.forEach(key => {
+        if (payload[key]) {
+           payload[key] = String(payload[key]).replace(/,/g, '.');
+        }
+      });
+      await updateSales.mutateAsync({
         id: recordId,
-        data: formData
+        data: payload
       });
       toast.success('Sales record updated successfully.');
       onSuccess();
@@ -168,10 +184,7 @@ export default function EditSalesModal({ open, onOpenChange, recordId, onSuccess
                     <Input 
                       name={col} 
                       value={formatInputAmount(formData[col] || '')} 
-                      onChange={(e) => {
-                        const cleaned = cleanInputAmount(e.target.value);
-                        setFormData(prev => ({...prev, [col]: cleaned}));
-                      }} 
+                      onChange={handleChange} 
                       className="h-11 rounded-xl bg-muted/20 border border-primary/10 shadow-none font-medium text-[13px] text-right focus-visible:border-primary/30 transition-all"
                     />
                   ) : (

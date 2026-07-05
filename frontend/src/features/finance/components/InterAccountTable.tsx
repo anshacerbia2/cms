@@ -34,8 +34,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuthStore } from "@/store/authStore";
 
 export const InterAccountTable: React.FC = () => {
+  const { can } = useAuthStore();
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString());
   const yearNum = useMemo(() => Number(yearFilter), [yearFilter]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -52,13 +54,11 @@ export const InterAccountTable: React.FC = () => {
     return years;
   }, []);
 
-  const { getInterAccountData, deleteInterAccount } = useInterAccount();
-  const interAccountQuery = getInterAccountData({ 
+  const { data: interAccountData, isLoading, deleteInterAccount, refetch } = useInterAccount({ 
     page: 1, 
     limit: 10000,
     year: yearFilter !== "all" ? yearNum : undefined
   });
-  const { data: interAccountData, isLoading } = interAccountQuery;
 
   const allDataRaw = interAccountData?.data || [];
 
@@ -167,9 +167,9 @@ export const InterAccountTable: React.FC = () => {
     if (!recordToDelete) return;
     setIsDeleting(true);
     try {
-      await deleteInterAccount().mutateAsync(recordToDelete);
+      await deleteInterAccount.mutateAsync(recordToDelete);
       toast.success("Inter Account record deleted successfully.");
-      interAccountQuery.refetch();
+      refetch();
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to delete record.");
     } finally {
@@ -287,13 +287,17 @@ export const InterAccountTable: React.FC = () => {
                         </TableCell>
                       ))}
                       <TableCell className="px-4 text-center">
-                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
-                            <Edit2 size={12} strokeWidth={2.5} />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
-                            <Trash2 size={12} strokeWidth={2.5} />
-                          </Button>
+                        <div className="flex items-center justify-center gap-1 transition-opacity">
+                          {can('inter-account.update') && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
+                              <Edit2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
+                          {can('inter-account.delete') && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
+                              <Trash2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -321,7 +325,7 @@ export const InterAccountTable: React.FC = () => {
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
         recordId={selectedRecordId}
-        onSuccess={() => interAccountQuery.refetch()}
+        onSuccess={() => refetch()}
       />
       <Dialog 
         open={recordToDelete !== null} 

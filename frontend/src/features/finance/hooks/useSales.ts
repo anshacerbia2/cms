@@ -47,16 +47,14 @@ export function useSales() {
       ...options,
     });
 
-  const updateSales = () => 
-    useMutation({
+  const updateSales = useMutation({
       mutationFn: ({ id, data }: { id: number, data: any }) => salesService.updateSales(id, data),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["finance", "sales"] });
       }
     });
 
-  const deleteSales = () => 
-    useMutation({
+  const deleteSales = useMutation({
       mutationFn: (id: number) => salesService.deleteSales(id),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["finance", "sales"] });

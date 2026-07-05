@@ -420,7 +420,7 @@ export function ApSummaryTab() {
                       {row.colV}
                     </TableCell>
                     <TableCell className="px-4 text-center">
-                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-center gap-1 transition-opacity">
                           <Button 
                             variant="ghost" 
                             size="icon" 

@@ -226,7 +226,7 @@ export default function DepreciationPage() {
     if (!recordToDelete) return;
     setIsDeleting(true);
     try {
-      await deleteAsset().mutateAsync(recordToDelete);
+      await deleteAsset.mutateAsync(recordToDelete);
       toast.success("Depreciation record deleted successfully.");
       assetsQuery.refetch();
     } catch (error: any) {
@@ -465,13 +465,17 @@ export default function DepreciationPage() {
                       <TableCell className="px-4 w-44 text-right font-bold">{row.accumulated2021}</TableCell>
                       <TableCell className="px-4 w-44 text-right font-black text-primary">{row.bookValue}</TableCell>
                       <TableCell className="px-4 text-center pr-8">
-                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
-                            <Edit2 size={12} strokeWidth={2.5} />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
-                            <Trash2 size={12} strokeWidth={2.5} />
-                          </Button>
+                        <div className="flex items-center justify-center gap-1 transition-opacity">
+                          {can('depreciation.update') && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
+                              <Edit2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
+                          {can('depreciation.delete') && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
+                              <Trash2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

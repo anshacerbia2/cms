@@ -32,16 +32,14 @@ export function useDepreciation() {
       ...options,
     });
 
-  const updateAsset = () => 
-    useMutation({
+  const updateAsset = useMutation({
       mutationFn: ({ id, data }: { id: number, data: any }) => depreciationService.updateAsset(id, data),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["finance", "assets"] });
       }
     });
 
-  const deleteAsset = () => 
-    useMutation({
+  const deleteAsset = useMutation({
       mutationFn: (id: number) => depreciationService.deleteAsset(id),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["finance", "assets"] });

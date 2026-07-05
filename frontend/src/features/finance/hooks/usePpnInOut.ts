@@ -51,16 +51,14 @@ export function usePpnInOut() {
       ...options,
     });
 
-  const updatePpnInOut = () => 
-    useMutation({
+  const updatePpnInOut = useMutation({
       mutationFn: ({ id, data }: { id: number, data: any }) => ppnInOutService.updatePpnInOut(id, data),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["finance", "ppn-in-out"] });
       }
     });
 
-  const deletePpnInOut = () => 
-    useMutation({
+  const deletePpnInOut = useMutation({
       mutationFn: (id: number) => ppnInOutService.deletePpnInOut(id),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["finance", "ppn-in-out"] });

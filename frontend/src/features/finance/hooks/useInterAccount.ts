@@ -44,16 +44,14 @@ export const useInterAccount = ({ page, limit = 10, search, year }: FetchParams)
       ...options,
     });
 
-  const updateInterAccount = () => 
-    useMutation({
+  const updateInterAccount = useMutation({
       mutationFn: ({ id, data }: { id: number, data: any }) => interAccountService.updateInterAccount(id, data),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["inter-account"] });
       }
     });
 
-  const deleteInterAccount = () => 
-    useMutation({
+  const deleteInterAccount = useMutation({
       mutationFn: (id: number) => interAccountService.deleteInterAccount(id),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["inter-account"] });
@@ -67,6 +65,7 @@ export const useInterAccount = ({ page, limit = 10, search, year }: FetchParams)
   return {
     data: getInterAccount.data,
     isLoading: getInterAccount.isLoading,
+    refetch: getInterAccount.refetch,
     getInterAccountById,
     updateInterAccount,
     deleteInterAccount

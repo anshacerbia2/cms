@@ -35,8 +35,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuthStore } from "@/store/authStore";
 
 export function PpnInOutTable() {
+  const { can } = useAuthStore();
   const limit = 10;
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
@@ -168,7 +170,7 @@ export function PpnInOutTable() {
     if (!recordToDelete) return;
     setIsDeleting(true);
     try {
-      await deletePpnInOut().mutateAsync(recordToDelete);
+      await deletePpnInOut.mutateAsync(recordToDelete);
       toast.success("PPN In/Out record deleted successfully.");
       ppnInOutQuery.refetch();
     } catch (error: any) {
@@ -295,13 +297,17 @@ export function PpnInOutTable() {
                         </TableCell>
                       ))}
                       <TableCell className="px-4 text-center">
-                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
-                            <Edit2 size={12} strokeWidth={2.5} />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
-                            <Trash2 size={12} strokeWidth={2.5} />
-                          </Button>
+                        <div className="flex items-center justify-center gap-1 transition-opacity">
+                          {can('ppn-in-out.update') && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
+                              <Edit2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
+                          {can('ppn-in-out.delete') && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
+                              <Trash2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

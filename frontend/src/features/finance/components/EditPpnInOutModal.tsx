@@ -62,7 +62,13 @@ export default function EditPpnInOutModal({ open, onOpenChange, recordId, onSucc
         if (DATE_COLS.includes(col)) {
           initialData[col] = record[col] ? format(new Date(record[col]), 'yyyy-MM-dd') : '';
         } else if (NUMERIC_COLS.includes(col)) {
-          initialData[col] = record[col] !== null && record[col] !== undefined ? record[col].toString() : '0';
+          let val = record[col];
+          if (val !== null && val !== undefined) {
+             const parsed = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+             initialData[col] = isNaN(parsed) ? '' : parsed.toString();
+          } else {
+             initialData[col] = '';
+          }
         } else {
           initialData[col] = record[col] || '';
         }
@@ -75,7 +81,11 @@ export default function EditPpnInOutModal({ open, onOpenChange, recordId, onSucc
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (NUMERIC_COLS.includes(name)) {
+      setFormData((prev) => ({ ...prev, [name]: cleanInputAmount(value) }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleDateSelect = (colName: string, date: Date | undefined) => {
@@ -95,9 +105,18 @@ export default function EditPpnInOutModal({ open, onOpenChange, recordId, onSucc
 
     try {
       setLoading(true);
-      await updatePpnInOut().mutateAsync({
+      const payload: any = { ...formData };
+      NUMERIC_COLS.forEach(key => {
+        if (payload[key]) {
+           payload[key] = String(payload[key]).replace(/,/g, '.');
+        }
+      });
+      if (payload.colF) {
+         payload.colF = parseInt(payload.colF, 10);
+      }
+      await updatePpnInOut.mutateAsync({
         id: recordId,
-        data: formData
+        data: payload
       });
       toast.success('PPN In/Out record updated successfully.');
       onSuccess();
@@ -164,10 +183,7 @@ export default function EditPpnInOutModal({ open, onOpenChange, recordId, onSucc
                     <Input 
                       name={col} 
                       value={formatInputAmount(formData[col] || '')} 
-                      onChange={(e) => {
-                        const cleaned = cleanInputAmount(e.target.value);
-                        setFormData(prev => ({...prev, [col]: cleaned}));
-                      }} 
+                      onChange={handleChange} 
                       className="h-11 rounded-xl bg-muted/20 border border-primary/10 shadow-none font-medium text-[13px] text-right focus-visible:border-primary/30 transition-all"
                     />
                   ) : (

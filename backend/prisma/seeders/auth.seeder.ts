@@ -86,6 +86,14 @@ export async function seedAuth(prisma: PrismaClient) {
     // Sales Module Permissions
     { name: 'View Sales', route: 'sales.index' },
     { name: 'Create Sales', route: 'sales.create' },
+    { name: 'Update Sales', route: 'sales.update' },
+    { name: 'Delete Sales', route: 'sales.delete' },
+    { name: 'Update PPN In/out', route: 'ppn-in-out.update' },
+    { name: 'Delete PPN In/out', route: 'ppn-in-out.delete' },
+    { name: 'Update Inter Account', route: 'inter-account.update' },
+    { name: 'Delete Inter Account', route: 'inter-account.delete' },
+    { name: 'Update Depreciation', route: 'depreciation.update' },
+    { name: 'Delete Depreciation', route: 'depreciation.delete' },
   ];
 
   // List of permissions for finance manager
