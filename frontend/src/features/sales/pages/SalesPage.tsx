@@ -14,9 +14,9 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
 import AddSalesModal from "../components/AddSalesModal";
 import { useAuthStore } from "@/store/authStore";
-import { Plus } from "lucide-react";
+import { Download, Edit2, Plus, Trash2, AlertCircle, FileSpreadsheet, FileText } from "lucide-react";
+import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
 import { toast } from "sonner";
-import { Edit2, Trash2, AlertCircle } from "lucide-react";
 import EditSalesModal from "../../finance/components/EditSalesModal";
 import {
   Dialog,
@@ -26,6 +26,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -228,7 +234,7 @@ export default function SalesPage() {
           />
         </div>
         <Select value={salesYearFilter} onValueChange={(v) => { setSalesYearFilter(v); setSalesPage(1); }}>
-          <SelectTrigger className="w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
+          <SelectTrigger className="w-full xl:w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
             <SelectValue placeholder="Year" />
           </SelectTrigger>
           <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden">
@@ -259,9 +265,35 @@ export default function SalesPage() {
               className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 disabled:grayscale transition-all active:scale-95 cursor-pointer"
             >
               <Plus size={20} strokeWidth={3} />
-              <span className="text-[13px]">Add Sales</span>
+              <span className="text-[13px]">Add Record</span>
             </Button>
           )}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                className="h-12 w-12 xl:w-auto xl:px-4 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center font-bold disabled:opacity-50 transition-all active:scale-95 shrink-0"
+              >
+                <Download size={20} strokeWidth={3} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden w-40">
+              <DropdownMenuItem 
+                onClick={() => downloadExcelFile(`/finance/sales/export/excel${salesYearFilter !== 'all' ? `?year=${salesYearFilter}` : ''}`, `Sales_${salesYearFilter !== 'all' ? salesYearFilter : 'All'}.xlsx`)}
+                className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-emerald-600 transition-colors flex items-center gap-2"
+              >
+                <FileSpreadsheet size={16} strokeWidth={2.5} />
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => downloadPdfFile(`/finance/sales/export/pdf${salesYearFilter !== 'all' ? `?year=${salesYearFilter}` : ''}`, `Sales_${salesYearFilter !== 'all' ? salesYearFilter : 'All'}.pdf`)}
+                className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-rose-600 transition-colors flex items-center gap-2"
+              >
+                <FileText size={16} strokeWidth={2.5} />
+                Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

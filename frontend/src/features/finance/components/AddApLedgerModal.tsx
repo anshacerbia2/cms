@@ -102,8 +102,6 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess, year }
     setRows(newRows);
   };
 
-
-
   const cleanNumber = (val: string) => {
     if (val === undefined || val === null) return '0';
     let strVal = val.toString().trim();
@@ -176,6 +174,7 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess, year }
           const field = COL_ORDER[targetColIndex];
           let value: any = cellText.trim();
           if (NUMERIC_COLS.includes(field)) value = cleanNumber(value);
+          else if (field === 'colB') value = value.replace(/[^0-9]/g, '');
           newRows[targetRowIndex] = { ...newRows[targetRowIndex], [field]: value };
         }
       });
@@ -298,7 +297,15 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess, year }
                             <Input
                               placeholder={isNumeric ? "0" : "-"}
                               value={isNumeric ? formatInput(row[col]) : row[col]}
-                              onChange={(e) => updateRow(idx, col, isNumeric ? parseDisplay(e.target.value) : e.target.value)}
+                              onChange={(e) => {
+                                let val = e.target.value;
+                                if (isNumeric) {
+                                  val = parseDisplay(val);
+                                } else if (col === 'colB') {
+                                  val = val.replace(/[^0-9]/g, '');
+                                }
+                                updateRow(idx, col, val);
+                              }}
                               onKeyDown={(e) => handleKeyDown(e, idx, col)}
                               onPaste={(e) => handlePaste(e, idx, col)}
                               data-row={idx}

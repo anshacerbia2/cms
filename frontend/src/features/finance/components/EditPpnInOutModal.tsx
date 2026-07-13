@@ -30,13 +30,13 @@ interface EditPpnInOutModalProps {
 
 const COL_ORDER = [
   'colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ',
-  'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR', 'colS'
+  'colK', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR', 'colS'
 ];
 
 const LABELS: Record<string, string> = {
   colA: 'Masa', colB: 'Col B', colC: 'No Faktur', colD: 'Client/Suplier',
   colE: 'Invoice No', colF: 'Sales', colG: 'Status', colH: 'PPN',
-  colI: 'WAPU', colJ: 'PAID', colK: 'AP PPN WAPU', colL: 'Blank',
+  colI: 'WAPU', colJ: 'PAID', colK: 'AP PPN WAPU',
   colM: 'Non WAPU', colN: 'Masukan', colO: 'AP PPN Non WAPU',
   colP: 'Ledger', colQ: 'Sub Ledger-1', colR: 'Sub Ledger-2', colS: 'Sub Ledger-3'
 };
@@ -83,6 +83,8 @@ export default function EditPpnInOutModal({ open, onOpenChange, recordId, onSucc
     const { name, value } = e.target;
     if (NUMERIC_COLS.includes(name)) {
       setFormData((prev) => ({ ...prev, [name]: cleanInputAmount(value) }));
+    } else if (name === 'colF') {
+      setFormData((prev) => ({ ...prev, [name]: value.replace(/[^0-9]/g, '') }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }

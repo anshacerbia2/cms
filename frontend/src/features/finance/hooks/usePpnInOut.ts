@@ -23,6 +23,14 @@ export const ppnInOutService = {
   deletePpnInOut: async (id: number): Promise<any> => {
     const { data } = await api.delete(`/finance/ppn-in-out/${id}`);
     return data;
+  },
+  createPpnInOut: async (payload: any): Promise<any> => {
+    const { data } = await api.post(`/finance/ppn-in-out`, payload);
+    return data;
+  },
+  createBulkPpnInOut: async (payload: any): Promise<any> => {
+    const { data } = await api.post(`/finance/ppn-in-out/bulk`, payload);
+    return data;
   }
 };
 
@@ -69,11 +77,35 @@ export function usePpnInOut() {
       }
     });
 
+  const createPpnInOut = useMutation({
+      mutationFn: (data: any) => ppnInOutService.createPpnInOut(data),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["finance", "ppn-in-out"] });
+        toast.success("PPN In/Out record created successfully");
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.message || "Failed to create ppn in/out record");
+      }
+    });
+
+  const createBulkPpnInOut = useMutation({
+    mutationFn: (payload: any) => ppnInOutService.createBulkPpnInOut(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["finance", "ppn-in-out"] });
+      toast.success("Bulk import successful");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || "Failed to perform bulk import");
+    }
+  });
+
   return {
     getPpnInOut,
     getAllPpnInOut,
     getPpnInOutById,
     updatePpnInOut,
     deletePpnInOut,
+    createPpnInOut,
+    createBulkPpnInOut
   };
 }

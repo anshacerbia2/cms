@@ -49,7 +49,7 @@ const LABELS: Record<string, string> = {
 };
 
 const NUMERIC_COLS = [
-  'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 
+  'colD', 'colF', 'colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 
   'colN', 'colO', 'colP', 'colQ', 'colR', 'colS', 'colT', 'colU'
 ];
 
@@ -91,6 +91,8 @@ export default function EditDepreciationModal({ open, onOpenChange, recordId, on
     const { name, value } = e.target;
     if (NUMERIC_COLS.includes(name)) {
       setFormData((prev) => ({ ...prev, [name]: cleanInputAmount(value) }));
+    } else if (name === 'colE') {
+      setFormData((prev) => ({ ...prev, [name]: value.replace(/[^0-9]/g, '') }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }

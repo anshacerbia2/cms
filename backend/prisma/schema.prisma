@@ -370,37 +370,37 @@ model FinancialTransaction {
 
 model SalesRecord {
   id              BigInt   @id @default(autoincrement())
-  colA            String?  @db.VarChar(100)
-  colB            String?  @db.VarChar(100)
-  colC            DateTime?
-  colD            Int?
-  colE            String?  @db.Text
-  colF            String?  @db.Text
-  colG            String?  @db.Text
-  colH            Decimal? @db.Decimal(19, 4)
-  colI            Decimal? @db.Decimal(19, 4)
-  colJ            Decimal? @db.Decimal(19, 4)
-  colK            Decimal? @db.Decimal(19, 4)
-  colL            DateTime?
-  colM            Decimal? @db.Decimal(19, 4)
-  colN            Decimal? @db.Decimal(19, 4)
-  colO            Decimal? @db.Decimal(19, 4)
-  colP            Decimal? @db.Decimal(19, 4)
-  colQ            Decimal? @db.Decimal(19, 4)
-  colR            Decimal? @db.Decimal(19, 4)
-  colS            Decimal? @db.Decimal(19, 4)
-  colT            Decimal? @db.Decimal(19, 4)
-  colU            Decimal? @db.Decimal(19, 4)
-  colV            Decimal? @db.Decimal(19, 4)
-  colW            Decimal? @db.Decimal(19, 4)
-  colX            Decimal? @db.Decimal(19, 4)
-  colY            String?  @db.Text
-  colZ            Decimal? @db.Decimal(19, 4)
-  colAA           Decimal? @db.Decimal(19, 4)
-  colAB           Decimal? @db.Decimal(19, 4)
-  colAC           Decimal? @db.Decimal(19, 4)
-  colAD           String?  @db.Text
-  tagYear         Int?
+  colA            String?  @db.VarChar(100) // No
+  colB            String?  @db.VarChar(100) // Invoice No
+  colC            DateTime? // Date
+  colD            Int? // Year
+  colE            String?  @db.Text // Billing To
+  colF            String?  @db.Text // Sales Code
+  colG            String?  @db.Text // Description
+  colH            Decimal? @db.Decimal(19, 4) // Basic Price
+  colI            Decimal? @db.Decimal(19, 4) // Management Fee
+  colJ            Decimal? @db.Decimal(19, 4) // PPN
+  colK            Decimal? @db.Decimal(19, 4) // Account Receivable IDR
+  colL            DateTime? // Date Received
+  colM            Decimal? @db.Decimal(19, 4) // BCA Sahardjo
+  colN            Decimal? @db.Decimal(19, 4) // BCA Juanda
+  colO            Decimal? @db.Decimal(19, 4) // Mandiri Mid Plaza
+  colP            Decimal? @db.Decimal(19, 4) // Mandiri Plaza Mandiri
+  colQ            Decimal? @db.Decimal(19, 4) // BRI Tebet
+  colR            Decimal? @db.Decimal(19, 4) // BRI Sahardjo
+  colS            Decimal? @db.Decimal(19, 4) // BTN
+  colT            Decimal? @db.Decimal(19, 4) // Bank Raya
+  colU            Decimal? @db.Decimal(19, 4) // BNI
+  colV            Decimal? @db.Decimal(19, 4) // Cash IDR
+  colW            Decimal? @db.Decimal(19, 4) // Non CB
+  colX            Decimal? @db.Decimal(19, 4) // Outstanding IDR
+  colY            String?  @db.Text // Blank
+  colZ            Decimal? @db.Decimal(19, 4) // AP PPn
+  colAA           Decimal? @db.Decimal(19, 4) // PPh-23
+  colAB           Decimal? @db.Decimal(19, 4) // WAPU
+  colAC           Decimal? @db.Decimal(19, 4) // Non WAPU
+  colAD           String?  @db.Text // Remarks
+  tagYear         Int? // Tag Year
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 

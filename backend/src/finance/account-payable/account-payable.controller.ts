@@ -3,6 +3,33 @@ import { AccountPayableService } from './account-payable.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import type { Response } from 'express';
+import { generateExcelBuffer } from '../../common/utils/excel.util';
+import { generatePdfBuffer } from '../../common/utils/pdf.util';
+import { Res } from '@nestjs/common';
+
+const AP_COLUMN_MAPPING = {
+  colA: 'Payable',
+  colB: 'Year',
+  colC: 'Vendor',
+  colD: 'Keterangan',
+  colE: 'EOY IDR|accounting',
+  colF: 'EOY USD|accounting',
+  colG: 'Col G|accounting',
+  colH: 'Col H',
+  colI: 'Col I',
+  colK: 'BCA Shardjo|accounting',
+  colL: 'BCA Juanda|accounting',
+  colM: 'Mandiri Mid Plaza|accounting',
+  colN: 'BTN|accounting',
+  colO: 'BRI Shardjo|accounting',
+  colP: 'BRI Tebet|accounting',
+  colQ: 'Cash IDR|accounting',
+  colR: 'Non CB|accounting',
+  colS: 'AP In and Out|accounting',
+  colU: 'Outstanding IDR|accounting',
+  colV: 'Outstanding USD|accounting',
+};
 
 @Controller('finance/account-payable')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -20,30 +47,39 @@ export class AccountPayableController {
   async getAllAccountPayables(@Query('year') year?: string) {
     return this.accountPayableService.getAllAccountPayables(year ? Number(year) : undefined);
   }
-
-  @Get('tax-ledger')
+  @Get('export/excel')
   @Permissions('account-payable.index')
-  async getPaginatedTaxLedger(@Query() query: any) {
-    return this.accountPayableService.getPaginatedTaxLedger(query);
+  async exportExcel(@Query('year') year: string, @Res() res: Response) {
+    const data = await this.accountPayableService.getAllAccountPayables(year ? Number(year) : undefined);
+    const cleanData = data.map(item => {
+      const { id, tagYear, createdAt, updatedAt, ...rest } = item;
+      return rest;
+    });
+    const buffer = generateExcelBuffer(cleanData, 'Account Payable', AP_COLUMN_MAPPING);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Account_Payable_${year || 'All'}.xlsx`);
+    res.send(buffer);
   }
 
-  @Get('tax-ledger/all')
+  @Get('export/pdf')
   @Permissions('account-payable.index')
-  async getAllTaxLedger(@Query() query: any) {
-    return this.accountPayableService.getAllTaxLedger(query);
+  async exportPdf(@Query('year') year: string, @Res() res: Response) {
+    const data = await this.accountPayableService.getAllAccountPayables(year ? Number(year) : undefined);
+    const cleanData = data.map(item => {
+      const { id, tagYear, createdAt, updatedAt, ...rest } = item;
+      return rest;
+    });
+    const buffer = await generatePdfBuffer(cleanData, 'Account Payable Ledger', AP_COLUMN_MAPPING);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Account_Payable_${year || 'All'}.pdf`);
+    res.send(buffer);
   }
-
   @Post()
   @Permissions('account-payable.create')
   async createAccountPayable(@Body() data: any) {
     return this.accountPayableService.createAccountPayable(data);
   }
 
-  @Post('tax-ledger')
-  @Permissions('account-payable.create')
-  async createTaxLedger(@Body() data: any) {
-    return this.accountPayableService.createTaxLedger(data);
-  }
 
   @Post('bulk')
   @Permissions('account-payable.bulk')
@@ -51,11 +87,6 @@ export class AccountPayableController {
     return this.accountPayableService.createBulkAccountPayables(body.data, body.tagYear);
   }
 
-  @Post('tax-ledger/bulk')
-  @Permissions('account-payable.bulk')
-  async createBulkTax(@Body() body: { data: any[], tagYear: number }) {
-    return this.accountPayableService.createBulkTaxLedgers(body.data, body.tagYear);
-  }
 
   @Put(':id')
   @Permissions('account-payable.update')

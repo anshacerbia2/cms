@@ -46,7 +46,12 @@ export default function EditApLedgerModal({ open, onOpenChange, record, onSucces
       Object.keys(LABELS).forEach((key) => {
         let val = record[key];
         if (NUMERIC_COLS.includes(key)) {
-           val = val ? String(val).replace(/[^0-9.-]/g, '') : '';
+           if (val !== null && val !== undefined) {
+             const parsed = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+             val = isNaN(parsed) ? '' : parsed.toString();
+           } else {
+             val = '';
+           }
         }
         initData[key] = val || '';
       });
@@ -62,6 +67,8 @@ export default function EditApLedgerModal({ open, onOpenChange, record, onSucces
     const { name, value } = e.target;
     if (NUMERIC_COLS.includes(name)) {
       setFormData((prev: any) => ({ ...prev, [name]: cleanInputAmount(value) }));
+    } else if (name === 'colB') {
+      setFormData((prev: any) => ({ ...prev, [name]: value.replace(/[^0-9]/g, '') }));
     } else {
       setFormData((prev: any) => ({ ...prev, [name]: value }));
     }

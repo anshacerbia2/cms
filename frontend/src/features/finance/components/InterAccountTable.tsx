@@ -12,13 +12,14 @@ import { useExcelFilter } from '../hooks/useExcelFilter';
 import { ExcelColumnFilter } from './ExcelColumnFilter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FilterX } from 'lucide-react';
+import { Search, FilterX, Download, Plus, Edit2, Trash2, AlertCircle, FileSpreadsheet, FileText } from 'lucide-react';
 import Decimal from 'decimal.js';
+import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
 
 import { useInterAccount } from '../hooks/useInterAccount';
 import { toast } from "sonner";
-import { Edit2, Trash2, AlertCircle } from "lucide-react";
 import EditInterAccountModal from "./EditInterAccountModal";
+import AddInterAccountModal from "./AddInterAccountModal";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -40,6 +47,7 @@ export const InterAccountTable: React.FC = () => {
   const { can } = useAuthStore();
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString());
   const yearNum = useMemo(() => Number(yearFilter), [yearFilter]);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
@@ -180,7 +188,7 @@ export const InterAccountTable: React.FC = () => {
 
 
   const cols: { k: string; l: string; num?: boolean; isDate?: boolean }[] = [
-    { k: 'colB', l: 'Col B' },
+    { k: 'colB', l: 'Description' },
     { k: 'colC', l: 'BCA Sahardjo', num: true },
     { k: 'colD', l: 'BCA Juanda', num: true },
     { k: 'colE', l: 'Mandiri Mid Plaza', num: true },
@@ -210,7 +218,7 @@ export const InterAccountTable: React.FC = () => {
         </div>
         
         <Select value={yearFilter} onValueChange={(v) => { setYearFilter(v); }}>
-          <SelectTrigger className="w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
+          <SelectTrigger className="w-full xl:w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
             <SelectValue placeholder="Year" />
           </SelectTrigger>
           <SelectContent className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden">
@@ -225,15 +233,53 @@ export const InterAccountTable: React.FC = () => {
           </SelectContent>
         </Select>
 
-        {isAnyFilterActive && (
-          <Button 
-            onClick={handleClearFilters}
-            className="h-12 w-12 bg-white border-0 text-muted-foreground hover:text-red-500 hover:bg-red-50/50 rounded-xl shadow-sm flex items-center justify-center shrink-0 transition-all"
-            title="Clear all filters"
-          >
-            <FilterX size={20} strokeWidth={2} />
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
+          {isAnyFilterActive && (
+            <Button 
+              onClick={handleClearFilters}
+              className="h-12 w-12 bg-white border-0 text-muted-foreground hover:text-red-500 hover:bg-red-50/50 rounded-xl shadow-sm flex items-center justify-center shrink-0 transition-all"
+              title="Clear all filters"
+            >
+              <FilterX size={20} strokeWidth={2} />
+            </Button>
+          )}
+
+          {can('inter-account.create') && (
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 transition-all active:scale-95 shrink-0"
+            >
+              <Plus size={20} strokeWidth={3} />
+              <span className="text-[13px]">Add Record</span>
+            </Button>
+          )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                className="h-12 w-12 xl:w-auto xl:px-4 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center font-bold disabled:opacity-50 transition-all active:scale-95 shrink-0"
+              >
+                <Download size={20} strokeWidth={3} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden w-40">
+              <DropdownMenuItem 
+                onClick={() => downloadExcelFile(`/finance/inter-account/export/excel${yearFilter !== 'all' ? `?year=${yearFilter}` : ''}`, `InterAccount_${yearFilter !== 'all' ? yearFilter : 'All'}.xlsx`)}
+                className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-emerald-600 transition-colors flex items-center gap-2"
+              >
+                <FileSpreadsheet size={16} strokeWidth={2.5} />
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => downloadPdfFile(`/finance/inter-account/export/pdf${yearFilter !== 'all' ? `?year=${yearFilter}` : ''}`, `InterAccount_${yearFilter !== 'all' ? yearFilter : 'All'}.pdf`)}
+                className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-rose-600 transition-colors flex items-center gap-2"
+              >
+                <FileText size={16} strokeWidth={2.5} />
+                Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-premium border border-primary/5 overflow-hidden">
@@ -326,6 +372,12 @@ export const InterAccountTable: React.FC = () => {
         onOpenChange={setIsEditModalOpen}
         recordId={selectedRecordId}
         onSuccess={() => refetch()}
+      />
+      <AddInterAccountModal 
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        onSuccess={() => refetch()}
+        year={yearNum}
       />
       <Dialog 
         open={recordToDelete !== null} 

@@ -29,22 +29,22 @@ interface EditInterAccountModalProps {
 }
 
 const COL_ORDER = [
-  'colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ',
-  'colK', 'colL', 'colM', 'colN', 'colO', 'colP'
+  'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ',
+  'colK', 'colL', 'colM', 'colN', 'colO'
 ];
 
 const LABELS: Record<string, string> = {
-  colA: 'Date / Period', colB: 'Description', colC: 'BCA Sahardjo', colD: 'BCA Juanda',
+  colB: 'Description', colC: 'BCA Sahardjo', colD: 'BCA Juanda',
   colE: 'Mandiri Mid Plaza', colF: 'BRI Sahardjo', colG: 'BTN', colH: 'BJB',
   colI: 'Bank Raya', colJ: 'BRI Tebet', colK: 'Manidiri Plaza Mandiri', colL: 'BNI',
-  colM: 'Cash IDR', colN: 'Non Cash Bank', colO: 'PPn In and Out', colP: 'Remarks'
+  colM: 'Cash IDR', colN: 'Non Cash Bank', colO: 'PPn In and Out'
 };
 
 const NUMERIC_COLS = [
   'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO'
 ];
 
-const DATE_COLS = ['colA'];
+const DATE_COLS: string[] = [];
 
 export default function EditInterAccountModal({ open, onOpenChange, recordId, onSuccess }: EditInterAccountModalProps) {
   const { updateInterAccount, getInterAccountById } = useInterAccount({ page: 1 });

@@ -38,9 +38,9 @@ const LABELS: Record<string, string> = {
   colA: 'No', colB: 'Invoice No', colC: 'Date', colD: 'Year', colE: 'Billing To',
   colF: 'Sales Code', colG: 'Description', colH: 'Basic Price', colI: 'Mgmt Fee',
   colJ: 'PPN', colK: 'AR IDR', colL: 'Date Received', colM: 'BCA Sahardjo',
-  colN: 'BCA Juanda', colO: 'Mandiri Mid', colP: 'Mandiri Plasa', colQ: 'BRI Tebet',
+  colN: 'BCA Juanda', colO: 'Mandiri Mid', colP: 'Mandiri Plaza', colQ: 'BRI Tebet',
   colR: 'BRI Sahardjo', colS: 'BTN', colT: 'Bank Raya', colU: 'BNI',
-  colV: 'Cash IDR', colW: 'Non CB', colX: 'Outstanding', colZ: 'AP PPN',
+  colV: 'Cash IDR', colW: 'Non CB', colX: 'Outstanding IDR', colZ: 'AP PPN',
   colAA: 'PPh 23', colAB: 'WAPU', colAC: 'Non WAPU', colAD: 'Remarks'
 };
 
@@ -87,6 +87,8 @@ export default function EditSalesModal({ open, onOpenChange, recordId, onSuccess
     const { name, value } = e.target;
     if (NUMERIC_COLS.includes(name)) {
       setFormData((prev) => ({ ...prev, [name]: cleanInputAmount(value) }));
+    } else if (name === 'colD') {
+      setFormData((prev) => ({ ...prev, [name]: value.replace(/[^0-9]/g, '') }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }

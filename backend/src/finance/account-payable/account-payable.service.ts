@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { formatDecimal } from '../../common/utils/format.utils';
+import { parseIntSafe, parseDateSafe } from '../../common/utils/parse.utils';
 
 @Injectable()
 export class AccountPayableService {
@@ -71,105 +72,23 @@ export class AccountPayableService {
     }));
   }
 
-  async getPaginatedTaxLedger(query: any) {
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
-    const skip = (page - 1) * limit;
-    const search = query.search || "";
-    const type = query.type; // Optional: WAPU or NON_WAPU
-
-    const where: any = {};
-    if (type) where.type = type;
-    if (search) {
-      where.OR = [
-        { colC: { contains: search, mode: 'insensitive' } }, // No Faktur
-        { colD: { contains: search, mode: 'insensitive' } }, // Client
-        { colE: { contains: search, mode: 'insensitive' } }, // Reference
-      ];
+  async createAccountPayable(data: any) {
+    const parsedTagYear = parseIntSafe(data.tagYear);
+    if (!parsedTagYear) {
+      throw new BadRequestException('tagYear is required and must be a valid number');
     }
 
-    const [data, total] = await Promise.all([
-      this.prisma.taxLedger.findMany({ 
-        where,
-        skip, 
-        take: limit, 
-        orderBy: [{ id: 'asc' }] 
-      }),
-      this.prisma.taxLedger.count({ where }),
-    ]);
-
-    return {
-      data: data.map((item: any) => ({
-        ...item,
-        id: Number(item.id),
-        colF: item.colF ? Number(item.colF) : null,
-        colH: formatDecimal(item.colH),
-        colI: formatDecimal(item.colI),
-        colJ: formatDecimal(item.colJ),
-        colK: formatDecimal(item.colK),
-      })),
-      meta: { total, page, limit, lastPage: Math.ceil(total / limit) },
-    };
-  }
-
-  async getAllTaxLedger(query: any) {
-    const type = query.type;
-    const where: any = {};
-    if (type) where.type = type;
-
-    const data = await this.prisma.taxLedger.findMany({ 
-      where,
-      orderBy: [{ id: 'asc' }] 
-    });
-
-    return data.map((item: any) => ({
-      ...item,
-      id: Number(item.id),
-      colF: item.colF ? Number(item.colF) : null,
-      colH: formatDecimal(item.colH),
-      colI: formatDecimal(item.colI),
-      colJ: formatDecimal(item.colJ),
-      colK: formatDecimal(item.colK),
-    }));
-  }
-
-  async createAccountPayable(data: any) {
     return this.prisma.accountPayable.create({
       data: {
-        ...data,
-        colB: data.colB ? Number(data.colB) : null,
-        colE: data.colE?.toString() || null,   // EOY IDR
-        colF: data.colF?.toString() || null,   // EOY USD
-        colG: data.colG?.toString() || null,   // col G
-        // colH, colI, colJ are strings (passed as-is)
-        colK: data.colK?.toString() || null,   // BCA Shardjo
-        colL: data.colL?.toString() || null,   // BCA Juanda
-        colM: data.colM?.toString() || null,   // Mandiri Mid Plaza
-        colN: data.colN?.toString() || null,   // BTN
-        colO: data.colO?.toString() || null,   // BRI Shardjo
-        colP: data.colP?.toString() || null,   // BRI Tebet
-        colQ: data.colQ?.toString() || null,   // Cash IDR
-        colR: data.colR?.toString() || null,   // Non CB
-        colS: data.colS?.toString() || null,   // AP In and Out
-        // colT is string (passed as-is)
-        colU: data.colU?.toString() || null,   // Outstanding IDR
-        colV: data.colV?.toString() || null,   // Outstanding USD
-      },
-    });
-  }
-
-  async updateAccountPayable(id: number, data: any) {
-    return this.prisma.accountPayable.update({
-      where: { id },
-      data: {
-        ...data,
-        colB: data.colB ? Number(data.colB) : null,
+        colA: data.colA || null,
+        colB: parseIntSafe(data.colB),
+        colC: data.colC || null,
+        colD: data.colD || null,
         colE: data.colE?.toString() || null,   // EOY IDR
         colF: data.colF?.toString() || null,   // EOY USD
         colG: data.colG?.toString() || null,   // col G
         colH: data.colH || null,               // col H (string)
         colI: data.colI || null,               // col I (string)
-        colJ: data.colJ || null,               // col J (string)
         colK: data.colK?.toString() || null,   // BCA Shardjo
         colL: data.colL?.toString() || null,   // BCA Juanda
         colM: data.colM?.toString() || null,   // Mandiri Mid Plaza
@@ -179,10 +98,39 @@ export class AccountPayableService {
         colQ: data.colQ?.toString() || null,   // Cash IDR
         colR: data.colR?.toString() || null,   // Non CB
         colS: data.colS?.toString() || null,   // AP In and Out
-        // colT is string (passed as-is)
         colU: data.colU?.toString() || null,   // Outstanding IDR
         colV: data.colV?.toString() || null,   // Outstanding USD
+        tagYear: parsedTagYear,
       },
+    });
+  }
+
+  async updateAccountPayable(id: number, data: any) {
+    const updateData: any = {};
+    if ('colA' in data) updateData.colA = data.colA || null;
+    if ('colB' in data) updateData.colB = parseIntSafe(data.colB);
+    if ('colC' in data) updateData.colC = data.colC || null;
+    if ('colD' in data) updateData.colD = data.colD || null;
+    if ('colE' in data) updateData.colE = data.colE?.toString() || null;
+    if ('colF' in data) updateData.colF = data.colF?.toString() || null;
+    if ('colG' in data) updateData.colG = data.colG?.toString() || null;
+    if ('colH' in data) updateData.colH = data.colH || null;
+    if ('colI' in data) updateData.colI = data.colI || null;
+    if ('colK' in data) updateData.colK = data.colK?.toString() || null;
+    if ('colL' in data) updateData.colL = data.colL?.toString() || null;
+    if ('colM' in data) updateData.colM = data.colM?.toString() || null;
+    if ('colN' in data) updateData.colN = data.colN?.toString() || null;
+    if ('colO' in data) updateData.colO = data.colO?.toString() || null;
+    if ('colP' in data) updateData.colP = data.colP?.toString() || null;
+    if ('colQ' in data) updateData.colQ = data.colQ?.toString() || null;
+    if ('colR' in data) updateData.colR = data.colR?.toString() || null;
+    if ('colS' in data) updateData.colS = data.colS?.toString() || null;
+    if ('colU' in data) updateData.colU = data.colU?.toString() || null;
+    if ('colV' in data) updateData.colV = data.colV?.toString() || null;
+
+    return this.prisma.accountPayable.update({
+      where: { id },
+      data: updateData,
     });
   }
 
@@ -192,24 +140,17 @@ export class AccountPayableService {
     });
   }
 
-  async createTaxLedger(data: any) {
-    return this.prisma.taxLedger.create({
-      data: {
-        ...data,
-        colA: data.colA ? new Date(data.colA) : null,
-        colF: data.colF ? Number(data.colF) : null,
-        colH: data.colH?.toString() || null,
-        colI: data.colI?.toString() || null,
-        colJ: data.colJ?.toString() || null,
-        colK: data.colK?.toString() || null,
-      },
-    });
-  }
+
 
   async createBulkAccountPayables(data: any[], tagYear: number) {
+    const parsedTagYear = parseIntSafe(tagYear);
+    if (!parsedTagYear) {
+      throw new BadRequestException('tagYear is required and must be a valid number');
+    }
+
     const records = data.map(row => ({
       colA: row.colA || null,
-      colB: row.colB ? Number(row.colB) : null,
+      colB: parseIntSafe(row.colB),
       colC: row.colC || null,
       colD: row.colD || null,
       colE: row.colE?.toString() || null,   // EOY IDR
@@ -217,7 +158,6 @@ export class AccountPayableService {
       colG: row.colG?.toString() || null,   // col G
       colH: row.colH || null,               // col H (string)
       colI: row.colI || null,               // col I (string)
-      colJ: row.colJ || null,               // col J (string)
       colK: row.colK?.toString() || null,   // BCA Shardjo
       colL: row.colL?.toString() || null,   // BCA Juanda
       colM: row.colM?.toString() || null,   // Mandiri Mid Plaza
@@ -227,38 +167,14 @@ export class AccountPayableService {
       colQ: row.colQ?.toString() || null,   // Cash IDR
       colR: row.colR?.toString() || null,   // Non CB
       colS: row.colS?.toString() || null,   // AP In and Out
-      colT: row.colT || null,               // col T (string)
       colU: row.colU?.toString() || null,   // Outstanding IDR
       colV: row.colV?.toString() || null,   // Outstanding USD
-      tagYear: tagYear,
+      tagYear: parsedTagYear,
     }));
     return this.prisma.accountPayable.createMany({
       data: records,
     });
   }
 
-  async createBulkTaxLedgers(data: any[], tagYear: number) {
-    const records = data.map(row => ({
-      type: row.type,
-      colA: row.colA ? new Date(row.colA) : null,
-      colB: row.colB || null,
-      colC: row.colC || null,
-      colD: row.colD || null,
-      colE: row.colE || null,
-      colF: row.colF ? Number(row.colF) : null,
-      colG: row.colG || null,
-      colH: row.colH?.toString() || null,
-      colI: row.colI?.toString() || null,
-      colJ: row.colJ?.toString() || null,
-      colK: row.colK?.toString() || null,
-      colL: row.colL || null,
-      colM: row.colM || null,
-      colN: row.colN || null,
-      tagYear: tagYear,
-    }));
 
-    return this.prisma.taxLedger.createMany({
-      data: records,
-    });
-  }
 }

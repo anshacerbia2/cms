@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { formatDecimal } from '../../common/utils/format.utils';
+import { parseIntSafe, parseDateSafe } from '../../common/utils/parse.utils';
 
 @Injectable()
 export class DepreciationService {
@@ -90,11 +91,19 @@ export class DepreciationService {
   }
 
   async createDepreciation(data: any) {
+    const parsedTagYear = parseIntSafe(data.tagYear);
+    if (!parsedTagYear) {
+      throw new BadRequestException('tagYear is required and must be a valid number');
+    }
+
     return this.prisma.depreciation.create({
       data: {
-        ...data,
-        colA: data.colA ? new Date(data.colA) : null,
+        type: data.type,
+        colA: parseDateSafe(data.colA),
+        colB: data.colB || null,
+        colC: data.colC || null,
         colD: data.colD?.toString() || null,
+        colE: parseIntSafe(data.colE),
         colF: data.colF?.toString() || null,
         colG: data.colG?.toString() || null,
         colH: data.colH?.toString() || null,
@@ -111,17 +120,24 @@ export class DepreciationService {
         colS: data.colS?.toString() || null,
         colT: data.colT?.toString() || null,
         colU: data.colU?.toString() || null,
+        tagYear: parsedTagYear,
       },
     });
   }
 
   async createBulkDepreciations(data: any[], tagYear: number) {
+    const parsedTagYear = parseIntSafe(tagYear);
+    if (!parsedTagYear) {
+      throw new BadRequestException('tagYear is required and must be a valid number');
+    }
+
     const records = data.map(row => ({
-      colA: row.colA ? new Date(row.colA) : null,
+      type: row.type,
+      colA: parseDateSafe(row.colA),
       colB: row.colB || null,
       colC: row.colC || null,
       colD: row.colD?.toString() || null,
-      colE: row.colE ? Number(row.colE) : null,
+      colE: parseIntSafe(row.colE),
       colF: row.colF?.toString() || null,
       colG: row.colG?.toString() || null,
       colH: row.colH?.toString() || null,
@@ -138,7 +154,7 @@ export class DepreciationService {
       colS: row.colS?.toString() || null,
       colT: row.colT?.toString() || null,
       colU: row.colU?.toString() || null,
-      tagYear: tagYear,
+      tagYear: parsedTagYear,
     }));
 
     return this.prisma.depreciation.createMany({
@@ -176,11 +192,12 @@ export class DepreciationService {
 
   async updateDepreciation(id: number, data: any) {
     const updateData: any = {};
-    if ('colA' in data) updateData.colA = data.colA ? new Date(data.colA) : null;
+    if ('type' in data) updateData.type = data.type;
+    if ('colA' in data) updateData.colA = parseDateSafe(data.colA);
     if ('colB' in data) updateData.colB = data.colB || null;
     if ('colC' in data) updateData.colC = data.colC || null;
     if ('colD' in data) updateData.colD = data.colD?.toString() || null;
-    if ('colE' in data) updateData.colE = data.colE ? Number(data.colE) : null;
+    if ('colE' in data) updateData.colE = parseIntSafe(data.colE);
     if ('colF' in data) updateData.colF = data.colF?.toString() || null;
     if ('colG' in data) updateData.colG = data.colG?.toString() || null;
     if ('colH' in data) updateData.colH = data.colH?.toString() || null;

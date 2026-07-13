@@ -57,9 +57,9 @@ const LABELS: Record<keyof SalesRow, string> = {
   colA: 'No', colB: 'Invoice No', colC: 'Date', colD: 'Year', colE: 'Billing To',
   colF: 'Sales Code', colG: 'Description', colH: 'Basic Price', colI: 'Mgmt Fee',
   colJ: 'PPN', colK: 'AR IDR', colL: 'Date Received', colM: 'BCA Sahardjo',
-  colN: 'BCA Juanda', colO: 'Mandiri Mid', colP: 'Mandiri Plasa', colQ: 'BRI Tebet',
+  colN: 'BCA Juanda', colO: 'Mandiri Mid', colP: 'Mandiri Plaza', colQ: 'BRI Tebet',
   colR: 'BRI Sahardjo', colS: 'BTN', colT: 'Bank Raya', colU: 'BNI',
-  colV: 'Cash IDR', colW: 'Non CB', colX: 'Outstanding', colZ: 'AP PPN',
+  colV: 'Cash IDR', colW: 'Non CB', colX: 'Outstanding IDR', colZ: 'AP PPN',
   colAA: 'PPh 23', colAB: 'WAPU', colAC: 'Non WAPU', colAD: 'Remarks'
 };
 
@@ -206,6 +206,7 @@ export default function AddSalesModal({ open, onOpenChange, onSuccess, year }: A
           let value: any = cellText.trim();
           if (NUMERIC_COLS.includes(field)) value = cleanNumber(value);
           if (DATE_COLS.includes(field)) value = parseSmartDate(value);
+          else if (field === 'colD') value = value.replace(/[^0-9]/g, '');
           newRows[targetRowIndex] = { ...newRows[targetRowIndex], [field]: value };
         }
       });
@@ -341,7 +342,12 @@ export default function AddSalesModal({ open, onOpenChange, onSuccess, year }: A
                             <Input
                               placeholder={isNumeric ? "0" : isDate ? "YYYY-MM-DD" : "-"}
                               value={isNumeric ? formatInput(row[col]) : row[col]}
-                              onChange={(e) => updateRow(idx, col, isNumeric ? parseDisplay(e.target.value) : e.target.value)}
+                              onChange={(e) => {
+                                let val = e.target.value;
+                                if (isNumeric) val = parseDisplay(val);
+                                else if (col === 'colD') val = val.replace(/[^0-9]/g, '');
+                                updateRow(idx, col, val);
+                              }}
                               onBlur={(e) => isDate && updateRow(idx, col, parseSmartDate(e.target.value))}
                               onKeyDown={(e) => handleKeyDown(e, idx, col)}
                               onPaste={(e) => handlePaste(e, idx, col)}

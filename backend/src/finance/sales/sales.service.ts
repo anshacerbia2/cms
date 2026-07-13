@@ -1,26 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../common/interfaces/paginated-result.interface';
 import { formatDecimal } from '../../common/utils/format.utils';
+import { parseIntSafe, parseDateSafe } from '../../common/utils/parse.utils';
 
-const parseDecimal = (val: any) => {
-  if (val === undefined || val === null || val === '') return 0;
-  const num = Number(val);
-  return isNaN(num) ? 0 : num;
-};
 
-const parseIntSafe = (val: any) => {
-  if (!val) return null;
-  const parsed = parseInt(String(val));
-  return isNaN(parsed) ? null : parsed;
-};
-
-const parseDateSafe = (val: any) => {
-  if (!val) return null;
-  const d = new Date(val);
-  return isNaN(d.getTime()) ? null : d;
-};
 
 @Injectable()
 export class SalesService {
@@ -98,37 +83,42 @@ export class SalesService {
   }
 
   async createBulkSales(payload: any[], tagYear: number): Promise<any> {
+    const parsedTagYear = parseIntSafe(tagYear);
+    if (!parsedTagYear) {
+      throw new BadRequestException('tagYear is required and must be a valid number');
+    }
+
     const data = payload.map(row => ({
-      colA: row.colA ? String(row.colA) : null,
-      colB: row.colB ? String(row.colB) : null,
+      colA: row.colA || null,
+      colB: row.colB || null,
       colC: parseDateSafe(row.colC),
       colD: parseIntSafe(row.colD),
-      colE: row.colE ? String(row.colE) : null,
-      colF: row.colF ? String(row.colF) : null,
-      colG: row.colG ? String(row.colG) : null,
-      colH: parseDecimal(row.colH),
-      colI: parseDecimal(row.colI),
-      colJ: parseDecimal(row.colJ),
-      colK: parseDecimal(row.colK),
+      colE: row.colE || null,
+      colF: row.colF || null,
+      colG: row.colG || null,
+      colH: row.colH?.toString() || null,
+      colI: row.colI?.toString() || null,
+      colJ: row.colJ?.toString() || null,
+      colK: row.colK?.toString() || null,
       colL: parseDateSafe(row.colL),
-      colM: parseDecimal(row.colM),
-      colN: parseDecimal(row.colN),
-      colO: parseDecimal(row.colO),
-      colP: parseDecimal(row.colP),
-      colQ: parseDecimal(row.colQ),
-      colR: parseDecimal(row.colR),
-      colS: parseDecimal(row.colS),
-      colT: parseDecimal(row.colT),
-      colU: parseDecimal(row.colU),
-      colV: parseDecimal(row.colV),
-      colW: parseDecimal(row.colW),
-      colX: parseDecimal(row.colX),
-      colZ: parseDecimal(row.colZ),
-      colAA: parseDecimal(row.colAA),
-      colAB: parseDecimal(row.colAB),
-      colAC: parseDecimal(row.colAC),
-      colAD: row.colAD ? String(row.colAD) : null,
-      tagYear: tagYear,
+      colM: row.colM?.toString() || null,
+      colN: row.colN?.toString() || null,
+      colO: row.colO?.toString() || null,
+      colP: row.colP?.toString() || null,
+      colQ: row.colQ?.toString() || null,
+      colR: row.colR?.toString() || null,
+      colS: row.colS?.toString() || null,
+      colT: row.colT?.toString() || null,
+      colU: row.colU?.toString() || null,
+      colV: row.colV?.toString() || null,
+      colW: row.colW?.toString() || null,
+      colX: row.colX?.toString() || null,
+      colZ: row.colZ?.toString() || null,
+      colAA: row.colAA?.toString() || null,
+      colAB: row.colAB?.toString() || null,
+      colAC: row.colAC?.toString() || null,
+      colAD: row.colAD || null,
+      tagYear: parsedTagYear,
     }));
 
     return this.prisma.salesRecord.createMany({ data });
@@ -167,35 +157,35 @@ export class SalesService {
 
   async updateSales(id: number, data: any): Promise<any> {
     const updateData: any = {};
-    if ('colA' in data) updateData.colA = data.colA ? String(data.colA) : null;
-    if ('colB' in data) updateData.colB = data.colB ? String(data.colB) : null;
+    if ('colA' in data) updateData.colA = data.colA || null;
+    if ('colB' in data) updateData.colB = data.colB || null;
     if ('colC' in data) updateData.colC = parseDateSafe(data.colC);
     if ('colD' in data) updateData.colD = parseIntSafe(data.colD);
-    if ('colE' in data) updateData.colE = data.colE ? String(data.colE) : null;
-    if ('colF' in data) updateData.colF = data.colF ? String(data.colF) : null;
-    if ('colG' in data) updateData.colG = data.colG ? String(data.colG) : null;
-    if ('colH' in data) updateData.colH = parseDecimal(data.colH);
-    if ('colI' in data) updateData.colI = parseDecimal(data.colI);
-    if ('colJ' in data) updateData.colJ = parseDecimal(data.colJ);
-    if ('colK' in data) updateData.colK = parseDecimal(data.colK);
+    if ('colE' in data) updateData.colE = data.colE || null;
+    if ('colF' in data) updateData.colF = data.colF || null;
+    if ('colG' in data) updateData.colG = data.colG || null;
+    if ('colH' in data) updateData.colH = data.colH?.toString() || null;
+    if ('colI' in data) updateData.colI = data.colI?.toString() || null;
+    if ('colJ' in data) updateData.colJ = data.colJ?.toString() || null;
+    if ('colK' in data) updateData.colK = data.colK?.toString() || null;
     if ('colL' in data) updateData.colL = parseDateSafe(data.colL);
-    if ('colM' in data) updateData.colM = parseDecimal(data.colM);
-    if ('colN' in data) updateData.colN = parseDecimal(data.colN);
-    if ('colO' in data) updateData.colO = parseDecimal(data.colO);
-    if ('colP' in data) updateData.colP = parseDecimal(data.colP);
-    if ('colQ' in data) updateData.colQ = parseDecimal(data.colQ);
-    if ('colR' in data) updateData.colR = parseDecimal(data.colR);
-    if ('colS' in data) updateData.colS = parseDecimal(data.colS);
-    if ('colT' in data) updateData.colT = parseDecimal(data.colT);
-    if ('colU' in data) updateData.colU = parseDecimal(data.colU);
-    if ('colV' in data) updateData.colV = parseDecimal(data.colV);
-    if ('colW' in data) updateData.colW = parseDecimal(data.colW);
-    if ('colX' in data) updateData.colX = parseDecimal(data.colX);
-    if ('colZ' in data) updateData.colZ = parseDecimal(data.colZ);
-    if ('colAA' in data) updateData.colAA = parseDecimal(data.colAA);
-    if ('colAB' in data) updateData.colAB = parseDecimal(data.colAB);
-    if ('colAC' in data) updateData.colAC = parseDecimal(data.colAC);
-    if ('colAD' in data) updateData.colAD = data.colAD ? String(data.colAD) : null;
+    if ('colM' in data) updateData.colM = data.colM?.toString() || null;
+    if ('colN' in data) updateData.colN = data.colN?.toString() || null;
+    if ('colO' in data) updateData.colO = data.colO?.toString() || null;
+    if ('colP' in data) updateData.colP = data.colP?.toString() || null;
+    if ('colQ' in data) updateData.colQ = data.colQ?.toString() || null;
+    if ('colR' in data) updateData.colR = data.colR?.toString() || null;
+    if ('colS' in data) updateData.colS = data.colS?.toString() || null;
+    if ('colT' in data) updateData.colT = data.colT?.toString() || null;
+    if ('colU' in data) updateData.colU = data.colU?.toString() || null;
+    if ('colV' in data) updateData.colV = data.colV?.toString() || null;
+    if ('colW' in data) updateData.colW = data.colW?.toString() || null;
+    if ('colX' in data) updateData.colX = data.colX?.toString() || null;
+    if ('colZ' in data) updateData.colZ = data.colZ?.toString() || null;
+    if ('colAA' in data) updateData.colAA = data.colAA?.toString() || null;
+    if ('colAB' in data) updateData.colAB = data.colAB?.toString() || null;
+    if ('colAC' in data) updateData.colAC = data.colAC?.toString() || null;
+    if ('colAD' in data) updateData.colAD = data.colAD || null;
 
     return this.prisma.salesRecord.update({
       where: { id },

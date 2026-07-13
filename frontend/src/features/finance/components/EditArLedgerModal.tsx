@@ -21,12 +21,12 @@ interface EditArLedgerModalProps {
 }
 
 const LABELS = {
-  colA: 'Status', colB: 'Type', colC: 'Date', colD: 'Client',
+  colB: 'Type', colC: 'Date', colD: 'Client',
   colE: 'Description', colF: 'EOY IDR', colG: 'EOY USD',
-  colH: 'USD Rate', colI: 'Col I',
+  colH: 'USD Rate',
   colJ: 'BCA Suhardjo', colK: 'BCA Juanda', colL: 'Mandiri MP',
   colM: 'BRI Suhardjo', colN: 'Cash IDR', colO: 'Non CB',
-  colP: 'PPn In and Out', colQ: 'Col Q', colR: 'Outstanding IDR',
+  colP: 'PPn In and Out', colR: 'Outstanding IDR',
   colS: 'Outstanding USD',
 };
 
@@ -51,7 +51,12 @@ export default function EditArLedgerModal({ open, onOpenChange, record, onSucces
                 val = new Date(val).toISOString().split('T')[0];
             }
         } else if (NUMERIC_COLS.includes(key)) {
-           val = val ? String(val).replace(/[^0-9.-]/g, '') : '';
+           if (val !== null && val !== undefined) {
+             const parsed = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+             val = isNaN(parsed) ? '' : parsed.toString();
+           } else {
+             val = '';
+           }
         }
         initData[key] = val || '';
       });

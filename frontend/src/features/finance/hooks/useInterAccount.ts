@@ -21,6 +21,14 @@ export const interAccountService = {
   deleteInterAccount: async (id: number): Promise<any> => {
     const { data } = await api.delete(`/finance/inter-account/${id}`);
     return data;
+  },
+  createInterAccount: async (payload: any): Promise<any> => {
+    const { data } = await api.post(`/finance/inter-account`, payload);
+    return data;
+  },
+  createBulkInterAccount: async (payload: any): Promise<any> => {
+    const { data } = await api.post(`/finance/inter-account/bulk`, payload);
+    return data;
   }
 };
 
@@ -62,12 +70,36 @@ export const useInterAccount = ({ page, limit = 10, search, year }: FetchParams)
       }
     });
 
+  const createInterAccount = useMutation({
+      mutationFn: (data: any) => interAccountService.createInterAccount(data),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["inter-account"] });
+        toast.success("Inter Account record created successfully");
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.message || "Failed to create inter account record");
+      }
+    });
+
+  const createBulkInterAccount = useMutation({
+    mutationFn: (payload: any) => interAccountService.createBulkInterAccount(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inter-account'] });
+      toast.success('Bulk import successful');
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to perform bulk import');
+    }
+  });
+
   return {
     data: getInterAccount.data,
     isLoading: getInterAccount.isLoading,
     refetch: getInterAccount.refetch,
     getInterAccountById,
     updateInterAccount,
-    deleteInterAccount
+    deleteInterAccount,
+    createInterAccount,
+    createBulkInterAccount
   };
 };

@@ -15,7 +15,8 @@ import { Decimal } from "decimal.js";
 import { Badge } from "@/components/ui/badge";
 import AddDepreciationModal from "../components/AddDepreciationModal";
 import { toast } from "sonner";
-import { Edit2, Trash2, AlertCircle } from "lucide-react";
+import { Edit2, Trash2, AlertCircle, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
 import EditDepreciationModal from "../components/EditDepreciationModal";
 import {
   Dialog,
@@ -25,6 +26,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -334,6 +341,32 @@ export default function DepreciationPage() {
               <span className="text-[13px]">Add Depreciation</span>
             </Button>
           )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                className="h-12 w-12 xl:w-auto xl:px-4 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center font-bold disabled:opacity-50 transition-all active:scale-95 shrink-0"
+              >
+                <Download size={20} strokeWidth={3} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden w-40">
+              <DropdownMenuItem 
+                onClick={() => downloadExcelFile(`/finance/depreciation/export/excel${depYearFilter !== 'all' ? `?year=${depYearFilter}` : ''}`, `Depreciation_${depYearFilter !== 'all' ? depYearFilter : 'All'}.xlsx`)}
+                className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-emerald-600 transition-colors flex items-center gap-2"
+              >
+                <FileSpreadsheet size={16} strokeWidth={2.5} />
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => downloadPdfFile(`/finance/depreciation/export/pdf${depYearFilter !== 'all' ? `?year=${depYearFilter}` : ''}`, `Depreciation_${depYearFilter !== 'all' ? depYearFilter : 'All'}.pdf`)}
+                className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-rose-600 transition-colors flex items-center gap-2"
+              >
+                <FileText size={16} strokeWidth={2.5} />
+                Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
