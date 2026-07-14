@@ -495,6 +495,7 @@ export function ApSummaryTab() {
                     <TableCell className={`text-right whitespace-nowrap ${getValueColor(subtotalTotals.colS.toString())}`}>{formatCurrency(subtotalTotals.colS.toString())}</TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colU.toString())}</TableCell>
                     <TableCell className="pr-8 text-right text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colV.toString())}</TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
 
                   <TableRow className="bg-secondary/10 border-t border-secondary/30 hover:bg-secondary/10 transition-none font-bold whitespace-nowrap">
@@ -516,6 +517,7 @@ export function ApSummaryTab() {
                     <TableCell className={`text-right whitespace-nowrap ${getValueColor(grandTotals.colS.toString())}`}>{formatCurrency(grandTotals.colS.toString())}</TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(grandTotals.colU.toString())}</TableCell>
                     <TableCell className="pr-8 text-right text-primary whitespace-nowrap">{formatCurrency(grandTotals.colV.toString())}</TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
                 </>
               )}

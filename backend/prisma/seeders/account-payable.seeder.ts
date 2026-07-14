@@ -56,42 +56,42 @@ export async function seedAccountPayable(prisma: PrismaClient) {
   }
 
   // 2. Seed AP PPN (WAPU & Non-WAPU)
-  const sheets = [
-    { name: 'AP PPN WAPU', type: 'WAPU', startRow: 1 },
-    { name: 'AP PPN Non WAPU', type: 'NON_WAPU', startRow: 3 }
-  ];
+  // const sheets = [
+  //   { name: 'AP PPN WAPU', type: 'WAPU', startRow: 1 },
+  //   { name: 'AP PPN Non WAPU', type: 'NON_WAPU', startRow: 3 }
+  // ];
 
-  for (const sheetInfo of sheets) {
-    const sheet = workbook.Sheets[sheetInfo.name];
-    if (sheet) {
-      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      const ppnData = [];
+  // for (const sheetInfo of sheets) {
+  //   const sheet = workbook.Sheets[sheetInfo.name];
+  //   if (sheet) {
+  //     const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  //     const ppnData = [];
       
-      for (let i = sheetInfo.startRow; i < rows.length; i++) {
-        const row = rows[i];
-        if (isRowEmpty(row)) break;
+  //     for (let i = sheetInfo.startRow; i < rows.length; i++) {
+  //       const row = rows[i];
+  //       if (isRowEmpty(row)) break;
         
-        ppnData.push({
-          type: sheetInfo.type as any,
-          colA: excelDateToJSDate(row[0]),
-          colB: cleanString(row[1]),
-          colC: cleanString(row[2]),
-          colD: cleanString(row[3]),
-          colE: cleanString(row[4]),
-          colF: row[5] ? parseInt(String(row[5])) : null,
-          colG: cleanString(row[6]),
-          colH: cleanCurrency(row[7]),
-          colI: cleanCurrency(row[8]),
-          colJ: cleanCurrency(row[9]),
-          colK: cleanCurrency(row[10]),
-          colL: cleanString(row[11]),
-          colM: cleanString(row[12]),
-          colN: cleanString(row[13]),
-          colO: cleanString(row[14]),
-        });
-      }
-      await prisma.taxLedger.createMany({ data: ppnData });
-      console.log(`✅ Seeded ${ppnData.length} records for AP Tax Ledger ${sheetInfo.type}`);
-    }
-  }
+  //       ppnData.push({
+  //         type: sheetInfo.type as any,
+  //         colA: excelDateToJSDate(row[0]),
+  //         colB: cleanString(row[1]),
+  //         colC: cleanString(row[2]),
+  //         colD: cleanString(row[3]),
+  //         colE: cleanString(row[4]),
+  //         colF: row[5] ? parseInt(String(row[5])) : null,
+  //         colG: cleanString(row[6]),
+  //         colH: cleanCurrency(row[7]),
+  //         colI: cleanCurrency(row[8]),
+  //         colJ: cleanCurrency(row[9]),
+  //         colK: cleanCurrency(row[10]),
+  //         colL: cleanString(row[11]),
+  //         colM: cleanString(row[12]),
+  //         colN: cleanString(row[13]),
+  //         colO: cleanString(row[14]),
+  //       });
+  //     }
+  //     await prisma.taxLedger.createMany({ data: ppnData });
+  //     console.log(`✅ Seeded ${ppnData.length} records for AP Tax Ledger ${sheetInfo.type}`);
+  //   }
+  // }
 }

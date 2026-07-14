@@ -464,6 +464,7 @@ export default function AccountReceivablePage() {
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colS.toString(), false)}`}>
                       {formatCurrency(subtotalTotals.colS.toString())}
                     </TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
 
                   {/* Grand Total Row */}
@@ -497,6 +498,7 @@ export default function AccountReceivablePage() {
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colS.toString(), false)}`}>
                       {formatCurrency(grandTotals.colS.toString())}
                     </TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
                 </>
               )}

@@ -318,7 +318,7 @@ CREATE TABLE "sales_records" (
     "colAB" DECIMAL(19,4),
     "colAC" DECIMAL(19,4),
     "colAD" TEXT,
-    "tagYear" INTEGER,
+    "tagYear" INTEGER NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -379,7 +379,7 @@ CREATE TABLE "account_payables" (
     "colT" TEXT,
     "colU" DECIMAL(19,4),
     "colV" DECIMAL(19,4),
-    "tagYear" INTEGER,
+    "tagYear" INTEGER NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -436,7 +436,7 @@ CREATE TABLE "depreciation" (
     "col_t" DECIMAL(19,4) DEFAULT 0,
     "col_u" DECIMAL(19,4) DEFAULT 0,
     "type" "DepreciationType" NOT NULL DEFAULT 'OFFICE_EQUIPMENT',
-    "tagYear" INTEGER,
+    "tagYear" INTEGER NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -496,11 +496,66 @@ CREATE TABLE "equity_properties" (
     "id" BIGSERIAL NOT NULL,
     "year" INTEGER NOT NULL,
     "key" TEXT NOT NULL,
-    "value" DECIMAL(19,4) NOT NULL,
+    "value" DECIMAL(19,4),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "equity_properties_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ppn_in_out" (
+    "id" BIGSERIAL NOT NULL,
+    "colA" DATE,
+    "colB" TEXT,
+    "colC" TEXT,
+    "colD" TEXT,
+    "colE" TEXT,
+    "colF" INTEGER,
+    "colG" DECIMAL(19,4),
+    "colH" DECIMAL(19,4),
+    "colI" DECIMAL(19,4),
+    "colJ" DECIMAL(19,4),
+    "colK" DECIMAL(19,4),
+    "colL" TEXT,
+    "colM" DECIMAL(19,4),
+    "colN" DECIMAL(19,4),
+    "colO" DECIMAL(19,4),
+    "colP" TEXT,
+    "colQ" TEXT,
+    "colR" TEXT,
+    "colS" TEXT,
+    "tagYear" INTEGER NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ppn_in_out_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "inter_account" (
+    "id" BIGSERIAL NOT NULL,
+    "colA" TEXT,
+    "colB" TEXT,
+    "colC" DECIMAL(19,4),
+    "colD" DECIMAL(19,4),
+    "colE" DECIMAL(19,4),
+    "colF" DECIMAL(19,4),
+    "colG" DECIMAL(19,4),
+    "colH" DECIMAL(19,4),
+    "colI" DECIMAL(19,4),
+    "colJ" DECIMAL(19,4),
+    "colK" DECIMAL(19,4),
+    "colL" DECIMAL(19,4),
+    "colM" DECIMAL(19,4),
+    "colN" DECIMAL(19,4),
+    "colO" DECIMAL(19,4),
+    "colP" DECIMAL(19,4),
+    "tagYear" INTEGER NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "inter_account_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex

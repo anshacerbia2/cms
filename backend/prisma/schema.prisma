@@ -1,5 +1,5 @@
 generator client {
-  provider        = "prisma-client-js"
+  provider = "prisma-client-js"
   // previewFeatures = ["driverAdapters"]
 }
 
@@ -33,20 +33,20 @@ model Permission {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  roles       RolePermission[]
-  menus       Menu[]
+  roles RolePermission[]
+  menus Menu[]
 
   @@map("permissions")
 }
 
 model RolePermission {
-  roleId       BigInt     @map("role_id")
-  permissionId BigInt     @map("permission_id")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+  roleId       BigInt   @map("role_id")
+  permissionId BigInt   @map("permission_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
   @@map("role_permission")
@@ -66,8 +66,8 @@ model User {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
-  role            Role?      @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  fiscalPeriods   FiscalPeriod[] @relation("ClosedBy")
+  role          Role?          @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  fiscalPeriods FiscalPeriod[] @relation("ClosedBy")
 
   @@map("users")
 }
@@ -89,10 +89,10 @@ model Menu {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  parent       Menu?    @relation("MenuToMenu", fields: [parentId], references: [id], onDelete: SetNull)
-  children     Menu[]   @relation("MenuToMenu")
-  permission   Permission? @relation(fields: [permissionId], references: [id], onDelete: SetNull)
-  roles        RoleMenu[]
+  parent     Menu?       @relation("MenuToMenu", fields: [parentId], references: [id], onDelete: SetNull)
+  children   Menu[]      @relation("MenuToMenu")
+  permission Permission? @relation(fields: [permissionId], references: [id], onDelete: SetNull)
+  roles      RoleMenu[]
 
   @@map("menus")
 }
@@ -104,8 +104,8 @@ model RoleMenu {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  menu      Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  menu Menu @relation(fields: [menuId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, menuId])
   @@map("role_menu")
@@ -114,20 +114,20 @@ model RoleMenu {
 // --- MASTER DATA: CUSTOMERS ---
 
 model Customer {
-  id                BigInt          @id @default(autoincrement())
-  code              String          @unique @db.VarChar(255)
-  name              String          @db.VarChar(255)
-  bankName          String?         @map("bank_name") @db.VarChar(255)
-  bankAccountNumber String?         @map("bank_account_number") @db.VarChar(255)
-  bankAccountName   String?         @map("bank_account_name") @db.VarChar(255)
-  status            CustomerStatus  @default(ACTIVE)
-  notes             String?         @db.Text
-  createdAt         DateTime        @default(now()) @map("created_at")
-  updatedAt         DateTime        @updatedAt @map("updated_at")
-  deletedAt         DateTime?       @map("deleted_at")
+  id                BigInt         @id @default(autoincrement())
+  code              String         @unique @db.VarChar(255)
+  name              String         @db.VarChar(255)
+  bankName          String?        @map("bank_name") @db.VarChar(255)
+  bankAccountNumber String?        @map("bank_account_number") @db.VarChar(255)
+  bankAccountName   String?        @map("bank_account_name") @db.VarChar(255)
+  status            CustomerStatus @default(ACTIVE)
+  notes             String?        @db.Text
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  deletedAt         DateTime?      @map("deleted_at")
 
-  billingOptions    BillingOption[]
-  pics              CustomerPic[]
+  billingOptions BillingOption[]
+  pics           CustomerPic[]
 
   @@index([name])
   @@index([status])
@@ -140,39 +140,39 @@ enum CustomerStatus {
 }
 
 model BillingOption {
-  id             BigInt    @id @default(autoincrement())
-  customerId     BigInt    @map("customer_id")
-  cpName         String?   @map("cp_name") @db.VarChar(255)
-  cpTitleDivision String?  @map("cp_title_division") @db.VarChar(255)
-  cpEmail        String?   @map("cp_email") @db.VarChar(255)
-  cpOfficeNumber String?   @map("cp_office_number") @db.VarChar(255)
-  cpMobileNumber String?   @map("cp_mobile_number") @db.VarChar(255)
-  isOverseas     Boolean   @default(false) @map("is_overseas")
-  address        String?   @db.Text
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  deletedAt      DateTime? @map("deleted_at")
+  id              BigInt    @id @default(autoincrement())
+  customerId      BigInt    @map("customer_id")
+  cpName          String?   @map("cp_name") @db.VarChar(255)
+  cpTitleDivision String?   @map("cp_title_division") @db.VarChar(255)
+  cpEmail         String?   @map("cp_email") @db.VarChar(255)
+  cpOfficeNumber  String?   @map("cp_office_number") @db.VarChar(255)
+  cpMobileNumber  String?   @map("cp_mobile_number") @db.VarChar(255)
+  isOverseas      Boolean   @default(false) @map("is_overseas")
+  address         String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
 
-  customer       Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
   @@map("billing_options")
 }
 
 model CustomerPic {
-  id         BigInt         @id @default(autoincrement())
-  customerId BigInt         @map("customer_id")
-  name       String         @db.VarChar(255)
-  email      String?        @db.VarChar(255)
-  phone      String?        @db.VarChar(255)
-  position   String?        @db.VarChar(255)
-  status     PicStatus      @default(ACTIVE)
-  notes      String?        @db.Text
-  createdAt  DateTime       @default(now()) @map("created_at")
-  updatedAt  DateTime       @updatedAt @map("updated_at")
-  deletedAt  DateTime?      @map("deleted_at")
+  id         BigInt    @id @default(autoincrement())
+  customerId BigInt    @map("customer_id")
+  name       String    @db.VarChar(255)
+  email      String?   @db.VarChar(255)
+  phone      String?   @db.VarChar(255)
+  position   String?   @db.VarChar(255)
+  status     PicStatus @default(ACTIVE)
+  notes      String?   @db.Text
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
 
-  customer   Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
   @@index([name])
@@ -188,25 +188,25 @@ enum PicStatus {
 // --- MASTER DATA: SUPPLIERS ---
 
 model Supplier {
-  id                BigInt          @id @default(autoincrement())
-  code              String          @unique @db.VarChar(255)
-  name              String          @db.VarChar(255)
-  address           String?         @db.Text
-  contactPerson     String?         @map("contact_person") @db.VarChar(255)
-  phone             String?         @db.VarChar(255)
-  email             String?         @db.VarChar(255)
-  taxNumber         String?         @map("tax_number") @db.VarChar(255)
-  bankName          String?         @map("bank_name") @db.VarChar(255)
-  bankAccountNumber String?         @map("bank_account_number") @db.VarChar(255)
-  bankAccountName   String?         @map("bank_account_name") @db.VarChar(255)
-  status            SupplierStatus  @default(ACTIVE)
-  notes             String?         @db.Text
-  createdAt         DateTime        @default(now()) @map("created_at")
-  updatedAt         DateTime        @updatedAt @map("updated_at")
-  deletedAt         DateTime?       @map("deleted_at")
+  id                BigInt         @id @default(autoincrement())
+  code              String         @unique @db.VarChar(255)
+  name              String         @db.VarChar(255)
+  address           String?        @db.Text
+  contactPerson     String?        @map("contact_person") @db.VarChar(255)
+  phone             String?        @db.VarChar(255)
+  email             String?        @db.VarChar(255)
+  taxNumber         String?        @map("tax_number") @db.VarChar(255)
+  bankName          String?        @map("bank_name") @db.VarChar(255)
+  bankAccountNumber String?        @map("bank_account_number") @db.VarChar(255)
+  bankAccountName   String?        @map("bank_account_name") @db.VarChar(255)
+  status            SupplierStatus @default(ACTIVE)
+  notes             String?        @db.Text
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  deletedAt         DateTime?      @map("deleted_at")
 
-  pics              SupplierPic[]
-  products          Product[]
+  pics     SupplierPic[]
+  products Product[]
 
   @@index([name])
   @@index([status])
@@ -219,19 +219,19 @@ enum SupplierStatus {
 }
 
 model SupplierPic {
-  id         BigInt         @id @default(autoincrement())
-  supplierId BigInt         @map("supplier_id")
-  name       String         @db.VarChar(255)
-  email      String?        @db.VarChar(255)
-  phone      String?        @db.VarChar(255)
-  position   String?        @db.VarChar(255)
-  status     PicStatus      @default(ACTIVE)
-  notes      String?        @db.Text
-  createdAt  DateTime       @default(now()) @map("created_at")
-  updatedAt  DateTime       @updatedAt @map("updated_at")
-  deletedAt  DateTime?      @map("deleted_at")
+  id         BigInt    @id @default(autoincrement())
+  supplierId BigInt    @map("supplier_id")
+  name       String    @db.VarChar(255)
+  email      String?   @db.VarChar(255)
+  phone      String?   @db.VarChar(255)
+  position   String?   @db.VarChar(255)
+  status     PicStatus @default(ACTIVE)
+  notes      String?   @db.Text
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
 
-  supplier   Supplier       @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   @@index([supplierId])
   @@index([name])
@@ -242,31 +242,31 @@ model SupplierPic {
 // --- MASTER DATA: PRODUCTS ---
 
 model ProductCategory {
-  id          BigInt    @id @default(autoincrement())
-  name        String    @unique @db.VarChar(255)
-  description String?   @db.Text
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id          BigInt   @id @default(autoincrement())
+  name        String   @unique @db.VarChar(255)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  products    Product[]
+  products Product[]
 
   @@map("product_categories")
 }
 
 model Product {
-  id          BigInt          @id @default(autoincrement())
-  code        String          @unique @db.VarChar(255)
-  name        String          @db.VarChar(255)
-  description String?         @db.Text
-  unit        String          @db.VarChar(50)
-  categoryId  BigInt?         @map("category_id")
-  supplierId  BigInt?         @map("supplier_id")
-  createdAt   DateTime        @default(now()) @map("created_at")
-  updatedAt   DateTime        @updatedAt @map("updated_at")
-  deletedAt   DateTime?       @map("deleted_at")
+  id          BigInt    @id @default(autoincrement())
+  code        String    @unique @db.VarChar(255)
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  unit        String    @db.VarChar(50)
+  categoryId  BigInt?   @map("category_id")
+  supplierId  BigInt?   @map("supplier_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
 
-  category    ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  supplier    Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  category ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  supplier Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@index([name])
   @@index([code])
@@ -276,13 +276,13 @@ model Product {
 // --- MASTER DATA: BANKS ---
 
 model Bank {
-  id          BigInt            @id @default(autoincrement())
-  bankCode    String            @unique @map("bank_code") @db.Char(3)
-  bankName    String            @map("bank_name") @db.VarChar(255)
-  bankBrand   String            @map("bank_brand") @db.VarChar(50)
-  bankAddress String?           @map("bank_address") @db.Text
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt @map("updated_at")
+  id          BigInt   @id @default(autoincrement())
+  bankCode    String   @unique @map("bank_code") @db.Char(3)
+  bankName    String   @map("bank_name") @db.VarChar(255)
+  bankBrand   String   @map("bank_brand") @db.VarChar(50)
+  bankAddress String?  @map("bank_address") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   internalAccounts InternalAccount[]
 
@@ -291,40 +291,40 @@ model Bank {
 }
 
 model InternalAccount {
-  id          BigInt               @id @default(autoincrement())
-  bankId      BigInt?              @map("bank_id")
-  userId      BigInt?              @map("user_id") // Links to owner/responsible user
-  type        InternalAccountType  @default(BANK)
-  accountNo   String?              @map("account_no") @db.VarChar(50)
-  branch      String?              @db.VarChar(255)
-  swiftCode   String?              @map("swift_code") @db.VarChar(20)
-  holderName  String               @map("holder_name") @db.VarChar(255)
-  createdAt   DateTime             @default(now()) @map("created_at")
-  updatedAt   DateTime             @updatedAt @map("updated_at")
+  id         BigInt              @id @default(autoincrement())
+  bankId     BigInt?             @map("bank_id")
+  userId     BigInt?             @map("user_id") // Links to owner/responsible user
+  type       InternalAccountType @default(BANK)
+  accountNo  String?             @map("account_no") @db.VarChar(50)
+  branch     String?             @db.VarChar(255)
+  swiftCode  String?             @map("swift_code") @db.VarChar(20)
+  holderName String              @map("holder_name") @db.VarChar(255)
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
 
-  bank        Bank?                @relation(fields: [bankId], references: [id], onDelete: Restrict)
-  fiscalPeriods   FiscalPeriod[]
-  transactions    FinancialTransaction[]
+  bank          Bank?                  @relation(fields: [bankId], references: [id], onDelete: Restrict)
+  fiscalPeriods FiscalPeriod[]
+  transactions  FinancialTransaction[]
 
   @@unique([accountNo, type, holderName, branch])
   @@map("internal_accounts")
 }
 
 model FiscalPeriod {
-  id                BigInt          @id @default(autoincrement())
-  internalAccountId BigInt          @map("internal_account_id")
+  id                BigInt       @id @default(autoincrement())
+  internalAccountId BigInt       @map("internal_account_id")
   year              Int
-  openingBalance    Decimal         @default(0) @db.Decimal(19, 4) @map("opening_balance")
-  closingBalance    Decimal?        @db.Decimal(19, 4) @map("closing_balance") // Audited Snapshot
-  status            FiscalStatus    @default(OPEN)
-  isStale           Boolean         @default(false) @map("is_stale")
-  closedAt          DateTime?       @map("closed_at")
-  closedById        BigInt?         @map("closed_by_id")
-  createdAt         DateTime        @default(now()) @map("created_at")
-  updatedAt         DateTime        @updatedAt @map("updated_at")
+  openingBalance    Decimal      @default(0) @map("opening_balance") @db.Decimal(19, 4)
+  closingBalance    Decimal?     @map("closing_balance") @db.Decimal(19, 4) // Audited Snapshot
+  status            FiscalStatus @default(OPEN)
+  isStale           Boolean      @default(false) @map("is_stale")
+  closedAt          DateTime?    @map("closed_at")
+  closedById        BigInt?      @map("closed_by_id")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
 
-  internalAccount   InternalAccount @relation(fields: [internalAccountId], references: [id], onDelete: Cascade)
-  closedBy          User?           @relation("ClosedBy", fields: [closedById], references: [id])
+  internalAccount InternalAccount @relation(fields: [internalAccountId], references: [id], onDelete: Cascade)
+  closedBy        User?           @relation("ClosedBy", fields: [closedById], references: [id])
 
   @@unique([internalAccountId, year])
   @@map("fiscal_periods")
@@ -342,12 +342,11 @@ enum InternalAccountType {
   OTHER
 }
 
-
 // --- FINANCIAL DATA: CONSOLIDATED BANK LEDGER ---
 
 model FinancialTransaction {
-  id                BigInt   @id @default(autoincrement())
-  internalAccountId BigInt?  @map("internal_account_id")
+  id                BigInt    @id @default(autoincrement())
+  internalAccountId BigInt?   @map("internal_account_id")
   colA              DateTime? @map("col_a") // Date
   colB              String?   @map("col_b") @db.Text // Description
   colC              Decimal?  @default(0) @map("col_c") @db.Decimal(19, 4) // Debit
@@ -358,10 +357,10 @@ model FinancialTransaction {
   colH              String?   @map("col_h") @db.Text // Sub Ledger 2
   colI              String?   @map("col_i") @db.Text // Sub Ledger 3
   tagYear           Int
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  internalAccount   InternalAccount? @relation(fields: [internalAccountId], references: [id])
+  internalAccount InternalAccount? @relation(fields: [internalAccountId], references: [id])
 
   @@map("financial_transactions")
 }
@@ -369,99 +368,99 @@ model FinancialTransaction {
 // --- FINANCIAL DATA: SALES & REVENUE ---
 
 model SalesRecord {
-  id              BigInt   @id @default(autoincrement())
-  colA            String?  @db.VarChar(100) // No
-  colB            String?  @db.VarChar(100) // Invoice No
-  colC            DateTime? // Date
-  colD            Int? // Year
-  colE            String?  @db.Text // Billing To
-  colF            String?  @db.Text // Sales Code
-  colG            String?  @db.Text // Description
-  colH            Decimal? @db.Decimal(19, 4) // Basic Price
-  colI            Decimal? @db.Decimal(19, 4) // Management Fee
-  colJ            Decimal? @db.Decimal(19, 4) // PPN
-  colK            Decimal? @db.Decimal(19, 4) // Account Receivable IDR
-  colL            DateTime? // Date Received
-  colM            Decimal? @db.Decimal(19, 4) // BCA Sahardjo
-  colN            Decimal? @db.Decimal(19, 4) // BCA Juanda
-  colO            Decimal? @db.Decimal(19, 4) // Mandiri Mid Plaza
-  colP            Decimal? @db.Decimal(19, 4) // Mandiri Plaza Mandiri
-  colQ            Decimal? @db.Decimal(19, 4) // BRI Tebet
-  colR            Decimal? @db.Decimal(19, 4) // BRI Sahardjo
-  colS            Decimal? @db.Decimal(19, 4) // BTN
-  colT            Decimal? @db.Decimal(19, 4) // Bank Raya
-  colU            Decimal? @db.Decimal(19, 4) // BNI
-  colV            Decimal? @db.Decimal(19, 4) // Cash IDR
-  colW            Decimal? @db.Decimal(19, 4) // Non CB
-  colX            Decimal? @db.Decimal(19, 4) // Outstanding IDR
-  colY            String?  @db.Text // Blank
-  colZ            Decimal? @db.Decimal(19, 4) // AP PPn
-  colAA           Decimal? @db.Decimal(19, 4) // PPh-23
-  colAB           Decimal? @db.Decimal(19, 4) // WAPU
-  colAC           Decimal? @db.Decimal(19, 4) // Non WAPU
-  colAD           String?  @db.Text // Remarks
-  tagYear         Int? // Tag Year
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id        BigInt    @id @default(autoincrement())
+  colA      String?   @db.VarChar(100) // No
+  colB      String?   @db.VarChar(100) // Invoice No
+  colC      DateTime? // Date
+  colD      Int? // Year
+  colE      String?   @db.Text // Billing To
+  colF      String?   @db.Text // Sales Code
+  colG      String?   @db.Text // Description
+  colH      Decimal?  @db.Decimal(19, 4) // Basic Price
+  colI      Decimal?  @db.Decimal(19, 4) // Management Fee
+  colJ      Decimal?  @db.Decimal(19, 4) // PPN
+  colK      Decimal?  @db.Decimal(19, 4) // Account Receivable IDR
+  colL      DateTime? // Date Received
+  colM      Decimal?  @db.Decimal(19, 4) // BCA Sahardjo
+  colN      Decimal?  @db.Decimal(19, 4) // BCA Juanda
+  colO      Decimal?  @db.Decimal(19, 4) // Mandiri Mid Plaza
+  colP      Decimal?  @db.Decimal(19, 4) // Mandiri Plaza Mandiri
+  colQ      Decimal?  @db.Decimal(19, 4) // BRI Tebet
+  colR      Decimal?  @db.Decimal(19, 4) // BRI Sahardjo
+  colS      Decimal?  @db.Decimal(19, 4) // BTN
+  colT      Decimal?  @db.Decimal(19, 4) // Bank Raya
+  colU      Decimal?  @db.Decimal(19, 4) // BNI
+  colV      Decimal?  @db.Decimal(19, 4) // Cash IDR
+  colW      Decimal?  @db.Decimal(19, 4) // Non CB
+  colX      Decimal?  @db.Decimal(19, 4) // Outstanding IDR
+  colY      String?   @db.Text // Blank
+  colZ      Decimal?  @db.Decimal(19, 4) // AP PPn
+  colAA     Decimal?  @db.Decimal(19, 4) // PPh-23
+  colAB     Decimal?  @db.Decimal(19, 4) // WAPU
+  colAC     Decimal?  @db.Decimal(19, 4) // Non WAPU
+  colAD     String?   @db.Text // Remarks
+  tagYear   Int // Tag Year
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@map("sales_records")
 }
 
 model AccountReceivable {
-  id              BigInt   @id @default(autoincrement())
-  colA            String?  @db.VarChar(100) // Blank
-  colB            String?  @db.VarChar(100) // Receiveable
-  colC            String?  @db.Text // Year
-  colD            String?  @db.Text // col D (Subject)
-  colE            String?  @db.Text // Description
-  colF            Decimal? @db.Decimal(19, 4) // EOY IDR
-  colG            Decimal? @db.Decimal(19, 4) // EOY USD
-  colH            Decimal? @db.Decimal(19, 4) // col H (USD Rate)
-  colI            String?  @db.Text // col I (Blank)
-  colJ            Decimal? @db.Decimal(19, 4) // BCA Shardjo
-  colK            Decimal? @db.Decimal(19, 4) // BCA Juanda
-  colL            Decimal? @db.Decimal(19, 4) // Mandiri Mid Plaza
-  colM            Decimal? @db.Decimal(19, 4) // BRI Shardjo
-  colN            Decimal? @db.Decimal(19, 4) // Cash IDR
-  colO            Decimal? @db.Decimal(19, 4) // Non CB
-  colP            Decimal? @db.Decimal(19, 4) // PPn In/Out
-  colQ            String?  @db.Text // col Q (Blank)
-  colR            Decimal? @db.Decimal(19, 4) // Outstanding IDR
-  colS            Decimal? @db.Decimal(19, 4) // Outstanding USD
-  tagYear         Int
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id        BigInt   @id @default(autoincrement())
+  colA      String?  @db.VarChar(100) // Blank
+  colB      String?  @db.VarChar(100) // Receiveable
+  colC      String?  @db.Text // Year
+  colD      String?  @db.Text // col D (Subject)
+  colE      String?  @db.Text // Description
+  colF      Decimal? @db.Decimal(19, 4) // EOY IDR
+  colG      Decimal? @db.Decimal(19, 4) // EOY USD
+  colH      Decimal? @db.Decimal(19, 4) // col H (USD Rate)
+  colI      String?  @db.Text // col I (Blank)
+  colJ      Decimal? @db.Decimal(19, 4) // BCA Shardjo
+  colK      Decimal? @db.Decimal(19, 4) // BCA Juanda
+  colL      Decimal? @db.Decimal(19, 4) // Mandiri Mid Plaza
+  colM      Decimal? @db.Decimal(19, 4) // BRI Shardjo
+  colN      Decimal? @db.Decimal(19, 4) // Cash IDR
+  colO      Decimal? @db.Decimal(19, 4) // Non CB
+  colP      Decimal? @db.Decimal(19, 4) // PPn In/Out
+  colQ      String?  @db.Text // col Q (Blank)
+  colR      Decimal? @db.Decimal(19, 4) // Outstanding IDR
+  colS      Decimal? @db.Decimal(19, 4) // Outstanding USD
+  tagYear   Int
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("account_receivables")
 }
 
 model AccountPayable {
-  id              BigInt   @id @default(autoincrement())
-  colA            String?  @db.VarChar(100)   // Payable (Supplier, Deposit) 
-  colB            Int?                        // Year
-  colC            String?  @db.Text           // Vendor
-  colD            String?  @db.Text           // Description
-  colE            Decimal? @db.Decimal(19, 4) // EOY IDR
-  colF            Decimal? @db.Decimal(19, 4) // EOY USD
-  colG            Decimal? @db.Decimal(19, 4) // col G (USD Rate)
-  colH            String?  @db.Text           // col H
-  colI            String?  @db.Text           // col I
-  colJ            String?  @db.Text           // col J (Blank)
-  colK            Decimal? @db.Decimal(19, 4) // BCA Shardjo
-  colL            Decimal? @db.Decimal(19, 4) // BCA Juanda
-  colM            Decimal? @db.Decimal(19, 4) // Mandiri Mid Plaza
-  colN            Decimal? @db.Decimal(19, 4) // BTN
-  colO            Decimal? @db.Decimal(19, 4) // BRI Shardjo
-  colP            Decimal? @db.Decimal(19, 4) // BRI Tebet
-  colQ            Decimal? @db.Decimal(19, 4) // Cash IDR
-  colR            Decimal? @db.Decimal(19, 4) // Non CB 
-  colS            Decimal? @db.Decimal(19, 4) // AP In and Out
-  colT            String?  @db.Text           // col T (Blank)
-  colU            Decimal? @db.Decimal(19, 4) // OUTSTANDING IDR
-  colV            Decimal? @db.Decimal(19, 4) // OUTSTANDING USD
-  tagYear         Int?
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id        BigInt   @id @default(autoincrement())
+  colA      String?  @db.VarChar(100) // Payable (Supplier, Deposit) 
+  colB      Int? // Year
+  colC      String?  @db.Text // Vendor
+  colD      String?  @db.Text // Description
+  colE      Decimal? @db.Decimal(19, 4) // EOY IDR
+  colF      Decimal? @db.Decimal(19, 4) // EOY USD
+  colG      Decimal? @db.Decimal(19, 4) // col G (USD Rate)
+  colH      String?  @db.Text // col H
+  colI      String?  @db.Text // col I
+  colJ      String?  @db.Text // col J (Blank)
+  colK      Decimal? @db.Decimal(19, 4) // BCA Shardjo
+  colL      Decimal? @db.Decimal(19, 4) // BCA Juanda
+  colM      Decimal? @db.Decimal(19, 4) // Mandiri Mid Plaza
+  colN      Decimal? @db.Decimal(19, 4) // BTN
+  colO      Decimal? @db.Decimal(19, 4) // BRI Shardjo
+  colP      Decimal? @db.Decimal(19, 4) // BRI Tebet
+  colQ      Decimal? @db.Decimal(19, 4) // Cash IDR
+  colR      Decimal? @db.Decimal(19, 4) // Non CB 
+  colS      Decimal? @db.Decimal(19, 4) // AP In and Out
+  colT      String?  @db.Text // col T (Blank)
+  colU      Decimal? @db.Decimal(19, 4) // OUTSTANDING IDR
+  colV      Decimal? @db.Decimal(19, 4) // OUTSTANDING USD
+  tagYear   Int
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("account_payables")
 }
@@ -478,25 +477,25 @@ enum DepreciationType {
 }
 
 model TaxLedger {
-  id              BigInt      @id @default(autoincrement())
-  type            PpnType
-  colA            DateTime?   @db.Date        // Masa
-  colB            String?     @db.VarChar(100) // Faktur
-  colC            String?     @db.VarChar(100) // No Faktur
-  colD            String?     @db.Text         // Client / Supplier
-  colE            String?     @db.VarChar(255) // Reference
-  colF            Int?                         // Sales (Year)
-  colG            String?     @db.VarChar(100) // STATUS
-  colH            Decimal?    @db.Decimal(19, 4) // PPN
-  colI            Decimal?    @db.Decimal(19, 4) // Amount (WAPU/Non-WAPU)
-  colJ            Decimal?    @db.Decimal(19, 4) // Masukan (WAPU/Non WAPU Paid)
-  colK            Decimal?    @db.Decimal(19, 4) // Kurang Bayar (AP PPN WAPU)
-  colL            String?     @db.VarChar(255) // Account
-  colM            String?     @db.VarChar(255) // Sub Ledger 1
-  colN            String?     @db.VarChar(255) // Sub Ledger 2
-  colO            String?     @db.VarChar(255) // Sub Ledger 3
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
+  id        BigInt    @id @default(autoincrement())
+  type      PpnType
+  colA      DateTime? @db.Date // Masa
+  colB      String?   @db.VarChar(100) // Faktur
+  colC      String?   @db.VarChar(100) // No Faktur
+  colD      String?   @db.Text // Client / Supplier
+  colE      String?   @db.VarChar(255) // Reference
+  colF      Int? // Sales (Year)
+  colG      String?   @db.VarChar(100) // STATUS
+  colH      Decimal?  @db.Decimal(19, 4) // PPN
+  colI      Decimal?  @db.Decimal(19, 4) // Amount (WAPU/Non-WAPU)
+  colJ      Decimal?  @db.Decimal(19, 4) // Masukan (WAPU/Non WAPU Paid)
+  colK      Decimal?  @db.Decimal(19, 4) // Kurang Bayar (AP PPN WAPU)
+  colL      String?   @db.VarChar(255) // Account
+  colM      String?   @db.VarChar(255) // Sub Ledger 1
+  colN      String?   @db.VarChar(255) // Sub Ledger 2
+  colO      String?   @db.VarChar(255) // Sub Ledger 3
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@map("tax_ledgers")
 }
@@ -504,32 +503,32 @@ model TaxLedger {
 // --- FINANCIAL DATA: ASSETS & DEPRECIATION ---
 
 model Depreciation {
-  id              BigInt   @id @default(autoincrement())
-  colA            DateTime? @map("col_a") // Date
-  colB            String?   @map("col_b") @db.VarChar(100) // Bank Source
-  colC            String?   @map("col_c") @db.Text // Description
-  colD            Decimal?  @default(0) @map("col_d") @db.Decimal(19, 4) // Buy Price 
-  colE            Int?      @map("col_e") // Month count (e.g, 36)
-  colF            Decimal?  @default(0) @map("col_f") @db.Decimal(19, 4) // s/d 2024
-  colG            Decimal?  @default(0) @map("col_g") @db.Decimal(19, 4) // Jan-25
-  colH            Decimal?  @default(0) @map("col_h") @db.Decimal(19, 4) // Feb-25
-  colI            Decimal?  @default(0) @map("col_i") @db.Decimal(19, 4) // Mar-25
-  colJ            Decimal?  @default(0) @map("col_j") @db.Decimal(19, 4) // Apr-25
-  colK            Decimal?  @default(0) @map("col_k") @db.Decimal(19, 4) // May-25
-  colL            Decimal?  @default(0) @map("col_l") @db.Decimal(19, 4) // Jun-25
-  colM            Decimal?  @default(0) @map("col_m") @db.Decimal(19, 4) // Jul-25
-  colN            Decimal?  @default(0) @map("col_n") @db.Decimal(19, 4) // Aug-25
-  colO            Decimal?  @default(0) @map("col_o") @db.Decimal(19, 4) // Sep-25
-  colP            Decimal?  @default(0) @map("col_p") @db.Decimal(19, 4) // Oct-25
-  colQ            Decimal?  @default(0) @map("col_q") @db.Decimal(19, 4) // Nov-25
-  colR            Decimal?  @default(0) @map("col_r") @db.Decimal(19, 4) // Dec-25
-  colS            Decimal?  @default(0) @map("col_s") @db.Decimal(19, 4) // 2025 (Total)
-  colT            Decimal?  @default(0) @map("col_t") @db.Decimal(19, 4) // s/d 2025
-  colU            Decimal?  @default(0) @map("col_u") @db.Decimal(19, 4) // Book Value 
-  type            DepreciationType @default(OFFICE_EQUIPMENT)
-  tagYear         Int?
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id        BigInt           @id @default(autoincrement())
+  colA      DateTime?        @map("col_a") // Date
+  colB      String?          @map("col_b") @db.VarChar(100) // Bank Source
+  colC      String?          @map("col_c") @db.Text // Description
+  colD      Decimal?         @default(0) @map("col_d") @db.Decimal(19, 4) // Buy Price 
+  colE      Int?             @map("col_e") // Month count (e.g, 36)
+  colF      Decimal?         @default(0) @map("col_f") @db.Decimal(19, 4) // s/d 2024
+  colG      Decimal?         @default(0) @map("col_g") @db.Decimal(19, 4) // Jan-25
+  colH      Decimal?         @default(0) @map("col_h") @db.Decimal(19, 4) // Feb-25
+  colI      Decimal?         @default(0) @map("col_i") @db.Decimal(19, 4) // Mar-25
+  colJ      Decimal?         @default(0) @map("col_j") @db.Decimal(19, 4) // Apr-25
+  colK      Decimal?         @default(0) @map("col_k") @db.Decimal(19, 4) // May-25
+  colL      Decimal?         @default(0) @map("col_l") @db.Decimal(19, 4) // Jun-25
+  colM      Decimal?         @default(0) @map("col_m") @db.Decimal(19, 4) // Jul-25
+  colN      Decimal?         @default(0) @map("col_n") @db.Decimal(19, 4) // Aug-25
+  colO      Decimal?         @default(0) @map("col_o") @db.Decimal(19, 4) // Sep-25
+  colP      Decimal?         @default(0) @map("col_p") @db.Decimal(19, 4) // Oct-25
+  colQ      Decimal?         @default(0) @map("col_q") @db.Decimal(19, 4) // Nov-25
+  colR      Decimal?         @default(0) @map("col_r") @db.Decimal(19, 4) // Dec-25
+  colS      Decimal?         @default(0) @map("col_s") @db.Decimal(19, 4) // 2025 (Total)
+  colT      Decimal?         @default(0) @map("col_t") @db.Decimal(19, 4) // s/d 2025
+  colU      Decimal?         @default(0) @map("col_u") @db.Decimal(19, 4) // Book Value 
+  type      DepreciationType @default(OFFICE_EQUIPMENT)
+  tagYear   Int
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
 
   @@map("depreciation")
 }
@@ -564,18 +563,18 @@ model FinanceExpense {
 }
 
 model ProfitLossSummary {
-  id          BigInt   @id @default(autoincrement())
-  category    String?  @db.VarChar(100)
-  bca         Decimal  @default(0) @db.Decimal(19, 4)
-  mandiri     Decimal  @default(0) @db.Decimal(19, 4)
-  bri         Decimal  @default(0) @db.Decimal(19, 4)
-  btn         Decimal  @default(0) @db.Decimal(19, 4)
-  cashIdr     Decimal  @default(0) @map("cash_idr") @db.Decimal(19, 4)
-  nonCb       Decimal  @default(0) @map("non_cb") @db.Decimal(19, 4)
-  other       Decimal  @default(0) @db.Decimal(19, 4)
-  total       Decimal  @default(0) @db.Decimal(19, 4)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id        BigInt   @id @default(autoincrement())
+  category  String?  @db.VarChar(100)
+  bca       Decimal  @default(0) @db.Decimal(19, 4)
+  mandiri   Decimal  @default(0) @db.Decimal(19, 4)
+  bri       Decimal  @default(0) @db.Decimal(19, 4)
+  btn       Decimal  @default(0) @db.Decimal(19, 4)
+  cashIdr   Decimal  @default(0) @map("cash_idr") @db.Decimal(19, 4)
+  nonCb     Decimal  @default(0) @map("non_cb") @db.Decimal(19, 4)
+  other     Decimal  @default(0) @db.Decimal(19, 4)
+  total     Decimal  @default(0) @db.Decimal(19, 4)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("profit_loss_summary")
 }
@@ -583,7 +582,7 @@ model ProfitLossSummary {
 model EquityProperty {
   id        BigInt   @id @default(autoincrement())
   year      Int
-  key       String   // 'SHARED_CAPITAL', 'RE_PREV_YEARS', 'DIVIDENDS', 'PL_NET_SALES', 'PL_NET_PROFIT', etc.
+  key       String // 'SHARED_CAPITAL', 'RE_PREV_YEARS', 'DIVIDENDS', 'PL_NET_SALES', 'PL_NET_PROFIT', etc.
   value     Decimal? @db.Decimal(19, 4)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -594,26 +593,26 @@ model EquityProperty {
 
 model PpnInOut {
   id        BigInt    @id @default(autoincrement())
-  colA      DateTime? @db.Date            // Masa (Date)
-  colB      String?   @db.Text            // col B
-  colC      String?   @db.Text            // No Faktur
-  colD      String?   @db.Text            // Client/Suplier
-  colE      String?   @db.Text            // Invoice No
-  colF      Int?                          // Sales (Year integer)
-  colG      Decimal?  @db.Decimal(19, 4)  // Status
-  colH      Decimal?  @db.Decimal(19, 4)  // PPN
-  colI      Decimal?  @db.Decimal(19, 4)  // WAPU
-  colJ      Decimal?  @db.Decimal(19, 4)  // PAID
-  colK      Decimal?  @db.Decimal(19, 4)  // AP PPN WAPU
-  colL      String?   @db.Text            // Blank
-  colM      Decimal?  @db.Decimal(19, 4)  // Non WAPU
-  colN      Decimal?  @db.Decimal(19, 4)  // Masukan
-  colO      Decimal?  @db.Decimal(19, 4)  // AP PPN Non WAPU
-  colP      String?   @db.Text            // Ledger
-  colQ      String?   @db.Text            // Sub Ledger-1
-  colR      String?   @db.Text            // Sub Ledger-2
-  colS      String?   @db.Text            // Sub Ledger-3
-  tagYear   Int?
+  colA      DateTime? @db.Date // Masa (Date)
+  colB      String?   @db.Text // col B
+  colC      String?   @db.Text // No Faktur
+  colD      String?   @db.Text // Client/Suplier
+  colE      String?   @db.Text // Invoice No
+  colF      Int? // Sales (Year integer)
+  colG      Decimal?  @db.Decimal(19, 4) // Status
+  colH      Decimal?  @db.Decimal(19, 4) // PPN
+  colI      Decimal?  @db.Decimal(19, 4) // WAPU
+  colJ      Decimal?  @db.Decimal(19, 4) // PAID
+  colK      Decimal?  @db.Decimal(19, 4) // AP PPN WAPU
+  colL      String?   @db.Text // Blank
+  colM      Decimal?  @db.Decimal(19, 4) // Non WAPU
+  colN      Decimal?  @db.Decimal(19, 4) // Masukan
+  colO      Decimal?  @db.Decimal(19, 4) // AP PPN Non WAPU
+  colP      String?   @db.Text // Ledger
+  colQ      String?   @db.Text // Sub Ledger-1
+  colR      String?   @db.Text // Sub Ledger-2
+  colS      String?   @db.Text // Sub Ledger-3
+  tagYear   Int
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
@@ -621,26 +620,26 @@ model PpnInOut {
 }
 
 model InterAccount {
-  id        BigInt    @id @default(autoincrement())
-  colA      String?   @db.Text            // blank
-  colB      String?   @db.Text            // colB
-  colC      Decimal?  @db.Decimal(19, 4)  // BCA Sahardjo
-  colD      Decimal?  @db.Decimal(19, 4)  // BCA Juanda
-  colE      Decimal?  @db.Decimal(19, 4)  // Mandiri Mid Plaza
-  colF      Decimal?  @db.Decimal(19, 4)  // BRI Sahardjo
-  colG      Decimal?  @db.Decimal(19, 4)  // BTN
-  colH      Decimal?  @db.Decimal(19, 4)  // BJB
-  colI      Decimal?  @db.Decimal(19, 4)  // Bank Raya
-  colJ      Decimal?  @db.Decimal(19, 4)  // BRI Tebet
-  colK      Decimal?  @db.Decimal(19, 4)  // Manidiri Plaza Mandiri
-  colL      Decimal?  @db.Decimal(19, 4)  // BNI
-  colM      Decimal?  @db.Decimal(19, 4)  // Cash IDR
-  colN      Decimal?  @db.Decimal(19, 4)  // Non Cash Bank
-  colO      Decimal?  @db.Decimal(19, 4)  // PPn In and Out
-  colP      Decimal?  @db.Decimal(19, 4)  // Blank
+  id        BigInt   @id @default(autoincrement())
+  colA      String?  @db.Text // blank
+  colB      String?  @db.Text // colB
+  colC      Decimal? @db.Decimal(19, 4) // BCA Sahardjo
+  colD      Decimal? @db.Decimal(19, 4) // BCA Juanda
+  colE      Decimal? @db.Decimal(19, 4) // Mandiri Mid Plaza
+  colF      Decimal? @db.Decimal(19, 4) // BRI Sahardjo
+  colG      Decimal? @db.Decimal(19, 4) // BTN
+  colH      Decimal? @db.Decimal(19, 4) // BJB
+  colI      Decimal? @db.Decimal(19, 4) // Bank Raya
+  colJ      Decimal? @db.Decimal(19, 4) // BRI Tebet
+  colK      Decimal? @db.Decimal(19, 4) // Manidiri Plaza Mandiri
+  colL      Decimal? @db.Decimal(19, 4) // BNI
+  colM      Decimal? @db.Decimal(19, 4) // Cash IDR
+  colN      Decimal? @db.Decimal(19, 4) // Non Cash Bank
+  colO      Decimal? @db.Decimal(19, 4) // PPn In and Out
+  colP      Decimal? @db.Decimal(19, 4) // Blank
   tagYear   Int
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("inter_account")
 }

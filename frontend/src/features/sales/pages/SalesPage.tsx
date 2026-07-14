@@ -487,6 +487,7 @@ export default function SalesPage() {
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colAB.toString())}</TableCell>
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colAC.toString())}</TableCell>
                     <TableCell className="py-3 bg-secondary/[0.02]" />
+                    <TableCell></TableCell>
                   </TableRow>
 
                   {/* Grand Total (All Pages) */}
@@ -516,6 +517,7 @@ export default function SalesPage() {
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colAB.toString())}</TableCell>
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colAC.toString())}</TableCell>
                     <TableCell className="py-3 bg-secondary/[0.03]" />
+                    <TableCell></TableCell>
                   </TableRow>
                 </>
               )}
