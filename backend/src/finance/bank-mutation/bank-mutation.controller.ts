@@ -13,14 +13,14 @@ import { Res } from '@nestjs/common';
 
 const BANK_MUTATION_COLUMN_MAPPING = {
   colA: 'Date',
-  colB: 'Keterangan',
+  colB: 'Description',
   colC: 'Debit|accounting',
   colD: 'Credit|accounting',
   colE: 'Balance|accounting',
-  colF: 'Tag 1',
-  colG: 'Tag 2',
-  colH: 'Tag 3',
-  colI: 'Notes',
+  colF: 'Ledger',
+  colG: 'Sub Ledger 1',
+  colH: 'Sub Ledger 2',
+  colI: 'Sub Ledger 3',
 };
 
 @Controller('bank-mutation')
