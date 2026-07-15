@@ -6,6 +6,22 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { generateExcelBuffer } from '../../common/utils/excel.util';
+import { generatePdfBuffer } from '../../common/utils/pdf.util';
+import type { Response } from 'express';
+import { Res } from '@nestjs/common';
+
+const BANK_MUTATION_COLUMN_MAPPING = {
+  colA: 'Date',
+  colB: 'Keterangan',
+  colC: 'Debit|accounting',
+  colD: 'Credit|accounting',
+  colE: 'Balance|accounting',
+  colF: 'Tag 1',
+  colG: 'Tag 2',
+  colH: 'Tag 3',
+  colI: 'Notes',
+};
 
 @Controller('bank-mutation')
 @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
@@ -22,6 +38,46 @@ export class BankMutationController {
     @Query('endDate') endDate?: string
   ) {
     return this.bankMutationService.getAllTransactions(accountId, year ? Number(year) : undefined, startDate, endDate);
+  }
+
+  @Get('export/excel')
+  @Permissions('bank-mutation.index')
+  async exportExcel(
+    @Query('accountId') accountId: string,
+    @Query('year') year: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Res() res: Response
+  ) {
+    const data = await this.bankMutationService.getAllTransactions(accountId, year ? Number(year) : undefined, startDate, endDate);
+    const cleanData = data.map(item => {
+      const { id, tagYear, internalAccountId, createdAt, updatedAt, ...rest } = item;
+      return rest;
+    });
+    const buffer = generateExcelBuffer(cleanData, 'Bank Statement', BANK_MUTATION_COLUMN_MAPPING);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Bank_Statement_${year || 'All'}.xlsx`);
+    res.send(buffer);
+  }
+
+  @Get('export/pdf')
+  @Permissions('bank-mutation.index')
+  async exportPdf(
+    @Query('accountId') accountId: string,
+    @Query('year') year: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Res() res: Response
+  ) {
+    const data = await this.bankMutationService.getAllTransactions(accountId, year ? Number(year) : undefined, startDate, endDate);
+    const cleanData = data.map(item => {
+      const { id, tagYear, internalAccountId, createdAt, updatedAt, ...rest } = item;
+      return rest;
+    });
+    const buffer = await generatePdfBuffer(cleanData, 'Bank Statement', BANK_MUTATION_COLUMN_MAPPING);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Bank_Statement_${year || 'All'}.pdf`);
+    res.send(buffer);
   }
 
   @Post('transactions/bulk')
