@@ -352,33 +352,6 @@ export default function BankMutationPage() {
         icon={Landmark}
         actions={
           <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  className="h-10 w-10 xl:w-auto xl:px-4 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center font-bold disabled:opacity-50 transition-all active:scale-95 shrink-0"
-                >
-                  <Download size={14} strokeWidth={3} className="xl:mr-2" />
-                  <span className="hidden xl:inline text-xs">Export</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden w-40 z-50">
-                <DropdownMenuItem 
-                  onClick={() => downloadExcelFile(`/bank-mutation/export/excel?accountId=${selectedAccount?.id}&year=${ledgerYearFilter}${ledgerStartDate ? `&startDate=${format(ledgerStartDate, 'yyyy-MM-dd')}` : ''}${ledgerEndDate ? `&endDate=${format(ledgerEndDate, 'yyyy-MM-dd')}` : ''}`, `Bank_Statement_${ledgerYearFilter !== 'all' ? ledgerYearFilter : 'All'}.xlsx`)}
-                  className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-emerald-600 transition-colors flex items-center gap-2"
-                >
-                  <FileSpreadsheet size={16} strokeWidth={2.5} />
-                  Export Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => downloadPdfFile(`/bank-mutation/export/pdf?accountId=${selectedAccount?.id}&year=${ledgerYearFilter}${ledgerStartDate ? `&startDate=${format(ledgerStartDate, 'yyyy-MM-dd')}` : ''}${ledgerEndDate ? `&endDate=${format(ledgerEndDate, 'yyyy-MM-dd')}` : ''}`, `Bank_Statement_${ledgerYearFilter !== 'all' ? ledgerYearFilter : 'All'}.pdf`)}
-                  className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-rose-600 transition-colors flex items-center gap-2"
-                >
-                  <FileText size={16} strokeWidth={2.5} />
-                  Export PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
             {anchorData?.isStale && (
               <Button
                 variant="outline"
@@ -693,6 +666,32 @@ export default function BankMutationPage() {
               <span className="text-[13px]">Add Mutation</span>
             </Button>
           )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                className="h-12 w-12 xl:w-auto xl:px-4 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center font-bold disabled:opacity-50 transition-all active:scale-95 shrink-0"
+              >
+                <Download size={20} strokeWidth={3} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden w-40">
+              <DropdownMenuItem 
+                onClick={() => downloadExcelFile(`/bank-mutation/export/excel?accountId=${selectedAccount?.id}&year=${ledgerYearFilter}${ledgerStartDate ? `&startDate=${format(ledgerStartDate, 'yyyy-MM-dd')}` : ''}${ledgerEndDate ? `&endDate=${format(ledgerEndDate, 'yyyy-MM-dd')}` : ''}`, `Bank_Statement_${selectedAccount?.bank?.bankBrand || selectedAccount?.holderName || 'Account'}_${ledgerYearFilter !== 'all' ? ledgerYearFilter : 'All'}.xlsx`)}
+                className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-emerald-600 transition-colors flex items-center gap-2"
+              >
+                <FileSpreadsheet size={16} strokeWidth={2.5} />
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => downloadPdfFile(`/bank-mutation/export/pdf?accountId=${selectedAccount?.id}&year=${ledgerYearFilter}${ledgerStartDate ? `&startDate=${format(ledgerStartDate, 'yyyy-MM-dd')}` : ''}${ledgerEndDate ? `&endDate=${format(ledgerEndDate, 'yyyy-MM-dd')}` : ''}`, `Bank_Statement_${selectedAccount?.bank?.bankBrand || selectedAccount?.holderName || 'Account'}_${ledgerYearFilter !== 'all' ? ledgerYearFilter : 'All'}.pdf`)}
+                className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-rose-600 transition-colors flex items-center gap-2"
+              >
+                <FileText size={16} strokeWidth={2.5} />
+                Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
