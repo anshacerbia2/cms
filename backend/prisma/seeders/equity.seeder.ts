@@ -6,7 +6,7 @@ export async function seedEquity(prisma: PrismaClient) {
   const equityData = [
     // --- YEAR 2025 ---
     { year: 2025, key: 'SHARED_CAPITAL', value: 2500000000 },
-    { year: 2025, key: 'RE_PREV_YEARS', value: 8453697304.01 },
+    { year: 2025, key: 'RE_PREV_YEARS', value: 6204867304.01 },
     { year: 2025, key: 'DIVIDENDS', value: null },
     { year: 2025, key: 'PL_NET_PROFIT', value: null },
 
