@@ -30,41 +30,41 @@ interface AddApLedgerModalProps {
 
 interface ApRow {
   colA: string; colB: string | number; colC: string; colD: string;
-  colE: string | number; colF: string | number; colG: string | number;
+  colE: string | number;
   colH: string; colI: string;
   colK: string | number; colL: string | number; colM: string | number;
   colN: string | number; colO: string | number; colP: string | number;
   colQ: string | number; colR: string | number; colS: string | number;
-  colU: string | number; colV: string | number;
+  colU: string | number;
 }
 
 // Exact Excel column order (index 0–19)
 const COL_ORDER: (keyof ApRow)[] = [
-  'colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', // 0-6
-  'colH', 'colI',                                          // 7-8 (string cols)
-  'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ',  // 9-15
-  'colR', 'colS', 'colU', 'colV',                          // 16-19
+  'colA', 'colB', 'colC', 'colD', 'colE',
+  'colH', 'colI',
+  'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ',
+  'colR', 'colS', 'colU',
 ];
 
 const VISIBLE_COLS: (keyof ApRow)[] = [
-  'colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG',
-  'colH', 'colI',
-  'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR', 'colS', 'colU', 'colV',
+  'colA', 'colB', 'colC', 'colD', 'colE',
+  /* 'colH', 'colI', */
+  'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR', 'colS', 'colU',
 ];
 
-const LABELS: Record<keyof ApRow, string> = {
+const LABELS: Partial<Record<keyof ApRow, string>> = {
   colA: 'Payable', colB: 'Year', colC: 'Vendor', colD: 'Keterangan',
-  colE: 'EOY IDR', colF: 'EOY USD', colG: 'Col G',
-  colH: 'Col H', colI: 'Col I',
+  colE: 'IDR',
+  /* colH: 'Col F', colI: 'Col G', */
   colK: 'BCA Shardjo', colL: 'BCA Juanda', colM: 'Mandiri Mid Plaza',
   colN: 'BTN', colO: 'BRI Shardjo', colP: 'BRI Tebet',
   colQ: 'Cash IDR', colR: 'Non CB', colS: 'AP In and Out',
-  colU: 'Outstanding IDR', colV: 'Outstanding USD',
+  colU: 'Outstanding IDR',
 };
 
 const NUMERIC_COLS: (keyof ApRow)[] = [
-  'colE', 'colF', 'colG', 'colK', 'colL', 'colM', 'colN',
-  'colO', 'colP', 'colQ', 'colR', 'colS', 'colU', 'colV',
+  'colE', 'colK', 'colL', 'colM', 'colN',
+  'colO', 'colP', 'colQ', 'colR', 'colS', 'colU',
 ];
 
 export default function AddApLedgerModal({ open, onOpenChange, onSuccess, year }: AddApLedgerModalProps) {
@@ -75,20 +75,20 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess, year }
   useEffect(() => {
     if (open) {
       setRows(Array(5).fill(null).map(() => ({
-        colA: '', colB: '', colC: '', colD: '', colE: '', colF: '', colG: '',
+        colA: '', colB: '', colC: '', colD: '', colE: '',
         colH: '', colI: '',
         colK: '', colL: '', colM: '', colN: '', colO: '', colP: '', colQ: '',
-        colR: '', colS: '', colU: '', colV: '',
+        colR: '', colS: '', colU: '',
       })));
     }
   }, [open]);
 
   const addRow = () => {
     setRows([...rows, {
-      colA: '', colB: '', colC: '', colD: '', colE: '', colF: '', colG: '',
+      colA: '', colB: '', colC: '', colD: '', colE: '',
       colH: '', colI: '',
       colK: '', colL: '', colM: '', colN: '', colO: '', colP: '', colQ: '',
-      colR: '', colS: '', colU: '', colV: '',
+      colR: '', colS: '', colU: '',
     }]);
   };
 
@@ -162,10 +162,10 @@ export default function AddApLedgerModal({ open, onOpenChange, onSuccess, year }
       const pasteCols = pasteRowText.split('\t');
       if (targetRowIndex >= newRows.length) {
         newRows.push({
-          colA: '', colB: '', colC: '', colD: '', colE: '', colF: '', colG: '',
+          colA: '', colB: '', colC: '', colD: '', colE: '',
           colH: '', colI: '',
           colK: '', colL: '', colM: '', colN: '', colO: '', colP: '', colQ: '',
-          colR: '', colS: '', colU: '', colV: '',
+          colR: '', colS: '', colU: '',
         });
       }
       pasteCols.forEach((cellText, j) => {

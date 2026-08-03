@@ -49,14 +49,14 @@ interface SalesRow {
 
 const COL_ORDER: (keyof SalesRow)[] = [
   'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ', 
-  'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR', 'colS', 'colT', 
+  'colK', /* 'colL', */ 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR', 'colS', 'colT', 
   'colU', 'colV', 'colW', 'colX', 'colZ', 'colAA', 'colAB', 'colAC', 'colAD'
 ];
 
-const LABELS: Record<keyof SalesRow, string> = {
+const LABELS: Partial<Record<keyof SalesRow, string>> = {
   colA: 'No', colB: 'Invoice No', colC: 'Date', colD: 'Year', colE: 'Billing To',
   colF: 'Sales Code', colG: 'Description', colH: 'Basic Price', colI: 'Mgmt Fee',
-  colJ: 'PPN', colK: 'AR IDR', colL: 'Date Received', colM: 'BCA Sahardjo',
+  colJ: 'PPN', colK: 'AR IDR', /* colL: 'Date Received', */ colM: 'BCA Sahardjo',
   colN: 'BCA Juanda', colO: 'Mandiri Mid', colP: 'Mandiri Plaza', colQ: 'BRI Tebet',
   colR: 'BRI Sahardjo', colS: 'BTN', colT: 'Bank Raya', colU: 'BNI',
   colV: 'Cash IDR', colW: 'Non CB', colX: 'Outstanding IDR', colZ: 'AP PPN',

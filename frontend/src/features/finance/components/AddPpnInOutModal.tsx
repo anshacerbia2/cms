@@ -17,9 +17,12 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Save, ClipboardPaste, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Save, ClipboardPaste, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePpnInOut } from '../hooks/usePpnInOut';
+import { isValid, parseISO, format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface AddPpnInOutModalProps {
   open: boolean;
@@ -117,6 +120,28 @@ export default function AddPpnInOutModal({ open, onOpenChange, onSuccess, year }
     return isNegative ? `-${formatted}` : formatted;
   };
 
+  const parseSmartDate = (value: string) => {
+    if (!value) return '';
+    const months: Record<string, string> = {
+      jan: '01', feb: '02', mar: '03', apr: '04', mei: '05', jun: '06',
+      jul: '07', agt: '08', ags: '08', sep: '09', okt: '10', nov: '11', des: '12',
+      januari: '01', februari: '02', maret: '03', april: '04', juni: '06',
+      juli: '07', agustus: '08', september: '09', oktober: '10', november: '11', desember: '12'
+    };
+    const parts = value.toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean);
+    if (parts.length === 3) {
+      let d = '', m = '', y = '';
+      if (parts[0].length === 4) { y = parts[0]; m = parts[1]; d = parts[2]; }
+      else { d = parts[0]; m = parts[1]; y = parts[2]; }
+      if (months[m]) m = months[m]; else m = m.padStart(2, '0');
+      d = d.padStart(2, '0');
+      if (y.length === 2) { const year = parseInt(y); y = year > 50 ? `19${y}` : `20${y}`; }
+      const finalDate = `${y}-${m}-${d}`;
+      return isValid(parseISO(finalDate)) ? finalDate : '';
+    }
+    return value.match(/^\d{4}-\d{2}-\d{2}$/) ? value : '';
+  };
+
   const parseDisplay = (val: string) => {
     if (val === undefined || val === null) return '';
     let strVal = val.toString().trim();
@@ -161,6 +186,7 @@ export default function AddPpnInOutModal({ open, onOpenChange, onSuccess, year }
           let value: any = cellText.trim();
           if (NUMERIC_COLS.includes(field)) value = cleanNumber(value);
           else if (field === 'colF') value = value.replace(/[^0-9]/g, '');
+          else if (field === 'colA') value = parseSmartDate(value);
           newRows[targetRowIndex] = { ...newRows[targetRowIndex], [field]: value };
         }
       });
@@ -280,21 +306,60 @@ export default function AddPpnInOutModal({ open, onOpenChange, onSuccess, year }
                       return (
                         <TableCell key={col} className="p-0 border-r border-primary/5 relative">
                           <div className="flex items-center w-full h-full">
-                            <Input
-                              placeholder={isNumeric ? "0" : "-"}
-                              value={isNumeric ? formatInput(row[col]) : row[col]}
-                              onChange={(e) => {
-                                let val = e.target.value;
-                                if (isNumeric) val = parseDisplay(val);
-                                else if (col === 'colF') val = val.replace(/[^0-9]/g, '');
-                                updateRow(idx, col, val);
-                              }}
-                              onPaste={(e) => handlePaste(e, idx, col)}
-                              onKeyDown={(e) => handleKeyDown(e, idx, col)}
-                              data-row={idx}
-                              data-col={col}
-                              className={`h-9 w-full rounded-none border-0 bg-transparent px-4 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-secondary/40 focus-visible:bg-secondary/5 font-medium text-[13px] ${isNumeric ? 'text-right' : 'text-left'} transition-colors`}
-                            />
+                            {col === 'colA' ? (
+                              <>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-full w-8 shrink-0 bg-transparent hover:bg-transparent text-primary/30 hover:text-primary transition-colors rounded-none cursor-pointer"
+                                    >
+                                      <CalendarIcon size={14} />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0 overflow-hidden" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={row.colA ? parseISO(row.colA) : undefined}
+                                      onSelect={(date) => {
+                                        if (date) {
+                                          updateRow(idx, 'colA', format(date, 'yyyy-MM-dd'));
+                                        }
+                                      }}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                                <Input
+                                  placeholder="YYYY-MM-DD"
+                                  value={row.colA}
+                                  onChange={(e) => updateRow(idx, 'colA', e.target.value)}
+                                  onBlur={(e) => updateRow(idx, 'colA', parseSmartDate(e.target.value))}
+                                  onPaste={(e) => handlePaste(e, idx, 'colA')}
+                                  onKeyDown={(e) => handleKeyDown(e, idx, 'colA')}
+                                  data-row={idx}
+                                  data-col="colA"
+                                  className="h-9 w-full rounded-none border-0 bg-transparent px-4 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-secondary/40 focus-visible:bg-secondary/5 font-medium text-[13px] text-left transition-colors pl-0"
+                                />
+                              </>
+                            ) : (
+                              <Input
+                                placeholder={isNumeric ? "0" : "-"}
+                                value={isNumeric ? formatInput(row[col]) : row[col]}
+                                onChange={(e) => {
+                                  let val = e.target.value;
+                                  if (isNumeric) val = parseDisplay(val);
+                                  else if (col === 'colF') val = val.replace(/[^0-9]/g, '');
+                                  updateRow(idx, col, val);
+                                }}
+                                onPaste={(e) => handlePaste(e, idx, col)}
+                                onKeyDown={(e) => handleKeyDown(e, idx, col)}
+                                data-row={idx}
+                                data-col={col}
+                                className={`h-9 w-full rounded-none border-0 bg-transparent px-4 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-secondary/40 focus-visible:bg-secondary/5 font-medium text-[13px] ${isNumeric ? 'text-right' : 'text-left'} transition-colors`}
+                              />
+                            )}
                           </div>
                         </TableCell>
                       );

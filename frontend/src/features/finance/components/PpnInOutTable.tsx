@@ -92,7 +92,6 @@ export function PpnInOutTable() {
       rawColJ: row.colJ,
       colK: formatCurrency(row.colK),
       rawColK: row.colK,
-      colL: row.colL || "-",
       colM: formatCurrency(row.colM),
       rawColM: row.colM,
       colN: formatCurrency(row.colN),
@@ -203,7 +202,6 @@ export function PpnInOutTable() {
     { k: 'colI', l: 'WAPU', num: true },
     { k: 'colJ', l: 'PAID', num: true },
     { k: 'colK', l: 'AP PPN WAPU', num: true },
-    { k: 'colL', l: 'Blank' },
     { k: 'colM', l: 'Non WAPU', num: true },
     { k: 'colN', l: 'Masukan', num: true },
     { k: 'colO', l: 'AP PPN Non WAPU', num: true },
@@ -370,7 +368,6 @@ export function PpnInOutTable() {
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colI.toString())}`}>{formatCurrency(subtotalTotals.colI.toString())}</TableCell>
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colJ.toString())}`}>{formatCurrency(subtotalTotals.colJ.toString())}</TableCell>
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colK.toString())}`}>{formatCurrency(subtotalTotals.colK.toString())}</TableCell>
-                    <TableCell className="text-primary/60">-</TableCell>
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colM.toString())}`}>{formatCurrency(subtotalTotals.colM.toString())}</TableCell>
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colN.toString())}`}>{formatCurrency(subtotalTotals.colN.toString())}</TableCell>
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colO.toString())}`}>{formatCurrency(subtotalTotals.colO.toString())}</TableCell>
@@ -387,7 +384,6 @@ export function PpnInOutTable() {
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colI.toString())}`}>{formatCurrency(grandTotals.colI.toString())}</TableCell>
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colJ.toString())}`}>{formatCurrency(grandTotals.colJ.toString())}</TableCell>
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colK.toString())}`}>{formatCurrency(grandTotals.colK.toString())}</TableCell>
-                    <TableCell className="text-primary/60">-</TableCell>
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colM.toString())}`}>{formatCurrency(grandTotals.colM.toString())}</TableCell>
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colN.toString())}`}>{formatCurrency(grandTotals.colN.toString())}</TableCell>
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colO.toString())}`}>{formatCurrency(grandTotals.colO.toString())}</TableCell>

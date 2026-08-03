@@ -22,17 +22,17 @@ interface EditApLedgerModalProps {
 
 const LABELS = {
   colA: 'Payable', colB: 'Year', colC: 'Vendor', colD: 'Keterangan',
-  colE: 'EOY IDR', colF: 'EOY USD', colG: 'Col G',
-  colH: 'Col H', colI: 'Col I',
+  colE: 'IDR',
+  /* colH: 'Col F', colI: 'Col G', */
   colK: 'BCA Shardjo', colL: 'BCA Juanda', colM: 'Mandiri Mid Plaza',
   colN: 'BTN', colO: 'BRI Shardjo', colP: 'BRI Tebet',
   colQ: 'Cash IDR', colR: 'Non CB', colS: 'AP In and Out',
-  colU: 'Outstanding IDR', colV: 'Outstanding USD',
+  colU: 'Outstanding IDR',
 };
 
 const NUMERIC_COLS = [
-  'colE', 'colF', 'colG', 'colK', 'colL', 'colM', 'colN',
-  'colO', 'colP', 'colQ', 'colR', 'colS', 'colU', 'colV',
+  'colE', 'colK', 'colL', 'colM', 'colN',
+  'colO', 'colP', 'colQ', 'colR', 'colS', 'colU',
 ];
 
 export default function EditApLedgerModal({ open, onOpenChange, record, onSuccess }: EditApLedgerModalProps) {

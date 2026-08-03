@@ -21,18 +21,16 @@ interface EditArLedgerModalProps {
 }
 
 const LABELS = {
-  colB: 'Type', colC: 'Date', colD: 'Client',
-  colE: 'Description', colF: 'EOY IDR', colG: 'EOY USD',
-  colH: 'USD Rate',
+  colB: 'Type', colC: 'Year', colD: 'Client',
+  colE: 'Description', colF: 'IDR',
   colJ: 'BCA Suhardjo', colK: 'BCA Juanda', colL: 'Mandiri MP',
   colM: 'BRI Suhardjo', colN: 'Cash IDR', colO: 'Non CB',
   colP: 'PPn In and Out', colR: 'Outstanding IDR',
-  colS: 'Outstanding USD',
 };
 
 const NUMERIC_COLS = [
-  'colF', 'colG', 'colH', 'colJ', 'colK', 'colL', 'colM',
-  'colN', 'colO', 'colP', 'colR', 'colS',
+  'colF', 'colJ', 'colK', 'colL', 'colM',
+  'colN', 'colO', 'colP', 'colR',
 ];
 
 export default function EditArLedgerModal({ open, onOpenChange, record, onSuccess }: EditArLedgerModalProps) {
@@ -45,12 +43,13 @@ export default function EditArLedgerModal({ open, onOpenChange, record, onSucces
       const initData: any = {};
       Object.keys(LABELS).forEach((key) => {
         let val = record[key];
-        if (key === 'colC') {
-            val = record.rawColC || record.colC;
-            if (val) {
-                val = new Date(val).toISOString().split('T')[0];
-            }
-        } else if (NUMERIC_COLS.includes(key)) {
+        // if (key === 'colC') {
+        //     val = record.rawColC || record.colC;
+        //     if (val) {
+        //         val = new Date(val).toISOString().split('T')[0];
+        //     }
+        // } else if (NUMERIC_COLS.includes(key)) {
+        if (NUMERIC_COLS.includes(key)) {
            if (val !== null && val !== undefined) {
              const parsed = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
              val = isNaN(parsed) ? '' : parsed.toString();
@@ -124,7 +123,8 @@ export default function EditArLedgerModal({ open, onOpenChange, record, onSucces
                 <Label className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">{label}</Label>
                 <Input
                   name={key}
-                  type={key === 'colC' ? 'date' : 'text'}
+                  type="text"
+                  // type={key === 'colC' ? 'date' : 'text'}
                   value={isNumeric ? formatInputAmount(formData[key]) : (formData[key] || '')}
                   onChange={handleChange}
                   className={cn(

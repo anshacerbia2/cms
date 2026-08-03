@@ -333,9 +333,9 @@ export default function SalesPage() {
                 <TableHead className="w-40 px-4 text-right">
                   <div className="flex items-center justify-end gap-1">AR IDR <ExcelColumnFilter columnKey="colK" label="AR IDR" data={getCascadingData("colK")} activeFilters={salesFilters["colK"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colK: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colK", direction: d}); setSalesPage(1); }} /></div>
                 </TableHead>
-                <TableHead className="w-40 px-4">
+                {/* <TableHead className="w-40 px-4">
                   <div className="flex items-center gap-1">Date Received <ExcelColumnFilter columnKey="colL" label="Date Received" data={getCascadingData("colL")} activeFilters={salesFilters["colL"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colL: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colL", direction: d}); setSalesPage(1); }} type="date" dateKey="rawColL" /></div>
-                </TableHead>
+                </TableHead> */}
 
                 <TableHead className="w-40 px-4 text-right">
                   <div className="flex items-center justify-end gap-1">BCA Sahardjo <ExcelColumnFilter columnKey="colM" label="BCA Sahardjo" data={getCascadingData("colM")} activeFilters={salesFilters["colM"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colM: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colM", direction: d}); setSalesPage(1); }} /></div>
@@ -423,7 +423,7 @@ export default function SalesPage() {
                       <TableCell className="px-4 w-40 text-right">{row.colI}</TableCell>
                       <TableCell className="px-4 w-40 text-right">{row.colJ}</TableCell>
                       <TableCell className="px-4 w-40 text-right">{row.colK}</TableCell>
-                      <TableCell className="px-4 w-40">{row.colL}</TableCell>
+                      {/* <TableCell className="px-4 w-40">{row.colL}</TableCell> */}
 
                       <TableCell className="px-4 w-40 text-right">{row.colM}</TableCell>
                       <TableCell className="px-4 w-40 text-right">{row.colN}</TableCell>
@@ -469,7 +469,7 @@ export default function SalesPage() {
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesPageSubtotals.colI.toString())}`}>{formatCurrency(salesPageSubtotals.colI.toString())}</TableCell>
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesPageSubtotals.colJ.toString())}`}>{formatCurrency(salesPageSubtotals.colJ.toString())}</TableCell>
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesPageSubtotals.colK.toString())}`}>{formatCurrency(salesPageSubtotals.colK.toString())}</TableCell>
-                    <TableCell className="py-3 bg-secondary/[0.01]" />
+                    {/* <TableCell className="py-3 bg-secondary/[0.01]" /> */}
                     <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colM.toString())}</TableCell>
                     <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colN.toString())}</TableCell>
                     <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colO.toString())}</TableCell>
@@ -499,7 +499,7 @@ export default function SalesPage() {
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesGrandTotals.colI.toString())}`}>{formatCurrency(salesGrandTotals.colI.toString())}</TableCell>
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesGrandTotals.colJ.toString())}`}>{formatCurrency(salesGrandTotals.colJ.toString())}</TableCell>
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesGrandTotals.colK.toString())}`}>{formatCurrency(salesGrandTotals.colK.toString())}</TableCell>
-                    <TableCell className="py-3 bg-secondary/[0.02]" />
+                    {/* <TableCell className="py-3 bg-secondary/[0.02]" /> */}
                     <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colM.toString())}</TableCell>
                     <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colN.toString())}</TableCell>
                     <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colO.toString())}</TableCell>

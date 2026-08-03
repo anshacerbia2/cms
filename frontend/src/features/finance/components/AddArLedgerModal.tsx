@@ -30,26 +30,26 @@ interface AddArLedgerModalProps {
 
 interface ArRow {
   colB: string; colC: string; colD: string; colE: string;
-  colF: string | number; colG: string | number; colH: string | number;
+  colF: string | number;
   colJ: string | number; colK: string | number;
   colL: string | number; colM: string | number; colN: string | number;
   colO: string | number; colP: string | number;
-  colR: string | number; colS: string | number;
+  colR: string | number;
 }
 
 const COL_ORDER: (keyof ArRow)[] = [
-  'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colR', 'colS'
+  'colB', 'colC', 'colD', 'colE', 'colF', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colR'
 ];
 
 const LABELS: Record<keyof ArRow, string> = {
-  colB: 'Type', colC: 'Year', colD: 'Name', colE: 'Description',
-  colF: 'EOY IDR', colG: 'EOY USD', colH: 'USD Rate',
+  colB: 'Type', colC: 'Year', colD: 'Client', colE: 'Description',
+  colF: 'IDR',
   colJ: 'BCA Suhardjo', colK: 'BCA Juanda', colL: 'MANDIRI MP',
   colM: 'BRI Suhardjo', colN: 'Cash IDR', colO: 'Non CB',
-  colP: 'PPn In and Out', colR: 'Outstanding IDR', colS: 'Outstanding USD'
+  colP: 'PPn In and Out', colR: 'Outstanding IDR'
 };
 
-const NUMERIC_COLS: (keyof ArRow)[] = ['colF', 'colG', 'colH', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colR', 'colS'];
+const NUMERIC_COLS: (keyof ArRow)[] = ['colF', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colR'];
 
 export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }: AddArLedgerModalProps) {
   const { createBulkAR } = useAccountReceivable();
@@ -60,8 +60,8 @@ export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }
     if (open) {
       setRows(Array(5).fill(null).map(() => ({
         colB: '', colC: '', colD: '', colE: '',
-        colF: '', colG: '', colH: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
-        colO: '', colP: '', colR: '', colS: ''
+        colF: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
+        colO: '', colP: '', colR: ''
       } as ArRow)));
     }
   }, [open]);
@@ -69,8 +69,8 @@ export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }
   const addRow = () => {
     setRows([...rows, {
       colB: '', colC: '', colD: '', colE: '',
-      colF: '', colG: '', colH: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
-      colO: '', colP: '', colR: '', colS: ''
+      colF: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
+      colO: '', colP: '', colR: ''
     } as ArRow]);
   };
 
@@ -147,8 +147,8 @@ export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }
       if (targetRowIndex >= newRows.length) {
         newRows.push({
           colB: '', colC: '', colD: '', colE: '',
-          colF: '', colG: '', colH: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
-          colO: '', colP: '', colR: '', colS: ''
+          colF: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
+          colO: '', colP: '', colR: ''
         } as ArRow);
       }
       pasteCols.forEach((cellText, j) => {
