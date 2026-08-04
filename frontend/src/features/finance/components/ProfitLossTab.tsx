@@ -10,7 +10,7 @@ import {
 import { formatCurrency, getAmountColor, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, DollarSign, PieChart, Info, Loader2, History, Plus, Calendar as CalendarIcon, ChevronDown, ChevronRight, Pin } from "lucide-react";
+import { TrendingUp, DollarSign, PieChart, Info, Loader2, History, Plus, Calendar as CalendarIcon, ChevronDown, ChevronRight, Pin, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { useFinance } from "../hooks/useFinance";
 import { useExcelFilter } from "../hooks/useExcelFilter";
 import { ExcelColumnFilter } from "./ExcelColumnFilter";
@@ -22,6 +22,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { 
   Select, 
@@ -1463,6 +1470,31 @@ export function ProfitLossTab() {
               </SelectContent>
             </Select>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                className="h-12 w-12 xl:w-auto xl:px-4 bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center font-bold disabled:opacity-50 transition-all active:scale-95 shrink-0"
+              >
+                <Download size={20} strokeWidth={3} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden w-40">
+              <DropdownMenuItem 
+                onClick={() => downloadExcelFile(`/finance/pl-statement/export/excel${year !== 'all' ? `?year=${year}` : ''}${selectedDate ? `${year !== 'all' ? '&' : '?'}date=${format(selectedDate, "yyyy-MM-dd")}` : ''}`, `Profit_Loss_${year !== 'all' ? year : 'All'}.xlsx`)}
+                className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-emerald-600 transition-colors flex items-center gap-2"
+              >
+                <FileSpreadsheet size={16} strokeWidth={2.5} />
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => downloadPdfFile(`/finance/pl-statement/export/pdf${year !== 'all' ? `?year=${year}` : ''}${selectedDate ? `${year !== 'all' ? '&' : '?'}date=${format(selectedDate, "yyyy-MM-dd")}` : ''}`, `Profit_Loss_${year !== 'all' ? year : 'All'}.pdf`)}
+                className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-rose-600 transition-colors flex items-center gap-2"
+              >
+                <FileText size={16} strokeWidth={2.5} />
+                Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
