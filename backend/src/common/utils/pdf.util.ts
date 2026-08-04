@@ -45,17 +45,22 @@ export function generatePdfBuffer(data: any[], title: string, columnMapping: Rec
           const isNum = mappingVal.endsWith('|num');
           let val = row[k];
           
+          let cellObj: any = { text: val != null ? String(val) : '' };
+          
           if (isAccounting) {
-            return { text: formatAccounting(val), alignment: 'right' };
+            cellObj = { text: formatAccounting(val), alignment: 'right' };
           } else if (isNum) {
-            return { text: formatNum(val), alignment: 'right' };
+            cellObj = { text: formatNum(val), alignment: 'right' };
+          } else if (val instanceof Date) {
+            cellObj = { text: val.toLocaleDateString('en-GB') };
           }
           
-          if (val instanceof Date) {
-            return { text: val.toLocaleDateString('en-GB') };
+          if (row._style) {
+            if (row._style.bold) cellObj.bold = true;
+            if (row._style.fill) cellObj.fillColor = '#' + row._style.fill;
           }
           
-          return { text: val != null ? String(val) : '' };
+          return cellObj;
         });
       });
 

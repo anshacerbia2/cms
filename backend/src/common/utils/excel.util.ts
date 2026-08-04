@@ -87,7 +87,21 @@ export function generateExcelBuffer(data: any[], sheetName: string = 'Sheet1', c
             fill: { fgColor: { rgb: "2F5597" } }, // Dark blue
             alignment: { horizontal: "center", vertical: "center" }
           };
+        } else {
+          const rowData = safeData[R - 1];
+          if (rowData && rowData._style) {
+            cell.s = cell.s || {};
+            if (rowData._style.bold) {
+              cell.s.font = cell.s.font || {};
+              cell.s.font.bold = true;
+            }
+            if (rowData._style.fill) {
+              cell.s.fill = cell.s.fill || {};
+              cell.s.fill.fgColor = { rgb: rowData._style.fill };
+            }
+          }
         }
+
         
         if (cell.t === 'n') {
           const headerLabel = headers ? headers[C] : undefined;

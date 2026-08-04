@@ -148,7 +148,8 @@ export class FinanceReportController {
     };
     const indentedData = data.tableData.map(row => ({
       ...row,
-      account: row.level >= 2 ? `${'    '.repeat(row.level - 1)}${row.account}` : row.account
+      account: row.level >= 2 ? `${'    '.repeat(row.level - 1)}${row.account}` : row.account,
+      _style: (row.isHeader || row.isTotal) ? { bold: true } : undefined
     }));
     const buffer = generateExcelBuffer(indentedData, 'Profit Loss', PL_COLUMN_MAPPING);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -170,7 +171,8 @@ export class FinanceReportController {
     };
     const indentedData = data.tableData.map(row => ({
       ...row,
-      account: row.level >= 2 ? `${'    '.repeat(row.level - 1)}${row.account}` : row.account
+      account: row.level >= 2 ? `${'    '.repeat(row.level - 1)}${row.account}` : row.account,
+      _style: (row.isHeader || row.isTotal) ? { bold: true } : undefined
     }));
     const buffer = await generatePdfBuffer(indentedData, `Profit Loss Statement ${year || 'All Time'}`, PL_COLUMN_MAPPING);
     res.setHeader('Content-Type', 'application/pdf');
@@ -180,23 +182,58 @@ export class FinanceReportController {
 
   private flattenBalanceSheet(data: any) {
     const rows: any[] = [];
-    const processSection = (sectionName: string, sectionData: any) => {
-      rows.push({ description: sectionName.toUpperCase(), amount: sectionData.total });
-      if (sectionData.categories) {
-        sectionData.categories.forEach((cat: any) => {
-          rows.push({ description: `    ${cat.name}`, amount: cat.total });
-          if (cat.items) {
-            cat.items.forEach((item: any) => {
-              rows.push({ description: `        ${item.accountName}`, amount: item.idr });
-            });
-          }
-        });
-      }
-    };
+    
+    // ASSETS
+    rows.push({ description: 'ASSETS', amount: null, _style: { bold: true } });
+    if (data.assets && data.assets.categories) {
+      data.assets.categories.forEach((cat: any) => {
+        rows.push({ description: cat.name, amount: null, _style: { bold: true } });
+        if (cat.items) {
+          cat.items.forEach((item: any) => {
+            rows.push({ description: `    ${item.accountName}`, amount: item.idr });
+          });
+        }
+        rows.push({ description: `        Total ${cat.name}`, amount: cat.total, _style: { bold: true } });
+        rows.push({ description: '', amount: null });
+      });
+    }
+    rows.push({ description: '        A S S E T S', amount: data.assets?.total, _style: { bold: true, fill: 'EEEEEE' } });
+    rows.push({ description: '', amount: null });
 
-    processSection('Assets', data.assets);
-    processSection('Liabilities', data.liabilities);
-    processSection('Equity', data.equity);
+    // LIABILITIES
+    rows.push({ description: 'LIABILITIES', amount: null, _style: { bold: true } });
+    if (data.liabilities && data.liabilities.categories) {
+      data.liabilities.categories.forEach((cat: any) => {
+        rows.push({ description: cat.name, amount: null, _style: { bold: true } });
+        if (cat.items) {
+          cat.items.forEach((item: any) => {
+            rows.push({ description: `    ${item.accountName}`, amount: item.idr });
+          });
+        }
+        rows.push({ description: `        Total ${cat.name}`, amount: cat.total, _style: { bold: true } });
+        rows.push({ description: '', amount: null });
+      });
+    }
+
+    // EQUITY
+    rows.push({ description: 'EQUITY', amount: null, _style: { bold: true } });
+    if (data.equity && data.equity.categories) {
+      data.equity.categories.forEach((cat: any) => {
+        rows.push({ description: cat.name, amount: null, _style: { bold: true } });
+        if (cat.items) {
+          cat.items.forEach((item: any) => {
+            rows.push({ description: `    ${item.accountName}`, amount: item.idr });
+          });
+        }
+        rows.push({ description: `        Total ${cat.name}`, amount: cat.total, _style: { bold: true } });
+        rows.push({ description: '', amount: null });
+      });
+    }
+
+    const totalLE = Number((data.liabilities?.total || "0").toString().replace(/,/g, '')) + 
+                    Number((data.equity?.total || "0").toString().replace(/,/g, ''));
+
+    rows.push({ description: '        L I A B I L I T I E S   &   E Q U I T Y', amount: totalLE, _style: { bold: true, fill: 'EEEEEE' } });
 
     return rows;
   }
