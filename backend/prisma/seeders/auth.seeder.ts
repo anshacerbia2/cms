@@ -25,6 +25,16 @@ export async function seedAuth(prisma: PrismaClient) {
     },
   });
 
+  const viewerRole = await prisma.role.upsert({
+    where: { slug: 'viewer' },
+    update: {},
+    create: {
+      name: 'Viewer',
+      slug: 'viewer',
+      description: 'View-only access for all modules',
+    },
+  });
+
   // 2. Create Permissions
   const permissions = [
     { name: 'Dashboard View', route: 'dashboard.view' },
@@ -98,6 +108,18 @@ export async function seedAuth(prisma: PrismaClient) {
     { name: 'Delete Depreciation', route: 'depreciation.delete' },
   ];
 
+  // List of permissions for viewer (all read-only permissions)
+  const viewerPermissions = permissions
+    .map(p => p.route)
+    .filter(route => 
+      route.includes('.index') || 
+      route.includes('.show') || 
+      route.includes('.view') || 
+      route.includes('.reports') || 
+      route.includes('.anchor') ||
+      route === 'dashboard.view'
+    );
+
   // List of permissions for finance manager
   const financeManagerPermissions = [
     'dashboard.view',
@@ -112,9 +134,7 @@ export async function seedAuth(prisma: PrismaClient) {
     'finance.year.close',
     'account-payable.index',
     'ppn-in-out.index',
-    'ppn-in-out.create',
     'inter-account.index',
-    'inter-account.create',
     'account-receivable.index',
     'depreciation.index',
     'bank-mutation.index',
@@ -158,6 +178,23 @@ export async function seedAuth(prisma: PrismaClient) {
         update: {},
         create: {
           roleId: financeRole.id,
+          permissionId: perm.id,
+        },
+      });
+    }
+
+    // Assign to Viewer if in the list
+    if (viewerPermissions.includes(p.route)) {
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: viewerRole.id,
+            permissionId: perm.id,
+          },
+        },
+        update: {},
+        create: {
+          roleId: viewerRole.id,
           permissionId: perm.id,
         },
       });
@@ -224,6 +261,11 @@ export async function seedAuth(prisma: PrismaClient) {
       });
     }
 
+    // Assign parent to Viewer
+    await prisma.roleMenu.create({
+      data: { roleId: viewerRole.id, menuId: parentMenu.id }
+    });
+
     for (const item of group.items) {
       const permission = await prisma.permission.findUnique({ where: { route: item.route } });
       
@@ -250,6 +292,11 @@ export async function seedAuth(prisma: PrismaClient) {
           data: { roleId: financeRole.id, menuId: childMenu.id }
         });
       }
+
+      // Assign child to Viewer
+      await prisma.roleMenu.create({
+        data: { roleId: viewerRole.id, menuId: childMenu.id }
+      });
     }
   }
 
@@ -282,6 +329,19 @@ export async function seedAuth(prisma: PrismaClient) {
     },
   });
 
+  // Viewer
+  await prisma.user.upsert({
+    where: { email: 'viewer@pcmi.com' },
+    update: { password: hashedPassword },
+    create: {
+      name: 'Viewer User',
+      email: 'viewer@pcmi.com',
+      password: hashedPassword,
+      roleId: viewerRole.id,
+      status: 'ACTIVE',
+    },
+  });
+
   console.log('✅ Auth seeding completed.');
-  return { adminRole, financeRole };
+  return { adminRole, financeRole, viewerRole };
 }

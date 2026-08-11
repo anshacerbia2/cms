@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, MoreVertical, Edit2, Trash2, Search, Building2, Banknote, CreditCard, QrCode } from "lucide-react";
+import { Plus, MoreVertical, Edit2, Trash2, Search, Building2, Banknote, CreditCard, QrCode, Eye } from "lucide-react";
 import { useBanks } from "../hooks/useBanks";
 import { useAuthStore } from "@/store/authStore";
 import { QRDialog } from "./QRDialog";
+import { DetailModal } from "@/components/common/DetailModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -38,7 +39,9 @@ export function AccountsTab() {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<InternalAccount | null>(null);
+  const [selectedViewAccount, setSelectedViewAccount] = useState<InternalAccount | null>(null);
   const [qrData, setQrData] = useState<{ title: string, subtitle: string, data: string }>({ title: "", subtitle: "", data: "" });
 
   const { can } = useAuthStore();
@@ -104,6 +107,11 @@ export function AccountsTab() {
       })
     });
     setIsQRDialogOpen(true);
+  };
+
+  const handleView = (account: InternalAccount) => {
+    setSelectedViewAccount(account);
+    setIsViewModalOpen(true);
   };
 
   const handleDialogSubmit = (data: any) => {
@@ -260,15 +268,22 @@ export function AccountsTab() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="rounded-xl border-primary/5 shadow-premium">
-                        <DropdownMenuItem onClick={() => handleEdit(account)} className="text-[10px] font-bold uppercase cursor-pointer">
-                          <Edit2 size={14} className="mr-2" /> Edit
+                        <DropdownMenuItem onClick={() => handleView(account)} className="text-[10px] font-bold uppercase cursor-pointer">
+                          <Eye size={14} className="mr-2" /> View Details
                         </DropdownMenuItem>
+                        {can('internal-accounts.update') && (
+                          <DropdownMenuItem onClick={() => handleEdit(account)} className="text-[10px] font-bold uppercase cursor-pointer">
+                            <Edit2 size={14} className="mr-2" /> Edit
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => handleShowQR(account)} className="text-[10px] font-bold uppercase cursor-pointer">
                           <QrCode size={14} className="mr-2" /> View QR Code
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(account.id)} className="text-[10px] font-bold uppercase text-destructive cursor-pointer">
-                          <Trash2 size={14} className="mr-2" /> Delete
-                        </DropdownMenuItem>
+                        {can('internal-accounts.delete') && (
+                          <DropdownMenuItem onClick={() => handleDelete(account.id)} className="text-[10px] font-bold uppercase text-destructive cursor-pointer">
+                            <Trash2 size={14} className="mr-2" /> Delete
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -322,6 +337,21 @@ export function AccountsTab() {
         open={isQRDialogOpen}
         onOpenChange={setIsQRDialogOpen}
         {...qrData}
+      />
+
+      <DetailModal
+        open={isViewModalOpen}
+        onOpenChange={setIsViewModalOpen}
+        title="Account Details"
+        subtitle={selectedViewAccount?.holderName}
+        data={[
+          { label: "Holder Name", value: selectedViewAccount?.holderName },
+          { label: "Account Type", value: selectedViewAccount?.type },
+          { label: "Account No", value: selectedViewAccount?.accountNo },
+          { label: "Branch", value: selectedViewAccount?.branch },
+          { label: "Swift Code", value: selectedViewAccount?.swiftCode },
+          { label: "Bank Name", value: selectedViewAccount?.bank?.bankName || selectedViewAccount?.bank?.name },
+        ]}
       />
     </div>
   );

@@ -15,8 +15,9 @@ import { Decimal } from "decimal.js";
 import { Badge } from "@/components/ui/badge";
 import AddDepreciationModal from "../components/AddDepreciationModal";
 import { toast } from "sonner";
-import { Edit2, Trash2, AlertCircle, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Edit2, Trash2, AlertCircle, Download, FileSpreadsheet, FileText, Eye } from "lucide-react";
 import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
+import { DetailModal } from "@/components/common/DetailModal";
 import EditDepreciationModal from "../components/EditDepreciationModal";
 import {
   Dialog,
@@ -44,7 +45,9 @@ export default function DepreciationPage() {
   const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
+  const [selectedViewRecord, setSelectedViewRecord] = useState<any>(null);
   const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const assetLimit = 10;
@@ -227,6 +230,11 @@ export default function DepreciationPage() {
   const handleEdit = (id: number) => {
     setSelectedRecordId(id);
     setIsEditModalOpen(true);
+  };
+
+  const handleView = (row: any) => {
+    setSelectedViewRecord(row);
+    setIsViewModalOpen(true);
   };
 
   const handleDelete = async () => {
@@ -499,6 +507,9 @@ export default function DepreciationPage() {
                       <TableCell className="px-4 w-44 text-right font-black text-primary">{row.bookValue}</TableCell>
                       <TableCell className="px-4 text-center pr-8">
                         <div className="flex items-center justify-center gap-1 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleView(row); }}>
+                            <Eye size={12} strokeWidth={2.5} />
+                          </Button>
                           {can('depreciation.update') && (
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
                               <Edit2 size={12} strokeWidth={2.5} />
@@ -602,6 +613,25 @@ export default function DepreciationPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DetailModal
+        open={isViewModalOpen}
+        onOpenChange={setIsViewModalOpen}
+        title="Depreciation Details"
+        subtitle={selectedViewRecord?.assetName}
+        data={[
+          { label: "Category", value: selectedViewRecord?.category },
+          { label: "Date", value: selectedViewRecord?.purchaseDate },
+          { label: "Source", value: selectedViewRecord?.bankRef },
+          { label: "Description", value: selectedViewRecord?.assetName },
+          { label: "Purchase Price", value: selectedViewRecord?.purchasePrice },
+          { label: "Month", value: selectedViewRecord?.usefulLife },
+          { label: "S/D 2024", value: selectedViewRecord?.accumulated2020 },
+          ...months.map((m) => ({ label: m.toUpperCase(), value: selectedViewRecord?.[m] })),
+          { label: "Total 2025", value: selectedViewRecord?.total2021 },
+          { label: "S/D 2025", value: selectedViewRecord?.accumulated2021 },
+          { label: "Book Value", value: selectedViewRecord?.bookValue },
+        ]}
+      />
     </PageContainer>
   );
 }

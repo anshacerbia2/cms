@@ -19,8 +19,9 @@ import AddArLedgerModal from "../components/AddArLedgerModal";
 import { formatCurrency, cleanAmount, getAmountColor } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { Decimal } from "decimal.js";
-import { Edit2, Trash2, AlertCircle, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Edit2, Trash2, AlertCircle, Download, FileSpreadsheet, FileText, Eye } from "lucide-react";
 import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
+import { DetailModal } from "@/components/common/DetailModal";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -66,7 +67,9 @@ export default function AccountReceivablePage() {
 
   const { getAllAR, deleteAR } = useAccountReceivable();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
+  const [selectedViewRecord, setSelectedViewRecord] = useState<any>(null);
   const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -163,6 +166,11 @@ export default function AccountReceivablePage() {
     const rawRecord = allARRaw?.find((r: any) => r.id === row.id) || row;
     setSelectedRecord(rawRecord);
     setIsEditModalOpen(true);
+  };
+
+  const handleView = (row: any) => {
+    setSelectedViewRecord(row);
+    setIsViewModalOpen(true);
   };
 
   const handleDelete = (id: number) => {
@@ -385,18 +393,30 @@ export default function AccountReceivablePage() {
                             variant="ghost" 
                             size="icon" 
                             className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
-                            onClick={() => handleEdit(row)}
+                            onClick={() => handleView(row)}
                           >
-                            <Edit2 size={12} strokeWidth={2.5} />
+                            <Eye size={12} strokeWidth={2.5} />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm"
-                            onClick={() => handleDelete(row.id)}
-                          >
-                            <Trash2 size={12} strokeWidth={2.5} />
-                          </Button>
+                          {can('account-receivable.update') && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
+                              onClick={() => handleEdit(row)}
+                            >
+                              <Edit2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
+                          {can('account-receivable.delete') && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm"
+                              onClick={() => handleDelete(row.id)}
+                            >
+                              <Trash2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -520,6 +540,27 @@ export default function AccountReceivablePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DetailModal
+        open={isViewModalOpen}
+        onOpenChange={setIsViewModalOpen}
+        title="Account Receivable Details"
+        subtitle={selectedViewRecord?.colD}
+        data={[
+          { label: "Type", value: selectedViewRecord?.colB },
+          { label: "Year", value: selectedViewRecord?.colC },
+          { label: "Client", value: selectedViewRecord?.colD },
+          { label: "Description", value: selectedViewRecord?.colE },
+          { label: "IDR", value: selectedViewRecord?.colF },
+          { label: "BCA Suhardjo", value: selectedViewRecord?.colJ },
+          { label: "BCA Juanda", value: selectedViewRecord?.colK },
+          { label: "MANDIRI MP", value: selectedViewRecord?.colL },
+          { label: "BRI Suhardjo", value: selectedViewRecord?.colM },
+          { label: "Cash IDR", value: selectedViewRecord?.colN },
+          { label: "Non CB", value: selectedViewRecord?.colO },
+          { label: "PPn In and Out", value: selectedViewRecord?.colP },
+          { label: "Outstanding IDR", value: selectedViewRecord?.colR },
+        ]}
+      />
     </PageContainer>
   );
 }

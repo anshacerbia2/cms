@@ -17,8 +17,9 @@ import { ExcelColumnFilter } from "./ExcelColumnFilter";
 import AddApLedgerModal from "./AddApLedgerModal";
 import { formatCurrency } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
-import { Plus, Edit2, Trash2, AlertCircle, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Plus, Edit2, Trash2, AlertCircle, Download, FileSpreadsheet, FileText, Eye } from "lucide-react";
 import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
+import { DetailModal } from "@/components/common/DetailModal";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -62,7 +63,9 @@ export function ApSummaryTab() {
 
   const { getAllAP, deleteAP } = useAccountPayable();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
+  const [selectedViewRecord, setSelectedViewRecord] = useState<any>(null);
   const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -192,6 +195,11 @@ export function ApSummaryTab() {
     const rawRecord = allAPRaw?.find((r: any) => r.id === row.id) || row;
     setSelectedRecord(rawRecord);
     setIsEditModalOpen(true);
+  };
+
+  const handleView = (row: any) => {
+    setSelectedViewRecord(row);
+    setIsViewModalOpen(true);
   };
 
   const handleDelete = (id: number) => {
@@ -428,18 +436,30 @@ export function ApSummaryTab() {
                             variant="ghost" 
                             size="icon" 
                             className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
-                            onClick={() => handleEdit(row)}
+                            onClick={() => handleView(row)}
                           >
-                            <Edit2 size={12} strokeWidth={2.5} />
+                            <Eye size={12} strokeWidth={2.5} />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm"
-                            onClick={() => handleDelete(row.id)}
-                          >
-                            <Trash2 size={12} strokeWidth={2.5} />
-                          </Button>
+                          {can('account-payable.update') && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
+                              onClick={() => handleEdit(row)}
+                            >
+                              <Edit2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
+                          {can('account-payable.delete') && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm"
+                              onClick={() => handleDelete(row.id)}
+                            >
+                              <Trash2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                         </div>
                     </TableCell>
                     </TableRow>
@@ -543,6 +563,29 @@ export function ApSummaryTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DetailModal
+        open={isViewModalOpen}
+        onOpenChange={setIsViewModalOpen}
+        title="Account Payable Details"
+        subtitle={selectedViewRecord?.colA}
+        data={[
+          { label: "Payable", value: selectedViewRecord?.colA },
+          { label: "Year", value: selectedViewRecord?.colB },
+          { label: "Vendor", value: selectedViewRecord?.colC },
+          { label: "Keterangan", value: selectedViewRecord?.colD },
+          { label: "IDR", value: selectedViewRecord?.colE },
+          { label: "BCA Shardjo", value: selectedViewRecord?.colK },
+          { label: "BCA Juanda", value: selectedViewRecord?.colL },
+          { label: "Mandiri Mid Plaza", value: selectedViewRecord?.colM },
+          { label: "BTN", value: selectedViewRecord?.colN },
+          { label: "BRI Shardjo", value: selectedViewRecord?.colO },
+          { label: "BRI Tebet", value: selectedViewRecord?.colP },
+          { label: "Cash IDR", value: selectedViewRecord?.colQ },
+          { label: "Non CB", value: selectedViewRecord?.colR },
+          { label: "AP In and Out", value: selectedViewRecord?.colS },
+          { label: "Outstanding IDR", value: selectedViewRecord?.colU },
+        ]}
+      />
     </div>
   );
 }

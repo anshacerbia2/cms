@@ -15,9 +15,10 @@ import {
   ShieldCheck,
   Edit2,
   Trash2,
-  Download,
   FileSpreadsheet,
   FileText,
+  Eye,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -39,6 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import AddLedgerModal from "../components/AddLedgerModal";
 import EditTransactionModal from "../components/EditTransactionModal";
+import { DetailModal } from "@/components/common/DetailModal";
 import {
   Table,
   TableBody,
@@ -92,7 +94,9 @@ export default function BankMutationPage() {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<number | null>(null);
+  const [selectedViewTransaction, setSelectedViewTransaction] = useState<any>(null);
   const [transactionToDelete, setTransactionToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -117,6 +121,11 @@ export default function BankMutationPage() {
   const handleEditTransaction = (row: any) => {
     setSelectedTransactionId(row.id);
     setIsEditModalOpen(true);
+  };
+
+  const handleViewTransaction = (row: any) => {
+    setSelectedViewTransaction(row);
+    setIsViewModalOpen(true);
   };
 
   const handleDeleteTransaction = (id: number) => {
@@ -848,18 +857,30 @@ export default function BankMutationPage() {
                             variant="ghost" 
                             size="icon" 
                             className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
-                            onClick={(e) => { e.stopPropagation(); handleEditTransaction(row); }}
+                            onClick={(e) => { e.stopPropagation(); handleViewTransaction(row); }}
                           >
-                            <Edit2 size={12} strokeWidth={2.5} />
+                            <Eye size={12} strokeWidth={2.5} />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm"
-                            onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(row.id); }}
-                          >
-                            <Trash2 size={12} strokeWidth={2.5} />
-                          </Button>
+                          {can('bank-mutation.edit') && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
+                              onClick={(e) => { e.stopPropagation(); handleEditTransaction(row); }}
+                            >
+                              <Edit2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
+                          {can('bank-mutation.delete') && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(row.id); }}
+                            >
+                              <Trash2 size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -970,6 +991,23 @@ export default function BankMutationPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DetailModal
+        open={isViewModalOpen}
+        onOpenChange={setIsViewModalOpen}
+        title="Mutation Details"
+        subtitle={selectedViewTransaction?.colB}
+        data={[
+          { label: "Date", value: selectedViewTransaction?.colA },
+          { label: "Description", value: selectedViewTransaction?.colB },
+          { label: "Debit", value: selectedViewTransaction?.colC },
+          { label: "Credit", value: selectedViewTransaction?.colD },
+          { label: "Balance", value: selectedViewTransaction?.colE },
+          { label: "Ledger", value: selectedViewTransaction?.colF },
+          { label: "Sub Ledger - 1", value: selectedViewTransaction?.colG },
+          { label: "Sub Ledger - 2", value: selectedViewTransaction?.colH },
+          { label: "Sub Ledger - 3", value: selectedViewTransaction?.colI },
+        ]}
+      />
       </div>
     </PageContainer>
   );

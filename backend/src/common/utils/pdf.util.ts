@@ -3,7 +3,7 @@ const formatAccounting = (val: any) => {
   if (val == null || val === '') return '';
   const num = Number(val);
   if (isNaN(num)) return val;
-  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `IDR ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const formatNum = (val: any) => {
@@ -48,9 +48,9 @@ export function generatePdfBuffer(data: any[], title: string, columnMapping: Rec
           let cellObj: any = { text: val != null ? String(val) : '' };
           
           if (isAccounting) {
-            cellObj = { text: formatAccounting(val), alignment: 'right' };
+            cellObj = { text: formatAccounting(val), alignment: 'right', noWrap: true };
           } else if (isNum) {
-            cellObj = { text: formatNum(val), alignment: 'right' };
+            cellObj = { text: formatNum(val), alignment: 'right', noWrap: true };
           } else if (val instanceof Date) {
             cellObj = { text: val.toLocaleDateString('en-GB') };
           }

@@ -14,10 +14,11 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
 import AddSalesModal from "../components/AddSalesModal";
 import { useAuthStore } from "@/store/authStore";
-import { Download, Edit2, Plus, Trash2, AlertCircle, FileSpreadsheet, FileText } from "lucide-react";
+import { Download, Edit2, Plus, Trash2, AlertCircle, FileSpreadsheet, FileText, Eye } from "lucide-react";
 import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
 import { toast } from "sonner";
 import EditSalesModal from "../../finance/components/EditSalesModal";
+import { DetailModal } from "@/components/common/DetailModal";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +45,9 @@ export default function SalesPage() {
   const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
+  const [selectedViewRecord, setSelectedViewRecord] = useState<any>(null);
   const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const salesLimit = 10;
@@ -136,6 +139,11 @@ export default function SalesPage() {
   const handleEdit = (id: number) => {
     setSelectedRecordId(id);
     setIsEditModalOpen(true);
+  };
+
+  const handleView = (row: any) => {
+    setSelectedViewRecord(row);
+    setIsViewModalOpen(true);
   };
 
   const handleDelete = async () => {
@@ -445,6 +453,9 @@ export default function SalesPage() {
                       <TableCell className="pr-8 w-64">{row.colAD}</TableCell>
                       <TableCell className="px-4 text-center">
                         <div className="flex items-center justify-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleView(row); }}>
+                            <Eye size={12} strokeWidth={2.5} />
+                          </Button>
                           {can('sales.update') && (
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
                               <Edit2 size={12} strokeWidth={2.5} />
@@ -568,6 +579,41 @@ export default function SalesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DetailModal
+        open={isViewModalOpen}
+        onOpenChange={setIsViewModalOpen}
+        title="Sales Details"
+        subtitle={`Invoice No: ${selectedViewRecord?.colB}`}
+        data={[
+          { label: "Invoice No", value: selectedViewRecord?.colB },
+          { label: "Date", value: selectedViewRecord?.colC },
+          { label: "Year", value: selectedViewRecord?.colD },
+          { label: "Billing To", value: selectedViewRecord?.colE },
+          { label: "Sales Code", value: selectedViewRecord?.colF },
+          { label: "Description", value: selectedViewRecord?.colG },
+          { label: "Basic Price", value: selectedViewRecord?.colH },
+          { label: "Mgmt Fee", value: selectedViewRecord?.colI },
+          { label: "PPN", value: selectedViewRecord?.colJ },
+          { label: "AR IDR", value: selectedViewRecord?.colK },
+          { label: "BCA Sahardjo", value: selectedViewRecord?.colM },
+          { label: "BCA Juanda", value: selectedViewRecord?.colN },
+          { label: "Mandiri Mid", value: selectedViewRecord?.colO },
+          { label: "Mandiri Plasa", value: selectedViewRecord?.colP },
+          { label: "BRI Tebet", value: selectedViewRecord?.colQ },
+          { label: "BRI Sahardjo", value: selectedViewRecord?.colR },
+          { label: "BTN", value: selectedViewRecord?.colS },
+          { label: "Bank Raya", value: selectedViewRecord?.colT },
+          { label: "BNI", value: selectedViewRecord?.colU },
+          { label: "Cash IDR", value: selectedViewRecord?.colV },
+          { label: "Non CB", value: selectedViewRecord?.colW },
+          { label: "Outstanding", value: selectedViewRecord?.colX },
+          { label: "AP PPN", value: selectedViewRecord?.colZ },
+          { label: "PPh 23", value: selectedViewRecord?.colAA },
+          { label: "WAPU", value: selectedViewRecord?.colAB },
+          { label: "Non WAPU", value: selectedViewRecord?.colAC },
+          { label: "Remarks", value: selectedViewRecord?.colAD },
+        ]}
+      />
     </PageContainer>
   );
 }

@@ -12,9 +12,10 @@ import { useExcelFilter } from '../hooks/useExcelFilter';
 import { ExcelColumnFilter } from './ExcelColumnFilter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FilterX, Download, Plus, Edit2, Trash2, AlertCircle, FileSpreadsheet, FileText } from 'lucide-react';
+import { Search, FilterX, Download, Plus, Edit2, Trash2, AlertCircle, FileSpreadsheet, FileText, Eye } from 'lucide-react';
 import Decimal from 'decimal.js';
 import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
+import { DetailModal } from "@/components/common/DetailModal";
 
 import { useInterAccount } from '../hooks/useInterAccount';
 import { toast } from "sonner";
@@ -49,7 +50,9 @@ export const InterAccountTable: React.FC = () => {
   const yearNum = useMemo(() => Number(yearFilter), [yearFilter]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
+  const [selectedViewRecord, setSelectedViewRecord] = useState<any>(null);
   const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -169,6 +172,11 @@ export const InterAccountTable: React.FC = () => {
   const handleEdit = (id: number) => {
     setSelectedRecordId(id);
     setIsEditModalOpen(true);
+  };
+
+  const handleView = (row: any) => {
+    setSelectedViewRecord(row);
+    setIsViewModalOpen(true);
   };
 
   const handleDelete = async () => {
@@ -334,6 +342,9 @@ export const InterAccountTable: React.FC = () => {
                       ))}
                       <TableCell className="px-4 text-center">
                         <div className="flex items-center justify-center gap-1 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleView(row); }}>
+                            <Eye size={12} strokeWidth={2.5} />
+                          </Button>
                           {can('inter-account.update') && (
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
                               <Edit2 size={12} strokeWidth={2.5} />
@@ -404,6 +415,16 @@ export const InterAccountTable: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DetailModal
+        open={isViewModalOpen}
+        onOpenChange={setIsViewModalOpen}
+        title="Inter Account Details"
+        subtitle={selectedViewRecord?.colB}
+        data={cols.map(c => ({
+          label: c.l,
+          value: selectedViewRecord?.[c.k]
+        }))}
+      />
     </div>
   );
 };

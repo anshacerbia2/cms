@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Plus, MoreVertical, Edit2, Trash2, Search, MapPin, Landmark, QrCode } from "lucide-react";
+import { Plus, MoreVertical, Edit2, Trash2, Search, MapPin, Landmark, QrCode, Eye } from "lucide-react";
 import { useBanks } from "../hooks/useBanks";
 import { useAuthStore } from "@/store/authStore";
 import { QRDialog } from "./QRDialog";
+import { DetailModal } from "@/components/common/DetailModal";
 import { 
   Table, 
   TableBody, 
@@ -32,7 +33,9 @@ export function BanksTab() {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
+  const [selectedViewBank, setSelectedViewBank] = useState<Bank | null>(null);
   const [qrData, setQrData] = useState<{ title: string, subtitle: string, data: string }>({ title: "", subtitle: "", data: "" });
 
   const { can } = useAuthStore();
@@ -64,6 +67,11 @@ export function BanksTab() {
       })
     });
     setIsQRDialogOpen(true);
+  };
+
+  const handleView = (bank: Bank) => {
+    setSelectedViewBank(bank);
+    setIsViewModalOpen(true);
   };
 
   return (
@@ -178,15 +186,22 @@ export function BanksTab() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="rounded-xl border-primary/5 shadow-premium">
-                        <DropdownMenuItem onClick={() => handleEdit(bank)} className="text-[10px] font-bold uppercase cursor-pointer">
-                          <Edit2 size={14} className="mr-2" /> Edit Reference
+                        <DropdownMenuItem onClick={() => handleView(bank)} className="text-[10px] font-bold uppercase cursor-pointer">
+                          <Eye size={14} className="mr-2" /> View Details
                         </DropdownMenuItem>
+                        {can('banks.update') && (
+                          <DropdownMenuItem onClick={() => handleEdit(bank)} className="text-[10px] font-bold uppercase cursor-pointer">
+                            <Edit2 size={14} className="mr-2" /> Edit Reference
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => handleShowQR(bank)} className="text-[10px] font-bold uppercase cursor-pointer">
                           <QrCode size={14} className="mr-2" /> View QR Code
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-[10px] font-bold uppercase text-destructive cursor-pointer">
-                          <Trash2 size={14} className="mr-2" /> Remove
-                        </DropdownMenuItem>
+                        {can('banks.delete') && (
+                          <DropdownMenuItem className="text-[10px] font-bold uppercase text-destructive cursor-pointer">
+                            <Trash2 size={14} className="mr-2" /> Delete
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -213,6 +228,19 @@ export function BanksTab() {
         open={isQRDialogOpen}
         onOpenChange={setIsQRDialogOpen}
         {...qrData}
+      />
+
+      <DetailModal
+        open={isViewModalOpen}
+        onOpenChange={setIsViewModalOpen}
+        title="Bank Details"
+        subtitle={selectedViewBank?.bankName}
+        data={[
+          { label: "Bank Name", value: selectedViewBank?.bankName },
+          { label: "Bank Code", value: selectedViewBank?.bankCode },
+          { label: "Brand Name", value: selectedViewBank?.bankBrand },
+          { label: "Headquarters Address", value: selectedViewBank?.bankAddress }
+        ]}
       />
     </div>
   );

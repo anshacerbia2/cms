@@ -18,8 +18,9 @@ import { ExcelColumnFilter } from "./ExcelColumnFilter";
 import { formatCurrency, formatDate, getAmountColor } from "@/lib/utils";
 import { Decimal } from "decimal.js";
 import { toast } from "sonner";
-import { Edit2, Trash2, AlertCircle, Plus, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Edit2, Trash2, AlertCircle, Plus, Download, FileSpreadsheet, FileText, Eye } from "lucide-react";
 import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
+import { DetailModal } from "@/components/common/DetailModal";
 import EditPpnInOutModal from "./EditPpnInOutModal";
 import AddPpnInOutModal from "./AddPpnInOutModal";
 import {
@@ -50,7 +51,9 @@ export function PpnInOutTable() {
   const limit = 10;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
+  const [selectedViewRecord, setSelectedViewRecord] = useState<any>(null);
   const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString());
@@ -172,6 +175,11 @@ export function PpnInOutTable() {
   const handleEdit = (id: number) => {
     setSelectedRecordId(id);
     setIsEditModalOpen(true);
+  };
+
+  const handleView = (row: any) => {
+    setSelectedViewRecord(row);
+    setIsViewModalOpen(true);
   };
 
   const handleDelete = async () => {
@@ -343,6 +351,9 @@ export function PpnInOutTable() {
                       ))}
                       <TableCell className="px-4 text-center">
                         <div className="flex items-center justify-center gap-1 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleView(row); }}>
+                            <Eye size={12} strokeWidth={2.5} />
+                          </Button>
                           {can('ppn-in-out.update') && (
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
                               <Edit2 size={12} strokeWidth={2.5} />
@@ -446,6 +457,16 @@ export function PpnInOutTable() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DetailModal
+        open={isViewModalOpen}
+        onOpenChange={setIsViewModalOpen}
+        title="PPN In/Out Details"
+        subtitle={selectedViewRecord?.colC}
+        data={cols.map(c => ({
+          label: c.l,
+          value: selectedViewRecord?.[c.k]
+        }))}
+      />
     </div>
   );
 }

@@ -34,7 +34,7 @@ export function generateExcelBuffer(data: any[], sheetName: string = 'Sheet1', c
       const label = mappingVal.replace(/\|num|\|accounting/g, '');
       
       if (isAccounting) {
-        columnFormats[label] = '_(* #,##0.00_);_(* (#,##0.00);_(* "-"??_);_(@_)';
+        columnFormats[label] = '_("Rp"* #,##0.00_);_("Rp"* \\(#,##0.00\\);_("Rp"* "-"??_);_(@_)';
       } else if (isNum) {
         columnFormats[label] = '0';
       }
@@ -125,15 +125,24 @@ export function generateExcelBuffer(data: any[], sheetName: string = 'Sheet1', c
   const keys = headers || Object.keys(mappedData[0]);
   for (let i = 0; i < keys.length; i++) {
     let max = keys[i].toString().length;
+    const headerLabel = headers ? headers[i] : undefined;
+    const isAccounting = headerLabel && columnFormats[headerLabel] && columnFormats[headerLabel].includes('"Rp"');
+    
     for (let j = 0; j < mappedData.length; j++) {
       const val = mappedData[j][keys[i]];
       if (val !== null && val !== undefined) {
-        const len = val.toString().length;
+        let len = val.toString().length;
+        if (isAccounting) {
+          // add length of 'Rp ' and formatting commas
+          len += 6; 
+        }
         if (len > max) {
           max = len;
         }
       }
     }
+    // Set a min width for accounting columns so they don't show ###
+    if (isAccounting && max < 16) max = 16;
     colWidths.push({ wch: Math.min(max + 2, 50) }); // cap width at 50
   }
   worksheet['!cols'] = colWidths;
