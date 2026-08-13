@@ -15,12 +15,12 @@ export async function seedAuth(prisma: PrismaClient) {
     },
   });
 
-  const financeRole = await prisma.role.upsert({
-    where: { slug: 'finance_manager' },
+  const presidentDirectorRole = await prisma.role.upsert({
+    where: { slug: 'president_director' },
     update: {},
     create: {
-      name: 'Finance Manager',
-      slug: 'finance_manager',
+      name: 'President Director',
+      slug: 'president_director',
       description: 'Access to financial ledger and reports only',
     },
   });
@@ -120,8 +120,8 @@ export async function seedAuth(prisma: PrismaClient) {
       route === 'dashboard.view'
     );
 
-  // List of permissions for finance manager
-  const financeManagerPermissions = [
+  // List of permissions for president director
+  const presidentDirectorPermissions = [
     'dashboard.view',
     'banks.index',
     'internal-accounts.index',
@@ -166,18 +166,18 @@ export async function seedAuth(prisma: PrismaClient) {
       },
     });
 
-    // Assign to Finance Manager if in the list
-    if (financeManagerPermissions.includes(p.route)) {
+    // Assign to President Director if in the list
+    if (presidentDirectorPermissions.includes(p.route)) {
       await prisma.rolePermission.upsert({
         where: {
           roleId_permissionId: {
-            roleId: financeRole.id,
+            roleId: presidentDirectorRole.id,
             permissionId: perm.id,
           },
         },
         update: {},
         create: {
-          roleId: financeRole.id,
+          roleId: presidentDirectorRole.id,
           permissionId: perm.id,
         },
       });
@@ -254,10 +254,10 @@ export async function seedAuth(prisma: PrismaClient) {
       data: { roleId: adminRole.id, menuId: parentMenu.id }
     });
 
-    // Assign parent to Finance Manager if applicable
+    // Assign parent to President Director if applicable
     if (group.forFinance) {
       await prisma.roleMenu.create({
-        data: { roleId: financeRole.id, menuId: parentMenu.id }
+        data: { roleId: presidentDirectorRole.id, menuId: parentMenu.id }
       });
     }
 
@@ -286,10 +286,10 @@ export async function seedAuth(prisma: PrismaClient) {
         data: { roleId: adminRole.id, menuId: childMenu.id }
       });
 
-      // Assign child to Finance Manager if applicable
+      // Assign child to President Director if applicable
       if (item.forFinance) {
         await prisma.roleMenu.create({
-          data: { roleId: financeRole.id, menuId: childMenu.id }
+          data: { roleId: presidentDirectorRole.id, menuId: childMenu.id }
         });
       }
 
@@ -316,15 +316,15 @@ export async function seedAuth(prisma: PrismaClient) {
     },
   });
 
-  // Director / Finance Manager
+  // President Director
   await prisma.user.upsert({
     where: { email: 'dir@pcmi.com' },
     update: { password: hashedPassword },
     create: {
-      name: 'Director',
+      name: 'President Director',
       email: 'dir@pcmi.com',
       password: hashedPassword,
-      roleId: financeRole.id,
+      roleId: presidentDirectorRole.id,
       status: 'ACTIVE',
     },
   });
@@ -343,5 +343,5 @@ export async function seedAuth(prisma: PrismaClient) {
   });
 
   console.log('✅ Auth seeding completed.');
-  return { adminRole, financeRole, viewerRole };
+  return { adminRole, presidentDirectorRole, viewerRole };
 }

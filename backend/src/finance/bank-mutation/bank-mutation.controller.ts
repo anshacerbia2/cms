@@ -25,7 +25,7 @@ const BANK_MUTATION_COLUMN_MAPPING = {
 
 @Controller('bank-mutation')
 @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-@Roles('admin', 'finance_manager')
+@Roles('admin', 'president_director')
 export class BankMutationController {
   constructor(private readonly bankMutationService: BankMutationService) {}
 

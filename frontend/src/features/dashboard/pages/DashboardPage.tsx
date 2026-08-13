@@ -138,7 +138,7 @@ export default function DashboardPage() {
                     <tr key={activity.id} className="hover:bg-primary/[0.02] transition-colors group">
                       <td className="py-4 font-black text-primary uppercase text-[12px]">{activity.id}</td>
                       <td className="py-4 text-muted-foreground font-medium">{activity.customer}</td>
-                      <td className="py-4 text-right font-mono font-bold text-[13px]">{activity.amount}</td>
+                      <td className="py-4 text-right font-mono font-bold text-[13px]">{activity.amount !== '-' ? formatCurrency(activity.amount) : '-'}</td>
                       <td className="py-4 text-right text-muted-foreground text-[11px] font-mono pr-2">{activity.date !== '-' ? new Date(activity.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '-'}</td>
                     </tr>
                   ))}

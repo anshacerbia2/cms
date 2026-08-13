@@ -12,14 +12,14 @@ export class EquityPropertyController {
   constructor(private readonly equityPropertyService: EquityPropertyService) {}
 
   @Get()
-  @Roles('admin', 'finance_manager')
+  @Roles('admin', 'president_director')
   @Permissions('finance.reports')
   async getProperties(@Query('year', ParseIntPipe) year: number) {
     return this.equityPropertyService.getProperties(year);
   }
 
   @Post()
-  @Roles('admin', 'finance_manager')
+  @Roles('admin', 'president_director')
   @Permissions('finance.reports')
   async setProperties(
     @Body('year', ParseIntPipe) year: number,
