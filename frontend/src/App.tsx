@@ -21,6 +21,8 @@ import InterAccountPage from './features/finance/pages/InterAccountPage';
 import ProjectsPage from './features/projects/pages/ProjectsPage';
 import ProposalsPage from './features/proposals/pages/ProposalsPage';
 import InvoicesPage from './features/invoices/pages/InvoicesPage';
+import ReceiveVouchersPage from './features/vouchers/pages/ReceiveVouchersPage';
+import PaymentVouchersPage from './features/vouchers/pages/PaymentVouchersPage';
 
 const queryClient = new QueryClient();
 
@@ -62,6 +64,8 @@ function App() {
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="proposals" element={<ProposalsPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
+            <Route path="receive-vouchers" element={<ReceiveVouchersPage />} />
+            <Route path="payment-vouchers" element={<PaymentVouchersPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
