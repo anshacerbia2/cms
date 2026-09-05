@@ -17,13 +17,10 @@ export class PermissionsGuard implements CanActivate {
     }
 
     const { user } = context.switchToHttp().getRequest();
-    
-    // User object in request comes from JwtStrategy.validate()
-    // We need to ensure the user has the required permissions.
-    // Note: In a real world expert app, we might want to re-fetch permissions from DB or cache (Redis)
-    // but for now we assume they are injected or we'll add a database check here.
 
-    const userPermissions = user.permissions || []; // This needs to be populated by the Auth middleware/strategy
+    // JwtStrategy.validate() loads these from the database on every request, so a
+    // permission revoked a moment ago is already gone from this list.
+    const userPermissions = user.permissions || [];
     
     const hasPermission = requiredPermissions.some((permission) => 
       userPermissions.includes(permission)
