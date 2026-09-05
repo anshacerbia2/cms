@@ -156,6 +156,10 @@ export class ProposalsService {
         }
 
         // Items already billed on an invoice are left alone; only unbilled ones are replaced.
+        const billed = await tx.salesItem.findMany({
+          where: { proposalId, invoiceId: { not: null } },
+          select: { totalPrice: true },
+        });
         await tx.salesItem.deleteMany({ where: { proposalId, invoiceId: null } });
 
         const built = await this.buildItems(tx, pricingModel, items ?? [], {
@@ -169,9 +173,14 @@ export class ProposalsService {
           });
         }
 
+        // The retained billed items are still part of the proposal, so they stay in its
+        // total — otherwise editing an unbilled row would silently shrink the proposal
+        // below what has already been invoiced against it.
+        const billedTotal = billed.reduce((acc, item) => acc + Number(item.totalPrice), 0);
+
         await tx.proposal.update({
           where: { id: proposalId },
-          data: { totalAmountItems: built.total },
+          data: { totalAmountItems: this.round2(billedTotal + built.total) },
         });
       }
 
