@@ -48,7 +48,11 @@ async function bootstrap() {
   app.enableCors();
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
-  console.log(`Application is running on port: ${port}`);
+  // Loopback only: nginx proxies from localhost, so nothing needs to reach this
+  // port over eth0. Binding 0.0.0.0 exposed the API directly over plain HTTP,
+  // bypassing the TLS the reverse proxy terminates.
+  const host = process.env.HOST || '127.0.0.1';
+  await app.listen(port, host);
+  console.log(`Application is running on ${host}:${port}`);
 }
 bootstrap();
