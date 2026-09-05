@@ -17,6 +17,8 @@ import { EquityPropertyModule } from './finance/equity-property/equity-property.
 import { PpnInOutModule } from './finance/ppn-in-out/ppn-in-out.module';
 import { InterAccountModule } from './finance/inter-account/inter-account.module';
 import { ProjectsModule } from './projects/projects.module';
+import { ProposalsModule } from './proposals/proposals.module';
+import { BoqsModule } from './boqs/boqs.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { ProjectsModule } from './projects/projects.module';
     PpnInOutModule,
     InterAccountModule,
     ProjectsModule,
+    ProposalsModule,
+    BoqsModule,
   ],
   controllers: [],
   providers: [],
