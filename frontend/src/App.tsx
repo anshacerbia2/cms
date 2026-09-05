@@ -20,6 +20,7 @@ import SalesPage from './features/sales/pages/SalesPage';
 import InterAccountPage from './features/finance/pages/InterAccountPage';
 import ProjectsPage from './features/projects/pages/ProjectsPage';
 import ProposalsPage from './features/proposals/pages/ProposalsPage';
+import InvoicesPage from './features/invoices/pages/InvoicesPage';
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ function App() {
             <Route path="sales" element={<SalesPage />} />
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="proposals" element={<ProposalsPage />} />
+            <Route path="invoices" element={<InvoicesPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
