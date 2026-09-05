@@ -1,5 +1,5 @@
 /**
- * Idempotent, upsert-only permission script for the sales pipeline modules.
+ * Idempotent, upsert-only permission and menu script for the sales pipeline modules.
  *
  * Deliberately separate from `prisma/seeders/auth.seeder.ts`: that seeder wipes
  * menus/role_menu before rebuilding them, which is unsafe against a live database.
@@ -32,6 +32,20 @@ const ACTIONS: { action: string; describe: (label: string) => string; readOnly: 
   { action: 'create', describe: (l) => `Create ${l}`, readOnly: false },
   { action: 'update', describe: (l) => `Update ${l}`, readOnly: false },
   { action: 'delete', describe: (l) => `Delete ${l}`, readOnly: false },
+];
+
+/**
+ * Sidebar entries. The frontend derives each URL from the linked permission route
+ * (`projects.index` -> `/projects`), so pointing a menu at its real permission is
+ * what makes the page reachable. Ids match the auth seeder's numbering scheme so a
+ * re-seed lands on the same rows instead of duplicating them.
+ */
+const MENUS: { id: number; parentId: number; name: string; icon: string; route: string; order: number }[] = [
+  { id: 5001, parentId: 500, name: 'Projects', icon: 'Briefcase', route: 'projects.index', order: 1 },
+  { id: 5002, parentId: 500, name: 'Proposals', icon: 'ClipboardList', route: 'proposals.index', order: 2 },
+  { id: 3001, parentId: 300, name: 'Invoices', icon: 'FileText', route: 'invoices.index', order: 1 },
+  { id: 3002, parentId: 300, name: 'Receive Vouchers', icon: 'ArrowDownRight', route: 'receive-vouchers.index', order: 2 },
+  { id: 3003, parentId: 300, name: 'Payment Vouchers', icon: 'ArrowUpRight', route: 'payment-vouchers.index', order: 3 },
 ];
 
 async function main() {
@@ -70,6 +84,47 @@ async function main() {
   }
 
   console.log(`✅ Sales pipeline permissions: ${created} new permission(s), ${linked} role link(s) ensured.`);
+
+  // Menus: the seeder ships these rows pointing at a placeholder permission, so the
+  // sidebar links resolve to /finance until they are repointed here.
+  let menusTouched = 0;
+
+  for (const menu of MENUS) {
+    const parent = await prisma.menu.findUnique({ where: { id: BigInt(menu.parentId) } });
+    if (!parent) {
+      console.warn(`⚠️  Parent menu ${menu.parentId} missing — skipping "${menu.name}".`);
+      continue;
+    }
+
+    const permission = await prisma.permission.findUnique({ where: { route: menu.route } });
+    if (!permission) throw new Error(`Permission "${menu.route}" not found.`);
+
+    const data = {
+      name: menu.name,
+      icon: menu.icon,
+      parentId: parent.id,
+      permissionId: permission.id,
+      orderIndex: menu.order,
+      isVisible: true,
+    };
+
+    await prisma.menu.upsert({
+      where: { id: BigInt(menu.id) },
+      update: data,
+      create: { id: BigInt(menu.id), ...data },
+    });
+    menusTouched++;
+
+    for (const role of [adminRole, ...(viewerRole ? [viewerRole] : [])]) {
+      await prisma.roleMenu.upsert({
+        where: { roleId_menuId: { roleId: role.id, menuId: BigInt(menu.id) } },
+        update: {},
+        create: { roleId: role.id, menuId: BigInt(menu.id) },
+      });
+    }
+  }
+
+  console.log(`✅ Sales pipeline menus: ${menusTouched} menu row(s) ensured.`);
 }
 
 main()

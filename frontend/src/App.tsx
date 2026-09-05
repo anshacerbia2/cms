@@ -18,6 +18,7 @@ import PpnInOutPage from './features/finance/pages/PpnInOutPage';
 import DepreciationPage from './features/finance/pages/DepreciationPage';
 import SalesPage from './features/sales/pages/SalesPage';
 import InterAccountPage from './features/finance/pages/InterAccountPage';
+import ProjectsPage from './features/projects/pages/ProjectsPage';
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ function App() {
             <Route path="ppn-in-out" element={<PpnInOutPage />} />
             <Route path="inter-account" element={<InterAccountPage />} />
             <Route path="sales" element={<SalesPage />} />
+            <Route path="projects" element={<ProjectsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
