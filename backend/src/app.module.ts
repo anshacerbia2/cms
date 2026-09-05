@@ -19,6 +19,8 @@ import { InterAccountModule } from './finance/inter-account/inter-account.module
 import { ProjectsModule } from './projects/projects.module';
 import { ProposalsModule } from './proposals/proposals.module';
 import { BoqsModule } from './boqs/boqs.module';
+import { InvoicesModule } from './invoices/invoices.module';
+import { VouchersModule } from './vouchers/vouchers.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { BoqsModule } from './boqs/boqs.module';
     ProjectsModule,
     ProposalsModule,
     BoqsModule,
+    InvoicesModule,
+    VouchersModule,
   ],
   controllers: [],
   providers: [],
