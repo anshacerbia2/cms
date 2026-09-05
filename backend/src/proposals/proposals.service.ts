@@ -156,6 +156,9 @@ export class ProposalsService {
         }
 
         // Items already billed on an invoice are left alone; only unbilled ones are replaced.
+        // Today this is defensive: an invoice requires a WIN proposal, and a WIN proposal is
+        // rejected above, so no billed item can reach here. It keeps the total honest if that
+        // lock is ever relaxed.
         const billed = await tx.salesItem.findMany({
           where: { proposalId, invoiceId: { not: null } },
           select: { totalPrice: true },

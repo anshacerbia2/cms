@@ -296,6 +296,11 @@ export default function ProposalsPage() {
                               <span>Manage BoQ</span>
                             </DropdownMenuItem>
                           )}
+                          {proposal.status === "WIN" && (
+                            <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 leading-relaxed">
+                              Won — locked against edits and deletion
+                            </div>
+                          )}
                           {can("proposals.update") && proposal.status !== "WIN" && (
                             <DropdownMenuItem
                               onClick={() => handleEdit(proposal)}
@@ -305,7 +310,7 @@ export default function ProposalsPage() {
                               <span>Edit Proposal</span>
                             </DropdownMenuItem>
                           )}
-                          {can("proposals.delete") && (
+                          {can("proposals.delete") && proposal.status !== "WIN" && (
                             <>
                               <div className="h-px bg-muted mx-1 my-1" />
                               <DropdownMenuItem
