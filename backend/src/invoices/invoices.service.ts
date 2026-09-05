@@ -30,6 +30,9 @@ export class InvoicesService {
   /** FIT flow: the project is billed directly, with one summary sales item. */
   private async createForFitProject(dto: CreateInvoiceDto, project: any) {
     const totalAmount = Number(dto.totalAmount ?? 0);
+    const managementFeeType = dto.managementFeeType ?? 'PERCENT';
+    const managementFee = dto.managementFee ?? 0;
+    const vatRate = dto.vatRate ?? 11;
 
     return this.prisma.$transaction(async (tx) => {
       const invoice = await tx.invoice.create({
@@ -49,12 +52,19 @@ export class InvoicesService {
           billingType: dto.billingType,
           taxType: dto.taxType,
           totalAmount,
-          balanceDue: totalAmount,
+          // Nothing is applied yet, so the whole gross figure is outstanding.
+          balanceDue: this.grossAmount({
+            totalAmount,
+            managementFeeType,
+            managementFee,
+            taxType: dto.taxType,
+            vatRate,
+          }),
           status: dto.status ?? 'PREPARED',
           paymentStatus: dto.paymentStatus ?? 'UNPAID',
-          managementFeeType: dto.managementFeeType ?? 'PERCENT',
-          managementFee: dto.managementFee ?? 0,
-          vatRate: dto.vatRate ?? 11,
+          managementFeeType,
+          managementFee,
+          vatRate,
         },
       });
 
@@ -85,6 +95,7 @@ export class InvoicesService {
 
     const selected = proposal.salesItems.filter((item: any) => itemIds.includes(item.id.toString()));
     const totalAmount = selected.reduce((sum: number, item: any) => sum + Number(item.totalPrice), 0);
+    const managementFee = this.proposalFeeValue(proposal, totalAmount);
 
     return this.prisma.$transaction(async (tx) => {
       const invoice = await tx.invoice.create({
@@ -104,11 +115,17 @@ export class InvoicesService {
           billingType: dto.billingType,
           taxType: dto.taxType,
           totalAmount,
-          balanceDue: totalAmount,
+          balanceDue: this.grossAmount({
+            totalAmount,
+            managementFeeType: proposal.managementFeeType,
+            managementFee,
+            taxType: dto.taxType,
+            vatRate: proposal.vatRate,
+          }),
           status: dto.status ?? 'PREPARED',
           paymentStatus: dto.paymentStatus ?? 'UNPAID',
           managementFeeType: proposal.managementFeeType,
-          managementFee: this.proposalFeeValue(proposal, totalAmount),
+          managementFee,
           vatRate: proposal.vatRate,
         },
       });
@@ -301,9 +318,11 @@ export class InvoicesService {
   }
 
   /**
-   * Rewrites the reconciliation columns from the invoice's applied receive vouchers.
-   * Balance due mirrors the legacy formula:
-   *   total_amount - (applied + PPh23 + bank charge + WAPU + other adjustments)
+   * Rewrites the reconciliation columns from the invoice's applied receive vouchers:
+   *   invoice amount - (applied + PPh23 + bank charge + WAPU + other adjustments)
+   *
+   * Legacy subtracted from `total_amount` (the item base), which under-states the
+   * balance by the management fee and VAT the customer is actually billed for.
    */
   async recalculateReconciliation(client: any, invoiceId: bigint) {
     const invoice = await client.invoice.findUnique({
@@ -321,14 +340,14 @@ export class InvoicesService {
     const totalWapu = sum('ppnWapuDeduction');
     const totalOthers = sum('othersAdjustment');
 
-    const totalAmount = Number(invoice.totalAmount);
+    const invoiceAmount = this.grossAmount(invoice);
     const balanceDue = Math.max(
       0,
-      totalAmount - (totalApplied + totalPph23 + totalBankCharge + totalWapu + totalOthers),
+      invoiceAmount - (totalApplied + totalPph23 + totalBankCharge + totalWapu + totalOthers),
     );
 
     let paymentStatus: 'UNPAID' | 'PARTLY_PAID' | 'FULLY_PAID' = 'UNPAID';
-    if (balanceDue <= 0 && totalAmount > 0) paymentStatus = 'FULLY_PAID';
+    if (balanceDue <= 0 && invoiceAmount > 0) paymentStatus = 'FULLY_PAID';
     else if (totalApplied > 0) paymentStatus = 'PARTLY_PAID';
 
     await client.invoice.update({
@@ -457,6 +476,14 @@ export class InvoicesService {
   private present(invoice: any) {
     if (!invoice) return invoice;
 
+    return serializeDecimals({ ...invoice, ...this.amounts(invoice) });
+  }
+
+  /**
+   * management fee (rate or nominal) -> sales amount -> VAT (zero when the invoice is
+   * No Tax) -> invoice amount, the gross figure billed to the customer.
+   */
+  private amounts(invoice: any) {
     const totalAmount = Number(invoice.totalAmount ?? 0);
     const feeValue = Number(invoice.managementFee ?? 0);
 
@@ -465,15 +492,17 @@ export class InvoicesService {
     const salesAmount = this.round2(totalAmount + managementFeeAmount);
     const vatAmount =
       invoice.taxType === 'NO_TAX' ? 0 : this.round2((salesAmount * Number(invoice.vatRate ?? 0)) / 100);
-    const invoiceAmount = this.round2(salesAmount + vatAmount);
 
-    return serializeDecimals({
-      ...invoice,
+    return {
       managementFeeAmount,
       salesAmount,
       vatAmount,
-      invoiceAmount,
-    });
+      invoiceAmount: this.round2(salesAmount + vatAmount),
+    };
+  }
+
+  private grossAmount(invoice: any): number {
+    return this.amounts(invoice).invoiceAmount;
   }
 
   private round2(value: number): number {

@@ -135,14 +135,24 @@ export class ReceiveVouchersService {
       const invoice = await tx.invoice.findUnique({ where: { id: BigInt(allocation.invoiceId) } });
       if (!invoice) throw new NotFoundException(`Invoice with ID ${allocation.invoiceId} not found.`);
 
-      const alreadyApplied = Number(
-        (previousByInvoice.get(invoice.id.toString()) as any)?.amountApplied ?? 0,
-      );
-      const maxAllowed = this.round2(Number(invoice.balanceDue) + alreadyApplied);
+      // Everything this RV previously took off the invoice is credited back before the
+      // check, otherwise re-editing a row would be measured against its own effect.
+      const previousRow = previousByInvoice.get(invoice.id.toString()) as any;
+      const previouslyReduced = previousRow
+        ? Number(previousRow.amountApplied) +
+          Number(previousRow.ppnWapuDeduction) +
+          Number(previousRow.pph23Deduction) +
+          Number(previousRow.bankCharge) +
+          Number(previousRow.othersAdjustment)
+        : 0;
 
-      if (applied > maxAllowed) {
+      const outstanding = this.round2(Number(invoice.balanceDue) + previouslyReduced);
+      const reducing = this.round2(applied + ppnWapu + pph23 + bankCharge + others);
+
+      if (reducing > outstanding) {
         throw new BadRequestException(
-          `Allocation for invoice ${invoice.code} (${applied}) exceeds its outstanding balance (${maxAllowed}).`,
+          `Allocation for invoice ${invoice.code} (${reducing} including deductions) ` +
+            `exceeds its outstanding balance (${outstanding}).`,
         );
       }
 
