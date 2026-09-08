@@ -68,3 +68,14 @@ export const useCustomers = (params: CustomerQueryParams = {}) => {
     deleteCustomer: deleteCustomerMutation,
   };
 };
+
+/** Single customer with its billing options — the invoice form bills to one of them. */
+export const useCustomer = (id?: string | null) =>
+  useQuery({
+    queryKey: ['customers', id],
+    queryFn: async () => {
+      const { data } = await api.get<Customer>(`/customers/${id}`);
+      return data;
+    },
+    enabled: !!id,
+  });

@@ -16,6 +16,11 @@ import { SalesModule } from './finance/sales/sales.module';
 import { EquityPropertyModule } from './finance/equity-property/equity-property.module';
 import { PpnInOutModule } from './finance/ppn-in-out/ppn-in-out.module';
 import { InterAccountModule } from './finance/inter-account/inter-account.module';
+import { ProjectsModule } from './projects/projects.module';
+import { ProposalsModule } from './proposals/proposals.module';
+import { BoqsModule } from './boqs/boqs.module';
+import { InvoicesModule } from './invoices/invoices.module';
+import { VouchersModule } from './vouchers/vouchers.module';
 
 @Module({
   imports: [
@@ -38,6 +43,11 @@ import { InterAccountModule } from './finance/inter-account/inter-account.module
     EquityPropertyModule,
     PpnInOutModule,
     InterAccountModule,
+    ProjectsModule,
+    ProposalsModule,
+    BoqsModule,
+    InvoicesModule,
+    VouchersModule,
   ],
   controllers: [],
   providers: [],

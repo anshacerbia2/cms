@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsNotEmpty, IsNumberString } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, IsNumberString, IsNumber, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateProductCategoryDto {
   @IsString()
@@ -30,4 +31,11 @@ export class CreateProductDto {
   @IsOptional()
   @IsNumberString()
   supplierId?: string;
+
+  /** Selling price. Stored as a product_price_versions row, not on the product itself. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  price?: number;
 }

@@ -128,6 +128,8 @@ model Customer {
 
   billingOptions BillingOption[]
   pics           CustomerPic[]
+  projects       Project[]
+  invoices       Invoice[]
 
   @@index([name])
   @@index([status])
@@ -153,7 +155,8 @@ model BillingOption {
   updatedAt       DateTime  @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
 
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
 
   @@index([customerId])
   @@map("billing_options")
@@ -265,8 +268,11 @@ model Product {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  category ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  supplier Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  category      ProductCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  supplier      Supplier?             @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  priceVersions ProductPriceVersion[]
+  boqItems      BoqItem[]
+  salesItems    SalesItem[]
 
   @@index([name])
   @@index([code])
@@ -302,9 +308,12 @@ model InternalAccount {
   createdAt  DateTime            @default(now()) @map("created_at")
   updatedAt  DateTime            @updatedAt @map("updated_at")
 
-  bank          Bank?                  @relation(fields: [bankId], references: [id], onDelete: Restrict)
-  fiscalPeriods FiscalPeriod[]
-  transactions  FinancialTransaction[]
+  bank            Bank?                  @relation(fields: [bankId], references: [id], onDelete: Restrict)
+  fiscalPeriods   FiscalPeriod[]
+  transactions    FinancialTransaction[]
+  invoices        Invoice[]
+  receiveVouchers ReceiveVoucher[]
+  paymentVouchers PaymentVoucher[]
 
   @@unique([accountNo, type, holderName, branch])
   @@map("internal_accounts")
@@ -642,4 +651,372 @@ model InterAccount {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("inter_account")
+}
+
+// --- SALES PIPELINE: PROJECT -> PROPOSAL (BoQ) -> SALES ITEM -> INVOICE ---
+
+enum ProjectStatus {
+  ACTIVE
+  INACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum ProjectType {
+  FIT
+  REGULAR
+}
+
+model Project {
+  id          BigInt        @id @default(autoincrement())
+  code        String        @unique @db.VarChar(255)
+  name        String        @db.VarChar(255)
+  refDocNo    String        @map("ref_doc_no") @db.VarChar(255)
+  value       Decimal       @db.Decimal(19, 4)
+  startDate   DateTime      @map("start_date") @db.Date
+  endDate     DateTime      @map("end_date") @db.Date
+  dueDate     DateTime      @map("due_date") @db.Date
+  description String?       @db.Text
+  customerId  BigInt        @map("customer_id")
+  status      ProjectStatus @default(ACTIVE)
+  type        ProjectType   @default(REGULAR)
+  salesCode   String?       @unique @map("sales_code") @db.VarChar(255)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  deletedAt   DateTime?     @map("deleted_at")
+
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  proposals  Proposal[]
+  salesItems SalesItem[]
+  invoices   Invoice[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([type])
+  @@map("projects")
+}
+
+enum ProposalStatus {
+  DRAFT
+  SUBMITTED
+  WIN
+  LOSE
+  CANCELLED
+}
+
+enum PricingModel {
+  A
+  B
+  C
+  D
+}
+
+enum ManagementFeeType {
+  NOMINAL
+  PERCENT
+}
+
+model Proposal {
+  id                      BigInt            @id @default(autoincrement())
+  projectId               BigInt            @map("project_id")
+  code                    String            @unique @db.VarChar(255)
+  salesCode               String?           @unique @map("sales_code") @db.VarChar(255)
+  note                    String?           @db.Text
+  status                  ProposalStatus    @default(DRAFT)
+  totalAmountItems        Decimal?          @map("total_amount_items") @db.Decimal(19, 4)
+  pricingModel            PricingModel?     @map("pricing_model")
+  managementFeeType       ManagementFeeType @default(PERCENT) @map("management_fee_type")
+  managementFee           Decimal           @default(0) @map("management_fee") @db.Decimal(19, 4)
+  vatRate                 Int               @default(11) @map("vat_rate")
+  pricingModelDescription String?           @map("pricing_model_description") @db.Text
+  createdAt               DateTime          @default(now()) @map("created_at")
+  updatedAt               DateTime          @updatedAt @map("updated_at")
+  deletedAt               DateTime?         @map("deleted_at")
+
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  boqs       Boq[]
+  salesItems SalesItem[]
+  invoices   Invoice[]
+
+  @@index([projectId])
+  @@index([status])
+  @@map("proposals")
+}
+
+model Boq {
+  id               BigInt   @id @default(autoincrement())
+  code             String   @unique @db.VarChar(255)
+  proposalId       BigInt?  @map("proposal_id")
+  totalAmountItems Decimal? @map("total_amount_items") @db.Decimal(19, 4)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  proposal Proposal? @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  items    BoqItem[]
+
+  @@index([proposalId])
+  @@map("boqs")
+}
+
+model BoqItem {
+  id                    BigInt   @id @default(autoincrement())
+  boqId                 BigInt   @map("boq_id")
+  productId             BigInt   @map("product_id")
+  productPriceVersionId BigInt?  @map("product_price_version_id")
+  description           String?  @db.Text
+  sellingPrice          Decimal  @map("selling_price") @db.Decimal(19, 4)
+  qty                   Int      @default(1)
+  qtyUnit               String?  @map("qty_unit") @db.VarChar(255)
+  freq                  Int      @default(1)
+  freqUnit              String?  @map("freq_unit") @db.VarChar(255)
+  totalPrice            Decimal  @map("total_price") @db.Decimal(19, 4)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  boq                 Boq                  @relation(fields: [boqId], references: [id], onDelete: Cascade)
+  product             Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productPriceVersion ProductPriceVersion? @relation(fields: [productPriceVersionId], references: [id], onDelete: SetNull)
+
+  @@index([boqId])
+  @@index([productId])
+  @@map("boq_items")
+}
+
+model ProductPriceVersion {
+  id             BigInt    @id @default(autoincrement())
+  productId      BigInt    @map("product_id")
+  version        Int       @default(1)
+  price          Decimal   @default(0) @db.Decimal(19, 4)
+  isActive       Boolean   @default(true) @map("is_active")
+  effectiveFrom  DateTime  @default(now()) @map("effective_from")
+  effectiveUntil DateTime? @map("effective_until")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  boqItems   BoqItem[]
+  salesItems SalesItem[]
+
+  @@unique([productId, version])
+  @@index([productId, isActive])
+  @@map("product_price_versions")
+}
+
+model SalesItem {
+  id                    BigInt   @id @default(autoincrement())
+  projectId             BigInt?  @map("project_id")
+  proposalId            BigInt?  @map("proposal_id")
+  invoiceId             BigInt?  @map("invoice_id")
+  productId             BigInt?  @map("product_id")
+  productPriceVersionId BigInt?  @map("product_price_version_id")
+  description           String?  @db.Text
+  sellingPrice          Decimal  @map("selling_price") @db.Decimal(19, 4)
+  title1Key             String?  @map("title1_key") @db.VarChar(255)
+  title1Value           Int?     @map("title1_value")
+  title2Key             String?  @map("title2_key") @db.VarChar(255)
+  title2Value           Int?     @map("title2_value")
+  title3Key             String?  @map("title3_key") @db.VarChar(255)
+  title3Value           Int?     @map("title3_value")
+  title4Key             String?  @map("title4_key") @db.VarChar(255)
+  title4Value           Int?     @map("title4_value")
+  totalPrice            Decimal  @map("total_price") @db.Decimal(19, 4)
+  header                String?  @db.VarChar(255)
+  subheader             String?  @db.VarChar(255)
+  headerOrder           Int      @default(0) @map("header_order")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  project             Project?             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  proposal            Proposal?            @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  invoice             Invoice?             @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  product             Product?             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productPriceVersion ProductPriceVersion? @relation(fields: [productPriceVersionId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([proposalId])
+  @@index([invoiceId])
+  @@map("sales_items")
+}
+
+enum InvoiceBillingType {
+  PARTLY_PAYMENT
+  FULL_AMOUNT
+}
+
+enum InvoiceTaxType {
+  NO_TAX
+  TAX_NON_WAPU
+  TAX_WAPU
+}
+
+enum InvoiceStatus {
+  VOID
+  REVISED
+  PREPARED
+  SENT
+}
+
+enum InvoicePaymentStatus {
+  UNPAID
+  PARTLY_PAID
+  FULLY_PAID
+}
+
+model Invoice {
+  id                  BigInt               @id @default(autoincrement())
+  code                String               @unique @db.VarChar(255)
+  invoiceNumber       String               @map("invoice_number") @db.VarChar(255)
+  dueDate             DateTime             @map("due_date") @db.Date
+  salesCode           String?              @map("sales_code") @db.VarChar(255)
+  projectId           BigInt?              @map("project_id")
+  proposalId          BigInt?              @map("proposal_id")
+  customerId          BigInt?              @map("customer_id")
+  billingOptionId     BigInt?              @map("billing_option_id")
+  internalAccountId   BigInt?              @map("internal_account_id")
+  projectName         String?              @map("project_name") @db.VarChar(255)
+  projectDescription  String?              @map("project_description") @db.Text
+  description         String?              @db.Text
+  billingType         InvoiceBillingType   @default(FULL_AMOUNT) @map("billing_type")
+  taxType             InvoiceTaxType       @default(TAX_NON_WAPU) @map("tax_type")
+  totalAmount         Decimal              @map("total_amount") @db.Decimal(19, 4)
+  totalReceivedAmount Decimal              @default(0) @map("total_received_amount") @db.Decimal(19, 4)
+  balanceDue          Decimal              @default(0) @map("balance_due") @db.Decimal(19, 4)
+  totalPph23Deduction Decimal              @default(0) @map("total_pph23_deduction") @db.Decimal(19, 4)
+  totalBankCharge     Decimal              @default(0) @map("total_bank_charge") @db.Decimal(19, 4)
+  status              InvoiceStatus        @default(PREPARED)
+  paymentStatus       InvoicePaymentStatus @default(UNPAID) @map("payment_status")
+  managementFeeType   ManagementFeeType    @default(PERCENT) @map("management_fee_type")
+  managementFee       Decimal              @default(0) @map("management_fee") @db.Decimal(19, 4)
+  vatRate             Int                  @default(11) @map("vat_rate")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+
+  project         Project?                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  proposal        Proposal?               @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  customer        Customer?               @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  billingOption   BillingOption?          @relation(fields: [billingOptionId], references: [id], onDelete: SetNull)
+  internalAccount InternalAccount?        @relation(fields: [internalAccountId], references: [id], onDelete: SetNull)
+  salesItems      SalesItem[]
+  receiveVouchers InvoiceReceiveVoucher[]
+
+  @@index([salesCode])
+  @@index([projectId])
+  @@index([customerId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@map("invoices")
+}
+
+// --- SALES PIPELINE: ACCOUNTING VOUCHERS (RV / PV) ---
+
+enum VoucherCurrency {
+  IDR
+  USD
+  EUR
+  GBP
+  JPY
+  KRW
+  MYR
+  HKD
+  OTHERS
+}
+
+enum VoucherPaymentForm {
+  BANK
+  CREDIT_CARD
+  CASH
+}
+
+enum VoucherPayerType {
+  CUSTOMER
+  EMPLOYEE
+  SUPPLIER
+  OTHERS
+  UNKNOWN
+}
+
+enum ReceiveVoucherPurpose {
+  INVOICE
+  RETURN_REFUND
+  RETURNING_DEPOSIT
+  RETURNING_CASH_ADVANCE
+  STAFF_LOAN
+  OTHERS
+  UNKNOWN
+}
+
+model PaymentVoucher {
+  id                BigInt    @id @default(autoincrement())
+  pvNumber          String    @unique @map("pv_number") @db.VarChar(255)
+  issuingDate       DateTime  @map("issuing_date") @db.Date
+  dueDate           DateTime? @map("due_date") @db.Date
+  currency          String    @default("IDR") @db.VarChar(255)
+  amount            Decimal   @db.Decimal(19, 4)
+  payableType       String    @map("payable_type") @db.VarChar(255)
+  payableId         BigInt?   @map("payable_id")
+  payableNameManual String?   @map("payable_name_manual") @db.VarChar(255)
+  category          String    @db.VarChar(255)
+  purchaseOrderId   BigInt?   @map("purchase_order_id")
+  expenseType       String?   @map("expense_type") @db.VarChar(255)
+  description       String?   @db.Text
+  sourcePaymentForm String    @map("source_payment_form") @db.VarChar(255)
+  internalAccountId BigInt?   @map("internal_account_id")
+  paymentDate       DateTime? @map("payment_date") @db.Date
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  internalAccount InternalAccount? @relation(fields: [internalAccountId], references: [id], onDelete: SetNull)
+  receiveVouchers ReceiveVoucher[]
+
+  @@index([payableType, payableId])
+  @@map("payment_vouchers")
+}
+
+model ReceiveVoucher {
+  id                BigInt                @id @default(autoincrement())
+  rvNumber          String                @unique @map("rv_number") @db.VarChar(255)
+  rvDate            DateTime              @map("rv_date") @db.Date
+  currency          VoucherCurrency       @default(IDR)
+  currencyManual    String?               @map("currency_manual") @db.VarChar(255)
+  amount            Decimal               @db.Decimal(19, 4)
+  paymentForm       VoucherPaymentForm    @map("payment_form")
+  internalAccountId BigInt?               @map("internal_account_id")
+  paymentFormValue  String?               @map("payment_form_value") @db.VarChar(255)
+  payerType         VoucherPayerType      @map("payer_type")
+  payerId           BigInt?               @map("payer_id")
+  payerNameManual   String?               @map("payer_name_manual") @db.VarChar(255)
+  purpose           ReceiveVoucherPurpose @default(INVOICE)
+  paymentVoucherId  BigInt?               @map("payment_voucher_id")
+  description       String?               @db.Text
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+
+  internalAccount InternalAccount?        @relation(fields: [internalAccountId], references: [id], onDelete: SetNull)
+  paymentVoucher  PaymentVoucher?         @relation(fields: [paymentVoucherId], references: [id], onDelete: SetNull)
+  invoices        InvoiceReceiveVoucher[]
+
+  @@index([payerType, payerId])
+  @@index([rvDate])
+  @@map("receive_vouchers")
+}
+
+model InvoiceReceiveVoucher {
+  id                    BigInt   @id @default(autoincrement())
+  invoiceId             BigInt   @map("invoice_id")
+  receiveVoucherId      BigInt   @map("receive_voucher_id")
+  amountApplied         Decimal  @map("amount_applied") @db.Decimal(19, 4)
+  ppnWapuDeduction      Decimal  @default(0) @map("ppn_wapu_deduction") @db.Decimal(19, 4)
+  pph23Deduction        Decimal  @default(0) @map("pph23_deduction") @db.Decimal(19, 4)
+  bankCharge            Decimal  @default(0) @map("bank_charge") @db.Decimal(19, 4)
+  othersAdjustment      Decimal  @default(0) @map("others_adjustment") @db.Decimal(19, 4)
+  adjustmentDescription String?  @map("adjustment_description") @db.VarChar(255)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  invoice        Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  receiveVoucher ReceiveVoucher @relation(fields: [receiveVoucherId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([receiveVoucherId])
+  @@map("invoice_receive_voucher")
 }

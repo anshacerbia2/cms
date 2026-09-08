@@ -18,6 +18,11 @@ import PpnInOutPage from './features/finance/pages/PpnInOutPage';
 import DepreciationPage from './features/finance/pages/DepreciationPage';
 import SalesPage from './features/sales/pages/SalesPage';
 import InterAccountPage from './features/finance/pages/InterAccountPage';
+import ProjectsPage from './features/projects/pages/ProjectsPage';
+import ProposalsPage from './features/proposals/pages/ProposalsPage';
+import InvoicesPage from './features/invoices/pages/InvoicesPage';
+import ReceiveVouchersPage from './features/vouchers/pages/ReceiveVouchersPage';
+import PaymentVouchersPage from './features/vouchers/pages/PaymentVouchersPage';
 
 const queryClient = new QueryClient();
 
@@ -56,6 +61,11 @@ function App() {
             <Route path="ppn-in-out" element={<PpnInOutPage />} />
             <Route path="inter-account" element={<InterAccountPage />} />
             <Route path="sales" element={<SalesPage />} />
+            <Route path="projects" element={<ProjectsPage />} />
+            <Route path="proposals" element={<ProposalsPage />} />
+            <Route path="invoices" element={<InvoicesPage />} />
+            <Route path="receive-vouchers" element={<ReceiveVouchersPage />} />
+            <Route path="payment-vouchers" element={<PaymentVouchersPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
