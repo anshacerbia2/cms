@@ -32,6 +32,7 @@ import {
   KeyRound,
   ListTree,
   Settings,
+  Printer,
 } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
 import { useAuthStore } from "@/store/authStore";
@@ -70,6 +71,7 @@ const iconMap: Record<string, LucideIcon> = {
   KeyRound,
   ListTree,
   Settings,
+  Printer,
 };
 
 function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIcon; label: string; to: string; end?: boolean }) {
