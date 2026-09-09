@@ -4,6 +4,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { seedAuth } from './auth.seeder';
 import { seedSalesPipelinePermissions } from './sales-pipeline.seeder';
+import { seedRbacPermissions } from './rbac.seeder';
 import { seedCustomers } from './customers.seeder';
 import { seedSuppliers } from './suppliers.seeder';
 import { seedProducts } from './products.seeder';
@@ -26,6 +27,7 @@ async function main() {
     await seedAuth(prisma);
     // Depends on the roles seedAuth creates, and repoints the stub menus it ships.
     await seedSalesPipelinePermissions(prisma);
+    await seedRbacPermissions(prisma);
     
     // Independent entities
     await seedCustomers(prisma);
