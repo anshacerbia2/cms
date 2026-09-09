@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Query, Res } from '@nestjs/common';
 import { ProposalsService } from './proposals.service';
 import { CreateProposalDto } from './dto/create-proposal.dto';
 import { UpdateProposalDto } from './dto/update-proposal.dto';
@@ -6,11 +6,27 @@ import { ProposalQueryDto } from './dto/proposal-query.dto';
 import { Permissions } from '../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { Response } from 'express';
+import { DocumentPrintService } from '../pdf-templates/document-print.service';
 
 @Controller('proposals')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ProposalsController {
-  constructor(private readonly proposalsService: ProposalsService) {}
+  constructor(
+    private readonly proposalsService: ProposalsService,
+    private readonly printService: DocumentPrintService,
+  ) {}
+
+  /**
+   * Returns a standalone printable page rather than JSON: it is opened in a
+   * new tab, where the browser's print dialog saves it as PDF.
+   */
+  @Get(':id/print')
+  @Permissions('proposals.show')
+  async print(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
+    const html = await this.printService.printProposal(id);
+    res.type('html').send(html);
+  }
 
   @Post()
   @Permissions('proposals.create')

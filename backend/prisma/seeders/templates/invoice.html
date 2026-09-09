@@ -1,0 +1,88 @@
+<div class="doc">
+  <header class="doc-head">
+    <div>
+      <h1>INVOICE</h1>
+      <p class="code">{{invoice_code}}</p>
+    </div>
+    <table class="meta">
+      <tr><th>Invoice No</th><td>{{invoice_number}}</td></tr>
+      <tr><th>Date</th><td>{{invoice_date}}</td></tr>
+      <tr><th>Due Date</th><td>{{due_date}}</td></tr>
+      <tr><th>Sales Code</th><td>{{sales_code}}</td></tr>
+    </table>
+  </header>
+
+  <section class="parties">
+    <div>
+      <h2>Bill To</h2>
+      <p class="strong">{{customer_name}}</p>
+      <p>{{bill_to}}</p>
+      <p>{{bill_to_contact}}</p>
+    </div>
+    <div>
+      <h2>Project</h2>
+      <p class="strong">{{project_name}}</p>
+      <p>{{project_description}}</p>
+    </div>
+  </section>
+
+  <table class="items">
+    <thead>
+      <tr>
+        <th class="num">#</th>
+        <th>Description</th>
+        <th class="num">Qty</th>
+        <th class="money">Unit Price</th>
+        <th class="money">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{items_rows}}
+    </tbody>
+  </table>
+
+  <section class="foot">
+    <div class="payto">
+      <h2>Payment To</h2>
+      <p>{{bank_name}} {{bank_branch}}</p>
+      <p class="strong">{{bank_account}}</p>
+      <p>a.n. {{bank_account_name}}</p>
+      <p class="note">{{notes}}</p>
+    </div>
+    <table class="totals">
+      {{totals_rows}}
+    </table>
+  </section>
+</div>
+
+<style>
+  .doc { max-width: 190mm; margin: 0 auto; font-size: 11px; }
+  .doc-head { display: flex; justify-content: space-between; align-items: flex-start;
+              border-bottom: 2px solid #1f2937; padding-bottom: 10px; margin-bottom: 16px; }
+  .doc-head h1 { margin: 0; font-size: 26px; letter-spacing: 3px; }
+  .code { margin: 4px 0 0; font-weight: bold; color: #4059C6; }
+  .meta th { text-align: left; padding-right: 10px; font-weight: normal; color: #6b7280; }
+  .meta td { font-weight: bold; }
+  .parties { display: flex; gap: 32px; margin-bottom: 16px; }
+  .parties > div { flex: 1; }
+  h2 { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px;
+       color: #6b7280; margin: 0 0 4px; }
+  .parties p { margin: 0 0 2px; }
+  .strong { font-weight: bold; }
+  table.items { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  table.items th { background: #f3f4f6; text-align: left; padding: 6px 8px;
+                   font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
+  table.items td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  .num { text-align: center; width: 40px; }
+  .money { text-align: right; white-space: nowrap; }
+  .empty { text-align: center; color: #9ca3af; padding: 20px; }
+  .foot { display: flex; justify-content: space-between; gap: 32px; }
+  .payto { flex: 1; }
+  .payto p { margin: 0 0 2px; }
+  .note { margin-top: 10px; color: #6b7280; font-style: italic; }
+  table.totals { min-width: 240px; border-collapse: collapse; }
+  .totals-label { padding: 4px 12px 4px 0; color: #6b7280; }
+  .totals-value { padding: 4px 0; text-align: right; font-weight: bold; white-space: nowrap; }
+  table.totals tr:last-child .totals-label,
+  table.totals tr:last-child .totals-value { border-top: 2px solid #1f2937; padding-top: 6px; }
+</style>

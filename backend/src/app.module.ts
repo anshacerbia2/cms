@@ -6,6 +6,7 @@ import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { MenusModule } from './menus/menus.module';
+import { PdfTemplatesModule } from './pdf-templates/pdf-templates.module';
 import { CustomersModule } from './customers/customers.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { ProductsModule } from './products/products.module';
@@ -36,6 +37,7 @@ import { VouchersModule } from './vouchers/vouchers.module';
     RolesModule,
     PermissionsModule,
     MenusModule,
+    PdfTemplatesModule,
     CustomersModule,
     SuppliersModule,
     ProductsModule,
