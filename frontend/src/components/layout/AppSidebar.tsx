@@ -28,6 +28,10 @@ import {
   Calculator,
   DollarSign,
   TrendingDown,
+  ShieldCheck,
+  KeyRound,
+  ListTree,
+  Settings,
 } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
 import { useAuthStore } from "@/store/authStore";
@@ -62,6 +66,10 @@ const iconMap: Record<string, LucideIcon> = {
   Calculator,
   DollarSign,
   TrendingDown,
+  ShieldCheck,
+  KeyRound,
+  ListTree,
+  Settings,
 };
 
 function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIcon; label: string; to: string; end?: boolean }) {

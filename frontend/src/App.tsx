@@ -23,6 +23,9 @@ import ProposalsPage from './features/proposals/pages/ProposalsPage';
 import InvoicesPage from './features/invoices/pages/InvoicesPage';
 import ReceiveVouchersPage from './features/vouchers/pages/ReceiveVouchersPage';
 import PaymentVouchersPage from './features/vouchers/pages/PaymentVouchersPage';
+import RolesPage from './features/access-control/pages/RolesPage';
+import PermissionsPage from './features/access-control/pages/PermissionsPage';
+import MenusPage from './features/access-control/pages/MenusPage';
 
 const queryClient = new QueryClient();
 
@@ -65,6 +68,9 @@ function App() {
             <Route path="proposals" element={<ProposalsPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
             <Route path="receive-vouchers" element={<ReceiveVouchersPage />} />
+            <Route path="roles" element={<RolesPage />} />
+            <Route path="permissions" element={<PermissionsPage />} />
+            <Route path="menus" element={<MenusPage />} />
             <Route path="payment-vouchers" element={<PaymentVouchersPage />} />
           </Route>
         </Routes>
