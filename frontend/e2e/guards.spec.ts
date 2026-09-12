@@ -466,20 +466,20 @@ test.describe("Access control", () => {
     });
 
     // Sign in as that user and keep the token.
-    const theirs = await (await import("@playwright/test")).request.newContext({
-      baseURL: (await import("./support/env")).API_URL,
-    });
-    const login = await theirs.post("/auth/login", {
+    const { API_URL } = await import("./support/env");
+    const theirs = await (await import("@playwright/test")).request.newContext();
+    const login = await theirs.post(`${API_URL}/auth/login`, {
       data: { email, password: "deact12345" },
     });
     const token = (await login.json()).data.access_token;
 
-    const before = await theirs.get("/roles", { headers: { Authorization: `Bearer ${token}` } });
+    const auth = { Authorization: `Bearer ${token}` };
+    const before = await theirs.get(`${API_URL}/roles`, { headers: auth });
     expect(before.status()).toBe(200);
 
     await api.patch(`/users/${created.id}`, { status: "INACTIVE" });
 
-    const after = await theirs.get("/roles", { headers: { Authorization: `Bearer ${token}` } });
+    const after = await theirs.get(`${API_URL}/roles`, { headers: auth });
     expect(after.status(), "authorisation is read per request, not from the token").toBe(401);
 
     await theirs.dispose();
@@ -554,10 +554,9 @@ test.describe("Print templates", () => {
     const api = await Api.signIn();
     const { invoice } = await api.createFitInvoice();
 
-    const ctx = await (await import("@playwright/test")).request.newContext({
-      baseURL: (await import("./support/env")).API_URL,
-    });
-    const res = await ctx.get(`/invoices/${invoice.id}/print`, {
+    const { API_URL } = await import("./support/env");
+    const ctx = await (await import("@playwright/test")).request.newContext();
+    const res = await ctx.get(`${API_URL}/invoices/${invoice.id}/print`, {
       headers: { Authorization: `Bearer ${api.token}` },
     });
     const html = await res.text();

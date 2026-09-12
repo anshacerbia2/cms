@@ -15,8 +15,12 @@ export class Api {
   ) {}
 
   static async signIn(role: RoleName = "admin") {
-    const ctx = await request.newContext({ baseURL: API_URL });
-    const res = await ctx.post("/auth/login", { data: ACCOUNTS[role] });
+    // No baseURL on purpose. Playwright resolves a relative path with URL
+    // semantics, so a leading slash replaces the whole path of the base —
+    // "/auth/login" against "http://host/api" resolves to "http://host/auth/login"
+    // and the /api prefix silently disappears. Every request here is absolute.
+    const ctx = await request.newContext();
+    const res = await ctx.post(`${API_URL}/auth/login`, { data: ACCOUNTS[role] });
 
     if (!res.ok()) {
       throw new Error(
@@ -39,7 +43,10 @@ export class Api {
 
   /** Unwraps the API's `{ statusCode, data }` envelope and throws on failure. */
   private async send(method: "get" | "post" | "patch" | "delete", path: string, data?: unknown) {
-    const res = await this.ctx[method](path, { headers: this.headers, data: data as any });
+    const res = await this.ctx[method](`${API_URL}${path}`, {
+      headers: this.headers,
+      data: data as any,
+    });
     const text = await res.text();
     const body = text ? JSON.parse(text) : {};
 
@@ -60,7 +67,10 @@ export class Api {
    * refusal. Returns the status and the message the UI would surface.
    */
   async expectRefusal(method: "post" | "patch" | "delete", path: string, data?: unknown) {
-    const res = await this.ctx[method](path, { headers: this.headers, data: data as any });
+    const res = await this.ctx[method](`${API_URL}${path}`, {
+      headers: this.headers,
+      data: data as any,
+    });
     const text = await res.text();
     const body = text ? JSON.parse(text) : {};
     const message = Array.isArray(body?.message) ? body.message.join("; ") : (body?.message ?? "");

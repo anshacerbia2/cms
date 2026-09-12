@@ -17,7 +17,7 @@ import { openPage, openRowMenu } from "./support/ui";
 const readOnlyPages = [
   { path: "/projects", heading: /projects/i, add: /ADD PROJECT/i },
   { path: "/proposals", heading: /proposals/i, add: /ADD PROPOSAL/i },
-  { path: "/invoices", heading: /invoices/i, add: /ADD INVOICE/i },
+  { path: "/invoices", heading: /invoices/i, add: /ISSUE INVOICE/i },
   { path: "/receive-vouchers", heading: /receive vouchers/i, add: /ADD RV/i },
   { path: "/payment-vouchers", heading: /payment vouchers/i, add: /ADD PV/i },
 ];

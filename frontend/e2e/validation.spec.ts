@@ -16,11 +16,19 @@ import { dialog, expectFieldError, openPage, expectToast } from "./support/ui";
 
 type Case = { field: string; message: string | RegExp };
 
+/**
+ * Every dialog's primary button, whatever it is called. The labels do not follow
+ * one verb — projects say Create, vouchers say Record Voucher — and matching on
+ * the submit type is both shorter and immune to the next rename.
+ */
+const submitButton = (page: import("@playwright/test").Page) =>
+  dialog(page).locator('button[type="submit"]');
+
 /** Opens the create dialog on a page and submits it untouched. */
 async function submitEmpty(page: import("@playwright/test").Page, addButton: string | RegExp) {
   await page.getByRole("button", { name: addButton }).click();
   await expect(dialog(page)).toBeVisible();
-  await dialog(page).getByRole("button", { name: /create|save|add/i }).last().click();
+  await submitButton(page).click();
 }
 
 test.describe("VAL — Projects", () => {
@@ -123,7 +131,7 @@ test.describe("VAL — Proposals", () => {
     await dialog(page).getByLabel(/pricing model/i).click();
     await page.getByRole("option", { name: /^B/ }).click();
     await dialog(page).getByRole("button", { name: /add item|add line/i }).first().click();
-    await dialog(page).getByRole("button", { name: /create|save/i }).last().click();
+    await submitButton(page).click();
 
     await expectFieldError(page, /^Required$/);
   });
@@ -146,7 +154,7 @@ test.describe("VAL — Proposals", () => {
 test.describe("VAL — Invoices", () => {
   test("VAL-INV-01 invoice number and due date are required", async ({ page }) => {
     await openPage(page, "/invoices", /invoices/i);
-    await submitEmpty(page, /ADD INVOICE/i);
+    await submitEmpty(page, /ISSUE INVOICE/i);
     await expectFieldError(page, "Invoice number is required");
     await expectFieldError(page, "Due date is required");
   });
@@ -198,8 +206,10 @@ test.describe("VAL — Vouchers", () => {
   test("VAL-RV-02 an allocation row needs an invoice", async ({ page }) => {
     await openPage(page, "/receive-vouchers", /receive vouchers/i);
     await page.getByRole("button", { name: /ADD RV/i }).click();
-    await dialog(page).getByRole("button", { name: /add allocation|allocate/i }).first().click();
-    await dialog(page).getByRole("button", { name: /create|save/i }).last().click();
+
+    await dialog(page).getByRole("tab", { name: /invoice allocation/i }).click();
+    await dialog(page).getByRole("button", { name: /add allocation/i }).click();
+    await submitButton(page).click();
     await expectFieldError(page, "Pick an invoice");
   });
 
@@ -260,7 +270,7 @@ test.describe("VAL — Access control", () => {
     await page.getByRole("button", { name: /ADD ROLE/i }).click();
     await dialog(page).getByLabel(/role name/i).fill("Finance Manager");
     await dialog(page).getByLabel(/slug/i).fill("Finance Manager");
-    await dialog(page).getByRole("button", { name: /create/i }).last().click();
+    await submitButton(page).click();
     await expectFieldError(page, "Use lowercase letters, numbers and dashes only");
   });
 
@@ -268,7 +278,7 @@ test.describe("VAL — Access control", () => {
     await openPage(page, "/permissions", /permissions/i);
     await page.getByRole("button", { name: /ADD PERMISSION/i }).click();
     await dialog(page).getByLabel(/route/i).fill("Not A Route");
-    await dialog(page).getByRole("button", { name: /create/i }).last().click();
+    await submitButton(page).click();
     await expectFieldError(page, /module\.action/);
   });
 
@@ -278,13 +288,13 @@ test.describe("VAL — Access control", () => {
     await expectFieldError(page, "Name is required");
   });
 
-  test("VAL-ACL-05 staff email must be an email", async ({ page }) => {
+  test("VAL-ACL-05 staff email must be a full address", async ({ page }) => {
     await openPage(page, "/users", /staff/i);
     await page.getByRole("button", { name: /ADD STAFF/i }).click();
     await dialog(page).getByLabel(/full name/i).fill("Val Check");
-    await dialog(page).getByLabel(/email/i).fill("not-an-email");
+    await dialog(page).getByLabel(/email/i).fill("admin@localhost");
     await dialog(page).getByLabel(/password/i).fill("longenough123");
-    await dialog(page).getByRole("button", { name: /create/i }).last().click();
+    await submitButton(page).click();
     await expectFieldError(page, "Enter a valid email");
   });
 
@@ -294,7 +304,7 @@ test.describe("VAL — Access control", () => {
     await dialog(page).getByLabel(/full name/i).fill("Val Check");
     await dialog(page).getByLabel(/email/i).fill(`val-${Date.now()}@local.test`);
     await dialog(page).getByLabel(/password/i).fill("short");
-    await dialog(page).getByRole("button", { name: /create/i }).last().click();
+    await submitButton(page).click();
     await expectFieldError(page, /at least 8 characters/i);
   });
 

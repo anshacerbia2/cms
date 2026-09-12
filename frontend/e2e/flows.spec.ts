@@ -35,7 +35,7 @@ test.describe("Flow A — Regular: project → proposal → WIN → invoice → 
     await dialog(page).getByLabel(/^type/i).click();
     await page.getByRole("option", { name: /regular/i }).click();
 
-    await dialog(page).getByRole("button", { name: /create|save/i }).last().click();
+    await dialog(page).locator('button[type="submit"]').click();
 
     await expect(row(page, projectName)).toBeVisible();
     // The contract value went in unseparated and must come back grouped.
@@ -54,7 +54,7 @@ test.describe("Flow A — Regular: project → proposal → WIN → invoice → 
     await page.getByRole("option", { name: /^A/ }).click();
     await dialog(page).getByLabel(/items total|total amount/i).fill("50000000");
 
-    await dialog(page).getByRole("button", { name: /create|save/i }).last().click();
+    await dialog(page).locator('button[type="submit"]').click();
 
     const created = row(page, projectName).first();
     await expect(created).toBeVisible();
@@ -64,7 +64,7 @@ test.describe("Flow A — Regular: project → proposal → WIN → invoice → 
     await rowAction(page, proposalCode, /edit/i);
     await dialog(page).getByLabel(/^status/i).click();
     await page.getByRole("option", { name: /^win/i }).click();
-    await dialog(page).getByRole("button", { name: /save/i }).last().click();
+    await dialog(page).locator('button[type="submit"]').click();
 
     await expect(row(page, proposalCode)).toContainText(/WIN/);
   });
@@ -81,7 +81,7 @@ test.describe("Flow A — Regular: project → proposal → WIN → invoice → 
     invoiceNumber = uniq("INV");
 
     await openPage(page, "/invoices", /invoices/i);
-    await page.getByRole("button", { name: /ADD INVOICE/i }).click();
+    await page.getByRole("button", { name: /ISSUE INVOICE/i }).click();
 
     await dialog(page).getByLabel(/source/i).click();
     await page.getByRole("option", { name: /proposal/i }).click();
@@ -91,7 +91,7 @@ test.describe("Flow A — Regular: project → proposal → WIN → invoice → 
     await dialog(page).getByLabel(/invoice number/i).fill(invoiceNumber);
     await dialog(page).getByLabel(/due date/i).fill("2026-10-31");
 
-    await dialog(page).getByRole("button", { name: /create|save/i }).last().click();
+    await dialog(page).locator('button[type="submit"]').click();
 
     await expect(row(page, invoiceNumber)).toBeVisible();
   });
@@ -137,7 +137,7 @@ test.describe("Flow B — FIT: project → invoice → receive voucher, no propo
     await dialog(page).getByLabel(/^type/i).click();
     await page.getByRole("option", { name: /^fit/i }).click();
 
-    await dialog(page).getByRole("button", { name: /create|save/i }).last().click();
+    await dialog(page).locator('button[type="submit"]').click();
     await expect(row(page, projectName)).toContainText(/FIT/);
   });
 
@@ -159,7 +159,7 @@ test.describe("Flow B — FIT: project → invoice → receive voucher, no propo
     invoiceNumber = uniq("INV");
 
     await openPage(page, "/invoices", /invoices/i);
-    await page.getByRole("button", { name: /ADD INVOICE/i }).click();
+    await page.getByRole("button", { name: /ISSUE INVOICE/i }).click();
 
     await dialog(page).getByLabel(/source/i).click();
     await page.getByRole("option", { name: /fit/i }).click();
@@ -175,7 +175,7 @@ test.describe("Flow B — FIT: project → invoice → receive voucher, no propo
     await page.getByRole("option", { name: /no tax/i }).click();
     await dialog(page).getByLabel(/management fee/i).fill("5");
 
-    await dialog(page).getByRole("button", { name: /create|save/i }).last().click();
+    await dialog(page).locator('button[type="submit"]').click();
 
     const created = row(page, invoiceNumber);
     await expect(created).toBeVisible();
