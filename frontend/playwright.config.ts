@@ -1,9 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * Points at a running dev stack rather than starting one: the API needs its own
- * database and seed, so bringing it up is a deliberate step (see e2e/README.md)
- * instead of something a test run does implicitly.
+ * Starts the UI if it is not already up, and never the API.
+ *
+ * The dev server is a static file server — starting it costs nothing and
+ * removes a whole class of failure, where a run dies with
+ * ERR_CONNECTION_REFUSED because a terminal was closed. The API is the opposite:
+ * it opens a database, so it stays a deliberate step (see e2e/README.md).
  */
 const UI = process.env.E2E_BASE_URL ?? "http://localhost:5173";
 
@@ -46,6 +49,17 @@ export default defineConfig({
   reporter: process.env.CI
     ? [["list"], ["html", { outputFolder: "./e2e/.report", open: "never" }]]
     : [["list"]],
+
+  // reuseExistingServer means an already-running `pnpm dev` is used as is, and
+  // only a missing one gets started — so this does not fight a dev session.
+  webServer: {
+    command: "pnpm dev",
+    url: UI,
+    reuseExistingServer: true,
+    timeout: 60_000,
+    stdout: "ignore",
+    stderr: "pipe",
+  },
 
   use: {
     baseURL: UI,

@@ -4,8 +4,9 @@ Playwright, driving the real UI against a real API and database.
 
 ## What it needs running
 
-The config does **not** start anything — the API needs its own database and seed,
-so bringing the stack up is a deliberate step.
+**The API.** Playwright starts the UI for you if it is down, and reuses a running
+`pnpm dev` as is. The API is not started for you: it opens a database, so that
+stays a step you take on purpose.
 
 ```bash
 # 1. database, from empty
@@ -18,7 +19,8 @@ npx prisma db seed          # roles, permissions, menus, sample master data
 # 2. api on :3000
 pnpm start:dev
 
-# 3. ui on :5173, in another shell
+# 3. the UI starts itself when the suite runs, but you can have it
+#    in its own shell for hot reload while you work
 cd ../frontend
 pnpm dev
 ```
