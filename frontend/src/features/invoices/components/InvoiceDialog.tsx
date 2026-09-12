@@ -37,6 +37,7 @@ import { useProposalOptions, useProposal } from "@/features/proposals/hooks/useP
 import { useCustomer } from "@/features/customers/hooks/useCustomers";
 import { useBanks } from "@/features/banks/hooks/useBanks";
 import { Invoice, CreateInvoiceInput } from "../types";
+import { AmountInput } from "@/components/common/AmountInput";
 
 const formSchema = z.object({
   source: z.enum(["PROPOSAL", "FIT"]),
@@ -506,11 +507,9 @@ export function InvoiceDialog({
                           <FormItem className="col-span-2">
                             <FormLabel className={LABEL}>Billed Amount (IDR)</FormLabel>
                             <FormControl>
-                              <Input
-                                type="number"
-                                min={0}
-                                step="0.01"
-                                {...field}
+                              <AmountInput
+                                value={field.value}
+                                onChange={field.onChange}
                                 disabled={hasVouchers}
                                 className={FIELD}
                               />
@@ -548,7 +547,11 @@ export function InvoiceDialog({
                               Management Fee {watched.managementFeeType === "PERCENT" ? "(%)" : "(IDR)"}
                             </FormLabel>
                             <FormControl>
-                              <Input type="number" min={0} step="0.01" {...field} className={FIELD} />
+                              {watched.managementFeeType === "NOMINAL" ? (
+                                <AmountInput value={field.value} onChange={field.onChange} className={FIELD} />
+                              ) : (
+                                <Input type="number" min={0} step="0.01" {...field} className={FIELD} />
+                              )}
                             </FormControl>
                           </FormItem>
                         )}

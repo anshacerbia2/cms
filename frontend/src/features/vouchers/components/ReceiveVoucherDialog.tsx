@@ -35,6 +35,7 @@ import { useBanks } from "@/features/banks/hooks/useBanks";
 import { useCustomers } from "@/features/customers/hooks/useCustomers";
 import { useUnpaidInvoices } from "@/features/invoices/hooks/useInvoices";
 import { ReceiveVoucher, CreateReceiveVoucherInput } from "../types";
+import { AmountInput } from "@/components/common/AmountInput";
 
 const allocationSchema = z.object({
   invoiceId: z.string().min(1, "Pick an invoice"),
@@ -320,7 +321,7 @@ export function ReceiveVoucherDialog({
                         <FormItem>
                           <FormLabel className={LABEL}>Amount Received</FormLabel>
                           <FormControl>
-                            <Input type="number" min={0} step="0.01" {...field} className={FIELD} />
+                            <AmountInput value={field.value} onChange={field.onChange} className={FIELD} />
                           </FormControl>
                           <FormMessage className="text-[10px] uppercase font-bold text-destructive" />
                         </FormItem>
@@ -611,7 +612,7 @@ export function ReceiveVoucherDialog({
                                     <FormItem>
                                       <FormLabel className={LABEL}>{label}</FormLabel>
                                       <FormControl>
-                                        <Input type="number" step="0.01" placeholder="0" {...field} className={CELL} />
+                                        <AmountInput placeholder="0" value={field.value} onChange={field.onChange} className={CELL} />
                                       </FormControl>
                                     </FormItem>
                                   )}

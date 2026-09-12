@@ -34,6 +34,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useProjectOptions } from "@/features/projects/hooks/useProjects";
 import { useProducts } from "@/features/products/hooks/useProducts";
 import { Proposal, CreateProposalInput, PricingModel } from "../types";
+import { AmountInput } from "@/components/common/AmountInput";
 
 const itemSchema = z.object({
   productId: z.string().optional(),
@@ -389,7 +390,11 @@ export function ProposalDialog({
                             Management Fee {watched.managementFeeType === "PERCENT" ? "(%)" : "(IDR)"}
                           </FormLabel>
                           <FormControl>
-                            <Input type="number" min={0} step="0.01" {...field} className={FIELD} />
+                            {watched.managementFeeType === "NOMINAL" ? (
+                                <AmountInput value={field.value} onChange={field.onChange} className={FIELD} />
+                              ) : (
+                                <Input type="number" min={0} step="0.01" {...field} className={FIELD} />
+                              )}
                           </FormControl>
                           <FormMessage className="text-[10px] uppercase font-bold text-destructive" />
                         </FormItem>
@@ -455,7 +460,7 @@ export function ProposalDialog({
                           <FormItem>
                             <FormLabel className={LABEL}>Lump Sum Total (IDR)</FormLabel>
                             <FormControl>
-                              <Input type="number" min={0} step="0.01" {...field} className={FIELD} />
+                              <AmountInput value={field.value} onChange={field.onChange} className={FIELD} />
                             </FormControl>
                             <FormMessage className="text-[10px] uppercase font-bold text-destructive" />
                           </FormItem>
@@ -539,7 +544,7 @@ export function ProposalDialog({
                                 <FormItem>
                                   <FormLabel className={LABEL}>Selling Price</FormLabel>
                                   <FormControl>
-                                    <Input type="number" min={0} step="0.01" {...field} className={CELL} />
+                                    <AmountInput value={field.value} onChange={field.onChange} className={CELL} />
                                   </FormControl>
                                   <FormMessage className="text-[10px] uppercase font-bold text-destructive" />
                                 </FormItem>

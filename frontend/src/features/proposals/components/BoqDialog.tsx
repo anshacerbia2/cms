@@ -24,6 +24,7 @@ import { useProducts } from "@/features/products/hooks/useProducts";
 import { useAuthStore } from "@/store/authStore";
 import { useBoqs } from "../hooks/useBoqs";
 import { Proposal, BoqItemInput } from "../types";
+import { AmountInput } from "@/components/common/AmountInput";
 
 interface DraftItem {
   productId: string;
@@ -312,13 +313,10 @@ export function BoqDialog({ open, onOpenChange, proposal }: BoqDialogProps) {
 
                     <div className="space-y-1.5">
                       <Label className={LABEL}>Unit Price</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
+                      <AmountInput
                         placeholder="Catalog price"
                         value={item.sellingPrice}
-                        onChange={(e) => patchDraft(index, { sellingPrice: e.target.value })}
+                        onChange={(v) => patchDraft(index, { sellingPrice: v })}
                         className={CELL}
                       />
                     </div>

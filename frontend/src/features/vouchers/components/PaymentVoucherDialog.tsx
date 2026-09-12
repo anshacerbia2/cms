@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { useBanks } from "@/features/banks/hooks/useBanks";
 import { PaymentVoucher, CreatePaymentVoucherInput } from "../types";
+import { AmountInput } from "@/components/common/AmountInput";
 
 const formSchema = z.object({
   pvNumber: z.string().min(1, "PV number is required"),
@@ -181,7 +182,7 @@ export function PaymentVoucherDialog({
                     <FormItem>
                       <FormLabel className={LABEL}>Amount</FormLabel>
                       <FormControl>
-                        <Input type="number" min={0} step="0.01" {...field} className={FIELD} />
+                        <AmountInput value={field.value} onChange={field.onChange} className={FIELD} />
                       </FormControl>
                       <FormMessage className="text-[10px] uppercase font-bold text-destructive" />
                     </FormItem>
