@@ -1,7 +1,9 @@
 /** Where the stack under test lives, and who signs in. */
 
-export const UI_URL = process.env.E2E_BASE_URL ?? "http://localhost:5174";
-export const API_URL = process.env.E2E_API_URL ?? "http://localhost:3001/api";
+// Vite and the Nest app on their own defaults. The dev worktree on the server
+// uses 5174 and 3001 to sit beside production; a local checkout does not.
+export const UI_URL = process.env.E2E_BASE_URL ?? "http://localhost:5173";
+export const API_URL = process.env.E2E_API_URL ?? "http://localhost:3000/api";
 
 /** Seeded by `prisma db seed`. See e2e/README.md before pointing this anywhere else. */
 export const ACCOUNTS = {

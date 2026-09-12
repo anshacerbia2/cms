@@ -5,24 +5,24 @@ import { defineConfig, devices } from "@playwright/test";
  * database and seed, so bringing it up is a deliberate step (see e2e/README.md)
  * instead of something a test run does implicitly.
  */
-const UI = process.env.E2E_BASE_URL ?? "http://localhost:5174";
+const UI = process.env.E2E_BASE_URL ?? "http://localhost:5173";
 
 /**
- * Drives the Chrome already on the machine instead of Playwright's pinned
- * Chromium, which it otherwise downloads into a shared cache.
+ * Runs on the Chrome already installed on the machine.
  *
- * Off by default: a pinned Chromium is reproducible, while system Chrome updates
- * underneath you and can change a result with no commit behind it. Worth turning
- * on when the download will not fit, or when the cached build does not match the
- * installed library version — the error names a build number, and switching here
- * skips the fetch entirely.
+ * Playwright would rather ship its own Chromium, pinned to the library version —
+ * more reproducible, because system Chrome updates underneath you. But that build
+ * is a few hundred megabytes, it has to be re-downloaded on every library bump,
+ * and a machine that cannot spare the space cannot run the suite at all. Getting
+ * the tests runnable everywhere wins over pinning the browser.
  *
- *   set E2E_USE_SYSTEM_CHROME=1 && pnpm e2e     (Windows)
- *   E2E_USE_SYSTEM_CHROME=1 pnpm e2e            (macOS, Linux)
+ * CI, where the download is cheap and reproducibility matters more, opts in:
+ *
+ *   E2E_PINNED_CHROMIUM=1 pnpm e2e      (after `playwright install chromium`)
  */
-const browser = process.env.E2E_USE_SYSTEM_CHROME
-  ? { ...devices["Desktop Chrome"], channel: "chrome" as const }
-  : devices["Desktop Chrome"];
+const browser = process.env.E2E_PINNED_CHROMIUM
+  ? devices["Desktop Chrome"]
+  : { ...devices["Desktop Chrome"], channel: "chrome" as const };
 
 export default defineConfig({
   testDir: "./e2e",
