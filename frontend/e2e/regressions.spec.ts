@@ -199,7 +199,14 @@ test.describe("REG-18 — Balance Sheet detail totals follow the filter", () => 
    * leaves that branch alone, so a test that filtered it would be asserting the
    * wrong behaviour.
    */
-  const ADDITIVE_GROUPS = ["Account Receivable", "Fixed Assets", "Deposit", "Prepaid Tax"];
+  /**
+   * Account rows carry the Tailwind marker class `group/item`, and only the
+   * clickable ones also carry `cursor-pointer` — a row whose name contains
+   * "depreciation" has no handler. The groups arrive already expanded, seeded
+   * from the backend's `isOpen` flag, so clicking a heading *collapses* it and
+   * hides exactly the rows this test needs.
+   */
+  const ITEM = 'div[class*="group/item"][class*="cursor-pointer"]';
 
   test("the Total row sums only the visible rows", async ({ page }) => {
     await openPage(page, "/finance-reports", /^financial reports$/i);
@@ -223,24 +230,30 @@ test.describe("REG-18 — Balance Sheet detail totals follow the filter", () => 
       await yearSelect.click();
       await page.getByRole("option", { name: year, exact: true }).click();
 
-      for (const group of ADDITIVE_GROUPS) {
-        const heading = page.getByText(group, { exact: true }).first();
-        if (!(await heading.count())) {
-          tried.push(`${year} ${group}: no such group`);
-          continue;
-        }
+      const items = page.locator(ITEM);
+      await expect(
+        items.first(),
+        `no clickable balance sheet account rendered for ${year}`,
+      ).toBeVisible();
 
-        // The groups render as collapsibles; open it, then take its first row.
-        await heading.click();
-        const item = page.locator("div.cursor-pointer").filter({ hasText: /\S/ }).nth(1);
-        if (!(await item.count())) {
-          tried.push(`${year} ${group}: no clickable account under it`);
-          continue;
-        }
+      const count = await items.count();
+      for (let i = 0; i < count; i++) {
+        const row = items.nth(i);
+        const label = ((await row.textContent()) ?? "").trim().slice(0, 40);
 
-        await item.click();
+        await row.click();
         if (!(await modal.isVisible({ timeout: 4000 }).catch(() => false))) {
-          tried.push(`${year} ${group}: nothing opened`);
+          tried.push(`${year} "${label}": nothing opened`);
+          continue;
+        }
+
+        // Cash and Bank show a closing balance, not a sum, and are excluded from
+        // the fix on purpose — filtering one would assert the wrong behaviour.
+        const shape = (await modal.getByText(/Financial Audit Trail/i).first().textContent()) ?? "";
+        if (/Bank Statement Records/i.test(shape)) {
+          tried.push(`${year} "${label}": cash or bank, skipped by design`);
+          await page.keyboard.press("Escape");
+          await expect(modal).toBeHidden();
           continue;
         }
 
@@ -250,11 +263,11 @@ test.describe("REG-18 — Balance Sheet detail totals follow the filter", () => 
         ]);
 
         if (await total().count()) {
-          opened = `${group} (${year})`;
+          opened = `${label} (${year})`;
           break;
         }
 
-        tried.push(`${year} ${group}: modal held no rows`);
+        tried.push(`${year} "${label}": modal held no rows`);
         await page.keyboard.press("Escape");
         await expect(modal).toBeHidden();
       }
