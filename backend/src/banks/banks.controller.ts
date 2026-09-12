@@ -7,10 +7,11 @@ import {
   Param, 
   Delete, 
   UseGuards,
-  Query 
+  Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { BanksService } from './banks.service';
-import { CreateBankDto, CreateInternalAccountDto, UpdateInternalAccountDto } from './dto/create-bank.dto';
+import { CreateBankDto, UpdateBankDto, CreateInternalAccountDto, UpdateInternalAccountDto } from './dto/create-bank.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
@@ -75,4 +76,26 @@ export class BanksController {
   findAllFiscalPeriods(@Query() query: FiscalPeriodQueryDto) {
     return this.banksService.findAllFiscalPeriods(query);
   }
+
+  // Declared last on purpose: a ':id' route matches before any literal path
+  // declared after it, so placing these earlier would make /banks/internal-accounts
+  // parse 'internal-accounts' as an id.
+  @Get(':id')
+  @Permissions('banks.show')
+  findOneBank(@Param('id', ParseIntPipe) id: number) {
+    return this.banksService.findOneBank(id);
+  }
+
+  @Patch(':id')
+  @Permissions('banks.update')
+  updateBank(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBankDto) {
+    return this.banksService.updateBank(id, dto);
+  }
+
+  @Delete(':id')
+  @Permissions('banks.delete')
+  removeBank(@Param('id', ParseIntPipe) id: number) {
+    return this.banksService.removeBank(id);
+  }
+
 }

@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Eye, Truck, Tag, Ruler } from "lucide-react";
+import { Plus, Search, MoreVertical, Edit2, Trash2, Eye, Truck, Tag, Ruler } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useProducts } from "../hooks/useProducts";
+import { CategoryManagerDialog } from "../components/CategoryManagerDialog";
+import { DetailModal } from "@/components/common/DetailModal";
 import { useAuthStore } from "@/store/authStore";
 import { useSuppliers } from "../../suppliers/hooks/useSuppliers";
 import { 
@@ -42,7 +44,16 @@ export default function ProductsPage() {
   const [categoryId, setCategoryId] = useState<string>("all");
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { productsQuery, categoriesQuery, deleteProduct, createProduct, updateProduct } = useProducts({
+  const {
+    productsQuery,
+    categoriesQuery,
+    deleteProduct,
+    createProduct,
+    updateProduct,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+  } = useProducts({
     page,
     search: debouncedSearch,
     categoryId: categoryId === "all" ? undefined : categoryId,
@@ -58,6 +69,8 @@ export default function ProductsPage() {
   const suppliers = suppliersQuery.data?.data || [];
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const handleCreate = () => {
@@ -121,11 +134,9 @@ export default function ProductsPage() {
         
         <div className="flex items-center gap-3 w-full lg:w-auto">
           <Select value={categoryId} onValueChange={(val) => { setCategoryId(val); setPage(1); }}>
-            <SelectTrigger className="w-full lg:w-[200px]">
-              <div className="flex items-center gap-2">
-                <Tag size={16} className="text-primary/50" />
-                <SelectValue placeholder="Category" />
-              </div>
+            <SelectTrigger className="w-full lg:w-[200px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
+              <Tag size={18} className="text-secondary shrink-0" />
+              <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">ALL CATEGORIES</SelectItem>
@@ -137,10 +148,16 @@ export default function ProductsPage() {
             </SelectContent>
           </Select>
 
-          <Button variant="outline" className="h-12 px-5 rounded-xl border-primary/10 bg-white shadow-sm flex items-center gap-2 hover:bg-primary/5 transition-all text-muted-foreground font-bold">
-            <Filter size={18} />
-            <span className="text-xs uppercase tracking-widest hidden sm:inline">Advanced</span>
-          </Button>
+          {can("product-categories.index") && (
+            <Button
+              variant="outline"
+              onClick={() => setIsCategoryDialogOpen(true)}
+              className="h-12 px-5 rounded-xl border-0 bg-white shadow-sm flex items-center gap-2 hover:bg-primary/5 transition-all text-muted-foreground font-bold cursor-pointer"
+            >
+              <Tag size={18} />
+              <span className="text-xs uppercase tracking-widest hidden sm:inline">Categories</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -215,7 +232,10 @@ export default function ProductsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-premium border-primary/10 p-1 bg-white backdrop-blur-xl animate-in zoom-in-95 duration-200">
-                          <DropdownMenuItem className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors">
+                          <DropdownMenuItem
+                            onClick={() => setDetailProduct(product)}
+                            className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors"
+                          >
                             <Eye size={14} />
                             <span>Specifications</span>
                           </DropdownMenuItem>
@@ -259,6 +279,37 @@ export default function ProductsPage() {
         categories={categories}
         suppliers={suppliers}
         isSubmitting={createProduct.isPending || updateProduct.isPending}
+      />
+
+      <CategoryManagerDialog
+        open={isCategoryDialogOpen}
+        onOpenChange={setIsCategoryDialogOpen}
+        categories={categories}
+        onCreate={(data) => createCategory.mutateAsync(data)}
+        onUpdate={(data) => updateCategory.mutateAsync(data)}
+        onDelete={(id) => deleteCategory.mutateAsync(id)}
+        isBusy={
+          createCategory.isPending || updateCategory.isPending || deleteCategory.isPending
+        }
+      />
+
+      <DetailModal
+        open={!!detailProduct}
+        onOpenChange={(open) => !open && setDetailProduct(null)}
+        title={detailProduct?.name || ""}
+        subtitle={detailProduct?.code}
+        icon={<Ruler className="w-8 h-8 text-secondary shrink-0" strokeWidth={2.5} />}
+        data={
+          detailProduct
+            ? [
+                { label: "Code", value: detailProduct.code },
+                { label: "Unit", value: detailProduct.unit },
+                { label: "Category", value: detailProduct.category?.name || "—" },
+                { label: "Supplier", value: detailProduct.supplier?.name || "—" },
+                { label: "Description", value: detailProduct.description || "—" },
+              ]
+            : []
+        }
       />
     </PageContainer>
   );

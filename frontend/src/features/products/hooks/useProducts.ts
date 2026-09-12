@@ -6,7 +6,8 @@ import {
   CreateProductInput, 
   UpdateProductInput,
   ProductCategory,
-  CreateProductCategoryInput
+  CreateProductCategoryInput,
+  UpdateProductCategoryInput
 } from "../types";
 import { PaginatedResponse, PaginationParams } from "@/types/pagination";
 
@@ -46,6 +47,15 @@ const ProductsService = {
     const response = await api.post("/products/categories", data);
     return response.data;
   },
+
+  updateCategory: async ({ id, ...data }: UpdateProductCategoryInput): Promise<ProductCategory> => {
+    const response = await api.patch(`/products/categories/${id}`, data);
+    return response.data;
+  },
+
+  removeCategory: async (id: string): Promise<void> => {
+    await api.delete(`/products/categories/${id}`);
+  },
 };
 
 export function useProducts(params: ProductQueryParams = {}) {
@@ -84,11 +94,26 @@ export function useProducts(params: ProductQueryParams = {}) {
     },
   });
 
+  // A category rename shows up on every product row, so the product list is
+  // refreshed alongside the category list.
+  const invalidateCategories = () => {
+    queryClient.invalidateQueries({ queryKey: ["product-categories"] });
+    queryClient.invalidateQueries({ queryKey: ["products"] });
+  };
+
   const createCategory = useMutation({
     mutationFn: ProductsService.createCategory,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product-categories"] });
-    },
+    onSuccess: invalidateCategories,
+  });
+
+  const updateCategory = useMutation({
+    mutationFn: ProductsService.updateCategory,
+    onSuccess: invalidateCategories,
+  });
+
+  const deleteCategory = useMutation({
+    mutationFn: ProductsService.removeCategory,
+    onSuccess: invalidateCategories,
   });
 
   return {
@@ -98,5 +123,7 @@ export function useProducts(params: ProductQueryParams = {}) {
     updateProduct,
     deleteProduct,
     createCategory,
+    updateCategory,
+    deleteCategory,
   };
 }

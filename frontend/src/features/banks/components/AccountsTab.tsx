@@ -142,7 +142,7 @@ export function AccountsTab() {
 
         {/* Type Filter - Select Dropdown */}
         <Select value={selectedType} onValueChange={setSelectedType}>
-          <SelectTrigger className="w-full lg:w-[180px]">
+          <SelectTrigger className="w-full lg:w-[180px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
             <SelectValue placeholder="Account Type" />
           </SelectTrigger>
           <SelectContent>

@@ -3,6 +3,10 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { RolesModule } from './roles/roles.module';
+import { PermissionsModule } from './permissions/permissions.module';
+import { MenusModule } from './menus/menus.module';
+import { PdfTemplatesModule } from './pdf-templates/pdf-templates.module';
 import { CustomersModule } from './customers/customers.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { ProductsModule } from './products/products.module';
@@ -30,6 +34,10 @@ import { VouchersModule } from './vouchers/vouchers.module';
     PrismaModule,
     AuthModule,
     UsersModule,
+    RolesModule,
+    PermissionsModule,
+    MenusModule,
+    PdfTemplatesModule,
     CustomersModule,
     SuppliersModule,
     ProductsModule,

@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBankDto, CreateInternalAccountDto, UpdateBankDto, UpdateInternalAccountDto } from './dto/create-bank.dto';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
@@ -24,6 +29,7 @@ export class BanksService {
   // --- MASTER BANKS ---
 
   async createBank(dto: CreateBankDto) {
+    await this.assertBankCodeFree(dto.bankCode);
     return this.prisma.bank.create({ data: dto });
   }
 
@@ -62,6 +68,44 @@ export class BanksService {
   }
 
   // --- INTERNAL ACCOUNTS ---
+
+  async findOneBank(id: number) {
+    const bank = await this.prisma.bank.findUnique({
+      where: { id: BigInt(id) },
+      include: { _count: { select: { internalAccounts: true } } },
+    });
+
+    if (!bank) throw new NotFoundException(`Bank with ID ${id} not found`);
+    return bank;
+  }
+
+  async updateBank(id: number, dto: UpdateBankDto) {
+    await this.findOneBank(id);
+    if (dto.bankCode) await this.assertBankCodeFree(dto.bankCode, BigInt(id));
+
+    return this.prisma.bank.update({ where: { id: BigInt(id) }, data: dto });
+  }
+
+  async removeBank(id: number) {
+    const bank = await this.findOneBank(id);
+
+    // internal_accounts.bank_id is ON DELETE RESTRICT, so this would fail as a
+    // raw database error. Name what is actually holding the row instead.
+    if (bank._count.internalAccounts > 0) {
+      throw new BadRequestException(
+        `"${bank.bankName}" is still used by ${bank._count.internalAccounts} internal account(s). Remove those first.`,
+      );
+    }
+
+    return this.prisma.bank.delete({ where: { id: BigInt(id) } });
+  }
+
+  private async assertBankCodeFree(bankCode: string, exceptId?: bigint) {
+    const existing = await this.prisma.bank.findUnique({ where: { bankCode } });
+    if (existing && existing.id !== exceptId) {
+      throw new ConflictException(`Bank code "${bankCode}" is already used.`);
+    }
+  }
 
   async createInternalAccount(dto: CreateInternalAccountDto) {
     const { bankId, userId, ...data } = dto;

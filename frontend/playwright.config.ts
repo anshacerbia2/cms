@@ -1,0 +1,90 @@
+import { defineConfig, devices } from "@playwright/test";
+
+/**
+ * Starts the UI if it is not already up, and never the API.
+ *
+ * The dev server is a static file server — starting it costs nothing and
+ * removes a whole class of failure, where a run dies with
+ * ERR_CONNECTION_REFUSED because a terminal was closed. The API is the opposite:
+ * it opens a database, so it stays a deliberate step (see e2e/README.md).
+ */
+const UI = process.env.E2E_BASE_URL ?? "http://localhost:5173";
+
+/**
+ * Runs on the Chrome already installed on the machine.
+ *
+ * Playwright would rather ship its own Chromium, pinned to the library version —
+ * more reproducible, because system Chrome updates underneath you. But that build
+ * is a few hundred megabytes, it has to be re-downloaded on every library bump,
+ * and a machine that cannot spare the space cannot run the suite at all. Getting
+ * the tests runnable everywhere wins over pinning the browser.
+ *
+ * CI, where the download is cheap and reproducibility matters more, opts in:
+ *
+ *   E2E_PINNED_CHROMIUM=1 pnpm e2e      (after `playwright install chromium`)
+ */
+const browser = process.env.E2E_PINNED_CHROMIUM
+  ? devices["Desktop Chrome"]
+  : { ...devices["Desktop Chrome"], channel: "chrome" as const };
+
+export default defineConfig({
+  testDir: "./e2e",
+  outputDir: "./e2e/.artifacts",
+
+  // Several specs mutate shared records — an invoice's balance, the one active
+  // print template — so they cannot run beside each other. Files are still
+  // parallel; tests inside a file are serial.
+  fullyParallel: false,
+  // Each worker runs its own browser, so two of them is two Chromes plus two
+  // Node processes. On a machine low on disk — where Windows cannot grow the
+  // page file — that is enough for V8 to fail an allocation before the first
+  // test runs. E2E_WORKERS=1 halves the footprint.
+  workers: Number(process.env.E2E_WORKERS) || (process.env.CI ? 1 : 2),
+
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 1 : 0,
+  timeout: 30_000,
+  expect: { timeout: 7_000 },
+
+  reporter: process.env.CI
+    ? [["list"], ["html", { outputFolder: "./e2e/.report", open: "never" }]]
+    : [["list"]],
+
+  // reuseExistingServer means an already-running `pnpm dev` is used as is, and
+  // only a missing one gets started — so this does not fight a dev session.
+  webServer: {
+    command: "pnpm dev",
+    url: UI,
+    reuseExistingServer: true,
+    timeout: 60_000,
+    stdout: "ignore",
+    stderr: "pipe",
+  },
+
+  use: {
+    baseURL: UI,
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+    video: "off",
+    // Amounts render as 52.000.000,00 — pin the locale so a runner in another
+    // region does not fail on separators.
+    locale: "id-ID",
+    timezoneId: "Asia/Jakarta",
+  },
+
+  projects: [
+    { name: "setup", testMatch: /auth\.setup\.ts/, use: browser },
+    {
+      name: "admin",
+      dependencies: ["setup"],
+      use: { ...browser, storageState: "e2e/.auth/admin.json" },
+      testIgnore: /viewer\.spec\.ts/,
+    },
+    {
+      name: "viewer",
+      dependencies: ["setup"],
+      use: { ...browser, storageState: "e2e/.auth/viewer.json" },
+      testMatch: /viewer\.spec\.ts/,
+    },
+  ],
+});

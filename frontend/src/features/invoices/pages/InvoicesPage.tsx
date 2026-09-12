@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Plus, Search, MoreVertical, Edit2, Trash2, Eye, FileText } from "lucide-react";
+import { Plus, Search, MoreVertical, Edit2, Trash2, Eye, FileText , Printer } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { toast } from "sonner";
 import { useInvoices, useInvoice } from "../hooks/useInvoices";
 import { useAuthStore } from "@/store/authStore";
+import { useDocumentPrint } from "@/features/print-templates/hooks/useDocumentPrint";
 import {
   Table,
   TableBody,
@@ -54,6 +55,7 @@ const ALL = "ALL";
 
 export default function InvoicesPage() {
   const { can } = useAuthStore();
+  const { print, printingId } = useDocumentPrint();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 500);
@@ -270,6 +272,14 @@ export default function InvoicesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-premium border-primary/10 p-1 bg-white backdrop-blur-xl">
+                          <DropdownMenuItem
+                            onClick={() => print("invoices", invoice.id)}
+                            disabled={printingId === invoice.id}
+                            className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors"
+                          >
+                            <Printer size={14} />
+                            <span>{printingId === invoice.id ? "Preparing..." : "Print"}</span>
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => setDetailId(invoice.id)}
                             className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors"

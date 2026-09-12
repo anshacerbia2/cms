@@ -30,6 +30,8 @@ export class InvoicesService {
   /** FIT flow: the project is billed directly, with one summary sales item. */
   private async createForFitProject(dto: CreateInvoiceDto, project: any) {
     const totalAmount = Number(dto.totalAmount ?? 0);
+    this.assertBillable(totalAmount, 'The amount given');
+    await this.assertNonVatSettlement(dto.taxType, dto.internalAccountId);
     const managementFeeType = dto.managementFeeType ?? 'PERCENT';
     const managementFee = dto.managementFee ?? 0;
     const vatRate = dto.vatRate ?? 11;
@@ -95,6 +97,8 @@ export class InvoicesService {
 
     const selected = proposal.salesItems.filter((item: any) => itemIds.includes(item.id.toString()));
     const totalAmount = selected.reduce((sum: number, item: any) => sum + Number(item.totalPrice), 0);
+    this.assertBillable(totalAmount, 'The selected proposal items');
+    await this.assertNonVatSettlement(dto.taxType, dto.internalAccountId);
     const managementFee = this.proposalFeeValue(proposal, totalAmount);
 
     return this.prisma.$transaction(async (tx) => {
@@ -210,6 +214,13 @@ export class InvoicesService {
       }
     }
 
+    // Checked against the values the invoice will end up with, since either the
+    // tax type or the settlement account may be the one being edited.
+    await this.assertNonVatSettlement(
+      dto.taxType ?? invoice.taxType,
+      dto.internalAccountId ?? (invoice.internalAccountId ? Number(invoice.internalAccountId) : null),
+    );
+
     const invoiceId = BigInt(id);
     const isFit = invoice.project?.type === 'FIT';
 
@@ -231,6 +242,7 @@ export class InvoicesService {
 
     if (isFit) {
       const totalAmount = dto.totalAmount !== undefined ? Number(dto.totalAmount) : Number(invoice.totalAmount);
+      this.assertBillable(totalAmount, 'The amount given');
 
       return this.prisma.$transaction(async (tx) => {
         await tx.invoice.update({
@@ -275,6 +287,7 @@ export class InvoicesService {
 
     const selected = proposal.salesItems.filter((item: any) => itemIds.includes(item.id.toString()));
     const totalAmount = selected.reduce((sum: number, item: any) => sum + Number(item.totalPrice), 0);
+    this.assertBillable(totalAmount, 'The selected proposal items');
 
     return this.prisma.$transaction(async (tx) => {
       await tx.invoice.update({
@@ -459,6 +472,62 @@ export class InvoicesService {
    * Percent fees carry the rate; nominal fees are split across invoices in proportion
    * to the share of the proposal being billed.
    */
+  /**
+   * No Tax invoices carry no VAT, so they must settle to the account kept outside
+   * the VAT reporting — the form has always said so without enforcing it, and the
+   * rule used to be written down as a literal account number, which silently
+   * stopped meaning anything the moment that account changed.
+   *
+   * Enforced only once at least one account is marked: on a database where nobody
+   * has designated one yet, there is nothing to check against and refusing every
+   * No Tax invoice would be worse than allowing them.
+   */
+  private async assertNonVatSettlement(taxType: string | undefined, internalAccountId?: number | null) {
+    if (taxType !== 'NO_TAX') return;
+
+    const designated = await this.prisma.internalAccount.count({
+      where: { isNonVatSettlement: true },
+    });
+    if (designated === 0) return;
+
+    if (!internalAccountId) {
+      throw new BadRequestException(
+        'A No Tax invoice must name the non-VAT settlement account.',
+      );
+    }
+
+    const account = await this.prisma.internalAccount.findUnique({
+      where: { id: BigInt(internalAccountId) },
+      include: { bank: true },
+    });
+
+    if (!account?.isNonVatSettlement) {
+      const allowed = await this.prisma.internalAccount.findMany({
+        where: { isNonVatSettlement: true },
+        include: { bank: true },
+      });
+
+      throw new BadRequestException(
+        `A No Tax invoice must settle to the non-VAT account (${allowed
+          .map((a) => `${a.bank?.bankName ?? 'Cash'} ${a.accountNo ?? ''}`.trim())
+          .join(', ')}).`,
+      );
+    }
+  }
+
+  /**
+   * An invoice for nothing cannot be collected and has no meaning in the ledger:
+   * its balance due is zero, so it is born already settled and no receive voucher
+   * can ever apply to it. Adjustments belong on vouchers, not on empty invoices.
+   */
+  private assertBillable(totalAmount: number, context: string) {
+    if (!(totalAmount > 0)) {
+      throw new BadRequestException(
+        `${context} produces a zero invoice amount. An invoice must bill a positive amount.`,
+      );
+    }
+  }
+
   private proposalFeeValue(proposal: any, totalAmount: number): number {
     const managementFee = Number(proposal.managementFee ?? 0);
     if (proposal.managementFeeType === 'PERCENT') return managementFee;

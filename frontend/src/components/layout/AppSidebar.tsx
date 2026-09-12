@@ -28,6 +28,11 @@ import {
   Calculator,
   DollarSign,
   TrendingDown,
+  ShieldCheck,
+  KeyRound,
+  ListTree,
+  Settings,
+  Printer,
 } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
 import { useAuthStore } from "@/store/authStore";
@@ -62,6 +67,11 @@ const iconMap: Record<string, LucideIcon> = {
   Calculator,
   DollarSign,
   TrendingDown,
+  ShieldCheck,
+  KeyRound,
+  ListTree,
+  Settings,
+  Printer,
 };
 
 function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIcon; label: string; to: string; end?: boolean }) {
@@ -116,8 +126,6 @@ export function AppSidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-
-  console.log('Sidebar User Menus:', user?.menus);
 
   return (
     <aside

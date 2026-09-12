@@ -87,7 +87,7 @@ export class PaymentVouchersService {
     for (const field of ['issuingDate', 'dueDate', 'paymentDate']) {
       if (data[field] !== undefined) row[field] = data[field] ? new Date(data[field]) : null;
     }
-    for (const field of ['payableId', 'purchaseOrderId', 'internalAccountId']) {
+    for (const field of ['payableId', 'internalAccountId']) {
       if (data[field] !== undefined) row[field] = data[field] ? BigInt(data[field]) : null;
     }
 

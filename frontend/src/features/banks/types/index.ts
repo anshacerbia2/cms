@@ -21,6 +21,8 @@ export interface InternalAccount {
   bank?: Bank;
   createdAt: string;
   updatedAt: string;
+  /** No Tax invoices must settle to this account. */
+  isNonVatSettlement?: boolean;
 }
 
 export interface CreateBankInput {

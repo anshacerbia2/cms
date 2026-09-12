@@ -27,6 +27,7 @@ import { PaginationControls } from "@/components/common/PaginationControls";
 
 import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
+import { DetailModal } from "@/components/common/DetailModal";
 
 export default function SuppliersPage() {
   const { can } = useAuthStore();
@@ -45,6 +46,7 @@ export default function SuppliersPage() {
   const meta = response?.meta;
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [detailSupplier, setDetailSupplier] = useState<Supplier | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
   const handleCreate = () => {
@@ -105,7 +107,7 @@ export default function SuppliersPage() {
             }}
           />
         </div>
-        <Button variant="outline" className="h-12 px-5 rounded-xl border-primary/10 bg-white shadow-sm flex items-center gap-2 hover:bg-primary/5 transition-all text-muted-foreground font-bold">
+        <Button variant="outline" className="h-12 px-5 rounded-xl border-0 bg-white shadow-sm flex items-center gap-2 hover:bg-primary/5 transition-all text-muted-foreground font-bold cursor-pointer">
           <Filter size={18} />
           <span className="text-xs uppercase tracking-widest">Filter</span>
         </Button>
@@ -189,7 +191,10 @@ export default function SuppliersPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-premium border-primary/10 p-1 bg-white backdrop-blur-xl animate-in zoom-in-95 duration-200">
-                          <DropdownMenuItem className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors">
+                          <DropdownMenuItem
+                            onClick={() => setDetailSupplier(supplier)}
+                            className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors"
+                          >
                             <Eye size={14} />
                             <span>View Profile</span>
                           </DropdownMenuItem>
@@ -231,6 +236,33 @@ export default function SuppliersPage() {
         onSubmit={handleSubmit}
         supplier={selectedSupplier}
         isSubmitting={createSupplier.isPending || updateSupplier.isPending}
+      />
+
+      <DetailModal
+        open={!!detailSupplier}
+        onOpenChange={(open) => !open && setDetailSupplier(null)}
+        title={detailSupplier?.name || ""}
+        subtitle={detailSupplier?.code}
+        icon={<Truck className="w-8 h-8 text-secondary shrink-0" strokeWidth={2.5} />}
+        data={
+          detailSupplier
+            ? [
+                { label: "Code", value: detailSupplier.code },
+                { label: "Status", value: detailSupplier.status },
+                { label: "Contact Person", value: detailSupplier.contactPerson || "—" },
+                { label: "Phone", value: detailSupplier.phone || "—" },
+                { label: "Email", value: detailSupplier.email || "—" },
+                { label: "Address", value: detailSupplier.address || "—" },
+                { label: "Tax Number", value: detailSupplier.taxNumber || "—" },
+                { label: "Bank", value: detailSupplier.bankName || "—" },
+                { label: "Account Number", value: detailSupplier.bankAccountNumber || "—" },
+                { label: "Account Name", value: detailSupplier.bankAccountName || "—" },
+                { label: "PICs", value: String(detailSupplier._count?.pics ?? 0) },
+                { label: "Products", value: String(detailSupplier._count?.products ?? 0) },
+                { label: "Notes", value: detailSupplier.notes || "—" },
+              ]
+            : []
+        }
       />
     </PageContainer>
   );

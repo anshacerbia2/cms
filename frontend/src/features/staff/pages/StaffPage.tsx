@@ -1,7 +1,12 @@
 import { useState } from "react";
-import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Shield, Mail, User as UserIcon } from "lucide-react";
+import { toast } from "sonner";
+import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Shield, Mail, KeyRound } from "lucide-react";
 import { useDebounce } from "use-debounce";
-import { useStaff } from "../hooks/useStaff";
+import { useUsers } from "@/features/access-control/hooks/useUsers";
+import { useRoles } from "@/features/access-control/hooks/useRoles";
+import { UserDialog } from "@/features/access-control/components/UserDialog";
+import { ChangePasswordDialog } from "@/features/access-control/components/ChangePasswordDialog";
+import { User, CreateUserInput } from "@/features/access-control/types";
 import { useAuthStore } from "@/store/authStore";
 import { 
   Table, 
@@ -33,24 +38,71 @@ export default function StaffPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { usersQuery, deleteUser } = useStaff({
+  const { usersQuery, createUser, updateUser, changePassword, deleteUser } = useUsers({
     page,
     search: debouncedSearch,
     limit: 10
   });
 
+  // Every role, for the assignment dropdown — there are only a handful of them.
+  const { rolesQuery } = useRoles({ limit: 100 });
+  const roles = rolesQuery.data?.data ?? [];
+
   const { data: response, isLoading, isFetching } = usersQuery;
   const users = response?.data || [];
   const meta = response?.meta;
 
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [selected, setSelected] = useState<User | null>(null);
+
   const handleCreate = () => {
-    // Dialog implementation would go here
-    alert("User creation dialog coming soon!");
+    setSelected(null);
+    setIsUserDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to remove this staff member?")) {
-      await deleteUser.mutateAsync(id);
+  const handleEdit = (user: User) => {
+    setSelected(user);
+    setIsUserDialogOpen(true);
+  };
+
+  const handleChangePassword = (user: User) => {
+    setSelected(user);
+    setIsPasswordDialogOpen(true);
+  };
+
+  const handleSubmit = async (data: CreateUserInput) => {
+    try {
+      if (selected) {
+        await updateUser.mutateAsync({ id: selected.id, ...data });
+      } else {
+        await createUser.mutateAsync(data);
+      }
+      setIsUserDialogOpen(false);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message ?? "Failed to save staff member.");
+    }
+  };
+
+  const handleSubmitPassword = async (password: string) => {
+    if (!selected) return;
+
+    try {
+      await changePassword.mutateAsync({ id: selected.id, password });
+      setIsPasswordDialogOpen(false);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message ?? "Failed to change password.");
+    }
+  };
+
+  const handleDelete = async (user: User) => {
+    if (!confirm(`Remove ${user.name}? This cannot be undone.`)) return;
+
+    try {
+      await deleteUser.mutateAsync(user.id);
+    } catch (error: any) {
+      // Refused when it is the account you are signed in as.
+      toast.error(error?.response?.data?.message ?? "Failed to remove staff member.");
     }
   };
 
@@ -87,7 +139,7 @@ export default function StaffPage() {
             }}
           />
         </div>
-        <Button variant="outline" className="h-12 px-5 rounded-xl border-primary/10 bg-white shadow-sm flex items-center gap-2 hover:bg-primary/5 transition-all text-muted-foreground font-bold">
+        <Button variant="outline" className="h-12 px-5 rounded-xl border-0 bg-white shadow-sm flex items-center gap-2 hover:bg-primary/5 transition-all text-muted-foreground font-bold cursor-pointer">
           <Filter size={18} />
           <span className="text-xs uppercase tracking-widest">Filter</span>
         </Button>
@@ -143,28 +195,39 @@ export default function StaffPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-primary/80">
-                          <UserIcon size={12} className="opacity-40" /> {user.username}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground lowercase">
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-primary/80 lowercase">
                           <Mail size={12} className="opacity-40" /> {user.email}
                         </div>
+                        {user.phone && (
+                          <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+                            {user.phone}
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="bg-primary/5 border-primary/10 text-[9px] font-extrabold uppercase tracking-[0.15em] px-2.5 py-1 rounded-lg text-primary shadow-sm flex w-fit items-center gap-1.5">
-                        <Shield size={10} className="text-secondary" /> {user.role}
+                        <Shield size={10} className="text-secondary" />
+                        {user.role?.name ?? "No Role"}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge className={
-                        user.status === 'active' 
-                          ? "bg-green-50 text-green-600 border-green-100/50 hover:bg-green-100" 
-                          : "bg-muted text-muted-foreground border-transparent"
+                        user.status === 'ACTIVE'
+                          ? "bg-green-50 text-green-600 border-green-100/50 hover:bg-green-100"
+                          : user.status === 'SUSPENDED'
+                            ? "bg-red-50 text-red-600 border-red-100/50 hover:bg-red-100"
+                            : "bg-muted text-muted-foreground border-transparent"
                         }
                         variant="outline"
                       >
-                        <div className={`w-1 h-1 rounded-full mr-1.5 ${user.status === 'active' ? 'bg-green-500' : 'bg-muted-foreground'}`} />
+                        <div className={`w-1 h-1 rounded-full mr-1.5 ${
+                          user.status === 'ACTIVE'
+                            ? 'bg-green-500'
+                            : user.status === 'SUSPENDED'
+                              ? 'bg-red-500'
+                              : 'bg-muted-foreground'
+                        }`} />
                         <span className="text-[10px] font-extrabold uppercase tracking-widest">{user.status}</span>
                       </Badge>
                     </TableCell>
@@ -176,18 +239,36 @@ export default function StaffPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-premium border-primary/10 p-1 bg-white backdrop-blur-xl animate-in zoom-in-95 duration-200">
-                          <DropdownMenuItem className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors">
-                            <Edit2 size={14} />
-                            <span>Edit Member</span>
-                          </DropdownMenuItem>
-                          <div className="h-px bg-muted mx-1 my-1" />
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(user.id)}
-                            className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-destructive hover:bg-destructive/5 transition-colors"
-                          >
-                            <Trash2 size={14} />
-                            <span>Revoke Access</span>
-                          </DropdownMenuItem>
+                          {can('users.update') && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleEdit(user)}
+                                className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors"
+                              >
+                                <Edit2 size={14} />
+                                <span>Edit Member</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleChangePassword(user)}
+                                className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors"
+                              >
+                                <KeyRound size={14} />
+                                <span>Change Password</span>
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {can('users.delete') && (
+                            <>
+                              <div className="h-px bg-muted mx-1 my-1" />
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(user)}
+                                className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-destructive hover:bg-destructive/5 transition-colors"
+                              >
+                                <Trash2 size={14} />
+                                <span>Revoke Access</span>
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -204,6 +285,23 @@ export default function StaffPage() {
           isFetching={isFetching}
         />
       </div>
+
+      <UserDialog
+        open={isUserDialogOpen}
+        onOpenChange={setIsUserDialogOpen}
+        onSubmit={handleSubmit}
+        user={selected}
+        roles={roles}
+        isSubmitting={createUser.isPending || updateUser.isPending}
+      />
+
+      <ChangePasswordDialog
+        open={isPasswordDialogOpen}
+        onOpenChange={setIsPasswordDialogOpen}
+        onSubmit={handleSubmitPassword}
+        user={selected}
+        isSubmitting={changePassword.isPending}
+      />
     </PageContainer>
   );
 }

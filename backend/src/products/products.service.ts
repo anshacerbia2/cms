@@ -1,13 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateProductDto, CreateProductCategoryDto } from './dto/create-product.dto';
+import { CreateProductDto, CreateProductCategoryDto, UpdateProductCategoryDto } from './dto/create-product.dto';
 import { PartialType } from '@nestjs/mapped-types';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { serializeDecimals } from '../common/utils/format.utils';
 
 class UpdateProductDto extends PartialType(CreateProductDto) {}
-class UpdateProductCategoryDto extends PartialType(CreateProductCategoryDto) {}
 
 @Injectable()
 export class ProductsService {
@@ -16,7 +20,46 @@ export class ProductsService {
   // --- CATEGORIES ---
 
   async createCategory(dto: CreateProductCategoryDto) {
+    await this.assertCategoryNameFree(dto.name);
     return this.prisma.productCategory.create({ data: dto });
+  }
+
+  async findOneCategory(id: number) {
+    const category = await this.prisma.productCategory.findUnique({
+      where: { id: BigInt(id) },
+      include: { _count: { select: { products: true } } },
+    });
+
+    if (!category) throw new NotFoundException(`Product category with ID ${id} not found`);
+    return category;
+  }
+
+  async updateCategory(id: number, dto: UpdateProductCategoryDto) {
+    await this.findOneCategory(id);
+    if (dto.name) await this.assertCategoryNameFree(dto.name, BigInt(id));
+
+    return this.prisma.productCategory.update({ where: { id: BigInt(id) }, data: dto });
+  }
+
+  async removeCategory(id: number) {
+    const category = await this.findOneCategory(id);
+
+    // products.category_id is required, so deleting a category in use would fail
+    // with a raw foreign-key error. Say what is actually in the way instead.
+    if (category._count.products > 0) {
+      throw new BadRequestException(
+        `Category "${category.name}" still has ${category._count.products} product(s). Move or delete them first.`,
+      );
+    }
+
+    return this.prisma.productCategory.delete({ where: { id: BigInt(id) } });
+  }
+
+  private async assertCategoryNameFree(name: string, exceptId?: bigint) {
+    const existing = await this.prisma.productCategory.findUnique({ where: { name } });
+    if (existing && existing.id !== exceptId) {
+      throw new ConflictException(`A category named "${name}" already exists.`);
+    }
   }
 
   async findAllCategories(query: PaginationQueryDto): Promise<PaginatedResult<any>> {

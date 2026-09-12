@@ -175,10 +175,33 @@ export class ProjectsService {
 
   async remove(id: number) {
     await this.findOneRaw(id);
+    const projectId = BigInt(id);
+
+    // Deleting the project is a soft delete, so its proposals and invoices would
+    // survive and stay reachable while their parent has vanished from every
+    // listing — an invoice with money collected against a project nobody can
+    // find. Invoice deletion already refuses while a receive voucher is attached
+    // and a WIN proposal refuses outright, so the chain only holds if this end
+    // checks too.
+    const [proposals, invoices] = await Promise.all([
+      this.prisma.proposal.count({ where: { projectId, deletedAt: null } }),
+      this.prisma.invoice.count({ where: { projectId } }),
+    ]);
+
+    if (proposals > 0 || invoices > 0) {
+      const blockers = [
+        proposals > 0 ? `${proposals} proposal(s)` : null,
+        invoices > 0 ? `${invoices} invoice(s)` : null,
+      ].filter(Boolean);
+
+      throw new BadRequestException(
+        `This project still has ${blockers.join(' and ')}. Delete those first.`,
+      );
+    }
 
     return serializeDecimals(
       await this.prisma.project.update({
-        where: { id: BigInt(id) },
+        where: { id: projectId },
         data: { deletedAt: new Date() },
       }),
     );

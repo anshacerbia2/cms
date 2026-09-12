@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { useCustomers } from "@/features/customers/hooks/useCustomers";
 import { Project, CreateProjectInput } from "../types";
+import { AmountInput } from "@/components/common/AmountInput";
 
 const formSchema = z.object({
   name: z.string().min(1, "Project name is required"),
@@ -273,7 +274,7 @@ export function ProjectDialog({
                         Contract Value (IDR)
                       </FormLabel>
                       <FormControl>
-                        <Input type="number" min={0} step="0.01" placeholder="0" {...field} className={FIELD} />
+                        <AmountInput value={field.value} onChange={field.onChange} className={FIELD} />
                       </FormControl>
                       <FormMessage className="text-[10px] uppercase font-bold text-destructive" />
                     </FormItem>

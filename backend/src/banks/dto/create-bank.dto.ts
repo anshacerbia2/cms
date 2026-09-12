@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNotEmpty, IsEnum, Length } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, IsEnum, Length , IsBoolean } from 'class-validator';
 import { InternalAccountType } from '@prisma/client';
 import { PartialType } from '@nestjs/mapped-types';
 
@@ -51,6 +51,11 @@ export class CreateInternalAccountDto {
   @IsString()
   @IsNotEmpty()
   holderName: string;
+
+  /** Marks this as the settlement account No Tax invoices must use. */
+  @IsOptional()
+  @IsBoolean()
+  isNonVatSettlement?: boolean;
 }
 
 export class UpdateInternalAccountDto extends PartialType(CreateInternalAccountDto) {}

@@ -132,7 +132,7 @@ export default function ReceiveVouchersPage() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="h-12 w-full sm:w-52 rounded-xl border-primary/10 bg-white shadow-sm text-muted-foreground font-bold text-xs uppercase tracking-widest">
+          <SelectTrigger className="w-full sm:w-52 h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
             <SelectValue placeholder="All purposes" />
           </SelectTrigger>
           <SelectContent>

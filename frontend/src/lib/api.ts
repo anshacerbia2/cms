@@ -25,8 +25,15 @@ api.interceptors.request.use(
 // Response interceptor for unwrapping the standardized response
 api.interceptors.response.use(
   (response) => {
-    // If the response follows our backend's TransformInterceptor format
-    if (response.data && 'data' in response.data && 'statusCode' in response.data) {
+    // If the response follows our backend's TransformInterceptor format.
+    // The object check is required: `in` throws on a string, and the document
+    // print endpoints return raw HTML rather than the JSON envelope.
+    if (
+      response.data &&
+      typeof response.data === 'object' &&
+      'data' in response.data &&
+      'statusCode' in response.data
+    ) {
       return { ...response, data: response.data.data };
     }
     return response;
