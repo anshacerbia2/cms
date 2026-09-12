@@ -300,26 +300,60 @@ test.describe("REG-18 — Balance Sheet detail totals follow the filter", () => 
 
     await agrees("unfiltered");
     const rowsBefore = await modal.locator("tbody tr").count();
+    expect(rowsBefore, "nothing to filter").toBeGreaterThan(1);
 
-    // Whichever column the modal offers first — the shape differs per category.
-    await modal.locator("thead th").filter({ has: page.locator("button") }).first()
-      .locator("button").first().click();
+    /**
+     * Which column can be partially filtered depends on the data, not on the
+     * shape: unticking a value in a column that holds one distinct value empties
+     * the table, and an empty table has no total to check. So try each column
+     * and keep the first that leaves rows behind, clearing up after the ones
+     * that do not.
+     */
+    const columns = modal.locator("thead th").filter({ has: page.locator("button") });
+    const columnCount = await columns.count();
+    const attempts: string[] = [];
+    let filtered = 0;
 
-    const boxes = page.getByRole("checkbox");
-    await expect(boxes.first()).toBeVisible();
-    const values = (await boxes.count()) - 1;
-    test.skip(values < 2, `${opened} has only one value to filter on`);
+    for (let i = 0; i < columnCount; i++) {
+      const header = columns.nth(i);
+      const name = ((await header.textContent()) ?? `column ${i}`).trim();
 
-    // Untick from the end. The list sorts numerically where it can, so the first
-    // entry is often "(Blanks)" — dropping rows whose amounts are empty changes
-    // the row count without changing the total, which proves nothing.
-    await boxes.last().uncheck();
-    // Escape only closes the dropdown; handleApply runs on OK and nowhere else.
-    await page.getByRole("button", { name: /^OK$/ }).click();
+      await header.locator("button").first().click();
+      const boxes = page.getByRole("checkbox");
+      await expect(boxes.first()).toBeVisible();
 
-    await expect.poll(async () => modal.locator("tbody tr").count()).toBeLessThan(rowsBefore);
+      if ((await boxes.count()) - 1 < 2) {
+        attempts.push(`${name}: only one value to choose from`);
+        await page.getByRole("button", { name: /^Cancel$/ }).click();
+        continue;
+      }
+
+      await boxes.last().uncheck();
+      // Escape only closes the dropdown; handleApply runs on OK and nowhere else.
+      await page.getByRole("button", { name: /^OK$/ }).click();
+
+      await expect.poll(async () => modal.locator("tbody tr").count()).toBeLessThan(rowsBefore);
+      filtered = await modal.locator("tbody tr").count();
+      if (filtered > 0) {
+        attempts.push(`${name}: ${rowsBefore} -> ${filtered} rows`);
+        break;
+      }
+
+      // Emptied it. Put the column back and move on.
+      attempts.push(`${name}: emptied the table`);
+      await header.locator("button").first().click();
+      await expect(page.getByRole("checkbox").first()).toBeVisible();
+      await page.getByRole("button", { name: /^Clear$/ }).click();
+      await expect.poll(async () => modal.locator("tbody tr").count()).toBe(rowsBefore);
+    }
+
+    expect(
+      filtered,
+      `no column could be filtered without emptying the table:\n  ${attempts.join("\n  ")}`,
+    ).toBeGreaterThan(0);
+
     await expect(total()).toBeVisible();
-    await agrees("after filtering");
+    await agrees(`after filtering (${attempts[attempts.length - 1]})`);
   });
 });
 
