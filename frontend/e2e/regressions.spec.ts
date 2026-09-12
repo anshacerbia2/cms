@@ -41,7 +41,10 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
     await page.getByRole("tab", { name: /profit.*loss/i }).click();
 
     const modal = dialog(page);
-    const total = () => modal.getByRole("row").filter({ hasText: /^TOTAL/ }).first();
+    // The totals row is the table's own <tfoot>, rendered only when the filtered
+    // detail is non-empty. Addressing the element beats matching its text.
+    const total = () => modal.locator("tfoot tr").first();
+    const noRecords = () => modal.getByText(/no records found/i);
     const yearSelect = page.getByRole("combobox").filter({ hasText: /^20\d{2}$/ }).first();
 
     // Prove this is the P&L table before looking for anything in it. These row
@@ -99,15 +102,29 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
         }
 
         await cell.click();
-        if (await total().isVisible({ timeout: 8000 }).catch(() => false)) {
+        if (!(await modal.isVisible({ timeout: 4000 }).catch(() => false))) {
+          tried.push(`${year} ${account}: modal never opened`);
+          continue;
+        }
+
+        // The modal fetches its own detail. Settle on whichever arrives: the
+        // totals row, or the empty state that stands in for it.
+        await Promise.race([
+          total().waitFor({ state: "visible", timeout: 8000 }).catch(() => {}),
+          noRecords().waitFor({ state: "visible", timeout: 8000 }).catch(() => {}),
+        ]);
+
+        if (await total().count()) {
           opened = `${account} (${year})`;
           break;
         }
-        // Empty or not drillable after all — shut it and try the next.
+
         tried.push(
-          `${year} ${account}: ${(await modal.count())
-            ? "modal opened with no TOTAL row, so it held no detail"
-            : "modal never opened"}`,
+          `${year} ${account}: ${
+            (await noRecords().count())
+              ? "No Records Found — this database holds no detail for it"
+              : `${await modal.getByRole("row").count()} row(s) but no tfoot`
+          }`,
         );
         await page.keyboard.press("Escape");
         await expect(modal).toBeHidden();
