@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { formatCurrency, getAmountColor, cn, formatDate } from "@/lib/utils";
+import { formatCurrency, getAmountColor, cn, formatDate, cleanAmount } from "@/lib/utils";
 import { useFinance } from "../hooks/useFinance";
 import { useExcelFilter } from "../hooks/useExcelFilter";
 import { ExcelColumnFilter } from "./ExcelColumnFilter";
@@ -116,7 +116,7 @@ export function BalanceSheetTab() {
           f_col1: row.colC, 
           f_col2: combinedDesc, 
           f_col3: formatCurrency(row.colR),
-          f_amount: Number(row.colR) || 0,
+          f_amount: Number(cleanAmount(formatCurrency(row.colR))),
         };
       }
       if (isFixedAsset) {
@@ -125,7 +125,7 @@ export function BalanceSheetTab() {
           f_col1: formatDate(row.purchaseDate), 
           f_col2: row.assetName, 
           f_col3: formatCurrency(row.purchasePrice),
-          f_amount: Number(row.purchasePrice) || 0,
+          f_amount: Number(cleanAmount(formatCurrency(row.purchasePrice))),
         };
       }
       const date = row.colA || row.date || row.createdAt;
@@ -138,7 +138,7 @@ export function BalanceSheetTab() {
         f_col2: reference, 
         f_col3: description, 
         f_col4: formatCurrency(amount),
-        f_amount: Number(amount) || 0,
+        f_amount: Number(cleanAmount(formatCurrency(amount))),
       };
     });
   }, [displayDetails.body, isARorTax, isFixedAsset, isCashOrBank, drillDown.isLiability]);
@@ -165,9 +165,17 @@ export function BalanceSheetTab() {
    * Cash and Bank are deliberately excluded. Their footer is the account's
    * closing balance — the running balance on the last transaction — and summing
    * running balances across a filtered subset means nothing.
+   *
+   * Each row's `f_amount` is parsed from the very string its cell displays,
+   * through the shared `cleanAmount`. Reading the underlying field with Number()
+   * instead looks equivalent and is not: formatCurrency unwraps a Decimal via
+   * .toNumber(), while Number() on that object yields NaN — so a row would show
+   * its figure while contributing zero, and the footer would sit at "-" no
+   * matter what the filter did. Going through the rendered text makes the total
+   * and the rows the same arithmetic by construction.
    */
   const filteredDetailTotal = useMemo(
-    () => (filteredBsDetails || []).reduce((sum: number, row: any) => sum + (Number(row.f_amount) || 0), 0),
+    () => (filteredBsDetails || []).reduce((sum: number, row: any) => sum + (row.f_amount || 0), 0),
     [filteredBsDetails],
   );
 
