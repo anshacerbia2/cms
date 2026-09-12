@@ -134,11 +134,9 @@ export default function ProductsPage() {
         
         <div className="flex items-center gap-3 w-full lg:w-auto">
           <Select value={categoryId} onValueChange={(val) => { setCategoryId(val); setPage(1); }}>
-            <SelectTrigger className="w-full lg:w-[200px]">
-              <div className="flex items-center gap-2">
-                <Tag size={16} className="text-primary/50" />
-                <SelectValue placeholder="Category" />
-              </div>
+            <SelectTrigger className="w-full lg:w-[200px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
+              <Tag size={18} className="text-secondary shrink-0" />
+              <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">ALL CATEGORIES</SelectItem>
@@ -154,7 +152,7 @@ export default function ProductsPage() {
             <Button
               variant="outline"
               onClick={() => setIsCategoryDialogOpen(true)}
-              className="h-12 px-5 rounded-xl border-primary/10 bg-white shadow-sm flex items-center gap-2 hover:bg-primary/5 transition-all text-muted-foreground font-bold"
+              className="h-12 px-5 rounded-xl border-0 bg-white shadow-sm flex items-center gap-2 hover:bg-primary/5 transition-all text-muted-foreground font-bold cursor-pointer"
             >
               <Tag size={18} />
               <span className="text-xs uppercase tracking-widest hidden sm:inline">Categories</span>

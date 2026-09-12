@@ -76,7 +76,7 @@ export function FiscalPeriodsTab() {
             value={selectedAccountId} 
             onValueChange={(v) => { setSelectedAccountId(v); setPage(1); }}
           >
-            <SelectTrigger className="flex-1 xl:w-[220px]">
+            <SelectTrigger className="flex-1 xl:w-[220px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
               <div className="flex items-center gap-3 overflow-hidden">
                 <Landmark size={18} className="text-secondary shrink-0" />
                 {selectedAccountId === "all" ? (
@@ -130,7 +130,7 @@ export function FiscalPeriodsTab() {
             value={selectedYear} 
             onValueChange={(v) => { setSelectedYear(v); setPage(1); }}
           >
-            <SelectTrigger className="flex-1 xl:w-[130px]">
+            <SelectTrigger className="flex-1 xl:w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
               <div className="flex items-center gap-2">
                 <Calendar size={18} className="text-secondary" />
                 <SelectValue placeholder="Year" />

@@ -139,7 +139,7 @@ export default function StaffPage() {
             }}
           />
         </div>
-        <Button variant="outline" className="h-12 px-5 rounded-xl border-primary/10 bg-white shadow-sm flex items-center gap-2 hover:bg-primary/5 transition-all text-muted-foreground font-bold">
+        <Button variant="outline" className="h-12 px-5 rounded-xl border-0 bg-white shadow-sm flex items-center gap-2 hover:bg-primary/5 transition-all text-muted-foreground font-bold cursor-pointer">
           <Filter size={18} />
           <span className="text-xs uppercase tracking-widest">Filter</span>
         </Button>
