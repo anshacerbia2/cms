@@ -339,7 +339,8 @@
       <li><a href="#access"><code>07</code><span>Access control</span></a></li>
       <li><a href="#print"><code>08</code><span>Print templates</span></a></li>
       <li><a href="#regress"><code>09</code><span>Repaired regressions</span></a></li>
-      <li><a href="#playwright"><code>10</code><span>Notes for Playwright</span></a></li>
+      <li><a href="#validation"><code>10</code><span>Validation</span></a></li>
+      <li><a href="#playwright"><code>11</code><span>The e2e suite</span></a></li>
     </ol>
   </nav>
 
@@ -353,8 +354,8 @@
         <span>Baseline <b>bda61dc</b></span>
         <span>Head <b>d3531c0</b></span>
         <span><b>26</b> commits</span>
-        <span><b>8</b> feature areas</span>
-        <span><b>96</b> scenarios</span>
+        <span><b>9</b> feature areas</span>
+        <span><b>123</b> scenarios</span>
       </div>
     </header>
 
@@ -968,58 +969,226 @@ paymentStatus = FULLY_PAID   when balanceDue ≤ 0 and invoiceAmount > 0
       </div>
     </section>
 
-    <section id="playwright">
-      <h2><span class="num">10</span> Notes for Playwright</h2>
+    <section id="validation">
+      <h2><span class="num">10</span> Validation</h2>
+      <p class="lede">Two layers, and a scenario has to say which one it is testing. The form refuses an
+        empty field before anything leaves the browser; the server refuses what only it can know.
+        A field that passes the form and is then rejected by the API is a bug in the form.</p>
 
       <div class="note">
-        <span class="h">There are no test ids yet</span>
-        <p>The frontend carries <strong>zero</strong> <code>data-testid</code> attributes and only two
-          <code>aria-label</code>s. Every selector has to come from visible text or role, which works for
-          headings and primary buttons but is fragile for the row menus, where each row renders an identical
-          unlabelled trigger.</p>
-        <p>Worth adding <code>data-testid</code> to the row menu trigger, the row itself keyed by code, and the
-          dialog submit buttons before writing many tests. Until then, scope every row interaction through
-          <code>getByRole('row', { name: … })</code> so a selector cannot drift to a neighbouring row.</p>
+        <span class="h">Submitting an empty form is the cheapest test there is</span>
+        <p>It proves the schema is wired up at all, and it is the first thing a real user does by accident.
+          Each row below names the exact message the form renders — a validator that gets dropped in a
+          refactor fails here rather than surfacing months later as a column of nulls.</p>
       </div>
 
-      <h4>Selectors that are stable today</h4>
+      <h3>Required fields, per form</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>ID</th><th>Form</th><th>Submit empty, expect</th><th>Optional, must stay silent</th></tr></thead>
+          <tbody>
+            <tr><td class="id">VAL-PRJ-01</td><td>Project</td>
+              <td><code>Project name is required</code> · <code>Reference document number is required</code> ·
+                <code>Customer is required</code> · <code>Contract value is required</code> ·
+                <code>Start date is required</code> · <code>End date is required</code> ·
+                <code>Due date is required</code></td>
+              <td>Description</td></tr>
+            <tr><td class="id">VAL-PRO-01</td><td>Proposal</td>
+              <td><code>Project is required</code></td>
+              <td>Note, pricing model description, management fee, VAT rate, items total</td></tr>
+            <tr><td class="id">VAL-PRO-02</td><td>Proposal line item</td>
+              <td><code>Required</code> on the selling price of each added row</td>
+              <td>Product, description, qty, all four title slots</td></tr>
+            <tr><td class="id">VAL-INV-01</td><td>Invoice</td>
+              <td><code>Invoice number is required</code> · <code>Due date is required</code></td>
+              <td>Description, billing option, settlement account, fee, VAT rate</td></tr>
+            <tr><td class="id">VAL-RV-01</td><td>Receive Voucher</td>
+              <td><code>RV number is required</code> · <code>RV date is required</code> ·
+                <code>Amount is required</code></td>
+              <td>Internal account, payer id, payer name, purpose, description</td></tr>
+            <tr><td class="id">VAL-RV-02</td><td>RV allocation row</td>
+              <td><code>Pick an invoice</code></td>
+              <td>All five reducing amounts, adjustment description</td></tr>
+            <tr><td class="id">VAL-PV-01</td><td>Payment Voucher</td>
+              <td><code>PV number is required</code> · <code>Issuing date is required</code> ·
+                <code>Amount is required</code> · <code>Payee type is required</code> ·
+                <code>Category is required</code> · <code>Payment form is required</code></td>
+              <td>Due date, payment date, payee name, expense type, account, description</td></tr>
+            <tr><td class="id">VAL-ACL-01</td><td>Role</td>
+              <td><code>Role name is required</code> · <code>Slug is required</code></td>
+              <td>Description, and both grant lists</td></tr>
+            <tr><td class="id">VAL-ACL-04</td><td>Menu</td>
+              <td><code>Name is required</code></td>
+              <td>Parent, icon, permission, order, visibility</td></tr>
+            <tr><td class="id">VAL-PRT-01</td><td>Print template</td>
+              <td><code>Name is required</code> · <code>Template markup is required</code></td>
+              <td>Description</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Format rules</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>ID</th><th>Field</th><th>Enter</th><th>Expected</th><th>Tag</th></tr></thead>
+          <tbody>
+            <tr><td class="id">VAL-ACL-02</td><td>Role slug</td><td><code>Finance Manager</code></td>
+              <td><code>Use lowercase letters, numbers and dashes only</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-ACL-03</td><td>Permission route</td><td><code>Not A Route</code></td>
+              <td>Must look like <code>module.action</code>, lowercase</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-ACL-05</td><td>Staff email</td><td><code>not-an-email</code></td>
+              <td><code>Enter a valid email</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-ACL-06</td><td>Staff password</td><td><code>short</code></td>
+              <td>At least 8 characters. Only on create — an edit carries no password field.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-ACL-08</td><td>Change password</td><td>Two different values</td>
+              <td><code>Passwords do not match</code></td><td><span class="tag guard">Refuse</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Rules only the server can decide</h3>
+      <p>These pass the form and are refused by the API, so the scenario asserts the toast, not an inline
+        message. A field-level equivalent would need the browser to know the whole database.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>ID</th><th>Scenario</th><th>Expected</th><th>Tag</th></tr></thead>
+          <tbody>
+            <tr><td class="id">VAL-PRJ-03</td><td>End date earlier than start date</td>
+              <td><code>End date must be after start date</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-PRJ-04</td><td>Due date outside the project window</td>
+              <td><code>Due date must fall between start date and end date</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-PRJ-05</td><td>Negative contract value</td>
+              <td><code>value must not be less than 0</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-PRO-03</td><td>Line items sent with pricing model A</td>
+              <td><code>Pricing model A bills a single lump sum. Send totalAmountItems instead of items.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-INV-02</td><td>Neither a proposal nor a FIT project</td>
+              <td><code>Proposal ID or a valid FIT Project ID is required.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-INV-03</td><td>Billed amount of zero</td>
+              <td><code>… produces a zero invoice amount. An invoice must bill a positive amount.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-RV-03</td><td>Payment form outside the enum</td>
+              <td><code>paymentForm must be one of the following values: BANK, CREDIT_CARD, CASH</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-PV-02</td><td>Payload carries <code>purchaseOrderId</code></td>
+              <td><code>property purchaseOrderId should not exist</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-ACL-07</td><td>Profile edit carries a password</td>
+              <td><code>property password should not exist</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-PRT-02</td><td>Duplicate template name</td>
+              <td>409, message quotes the existing name</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-CAT-01</td><td>Duplicate product category name</td>
+              <td>409, message quotes the existing name</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">VAL-BNK-01</td><td>Duplicate bank code</td>
+              <td><code>Bank code "…" is already used.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <span class="h">One gap worth knowing</span>
+        <p>Text fields are checked for emptiness, not for content: <code>refDocNo</code> accepts a single
+          space, because the rule is <code>@IsNotEmpty()</code> on the server and <code>min(1)</code> in the
+          form, and a space satisfies both. Nothing in the suite depends on that, but a scenario that
+          expects whitespace to be refused will fail until the rule tightens.</p>
+      </div>
+    </section>
+
+    <section id="playwright">
+      <h2><span class="num">11</span> The e2e suite</h2>
+      <p class="lede">The suite exists. It lives in <code>frontend/e2e/</code>, runs on Playwright, and its
+        test titles are the IDs in this document, so a failure names the scenario you are reading.</p>
+
+      <h4>Running it</h4>
+      <pre><code>cd frontend
+pnpm install
+npx playwright install chromium     # once
+
+pnpm e2e                  # everything
+pnpm e2e:ui               # pick and watch tests interactively
+pnpm e2e --grep VAL       # just the validation scenarios
+pnpm e2e --project=viewer # what a read-only role is not offered</code></pre>
+      <p>It needs the stack already running — API on <code>:3001</code>, UI on <code>:5174</code>, against a
+        seeded local database. The config deliberately starts nothing: the API needs its own database, so
+        bringing it up is a step you take, not a side effect of a test run. <strong>Never point it at
+        production</strong> — it creates and deletes records and toggles the non-VAT settlement flag on a
+        real internal account.</p>
+
+      <h4>What is where</h4>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>File</th><th class="num">Tests</th><th>Covers</th></tr></thead>
+          <tbody>
+            <tr><td><code>auth.setup.ts</code></td><td class="num">2</td><td>Signs in once per role, saves the session so no spec pays for a login</td></tr>
+            <tr><td><code>flows.spec.ts</code></td><td class="num">11</td><td>Both project paths, walked in the browser from empty record to settled invoice</td></tr>
+            <tr><td><code>validation.spec.ts</code></td><td class="num">28</td><td>Section 10 — required fields and format rules, per form</td></tr>
+            <tr><td><code>guards.spec.ts</code></td><td class="num">36</td><td>Every rule that passes by refusing, asserted on its exact message</td></tr>
+            <tr><td><code>regressions.spec.ts</code></td><td class="num">7</td><td>The repairs, including the two purely visual ones</td></tr>
+            <tr><td><code>viewer.spec.ts</code></td><td class="num">4</td><td>What a read-only role is not offered</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Two decisions worth understanding before extending it</h4>
+      <p><strong>Preconditions go through the API, assertions go through the browser.</strong> Driving the UI
+        to build a WIN proposal before every invoice test makes each test a dozen steps long and fail for
+        reasons unrelated to what it checks. <code>support/api.ts</code> carries the factories —
+        <code>wonProposal()</code>, <code>createFitInvoice()</code>, <code>createProposalInvoice()</code>.
+        The deliberate exception is <code>flows.spec.ts</code>, whose whole point is that a person can
+        complete the journey by hand.</p>
+      <p><strong>Refusals are asserted on the server's own wording.</strong> A test that succeeds where a
+        refusal was expected has found a bug; one that fails with a <em>different</em> message has found a
+        changed rule. Both matter, so neither is matched loosely.</p>
+
+      <div class="note">
+        <span class="h">There are no test ids, and that is the suite's weak point</span>
+        <p>The frontend carries <strong>zero</strong> <code>data-testid</code> attributes and two
+          <code>aria-label</code>s, so every selector comes from visible text or an ARIA role. Fine for
+          headings and primary buttons; fragile for row menus, where every row renders an identical
+          unlabelled trigger.</p>
+        <p><code>support/ui.ts</code> works around it with <code>row()</code>,
+          <code>openRowMenu()</code> and <code>rowAction()</code>, which reach a row by its document code
+          before acting inside it — an unscoped click lands on whichever row the DOM happens to order
+          first. Adding <code>data-testid</code> to the row trigger, the row keyed by code, and the dialog
+          submit buttons would remove most of the remaining brittleness.</p>
+      </div>
+
+      <h4>Selectors that hold today</h4>
       <div class="tablewrap">
         <table>
           <thead><tr><th>Target</th><th>Selector</th></tr></thead>
           <tbody>
             <tr><td>Primary action</td><td><code>getByRole('button', { name: 'ADD PROJECT' })</code> — the label is uppercase in the DOM</td></tr>
-            <tr><td>A specific row</td><td><code>getByRole('row', { name: /I-FIT-.*-001/ })</code> — match on the document code</td></tr>
-            <tr><td>Row menu</td><td>Scope to the row first, then <code>getByRole('button').last()</code></td></tr>
-            <tr><td>Menu item</td><td><code>getByRole('menuitem', { name: 'Print' })</code></td></tr>
-            <tr><td>Dialog</td><td><code>getByRole('dialog')</code>, then its title text</td></tr>
-            <tr><td>Failure message</td><td>Toast text. Every page reports failures through sonner, so assert on the server's own message</td></tr>
-            <tr><td>Totals row</td><td>The cell labelled <code>TOTAL</code> within the table</td></tr>
+            <tr><td>A specific row</td><td><code>row(page, /I-FIT-.*-001/)</code> — match on the document code, never an index</td></tr>
+            <tr><td>Row action</td><td><code>rowAction(page, code, /print/i)</code></td></tr>
+            <tr><td>Dialog field</td><td><code>dialog(page).getByLabel(/contract value/i)</code></td></tr>
+            <tr><td>Server refusal</td><td><code>expectToast(page, /still has 1 proposal/)</code> — sonner carries the API's message verbatim</td></tr>
+            <tr><td>Inline validation</td><td><code>expectFieldError(page, 'Project name is required')</code></td></tr>
+            <tr><td>Totals row</td><td><code>totalsRow(modal)</code> — the row whose text starts TOTAL</td></tr>
           </tbody>
         </table>
       </div>
 
-      <h4>Sequencing</h4>
+      <h4>Traps that are already handled, and one that is not</h4>
       <ul>
-        <li>Most scenarios need a prior state — a WIN proposal, a settled invoice. Build those through the API in
-          a fixture rather than driving the UI, and keep the UI path for the assertion under test.</li>
-        <li>Project codes, proposal codes and invoice codes are generated with a random segment, so capture the
-          created code from the response and match rows on it. Never index rows by position.</li>
-        <li><code>PRT-02</code> and <code>PRT-03</code> open a new tab and call <code>window.print()</code>. Wait
-          for the popup with <code>context.waitForEvent('page')</code> and stub <code>window.print</code>, or the
-          run blocks on a native dialog.</li>
-        <li><code>ACL-19</code> needs two sessions: keep one browser context signed in while another changes that
-          user's status.</li>
-        <li>Currency is formatted Indonesian — <code>52.000.000,00</code>. Assert on the numeric field from the
-          API, or normalise the separators before comparing.</li>
+        <li>Amounts render Indonesian — <code>52.000.000,00</code>. The config pins <code>id-ID</code> so a
+          runner in another region does not fail on separators, and <code>parseIdr()</code> converts a cell
+          back to a number.</li>
+        <li>Codes carry a random segment, so rows are matched on the code captured from the create response.
+          Nothing indexes rows by position.</li>
+        <li>Deactivating an account while its token is live needs two sessions;
+          <code>guards.spec.ts</code> opens a second request context for it.</li>
+        <li>Several specs mutate shared state — an invoice balance, the one active print template — so
+          <code>fullyParallel</code> is off and files run serially inside themselves.</li>
+        <li><strong>Not handled:</strong> the printed document opens a new tab and calls
+          <code>window.print()</code>, which blocks on a native dialog. The print scenarios assert the
+          rendered HTML through the API instead. A true UI version needs
+          <code>context.waitForEvent('page')</code> and a stubbed <code>window.print</code>.</li>
       </ul>
 
       <div class="note">
-        <span class="h">Not yet verified by anyone</span>
-        <p>Every figure and message in this document was checked against the running API on the dev database.
-          <strong>None of the eleven pages has been opened in a browser</strong> — the server has no browser, so
-          all verification was at the API, typecheck and build level. Expect the first UI pass to find layout
-          issues this plan cannot predict, and treat <code>REG-01</code> and <code>REG-11</code> as the highest-value
-          manual checks since they are purely visual.</p>
+        <span class="h">Written, not yet run</span>
+        <p>Every figure and message here was verified against the running API. The suite itself has been
+          typechecked and parsed but <strong>never executed</strong> — Playwright's browser was deliberately
+          not installed on the server this was written on, which is a live production box. Expect the first
+          local run to need selector adjustments where a label differs from what the markup suggested, and
+          treat that first run as part of the work rather than a regression.</p>
       </div>
     </section>
   </main>
