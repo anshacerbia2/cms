@@ -469,6 +469,11 @@ npx prisma db seed               # roles, permissions, menus, sample master data
           <div class="step term"><span class="k">Step 4</span><span class="v">Receive Voucher</span><span class="n">settles the balance</span></div>
         </div>
       </div>
+      <p>Every field's own rule — what it accepts, what it refuses, the exact message, and whether the
+        form or the API does the refusing — is in <a href="#validation">section 10, field by field</a>.
+        Three of this module's rules are reachable only by submitting: a negative contract value and the
+        two date relationships. Nothing in the dialog catches them.</p>
+
       <p>A FIT project has <strong>no proposal step at all</strong> — the amount is typed on the invoice.
         Attempting to attach a proposal to one is refused, and so is billing a REGULAR project without going
         through a WIN proposal. Those two refusals are what keep the paths from blurring.</p>
@@ -1074,6 +1079,201 @@ paymentStatus = FULLY_PAID   when balanceDue ≤ 0 and invoiceAmount > 0
             <tr><td class="id">VAL-PRT-01</td><td>Print template</td>
               <td><code>Name is required</code> · <code>Template markup is required</code></td>
               <td>Description</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Field by field</h3>
+      <p>The table above says what an empty form reports. This one says what each field will and will not
+        accept once something is typed into it, and — the column that matters when a rule fails — which
+        layer does the refusing. A rule marked <strong>API</strong> reaches the user as a toast after a
+        round trip; one marked <strong>form</strong> appears inline under the field before anything is
+        sent.</p>
+
+      <div class="note">
+        <span class="h">Read this before writing a validation scenario</span>
+        <p>None of the four pipeline dialogs — project, proposal, invoice, voucher — carries a single
+          cross-field rule. There is no <code>superRefine</code> or <code>.refine</code> in any of them, so
+          <em>every</em> relational check is server-side: dates against each other, an amount against a
+          balance, a model against its items.</p>
+        <p>And every money field in every one of those forms is <code>z.string().min(1, "…is required")</code>
+          — presence only. No numeric check, no sign check. The floor is <code>@Min(0)</code> on the DTO. So
+          a negative contract value, a negative voucher amount and a negative selling price all clear the
+          form and come back as a toast. That is worth knowing when a test asserts an inline error and gets
+          a toast instead: the test is right about the rule and wrong about the layer.</p>
+      </div>
+
+      <h4>Project</h4>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Field</th><th>Accepts</th><th>Refuses</th><th>Refused by</th></tr></thead>
+          <tbody>
+            <tr><td><code>name</code></td><td>Any non-empty string, no length ceiling</td>
+              <td>Empty — <code>Project name is required</code></td><td>form + API</td></tr>
+            <tr><td><code>refDocNo</code></td><td>Any non-empty string. Free text, not checked for
+              uniqueness or shape</td>
+              <td>Empty — <code>Reference document number is required</code></td><td>form + API</td></tr>
+            <tr><td><code>customerId</code></td><td>An id the select offers</td>
+              <td>Empty — <code>Customer is required</code>. An id that does not exist —
+                <code>Customer with ID … not found</code> (404)</td><td>form / API</td></tr>
+            <tr><td><code>type</code></td><td><code>REGULAR</code> or <code>FIT</code>. Fixes the whole
+              downstream path and no screen lets you change it later</td>
+              <td>Anything else, rejected as an enum</td><td>form + API</td></tr>
+            <tr><td><code>status</code></td><td><code>ACTIVE</code> <code>INACTIVE</code>
+              <code>COMPLETED</code> <code>CANCELLED</code>; defaults to ACTIVE, optional on the API</td>
+              <td>Anything else</td><td>form + API</td></tr>
+            <tr><td><code>value</code></td><td>Any non-empty digits, grouped as you type. Zero is
+              accepted</td>
+              <td>Empty — <code>Contract value is required</code>. Negative — <code>value must not be less
+                than 0</code>, and only after a round trip</td><td>form / <strong>API</strong></td></tr>
+            <tr><td><code>startDate</code> <code>endDate</code> <code>dueDate</code></td>
+              <td>Any ISO date. Each is checked for presence alone in the browser</td>
+              <td>Empty — <code>… is required</code>. <code>endDate ≤ startDate</code> —
+                <code>End date must be after start date</code>. <code>dueDate</code> outside the window —
+                <code>Due date must fall between start date and end date</code>. Note <em>equal</em> start
+                and end dates are refused, not just reversed ones</td><td>form / <strong>API</strong></td></tr>
+            <tr><td><code>description</code></td><td>Anything, including nothing</td><td>Nothing</td>
+              <td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>So Projects has <strong>three</strong> rules a user can only discover by submitting: a negative
+        contract value and the two date relationships. <code>VAL-PRJ-03</code>, <code>VAL-PRJ-04</code> and
+        <code>VAL-PRJ-05</code> each assert the toast for one of them, and <code>PRJ-05</code> covers the
+        unknown customer.</p>
+
+      <h4>Proposal</h4>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Field</th><th>Accepts</th><th>Refuses</th><th>Refused by</th></tr></thead>
+          <tbody>
+            <tr><td><code>projectId</code></td><td>A REGULAR project the select offers</td>
+              <td>Empty — <code>Project is required</code>. A FIT project — <code>FIT projects bill
+                directly and cannot have proposals.</code> The select lists only REGULAR projects, so the
+                second is reachable by API only</td><td>form / API</td></tr>
+            <tr><td><code>pricingModel</code></td><td><code>A</code> <code>B</code> <code>C</code>
+              <code>D</code>. Decides how the total is built, so it is not cosmetic</td>
+              <td>Model A sent with a non-empty <code>items</code> array — <code>Pricing model A bills a
+                single lump sum. Send totalAmountItems instead of items.</code> The form hides the item
+                rows for A, so this too is an API-only path</td><td>API</td></tr>
+            <tr><td><code>totalAmountItems</code></td><td>Model A's lump sum. Optional, and
+              <strong>zero is accepted</strong> — a proposal with no value is a legal record</td>
+              <td>Negative — <code>@Min(0)</code></td><td>API</td></tr>
+            <tr><td><code>managementFee</code></td><td>A percentage or a flat figure, depending on
+              <code>managementFeeType</code>. Optional, floor of 0</td>
+              <td>Negative</td><td>API</td></tr>
+            <tr><td><code>vatRate</code></td><td>Any non-negative number. <strong>No upper bound at either
+              layer</strong> — a VAT rate of 500 is stored and billed as written</td>
+              <td>Negative only</td><td>API</td></tr>
+            <tr><td><code>items[].sellingPrice</code></td><td>Non-empty digits per row</td>
+              <td>Empty — <code>Required</code>, inline on that row. Negative — <code>@Min(0)</code></td>
+              <td>form / API</td></tr>
+            <tr><td><code>items[].qty</code></td><td>A plain count, deliberately left ungrouped. Optional;
+              model B reads it, and falls back to <code>title1Value</code> when absent</td>
+              <td>Nothing — an item with no qty totals zero rather than being refused</td><td>—</td></tr>
+            <tr><td><code>status</code></td><td><code>DRAFT</code> <code>SUBMITTED</code> <code>WIN</code>
+              <code>LOSE</code> <code>CANCELLED</code></td>
+              <td>Any edit once the status is WIN — <code>Proposal with status 'WIN' cannot be
+                modified.</code> One-way door</td><td>API</td></tr>
+            <tr><td><code>note</code> <code>pricingModelDescription</code> <code>items[].description</code>
+              <code>items[].title1..4</code></td><td>Anything, including nothing</td><td>Nothing</td>
+              <td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Invoice</h4>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Field</th><th>Accepts</th><th>Refuses</th><th>Refused by</th></tr></thead>
+          <tbody>
+            <tr><td><code>invoiceNumber</code></td><td>Any non-empty string</td>
+              <td>Empty — <code>Invoice number is required</code></td><td>form + API</td></tr>
+            <tr><td><code>dueDate</code></td><td>Any ISO date. <strong>Not</strong> checked against the
+              project's window, unlike the project's own due date</td>
+              <td>Empty — <code>Due date is required</code></td><td>form + API</td></tr>
+            <tr><td><code>proposalId</code> / <code>projectId</code></td>
+              <td>Exactly one, decided by the Billing Source tab. A won proposal, or a FIT project</td>
+              <td>Neither, or a REGULAR project — <code>Proposal ID or a valid FIT Project ID is
+                required.</code> A non-WIN proposal — <code>Invoice can only be generated for win
+                proposals.</code></td><td>API</td></tr>
+            <tr><td><code>totalAmount</code></td><td>The billed figure, typed only on the FIT path; the
+              proposal path sums the claimed items instead. Optional in the form</td>
+              <td>A figure that produces a zero invoice — <code>… produces a zero invoice amount. An
+                invoice must bill a positive amount.</code> Negative — <code>@Min(0)</code></td>
+              <td><strong>API</strong></td></tr>
+            <tr><td><code>billingType</code></td><td><code>FULL_AMOUNT</code> or
+              <code>PARTLY_PAYMENT</code></td>
+              <td>FULL when another invoice exists on the proposal, or when any item is already claimed.
+                See <code>INV-06</code> and <code>INV-08</code> for the three refusals the item pool
+                raises</td><td>API</td></tr>
+            <tr><td><code>taxType</code></td><td><code>TAX_NON_WAPU</code> <code>TAX_WAPU</code>
+              <code>NO_TAX</code>. NO_TAX zeroes the VAT line and disables the rate field</td>
+              <td>A NO_TAX invoice that does not settle to the designated account, once one is marked —
+                <code>A No Tax invoice must name the non-VAT settlement account.</code> Dormant until
+                someone designates one</td><td>API</td></tr>
+            <tr><td><code>vatRate</code></td><td>Non-negative, no ceiling, same as the proposal</td>
+              <td>Negative only</td><td>API</td></tr>
+            <tr><td><code>taxType</code> <code>totalAmount</code> <code>customerId</code>, on edit</td>
+              <td>Changes, while no voucher is attached</td>
+              <td>Any change once an RV is applied — <code>Cannot change sensitive field '…' because this
+                invoice already has linked Receive Vouchers.</code> The dialog also says so in a banner
+                and disables the fields</td><td>API</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Receive Voucher</h4>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Field</th><th>Accepts</th><th>Refuses</th><th>Refused by</th></tr></thead>
+          <tbody>
+            <tr><td><code>rvNumber</code> <code>rvDate</code> <code>amount</code></td>
+              <td>Non-empty. The amount is the voucher's own face value</td>
+              <td>Empty — <code>… is required</code>. A negative amount — <code>@Min(0)</code>, as a
+                toast</td><td>form / <strong>API</strong></td></tr>
+            <tr><td><code>paymentForm</code></td><td><code>BANK</code> <code>CREDIT_CARD</code>
+              <code>CASH</code> — exactly three, and nothing else</td>
+              <td>Any other string, including <code>TRANSFER</code></td><td>form + API</td></tr>
+            <tr><td><code>payerType</code></td><td><code>CUSTOMER</code> <code>EMPLOYEE</code>
+              <code>SUPPLIER</code> <code>OTHERS</code> <code>UNKNOWN</code></td><td>Anything else</td>
+              <td>form + API</td></tr>
+            <tr><td><code>allocations[].invoiceId</code></td><td>An invoice with an outstanding
+              balance</td>
+              <td>Empty — <code>Pick an invoice</code>, inline. An id that does not exist —
+                <code>Invoice with ID … not found.</code></td><td>form / API</td></tr>
+            <tr><td><code>allocations[].amountApplied</code> and the four deductions</td>
+              <td>Optional per row, floor of 0 — except <code>othersAdjustment</code>, which carries
+                <strong>no floor</strong> and so accepts a negative</td>
+              <td>More than the invoice's balance — the message names the invoice and its balance. More in
+                total than the voucher itself — <code>Total allocated (…) exceeds the Receive Voucher
+                amount (…).</code></td><td><strong>API</strong></td></tr>
+            <tr><td><code>currency</code> <code>purpose</code> <code>internalAccountId</code>
+              <code>payerId</code> <code>payerNameManual</code> <code>description</code></td>
+              <td>Optional throughout</td><td>Nothing</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Payment Voucher</h4>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Field</th><th>Accepts</th><th>Refuses</th><th>Refused by</th></tr></thead>
+          <tbody>
+            <tr><td><code>pvNumber</code> <code>issuingDate</code> <code>amount</code>
+              <code>category</code></td><td>Non-empty. Category is free text, not an enum</td>
+              <td>Empty — <code>… is required</code></td><td>form + API</td></tr>
+            <tr><td><code>payableType</code></td><td><code>SUPPLIER</code> <code>EMPLOYEE</code>
+              <code>CUSTOMER</code> <code>INTERNAL</code> <code>OTHERS</code>; defaults to SUPPLIER</td>
+              <td>Empty, which the form cannot produce — the default fills it</td><td>API only</td></tr>
+            <tr><td><code>sourcePaymentForm</code></td><td>Defaults to BANK, same story</td>
+              <td>Empty, unreachable from the form</td><td>API only</td></tr>
+            <tr><td><code>purchaseOrderId</code></td><td>Nothing — the field is rejected outright</td>
+              <td>Any value. There is no purchase order table for it to point at, and it previously let
+                callers store an id referencing nothing</td><td>API</td></tr>
+            <tr><td><code>dueDate</code> <code>paymentDate</code> <code>payableNameManual</code>
+              <code>expenseType</code> <code>internalAccountId</code> <code>description</code>
+              <code>currency</code></td><td>Optional throughout</td><td>Nothing</td><td>—</td></tr>
           </tbody>
         </table>
       </div>
