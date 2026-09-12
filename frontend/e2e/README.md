@@ -43,6 +43,32 @@ pnpm e2e --project=viewer
 Override the defaults with `E2E_BASE_URL`, `E2E_API_URL`,
 `E2E_ADMIN_PASSWORD` and `E2E_VIEWER_PASSWORD`.
 
+### When the browser download will not fit
+
+Playwright pins a Chromium build to its library version, so upgrading the
+library asks for a matching download. The error names the build it wants:
+
+```
+Executable doesn't exist at ...\chromium_headless_shell-1243\...
+```
+
+Two ways out. Fetch it, which needs a few hundred megabytes free:
+
+```bash
+pnpm exec playwright install chromium
+```
+
+Or drive the Chrome already on the machine and download nothing:
+
+```bash
+set E2E_USE_SYSTEM_CHROME=1 && pnpm e2e     # Windows
+E2E_USE_SYSTEM_CHROME=1 pnpm e2e            # macOS, Linux
+```
+
+The pinned Chromium is the better default — system Chrome updates underneath you
+and can change a result with no commit behind it — so treat the flag as a way
+through a blocked machine rather than the normal way to run.
+
 ## How it is laid out
 
 | File | Covers |

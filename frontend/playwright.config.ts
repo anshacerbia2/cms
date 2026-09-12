@@ -7,6 +7,23 @@ import { defineConfig, devices } from "@playwright/test";
  */
 const UI = process.env.E2E_BASE_URL ?? "http://localhost:5174";
 
+/**
+ * Drives the Chrome already on the machine instead of Playwright's pinned
+ * Chromium, which it otherwise downloads into a shared cache.
+ *
+ * Off by default: a pinned Chromium is reproducible, while system Chrome updates
+ * underneath you and can change a result with no commit behind it. Worth turning
+ * on when the download will not fit, or when the cached build does not match the
+ * installed library version — the error names a build number, and switching here
+ * skips the fetch entirely.
+ *
+ *   set E2E_USE_SYSTEM_CHROME=1 && pnpm e2e     (Windows)
+ *   E2E_USE_SYSTEM_CHROME=1 pnpm e2e            (macOS, Linux)
+ */
+const browser = process.env.E2E_USE_SYSTEM_CHROME
+  ? { ...devices["Desktop Chrome"], channel: "chrome" as const }
+  : devices["Desktop Chrome"];
+
 export default defineConfig({
   testDir: "./e2e",
   outputDir: "./e2e/.artifacts",
@@ -38,17 +55,17 @@ export default defineConfig({
   },
 
   projects: [
-    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    { name: "setup", testMatch: /auth\.setup\.ts/, use: browser },
     {
       name: "admin",
       dependencies: ["setup"],
-      use: { ...devices["Desktop Chrome"], storageState: "e2e/.auth/admin.json" },
+      use: { ...browser, storageState: "e2e/.auth/admin.json" },
       testIgnore: /viewer\.spec\.ts/,
     },
     {
       name: "viewer",
       dependencies: ["setup"],
-      use: { ...devices["Desktop Chrome"], storageState: "e2e/.auth/viewer.json" },
+      use: { ...browser, storageState: "e2e/.auth/viewer.json" },
       testMatch: /viewer\.spec\.ts/,
     },
   ],
