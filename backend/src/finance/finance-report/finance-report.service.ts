@@ -466,8 +466,17 @@ export class FinanceReportService {
     if (props && props['PL_NET_PROFIT'] !== undefined && props['PL_NET_PROFIT'] !== null) {
       profitLossVal = new Prisma.Decimal(props['PL_NET_PROFIT']);
     } else {
-      // Dynamic fallback (per user requirement, use Profit Before Tax)
-      profitLossVal = new Prisma.Decimal(plCurrentData.tableData.find(r => r.account?.trim().toLowerCase() === "profit before tax")?.total?.toString().replace(/,/g, '') || "0");
+      // Profit AFTER tax, not before.
+      //
+      // Corporate income tax payable (HUTANG PAJAK BADAN) is now carried on the
+      // Payable side of the balance sheet. Taking profit before tax into equity
+      // while the same tax sits in liabilities counts it once and deducts it
+      // never, so the sheet fails to balance by exactly the tax — which is the
+      // discrepancy this was reported as.
+      //
+      // This holds all year. Mid-year the tax payable is simply nil, and
+      // after-tax profit equals before-tax profit, so nothing moves.
+      profitLossVal = new Prisma.Decimal(plCurrentData.tableData.find(r => r.account?.trim().toLowerCase() === "profit after tax")?.total?.toString().replace(/,/g, '') || "0");
     }
 
     // 3. Previous Years Net RE (Opening balance of RE for the year)
