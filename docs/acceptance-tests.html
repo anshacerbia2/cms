@@ -1167,9 +1167,12 @@ pnpm e2e --project=viewer # what a read-only role is not offered</code></pre>
             <tr><td><code>auth.setup.ts</code></td><td class="num">2</td><td>Signs in once per role, saves the session so no spec pays for a login</td></tr>
             <tr><td><code>flows.spec.ts</code></td><td class="num">11</td><td>Both project paths, walked in the browser from empty record to settled invoice</td></tr>
             <tr><td><code>validation.spec.ts</code></td><td class="num">28</td><td>Section 10 — required fields and format rules, per form</td></tr>
-            <tr><td><code>guards.spec.ts</code></td><td class="num">36</td><td>Every rule that passes by refusing, asserted on its exact message</td></tr>
-            <tr><td><code>regressions.spec.ts</code></td><td class="num">9</td><td>The repairs, including the two purely visual ones</td></tr>
+            <tr><td><code>guards.spec.ts</code></td><td class="num">51</td><td>Every rule that passes by refusing, asserted on its exact message, plus the arithmetic no screen shows</td></tr>
+            <tr><td><code>regressions.spec.ts</code></td><td class="num">10</td><td>The repairs, including the three purely visual ones</td></tr>
             <tr><td><code>viewer.spec.ts</code></td><td class="num">8</td><td>What a read-only role is not offered</td></tr>
+            <tr><td><code>payment-vouchers.spec.ts</code></td><td class="num">3</td><td>PV create, round-trip, edit and delete, through the dialog</td></tr>
+            <tr><td><code>access-control.spec.ts</code></td><td class="num">1</td><td>The staff row's role name and status badge, which only the page shows</td></tr>
+            <tr><td><code>print.spec.ts</code></td><td class="num">1</td><td>The Print action, caught as the popup it opens</td></tr>
           </tbody>
         </table>
       </div>
@@ -1189,12 +1192,13 @@ pnpm e2e --project=viewer # what a read-only role is not offered</code></pre>
                 <code>INV-09</code> <code>RV-01</code> <code>RV-02</code> <code>REG-16</code>, and
                 <code>RV-08</code> for tax type and amount but not customer</td></tr>
             <tr><td><code>guards.spec.ts</code></td>
-              <td><code>PRJ-06..08</code> <code>PRO-06</code> <code>PRO-07</code> <code>PRO-10</code>
-                <code>PRO-12</code> <code>INV-03</code> <code>INV-04</code> <code>INV-06</code>
-                <code>INV-10..15</code> <code>RV-01</code> <code>RV-03..06</code> <code>RV-09</code>
-                <code>ACL-02..05</code> <code>ACL-10..14</code> <code>ACL-16</code> <code>ACL-19</code>
-                <code>ACL-20</code> <code>PRT-04..07</code> <code>PRT-09</code> <code>PRT-10</code>
-                <code>REG-04..06</code> <code>REG-09</code> <code>REG-10</code> <code>REG-12</code></td></tr>
+              <td><code>PRJ-05..08</code> <code>PRO-02</code> <code>PRO-04</code> <code>PRO-06</code>
+                <code>PRO-07</code> <code>PRO-09..12</code> <code>INV-03</code> <code>INV-04</code>
+                <code>INV-06..08</code> <code>INV-10..16</code> <code>RV-01</code> <code>RV-03..07</code>
+                <code>RV-09</code> <code>RV-10</code> <code>ACL-01..06</code> <code>ACL-08..14</code>
+                <code>ACL-16</code> <code>ACL-18..20</code> <code>PRT-01</code> <code>PRT-03..07</code>
+                <code>PRT-09</code> <code>PRT-10</code> <code>PRT-11</code> <code>REG-04..06</code>
+                <code>REG-09</code> <code>REG-10</code> <code>REG-12</code></td></tr>
             <tr><td><code>validation.spec.ts</code></td>
               <td>Every <code>VAL-*</code> row in section 10. Several also settle a scenario listed
                 elsewhere: <code>PRJ-03</code> <code>PRJ-04</code> as VAL-PRJ-03/04, <code>PRO-03</code> as
@@ -1202,8 +1206,14 @@ pnpm e2e --project=viewer # what a read-only role is not offered</code></pre>
                 <code>ACL-07</code> as VAL-ACL-03, <code>ACL-17</code> as VAL-ACL-07, <code>PRT-12</code> as
                 VAL-PRT-02, <code>REG-07</code> as VAL-BNK-01</td></tr>
             <tr><td><code>regressions.spec.ts</code></td>
-              <td><code>REG-01</code> <code>REG-08</code> <code>REG-09</code> <code>REG-11</code>
-                <code>REG-13..15</code></td></tr>
+              <td><code>REG-01</code> <code>REG-02</code> <code>REG-08</code> <code>REG-09</code>
+                <code>REG-11</code> <code>REG-13..15</code> <code>REG-17</code></td></tr>
+            <tr><td><code>payment-vouchers.spec.ts</code></td>
+              <td><code>PV-01..04</code></td></tr>
+            <tr><td><code>access-control.spec.ts</code></td>
+              <td><code>ACL-15</code></td></tr>
+            <tr><td><code>print.spec.ts</code></td>
+              <td><code>PRT-02</code></td></tr>
             <tr><td><code>viewer.spec.ts</code></td>
               <td><code>PRJ-09</code> (and the same absence on Proposals, Invoices, RV and PV)
                 <code>ACL-21</code> <code>ACL-22</code></td></tr>
@@ -1212,43 +1222,19 @@ pnpm e2e --project=viewer # what a read-only role is not offered</code></pre>
       </div>
 
       <h4>Still manual only</h4>
-      <p>Twenty-eight of the scenarios have no automated assertion. They are not lower value — several are
-        the arithmetic the money depends on — they are simply not written yet. Run these by hand.</p>
+      <p>Two scenarios have no automated assertion, both deliberately.</p>
       <div class="tablewrap">
         <table>
-          <thead><tr><th>Module</th><th>Uncovered</th><th>Worth doing first</th></tr></thead>
+          <thead><tr><th>ID</th><th>Scenario</th><th>Why it is left by hand</th></tr></thead>
           <tbody>
-            <tr><td>Projects</td><td><code>PRJ-05</code> unknown customer</td><td>—</td></tr>
-            <tr><td>Proposals</td>
-              <td><code>PRO-02</code> model B per-line · <code>PRO-04</code> fee as a percentage ·
-                <code>PRO-09</code> BoQ on a WIN proposal · <code>PRO-11</code> product with no active price</td>
-              <td><code>PRO-04</code> — nothing else checks the fee and VAT arithmetic end to end</td></tr>
-            <tr><td>Invoices</td>
-              <td><code>INV-07</code> partial billing across two invoices · <code>INV-08</code> billing an
-                already-claimed item · <code>INV-16</code> deleting returns items to the pool</td>
-              <td>All three. Item claiming is the one invoice rule with no guard on it at all</td></tr>
-            <tr><td>Receive Vouchers</td>
-              <td><code>RV-07</code> one RV across several invoices · <code>RV-10</code> unknown invoice in an
-                allocation</td>
-              <td><code>RV-07</code> — splitting one voucher is how most payments actually arrive</td></tr>
-            <tr><td>Payment Vouchers</td>
-              <td><code>PV-01..04</code> create, persist optional fields, edit the amount, delete</td>
-              <td>The whole module. Only its two refusals are covered</td></tr>
-            <tr><td>Access control</td>
-              <td><code>ACL-01</code> create a role with grants · <code>ACL-06</code> create a permission ·
-                <code>ACL-08</code> menu without its permission · <code>ACL-09</code> permission without its
-                menu · <code>ACL-15</code> create staff with a role · <code>ACL-18</code> change password</td>
-              <td><code>ACL-08</code> and <code>ACL-09</code> — the two halves of a grant, and the pair that
-                produces a sidebar entry which 403s</td></tr>
-            <tr><td>Print templates</td>
-              <td><code>PRT-01</code> starters exist · <code>PRT-02</code> print an invoice ·
-                <code>PRT-03</code> print a proposal · <code>PRT-08</code> print with no active template ·
-                <code>PRT-11</code> unknown placeholder is flagged</td>
-              <td><code>PRT-02</code> — the Print action itself is never exercised, only its rendering rules</td></tr>
-            <tr><td>Regressions</td>
-              <td><code>REG-02</code> clearing the filter restores the total · <code>REG-03</code> other
-                finance views unaffected · <code>REG-17</code> the sidebar logs nothing</td>
-              <td><code>REG-02</code> — it is four lines on top of REG-01</td></tr>
+            <tr><td class="id">PRT-08</td><td>Print with no active template</td>
+              <td>Reaching the state means deactivating or deleting the last template of a type, which
+                <code>PRT-05/06</code> also manipulates. Two tests fighting over one global would make both
+                flaky, and the message itself lives in <code>useDocumentPrint</code> rather than the API.</td></tr>
+            <tr><td class="id">REG-03</td><td>Other finance views unaffected</td>
+              <td>"No change in behaviour" across five reports is a reading, not an assertion. Balance Sheet,
+                AP Summary, PPN In/Out, Inter Account and Depreciation already totalled their filtered rows
+                before this branch; there is no before state for a test to distinguish.</td></tr>
           </tbody>
         </table>
       </div>

@@ -55,6 +55,24 @@ export class Api {
     return new Api(ctx, body.data.access_token);
   }
 
+  /**
+   * Signs in as an account this suite just created, rather than a seeded one.
+   * Returns the user payload too: the sidebar is built from `user.menus`, so the
+   * menu half of a grant is observable here without opening a browser.
+   */
+  static async signInAs(email: string, password: string) {
+    Api.assertLocal();
+    const ctx = await request.newContext();
+    const res = await ctx.post(`${API_URL}/auth/login`, { data: { email, password } });
+
+    if (!res.ok()) {
+      throw new Error(`Sign-in failed for ${email} (${res.status()}).`);
+    }
+
+    const body = await res.json();
+    return { api: new Api(ctx, body.data.access_token), user: body.data.user };
+  }
+
   async dispose() {
     await this.ctx.dispose();
   }
@@ -88,7 +106,7 @@ export class Api {
    * Same call without the throw, for the scenarios whose whole point is the
    * refusal. Returns the status and the message the UI would surface.
    */
-  async expectRefusal(method: "post" | "patch" | "delete", path: string, data?: unknown) {
+  async expectRefusal(method: "get" | "post" | "patch" | "delete", path: string, data?: unknown) {
     const res = await this.ctx[method](`${API_URL}${path}`, {
       headers: this.headers,
       data: data as any,
@@ -252,8 +270,104 @@ export class Api {
     return Number(match.id);
   }
 
+  /**
+   * A child menu together with its group. The login payload builds each group
+   * from a granted parent and only then fills in its children, so a role handed
+   * the child alone renders no sidebar entry at all.
+   */
+  async menuPathByRoute(route: string) {
+    const flatten = (nodes: any[]): any[] =>
+      nodes.flatMap((n) => [n, ...flatten(n.children ?? [])]);
+    const all = flatten(await this.get("/menus"));
+    const child = all.find((m: any) => m.permission?.route === route);
+    if (!child) throw new Error(`Menu for ${route} not found — run the seeders.`);
+    const parent = all.find((m: any) => String(m.id) === String(child.parentId));
+    return {
+      menuId: Number(child.id),
+      parentId: parent ? Number(parent.id) : null,
+      title: String(child.name),
+    };
+  }
+
   async activeTemplate(type: "INVOICE" | "PROPOSAL") {
     const page = await this.get(`/pdf-templates?type=${type}&limit=50`);
     return (page.data ?? []).find((t: any) => t.isActive);
+  }
+
+  /**
+   * A product carrying no price version at all. `price` is optional on create,
+   * and without it no version row is opened — which is the state a BoQ refuses.
+   */
+  async productWithoutPrice() {
+    return this.post("/products", { name: uniq("NOPRICE"), unit: "unit" });
+  }
+
+  /** An account of this suite's own, with a known password to sign in as. */
+  async createUser(roleId: number | string, overrides: Record<string, unknown> = {}) {
+    const email = `${uniq("e2e").toLowerCase()}@local.test`;
+    const password = "e2epass1234";
+    const user = await this.post("/users", {
+      name: "E2E holder",
+      email,
+      password,
+      roleId: Number(roleId),
+      status: "ACTIVE",
+      ...overrides,
+    });
+    return { user, email, password };
+  }
+
+  async createBoq(proposalId: number | string, items: Array<Record<string, unknown>>) {
+    return this.post("/boqs", { proposalId: Number(proposalId), items });
+  }
+
+  /**
+   * A WIN proposal built from real line items, so each carries its own id and can
+   * be claimed separately. `wonProposal` uses model A, whose single summary row
+   * cannot be split across invoices.
+   */
+  async wonProposalWithItems(items: Array<Record<string, unknown>>) {
+    const project = await this.createProject();
+    const proposal = await this.post("/proposals", {
+      projectId: Number(project.id),
+      pricingModel: "B",
+      managementFeeType: "PERCENT",
+      managementFee: 0,
+      vatRate: 11,
+      items,
+    });
+    const won = await this.patch(`/proposals/${proposal.id}`, { status: "WIN" });
+    return { project, proposal: won, itemIds: (won.salesItems ?? []).map((i: any) => Number(i.id)) };
+  }
+
+  /** One invoice claiming a chosen subset of a proposal's items. */
+  async partialInvoice(proposalId: number | string, itemIds: number[]) {
+    return this.post("/invoices", {
+      proposalId: Number(proposalId),
+      customerId: await this.firstCustomerId(),
+      invoiceNumber: uniq("INV"),
+      dueDate: "2026-10-31",
+      billingType: "PARTLY_PAYMENT",
+      taxType: "TAX_NON_WAPU",
+      vatRate: 11,
+      itemIds,
+    });
+  }
+
+  /** A standalone FIT invoice for a given billed amount, no fee and no VAT. */
+  async plainFitInvoice(totalAmount: number) {
+    const project = await this.createProject({ type: "FIT" });
+    const invoice = await this.post("/invoices", {
+      projectId: Number(project.id),
+      customerId: await this.firstCustomerId(),
+      invoiceNumber: uniq("INV"),
+      dueDate: "2026-10-31",
+      billingType: "FULL_AMOUNT",
+      taxType: "NO_TAX",
+      totalAmount,
+      managementFeeType: "PERCENT",
+      managementFee: 0,
+    });
+    return invoice;
   }
 }

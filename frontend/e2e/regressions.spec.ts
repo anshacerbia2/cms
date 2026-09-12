@@ -171,6 +171,33 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
       filtered,
       "the total used to keep the unfiltered figure and contradict the rows above it",
     ).not.toBe(unfiltered);
+
+    // REG-02 — and it goes back. Clear is inside the same dropdown, so reopen it.
+    await modal
+      .locator("thead th")
+      .filter({ hasText: /^Description$/ })
+      .locator("button")
+      .first()
+      .click();
+    await expect(page.getByRole("checkbox").first()).toBeVisible();
+    await page.getByRole("button", { name: /^Clear$/ }).click();
+
+    await expect.poll(async () => modal.getByRole("row").count()).toBe(rowsBefore);
+    expect(parseIdr((await total().textContent()) ?? "")).toBe(unfiltered);
+  });
+});
+
+test.describe("REG-17 — the sidebar keeps the menu tree to itself", () => {
+  test("signing in logs nothing to the console", async ({ page }) => {
+    const noise: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "log") noise.push(message.text());
+    });
+
+    await openPage(page, "/dashboard", /dashboard|welcome/i);
+    // Every render printed the signed-in user's whole menu tree, which is both
+    // noise and a needless disclosure in anyone's devtools.
+    expect(noise.filter((line) => /menu/i.test(line)), noise.join("\n")).toHaveLength(0);
   });
 });
 

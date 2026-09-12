@@ -77,7 +77,6 @@ export class AuthService {
       });
     });
 
-    console.log(`Generated ${parentMenus.length} menu groups for user ${user.email}`);
 
     const payload = { 
       email: user.email, 
