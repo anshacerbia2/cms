@@ -32,6 +32,9 @@ import {
 } from "@/components/ui/select";
 import { PdfTemplate, CreatePdfTemplateInput } from "../types";
 
+const LABEL = "text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2";
+const FIELD = "h-12 rounded-xl bg-muted/30 border-primary/5 focus-visible:ring-primary/10 font-bold tracking-tight";
+
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   type: z.enum(["INVOICE", "PROPOSAL"]),
@@ -114,7 +117,7 @@ export function PdfTemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl">
+      <DialogContent className="sm:max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl border-primary/5 shadow-premium">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary font-extrabold uppercase tracking-tight">
             <Printer size={18} />
@@ -130,9 +133,9 @@ export function PdfTemplateDialog({
                 name="name"
                 render={({ field }) => (
                   <FormItem className="sm:col-span-2">
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel className={LABEL}>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Default Invoice" {...field} />
+                      <Input placeholder="Default Invoice" {...field} className={FIELD} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -144,10 +147,10 @@ export function PdfTemplateDialog({
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type</FormLabel>
+                    <FormLabel className={LABEL}>Type</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className={FIELD}>
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -167,9 +170,9 @@ export function PdfTemplateDialog({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel className={LABEL}>Description</FormLabel>
                   <FormControl>
-                    <Input placeholder="Standard A4 layout" {...field} />
+                    <Input placeholder="Standard A4 layout" {...field} className={FIELD} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -225,7 +228,7 @@ export function PdfTemplateDialog({
                         <Textarea
                           rows={16}
                           spellCheck={false}
-                          className="font-mono text-[11px] leading-relaxed"
+                          className="rounded-xl bg-muted/20 border-primary/5 resize-none font-mono text-[11px] leading-relaxed"
                           placeholder="<div>{{invoice_code}}</div>"
                           {...field}
                         />
@@ -287,11 +290,16 @@ export function PdfTemplateDialog({
               </TabsContent>
             </Tabs>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <DialogFooter className="pt-5 border-t border-primary/5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="h-11 px-6 rounded-xl border-primary/10 font-bold text-xs uppercase tracking-widest"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="h-11 px-8 rounded-xl bg-primary hover:bg-primary/90 text-white font-extrabold text-xs uppercase tracking-widest shadow-premium active:scale-95 transition-all">
                 {isSubmitting ? "Saving..." : template ? "Save Changes" : "Create Template"}
               </Button>
             </DialogFooter>

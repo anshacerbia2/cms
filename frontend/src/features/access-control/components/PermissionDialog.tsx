@@ -29,6 +29,9 @@ import {
 } from "@/components/ui/select";
 import { Permission, CreatePermissionInput } from "../types";
 
+const LABEL = "text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2";
+const FIELD = "h-12 rounded-xl bg-muted/30 border-primary/5 focus-visible:ring-primary/10 font-bold tracking-tight";
+
 const NO_METHOD = "__none__";
 
 const formSchema = z.object({
@@ -81,7 +84,7 @@ export function PermissionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg rounded-3xl">
+      <DialogContent className="sm:max-w-lg rounded-3xl border-primary/5 shadow-premium">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary font-extrabold uppercase tracking-tight">
             <KeyRound size={18} />
@@ -96,9 +99,9 @@ export function PermissionDialog({
               name="route"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Route</FormLabel>
+                  <FormLabel className={LABEL}>Route</FormLabel>
                   <FormControl>
-                    <Input placeholder="projects.index" className="font-mono" {...field} />
+                    <Input placeholder="projects.index" className={`${FIELD} font-mono`} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -111,10 +114,10 @@ export function PermissionDialog({
                 name="method"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>HTTP Method</FormLabel>
+                    <FormLabel className={LABEL}>HTTP Method</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className={FIELD}>
                           <SelectValue placeholder="Any" />
                         </SelectTrigger>
                       </FormControl>
@@ -137,9 +140,9 @@ export function PermissionDialog({
                 name="path"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Path</FormLabel>
+                    <FormLabel className={LABEL}>Path</FormLabel>
                     <FormControl>
-                      <Input placeholder="/projects/{id}" className="font-mono" {...field} />
+                      <Input placeholder="/projects/{id}" className={`${FIELD} font-mono`} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -152,20 +155,25 @@ export function PermissionDialog({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel className={LABEL}>Description</FormLabel>
                   <FormControl>
-                    <Input placeholder="View Projects" {...field} />
+                    <Input placeholder="View Projects" {...field} className={FIELD} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <DialogFooter className="pt-5 border-t border-primary/5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="h-11 px-6 rounded-xl border-primary/10 font-bold text-xs uppercase tracking-widest"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="h-11 px-8 rounded-xl bg-primary hover:bg-primary/90 text-white font-extrabold text-xs uppercase tracking-widest shadow-premium active:scale-95 transition-all">
                 {isSubmitting ? "Saving..." : permission ? "Save Changes" : "Create"}
               </Button>
             </DialogFooter>

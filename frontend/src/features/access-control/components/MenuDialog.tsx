@@ -30,6 +30,9 @@ import {
 import { Menu, Permission, CreateMenuInput } from "../types";
 import { flattenMenus } from "../hooks/useMenus";
 
+const LABEL = "text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2";
+const FIELD = "h-12 rounded-xl bg-muted/30 border-primary/5 focus-visible:ring-primary/10 font-bold tracking-tight";
+
 const NONE = "__none__";
 
 const formSchema = z.object({
@@ -112,7 +115,7 @@ export function MenuDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg rounded-3xl">
+      <DialogContent className="sm:max-w-lg rounded-3xl border-primary/5 shadow-premium">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary font-extrabold uppercase tracking-tight">
             <ListTree size={18} />
@@ -127,9 +130,9 @@ export function MenuDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel className={LABEL}>Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Projects" {...field} />
+                    <Input placeholder="Projects" {...field} className={FIELD} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -141,10 +144,10 @@ export function MenuDialog({
               name="parentId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Parent</FormLabel>
+                  <FormLabel className={LABEL}>Parent</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className={FIELD}>
                         <SelectValue placeholder="Top level" />
                       </SelectTrigger>
                     </FormControl>
@@ -167,10 +170,10 @@ export function MenuDialog({
               name="permissionId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Permission</FormLabel>
+                  <FormLabel className={LABEL}>Permission</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className={FIELD}>
                         <SelectValue placeholder="None (group header)" />
                       </SelectTrigger>
                     </FormControl>
@@ -198,9 +201,9 @@ export function MenuDialog({
                 name="icon"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Icon</FormLabel>
+                    <FormLabel className={LABEL}>Icon</FormLabel>
                     <FormControl>
-                      <Input placeholder="Briefcase" {...field} />
+                      <Input placeholder="Briefcase" {...field} className={FIELD} />
                     </FormControl>
                     <p className="text-[10px] text-muted-foreground">lucide-react name</p>
                     <FormMessage />
@@ -213,9 +216,9 @@ export function MenuDialog({
                 name="orderIndex"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Order</FormLabel>
+                    <FormLabel className={LABEL}>Order</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} {...field} />
+                      <Input type="number" min={0} {...field} className={FIELD} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -244,11 +247,16 @@ export function MenuDialog({
               )}
             />
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <DialogFooter className="pt-5 border-t border-primary/5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="h-11 px-6 rounded-xl border-primary/10 font-bold text-xs uppercase tracking-widest"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="h-11 px-8 rounded-xl bg-primary hover:bg-primary/90 text-white font-extrabold text-xs uppercase tracking-widest shadow-premium active:scale-95 transition-all">
                 {isSubmitting ? "Saving..." : menu ? "Save Changes" : "Create"}
               </Button>
             </DialogFooter>

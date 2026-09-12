@@ -73,7 +73,7 @@ export function CategoryManagerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg rounded-3xl">
+      <DialogContent className="sm:max-w-lg rounded-3xl border-primary/5 shadow-premium">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary font-extrabold uppercase tracking-tight">
             <Tag size={18} />

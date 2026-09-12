@@ -29,6 +29,9 @@ import {
 } from "@/components/ui/select";
 import { User, Role, CreateUserInput } from "../types";
 
+const LABEL = "text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2";
+const FIELD = "h-12 rounded-xl bg-muted/30 border-primary/5 focus-visible:ring-primary/10 font-bold tracking-tight";
+
 const NO_ROLE = "__none__";
 
 const formSchema = z.object({
@@ -108,7 +111,7 @@ export function UserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg rounded-3xl">
+      <DialogContent className="sm:max-w-lg rounded-3xl border-primary/5 shadow-premium">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary font-extrabold uppercase tracking-tight">
             <UserCog size={18} />
@@ -123,9 +126,9 @@ export function UserDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Full Name</FormLabel>
+                  <FormLabel className={LABEL}>Full Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Jane Doe" {...field} />
+                    <Input placeholder="Jane Doe" {...field} className={FIELD} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -137,9 +140,9 @@ export function UserDialog({
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel className={LABEL}>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="jane@company.com" {...field} />
+                    <Input type="email" placeholder="jane@company.com" {...field} className={FIELD} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -152,9 +155,9 @@ export function UserDialog({
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className={LABEL}>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="At least 8 characters" {...field} />
+                      <Input type="password" placeholder="At least 8 characters" {...field} className={FIELD} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -168,9 +171,9 @@ export function UserDialog({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel className={LABEL}>Phone</FormLabel>
                     <FormControl>
-                      <Input placeholder="0812..." {...field} />
+                      <Input placeholder="0812..." {...field} className={FIELD} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -182,9 +185,9 @@ export function UserDialog({
                 name="location"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location</FormLabel>
+                    <FormLabel className={LABEL}>Location</FormLabel>
                     <FormControl>
-                      <Input placeholder="Jakarta" {...field} />
+                      <Input placeholder="Jakarta" {...field} className={FIELD} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -198,10 +201,10 @@ export function UserDialog({
                 name="roleId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Role</FormLabel>
+                    <FormLabel className={LABEL}>Role</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className={FIELD}>
                           <SelectValue placeholder="No role" />
                         </SelectTrigger>
                       </FormControl>
@@ -227,10 +230,10 @@ export function UserDialog({
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Status</FormLabel>
+                    <FormLabel className={LABEL}>Status</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className={FIELD}>
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -249,11 +252,16 @@ export function UserDialog({
               />
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <DialogFooter className="pt-5 border-t border-primary/5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="h-11 px-6 rounded-xl border-primary/10 font-bold text-xs uppercase tracking-widest"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="h-11 px-8 rounded-xl bg-primary hover:bg-primary/90 text-white font-extrabold text-xs uppercase tracking-widest shadow-premium active:scale-95 transition-all">
                 {isSubmitting ? "Saving..." : isEdit ? "Save Changes" : "Create User"}
               </Button>
             </DialogFooter>

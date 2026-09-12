@@ -27,6 +27,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Role, CreateRoleInput, PermissionGroup, Menu } from "../types";
 import { flattenMenus } from "../hooks/useMenus";
 
+const LABEL = "text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2";
+const FIELD = "h-12 rounded-xl bg-muted/30 border-primary/5 focus-visible:ring-primary/10 font-bold tracking-tight";
+
 const formSchema = z.object({
   name: z.string().min(1, "Role name is required"),
   slug: z
@@ -124,7 +127,7 @@ export function RoleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border-primary/5 shadow-premium">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary font-extrabold uppercase tracking-tight">
             <ShieldCheck size={18} />
@@ -140,9 +143,9 @@ export function RoleDialog({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Role Name</FormLabel>
+                    <FormLabel className={LABEL}>Role Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Finance Manager" {...field} />
+                      <Input placeholder="Finance Manager" {...field} className={FIELD} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -153,9 +156,9 @@ export function RoleDialog({
                 name="slug"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Slug</FormLabel>
+                    <FormLabel className={LABEL}>Slug</FormLabel>
                     <FormControl>
-                      <Input placeholder="finance-manager" {...field} />
+                      <Input placeholder="finance-manager" {...field} className={FIELD} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -168,9 +171,14 @@ export function RoleDialog({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel className={LABEL}>Description</FormLabel>
                   <FormControl>
-                    <Textarea rows={2} placeholder="What this role is for" {...field} />
+                    <Textarea
+                      rows={2}
+                      placeholder="What this role is for"
+                      className="min-h-[80px] rounded-xl bg-muted/20 border-primary/5 font-medium text-xs resize-none"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -301,11 +309,16 @@ export function RoleDialog({
               </TabsContent>
             </Tabs>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <DialogFooter className="pt-5 border-t border-primary/5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="h-11 px-6 rounded-xl border-primary/10 font-bold text-xs uppercase tracking-widest"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="h-11 px-8 rounded-xl bg-primary hover:bg-primary/90 text-white font-extrabold text-xs uppercase tracking-widest shadow-premium active:scale-95 transition-all">
                 {isSubmitting ? "Saving..." : role ? "Save Changes" : "Create Role"}
               </Button>
             </DialogFooter>
