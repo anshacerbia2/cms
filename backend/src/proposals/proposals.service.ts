@@ -253,6 +253,15 @@ export class ProposalsService {
     context: { totalAmountItems?: number; pricingModelDescription?: string | null },
   ): Promise<{ items: BuiltItem[]; total: number }> {
     if (pricingModel === PricingModel.A) {
+      // Model A is a lump sum: the figure comes from totalAmountItems, and line
+      // items have no meaning. Accepting them silently discarded the caller's
+      // data and produced a zero-total proposal with no complaint.
+      if (items.length > 0) {
+        throw new BadRequestException(
+          'Pricing model A bills a single lump sum. Send totalAmountItems instead of items.',
+        );
+      }
+
       const total = Number(context.totalAmountItems ?? 0);
 
       return {

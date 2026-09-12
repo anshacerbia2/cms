@@ -30,6 +30,7 @@ export class InvoicesService {
   /** FIT flow: the project is billed directly, with one summary sales item. */
   private async createForFitProject(dto: CreateInvoiceDto, project: any) {
     const totalAmount = Number(dto.totalAmount ?? 0);
+    this.assertBillable(totalAmount, 'The amount given');
     const managementFeeType = dto.managementFeeType ?? 'PERCENT';
     const managementFee = dto.managementFee ?? 0;
     const vatRate = dto.vatRate ?? 11;
@@ -95,6 +96,7 @@ export class InvoicesService {
 
     const selected = proposal.salesItems.filter((item: any) => itemIds.includes(item.id.toString()));
     const totalAmount = selected.reduce((sum: number, item: any) => sum + Number(item.totalPrice), 0);
+    this.assertBillable(totalAmount, 'The selected proposal items');
     const managementFee = this.proposalFeeValue(proposal, totalAmount);
 
     return this.prisma.$transaction(async (tx) => {
@@ -231,6 +233,7 @@ export class InvoicesService {
 
     if (isFit) {
       const totalAmount = dto.totalAmount !== undefined ? Number(dto.totalAmount) : Number(invoice.totalAmount);
+      this.assertBillable(totalAmount, 'The amount given');
 
       return this.prisma.$transaction(async (tx) => {
         await tx.invoice.update({
@@ -275,6 +278,7 @@ export class InvoicesService {
 
     const selected = proposal.salesItems.filter((item: any) => itemIds.includes(item.id.toString()));
     const totalAmount = selected.reduce((sum: number, item: any) => sum + Number(item.totalPrice), 0);
+    this.assertBillable(totalAmount, 'The selected proposal items');
 
     return this.prisma.$transaction(async (tx) => {
       await tx.invoice.update({
@@ -459,6 +463,19 @@ export class InvoicesService {
    * Percent fees carry the rate; nominal fees are split across invoices in proportion
    * to the share of the proposal being billed.
    */
+  /**
+   * An invoice for nothing cannot be collected and has no meaning in the ledger:
+   * its balance due is zero, so it is born already settled and no receive voucher
+   * can ever apply to it. Adjustments belong on vouchers, not on empty invoices.
+   */
+  private assertBillable(totalAmount: number, context: string) {
+    if (!(totalAmount > 0)) {
+      throw new BadRequestException(
+        `${context} produces a zero invoice amount. An invoice must bill a positive amount.`,
+      );
+    }
+  }
+
   private proposalFeeValue(proposal: any, totalAmount: number): number {
     const managementFee = Number(proposal.managementFee ?? 0);
     if (proposal.managementFeeType === 'PERCENT') return managementFee;

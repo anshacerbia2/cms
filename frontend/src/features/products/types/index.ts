@@ -57,3 +57,7 @@ export interface CreateProductCategoryInput {
   name: string;
   description?: string;
 }
+
+export interface UpdateProductCategoryInput extends Partial<CreateProductCategoryInput> {
+  id: string;
+}

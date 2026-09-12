@@ -39,3 +39,14 @@ export class CreateProductDto {
   @Min(0)
   price?: number;
 }
+
+export class UpdateProductCategoryDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+}

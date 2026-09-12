@@ -7,10 +7,11 @@ import {
   Param, 
   Delete, 
   Query, 
-  UseGuards 
+  UseGuards, 
+  ParseIntPipe 
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
-import { CreateProductDto, CreateProductCategoryDto } from './dto/create-product.dto';
+import { CreateProductDto, CreateProductCategoryDto, UpdateProductCategoryDto } from './dto/create-product.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
@@ -33,6 +34,27 @@ export class ProductsController {
   @Permissions('product-categories.index')
   findAllCategories(@Query() query: PaginationQueryDto) {
     return this.productsService.findAllCategories(query);
+  }
+
+  @Get('categories/:id')
+  @Permissions('product-categories.index')
+  findOneCategory(@Param('id', ParseIntPipe) id: number) {
+    return this.productsService.findOneCategory(id);
+  }
+
+  @Patch('categories/:id')
+  @Permissions('product-categories.update')
+  updateCategory(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateProductCategoryDto,
+  ) {
+    return this.productsService.updateCategory(id, dto);
+  }
+
+  @Delete('categories/:id')
+  @Permissions('product-categories.delete')
+  removeCategory(@Param('id', ParseIntPipe) id: number) {
+    return this.productsService.removeCategory(id);
   }
 
   // --- PRODUCTS ---

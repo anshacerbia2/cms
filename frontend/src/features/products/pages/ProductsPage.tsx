@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Eye, Truck, Tag, Ruler } from "lucide-react";
+import { Plus, Search, MoreVertical, Edit2, Trash2, Eye, Truck, Tag, Ruler } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useProducts } from "../hooks/useProducts";
+import { CategoryManagerDialog } from "../components/CategoryManagerDialog";
 import { useAuthStore } from "@/store/authStore";
 import { useSuppliers } from "../../suppliers/hooks/useSuppliers";
 import { 
@@ -42,7 +43,16 @@ export default function ProductsPage() {
   const [categoryId, setCategoryId] = useState<string>("all");
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { productsQuery, categoriesQuery, deleteProduct, createProduct, updateProduct } = useProducts({
+  const {
+    productsQuery,
+    categoriesQuery,
+    deleteProduct,
+    createProduct,
+    updateProduct,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+  } = useProducts({
     page,
     search: debouncedSearch,
     categoryId: categoryId === "all" ? undefined : categoryId,
@@ -58,6 +68,7 @@ export default function ProductsPage() {
   const suppliers = suppliersQuery.data?.data || [];
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const handleCreate = () => {
@@ -137,10 +148,16 @@ export default function ProductsPage() {
             </SelectContent>
           </Select>
 
-          <Button variant="outline" className="h-12 px-5 rounded-xl border-primary/10 bg-white shadow-sm flex items-center gap-2 hover:bg-primary/5 transition-all text-muted-foreground font-bold">
-            <Filter size={18} />
-            <span className="text-xs uppercase tracking-widest hidden sm:inline">Advanced</span>
-          </Button>
+          {can("product-categories.index") && (
+            <Button
+              variant="outline"
+              onClick={() => setIsCategoryDialogOpen(true)}
+              className="h-12 px-5 rounded-xl border-primary/10 bg-white shadow-sm flex items-center gap-2 hover:bg-primary/5 transition-all text-muted-foreground font-bold"
+            >
+              <Tag size={18} />
+              <span className="text-xs uppercase tracking-widest hidden sm:inline">Categories</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -259,6 +276,18 @@ export default function ProductsPage() {
         categories={categories}
         suppliers={suppliers}
         isSubmitting={createProduct.isPending || updateProduct.isPending}
+      />
+
+      <CategoryManagerDialog
+        open={isCategoryDialogOpen}
+        onOpenChange={setIsCategoryDialogOpen}
+        categories={categories}
+        onCreate={(data) => createCategory.mutateAsync(data)}
+        onUpdate={(data) => updateCategory.mutateAsync(data)}
+        onDelete={(id) => deleteCategory.mutateAsync(id)}
+        isBusy={
+          createCategory.isPending || updateCategory.isPending || deleteCategory.isPending
+        }
       />
     </PageContainer>
   );
