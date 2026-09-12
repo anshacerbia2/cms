@@ -209,6 +209,18 @@ test.describe("REG-18 — Balance Sheet detail totals follow the filter", () => 
   const ITEM = 'div[class*="group/item"][class*="cursor-pointer"]';
 
   test("the Total row sums only the visible rows", async ({ page }) => {
+    // The component prints [BS-DIAG] with what the footer is summing. Surface it
+    // here so one terminal run carries both the failure and its evidence.
+    page.on("console", async (message) => {
+      if (!message.text().includes("BS-DIAG")) return;
+      for (const arg of message.args()) {
+        try {
+          const value = await arg.jsonValue();
+          if (typeof value === "object") console.log("[BS-DIAG]", JSON.stringify(value));
+        } catch {}
+      }
+    });
+
     await openPage(page, "/finance-reports", /^financial reports$/i);
     await page.getByRole("tab", { name: /^balance$/i }).click();
 
