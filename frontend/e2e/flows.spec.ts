@@ -84,7 +84,7 @@ test.describe("Flow A — Regular: project → proposal → WIN → invoice → 
     await openPage(page, "/invoices", /invoices/i);
     await page.getByRole("button", { name: /ISSUE INVOICE/i }).click();
 
-    await dialog(page).getByLabel(/source/i).click();
+    await dialog(page).getByRole("combobox", { name: /billing source/i }).click();
     await page.getByRole("option", { name: /proposal/i }).click();
     await dialog(page).getByLabel(/proposal/i).click();
     await page.getByRole("option", { name: proposalCode }).click();
@@ -162,7 +162,9 @@ test.describe("Flow B — FIT: project → invoice → receive voucher, no propo
     await openPage(page, "/invoices", /invoices/i);
     await page.getByRole("button", { name: /ISSUE INVOICE/i }).click();
 
-    await dialog(page).getByLabel(/source/i).click();
+    // The "Billing Source" tab panel is labelled by its own trigger, so
+    // getByLabel(/source/) matches the panel as well as the select.
+    await dialog(page).getByRole("combobox", { name: /billing source/i }).click();
     await page.getByRole("option", { name: /fit/i }).click();
     await dialog(page).getByLabel(/project/i).click();
     await page.getByRole("option", { name: projectName }).click();

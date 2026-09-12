@@ -20,36 +20,77 @@ import {
  */
 
 test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
+  /**
+   * Only some P&L rows drill down: the six ledgers in `expenseLedgers`, plus
+   * Sales and Cost of Goods, plus expanded level-3 sub-items. A heading row like
+   * "Total Expenses" reads as an expense but has no click handler, so a loose
+   * text filter lands on one and the modal never opens.
+   */
+  const DRILLABLE = [
+    "Personnel Expense",
+    "Office Expense",
+    "Marketing Expense",
+    "Financial Expense",
+    // Sales shares the plain detail table. Cost of Goods is left out on purpose:
+    // it renders the COGS column set instead, which has no Description header.
+    "Sales",
+  ];
+
   test("the TOTAL row sums only the visible rows", async ({ page }) => {
     await openPage(page, "/finance-reports", /^financial reports$/i);
-
-    // Open the Profit & Loss tab, then drill into a line that has detail rows.
     await page.getByRole("tab", { name: /profit.*loss/i }).click();
-    const drillable = page
-      .getByRole("row")
-      .filter({ hasText: /expense|personnel|salar/i })
-      .first();
-    test.skip(!(await drillable.count()), "no P&L line with detail in this dataset");
-    await drillable.click();
 
     const modal = dialog(page);
-    await expect(modal).toBeVisible();
+    const total = () => modal.getByRole("row").filter({ hasText: /^TOTAL/ }).first();
 
-    const totalCell = modal.getByRole("row").filter({ hasText: /^TOTAL/ }).first();
-    await expect(totalCell).toBeVisible();
-    const unfiltered = parseIdr((await totalCell.textContent()) ?? "");
+    // Take the first drillable ledger this dataset actually has detail for.
+    let opened = "";
+    for (const account of DRILLABLE) {
+      const cell = page
+        .getByRole("cell")
+        .filter({ hasText: new RegExp(`^\\s*${account}\\s*$`) })
+        .first();
+      if (!(await cell.count())) continue;
+
+      await cell.click();
+      if (await total().isVisible({ timeout: 4000 }).catch(() => false)) {
+        opened = account;
+        break;
+      }
+      // Empty or not drillable after all — shut it and try the next.
+      await page.keyboard.press("Escape");
+      await expect(modal).toBeHidden();
+    }
+    test.skip(!opened, "no P&L ledger with detail rows in this dataset");
+
+    const unfiltered = parseIdr((await total().textContent()) ?? "");
     const rowsBefore = await modal.getByRole("row").count();
 
-    // Apply a column filter that removes rows.
-    await modal.getByRole("button", { name: /filter/i }).first().click();
-    await page.getByRole("checkbox").nth(1).uncheck();
-    await page.keyboard.press("Escape");
+    // The filter trigger is a bare icon button with no accessible name, so reach
+    // it through the header it sits in.
+    await modal
+      .locator("thead th")
+      .filter({ hasText: /^Description$/ })
+      .locator("button")
+      .first()
+      .click();
+
+    // nth(0) is "(Select All)". Needing two values below it guarantees the
+    // filter leaves at least one row, so the TOTAL row stays rendered.
+    const boxes = page.getByRole("checkbox");
+    const values = (await boxes.count()) - 1;
+    test.skip(values < 2, `${opened} detail has only one Description value to filter on`);
+
+    await boxes.nth(1).uncheck();
+    // Escape only closes the dropdown — handleApply runs on OK and nowhere else.
+    await page.getByRole("button", { name: /^OK$/ }).click();
 
     await expect
       .poll(async () => modal.getByRole("row").count())
       .toBeLessThan(rowsBefore);
 
-    const filtered = parseIdr((await totalCell.textContent()) ?? "");
+    await expect(total()).toBeVisible();
+    const filtered = parseIdr((await total().textContent()) ?? "");
     expect(
       filtered,
       "the total used to keep the unfiltered figure and contradict the rows above it",
