@@ -30,6 +30,30 @@ export async function rowAction(page: Page, text: string | RegExp, action: strin
 /** The open dialog, whichever it is. */
 export const dialog = (page: Page) => page.getByRole("dialog");
 
+/**
+ * Several dialogs split their fields across tabs — a proposal's line items, a
+ * receive voucher's allocations, an invoice's amounts — and a field on an
+ * unselected tab is not in the DOM at all, so it reads as a missing selector
+ * rather than a hidden one.
+ */
+export async function dialogTab(page: Page, name: string | RegExp) {
+  await dialog(page).getByRole("tab", { name }).click();
+}
+
+/**
+ * Collects anything the page throws, so a dialog that dies on mount reports the
+ * exception instead of a bare "element not found". Call before the interaction
+ * and pass the result into a failure message.
+ */
+export function capturePageErrors(page: Page) {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  return errors;
+}
+
 /** A form control inside the open dialog, by its visible label. */
 export const field = (page: Page, label: string | RegExp) =>
   dialog(page).getByLabel(label);

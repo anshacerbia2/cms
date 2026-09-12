@@ -1,6 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { Api } from "./support/api";
-import { dialog, expectFieldError, openPage, expectToast } from "./support/ui";
+import {
+  dialog,
+  dialogTab,
+  expectFieldError,
+  openPage,
+  capturePageErrors,
+} from "./support/ui";
 
 /**
  * VAL — required fields and format rules.
@@ -26,8 +32,20 @@ const submitButton = (page: import("@playwright/test").Page) =>
 
 /** Opens the create dialog on a page and submits it untouched. */
 async function submitEmpty(page: import("@playwright/test").Page, addButton: string | RegExp) {
+  const errors = capturePageErrors(page);
   await page.getByRole("button", { name: addButton }).click();
-  await expect(dialog(page)).toBeVisible();
+
+  try {
+    await expect(dialog(page)).toBeVisible();
+  } catch {
+    throw new Error(
+      `The dialog behind ${addButton} never appeared.` +
+        (errors.length
+          ? `\n\nThe page threw:\n  ${errors.join("\n  ")}`
+          : "\n\nThe page threw nothing, so the trigger is wired to something else."),
+    );
+  }
+
   await submitButton(page).click();
 }
 
@@ -130,7 +148,9 @@ test.describe("VAL — Proposals", () => {
     // Model B bills per line, so the item rows appear and each needs a price.
     await dialog(page).getByLabel(/pricing model/i).click();
     await page.getByRole("option", { name: /^Type B/ }).click();
-    await dialog(page).getByRole("button", { name: /add item|add line/i }).first().click();
+
+    await dialogTab(page, /pricing items/i);
+    await dialog(page).getByRole("button", { name: /add item/i }).click();
     await submitButton(page).click();
 
     await expectFieldError(page, /^Required$/);
@@ -207,7 +227,7 @@ test.describe("VAL — Vouchers", () => {
     await openPage(page, "/receive-vouchers", /receive vouchers/i);
     await page.getByRole("button", { name: /ADD RV/i }).click();
 
-    await dialog(page).getByRole("tab", { name: /invoice allocation/i }).click();
+    await dialogTab(page, /invoice allocation/i);
     await dialog(page).getByRole("button", { name: /add allocation/i }).click();
     await submitButton(page).click();
     await expectFieldError(page, "Pick an invoice");

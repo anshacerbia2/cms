@@ -7,6 +7,7 @@ import {
   rowAction,
   parseIdr,
   acceptConfirm,
+  dialogTab,
 } from "./support/ui";
 
 /**
@@ -153,7 +154,9 @@ test.describe("REG — amount inputs group thousands", () => {
     await page.getByRole("option", { name: project.name }).click();
     await dialog(page).getByLabel(/pricing model/i).click();
     await page.getByRole("option", { name: /^Type B/ }).click();
-    await dialog(page).getByRole("button", { name: /add item|add line/i }).first().click();
+
+    await dialogTab(page, /pricing items/i);
+    await dialog(page).getByRole("button", { name: /add item/i }).click();
 
     const qty = dialog(page).getByLabel(/^qty/i).first();
     await qty.fill("1000");
