@@ -135,6 +135,28 @@ The other two: the database has no seeded users (`npx prisma db seed` in
 three accounts — `admin123`. Override with `E2E_ADMIN_PASSWORD` and
 `E2E_VIEWER_PASSWORD`.
 
+## When the run dies before any test
+
+```
+FATAL ERROR: Zone Allocation failed - process out of memory
+Error: worker process exited unexpectedly (code=134)
+```
+
+Not a leak in the suite — this arrives in the first few hundred milliseconds,
+with the heap still tens of megabytes. V8 asked the OS for memory and was
+refused, which on Windows usually means the disk is too full for the page file
+to grow. Check free space on the system drive first; a few hundred megabytes is
+not enough to run a browser.
+
+Fewer workers lowers the footprint, since each one is a browser plus a Node
+process:
+
+```bash
+E2E_WORKERS=1 pnpm e2e
+```
+
+That is a way to finish a run on a constrained machine, not a fix for one.
+
 ## Known gaps
 
 - The printed-document scenarios assert the rendered HTML through the API rather

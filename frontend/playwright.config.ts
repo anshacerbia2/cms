@@ -32,7 +32,11 @@ export default defineConfig({
   // print template — so they cannot run beside each other. Files are still
   // parallel; tests inside a file are serial.
   fullyParallel: false,
-  workers: process.env.CI ? 1 : 2,
+  // Each worker runs its own browser, so two of them is two Chromes plus two
+  // Node processes. On a machine low on disk — where Windows cannot grow the
+  // page file — that is enough for V8 to fail an allocation before the first
+  // test runs. E2E_WORKERS=1 halves the footprint.
+  workers: Number(process.env.E2E_WORKERS) || (process.env.CI ? 1 : 2),
 
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
