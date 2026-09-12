@@ -349,7 +349,22 @@ export class FinanceReportService {
           color: "text-indigo-500"
         }
       ],
-      tableData
+      tableData,
+
+      /**
+       * The same figures the rows above display, addressable without matching a
+       * label. The balance sheet needs net profit, and finding it by scanning
+       * tableData for the text "PROFIT AFTER TAX" would silently yield nothing
+       * the day that label is reworded.
+       */
+      figures: {
+        netSales: formatDecimal(netSales),
+        grossProfit: formatDecimal(grossProfit),
+        operatingProfit: formatDecimal(operatingProfit),
+        profitBeforeTax: formatDecimal(profitBeforeTax),
+        incomeTax: formatDecimal(incomeTax),
+        netProfit: formatDecimal(netProfit),
+      },
     };
   }
 
@@ -466,8 +481,17 @@ export class FinanceReportService {
     if (props && props['PL_NET_PROFIT'] !== undefined && props['PL_NET_PROFIT'] !== null) {
       profitLossVal = new Prisma.Decimal(props['PL_NET_PROFIT']);
     } else {
-      // Dynamic fallback (per user requirement, use Profit Before Tax)
-      profitLossVal = new Prisma.Decimal(plCurrentData.tableData.find(r => r.account?.trim().toLowerCase() === "profit before tax")?.total?.toString().replace(/,/g, '') || "0");
+      // Profit AFTER tax, not before.
+      //
+      // Corporate income tax payable (HUTANG PAJAK BADAN) is now carried on the
+      // Payable side of the balance sheet. Taking profit before tax into equity
+      // while the same tax sits in liabilities counts it once and deducts it
+      // never, so the sheet fails to balance by exactly the tax — which is the
+      // discrepancy this was reported as.
+      //
+      // This holds all year. Mid-year the tax payable is simply nil, and
+      // after-tax profit equals before-tax profit, so nothing moves.
+      profitLossVal = new Prisma.Decimal(plCurrentData.figures.netProfit);
     }
 
     // 3. Previous Years Net RE (Opening balance of RE for the year)
@@ -482,7 +506,11 @@ export class FinanceReportService {
         prevProfit = new Prisma.Decimal(prevProps['PL_NET_PROFIT']);
       } else {
         const plUpToPrevYear = await this.getProfitLossStatement(yearNum - 1);
-        prevProfit = new Prisma.Decimal(plUpToPrevYear.tableData.find(r => r.account?.toLowerCase() === "profit before tax")?.total?.toString().replace(/,/g, '') || "0");
+        // Deliberately before tax, unlike the current year above: this is the
+        // opening balance of retained earnings, and moving it would restate
+        // prior years. Read from `figures` all the same, so neither path
+        // depends on a row label.
+        prevProfit = new Prisma.Decimal(plUpToPrevYear.figures.profitBeforeTax);
       }
 
       let prevDividend = new Prisma.Decimal(0);
