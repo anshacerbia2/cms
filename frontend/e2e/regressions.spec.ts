@@ -49,10 +49,17 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
     // behind it — which is what made this test skip instead of run. Walk the
     // years the selector offers rather than pinning one.
     await yearSelect.click();
-    const years = await page.getByRole("option").allTextContents();
+    const options = page.getByRole("option");
+    // Radix mounts the list asynchronously: reading it straight after the click
+    // returns an empty array, and an empty array made the loop below a no-op.
+    await expect(options.first()).toBeVisible();
+    const years = await options.allTextContents();
     await page.keyboard.press("Escape");
+    expect(years.length, "the report's year selector offered nothing").toBeGreaterThan(0);
 
-    // Take the first drillable ledger any year actually has detail for.
+    // Take the first drillable ledger any year actually has detail for, keeping
+    // a trail so a skip says what it saw instead of going quiet.
+    const tried: string[] = [];
     let opened = "";
     for (const year of years) {
       await yearSelect.click();
@@ -63,20 +70,28 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
           .getByRole("cell")
           .filter({ hasText: new RegExp(`^\\s*${account}\\s*$`) })
           .first();
-        if (!(await cell.count())) continue;
+        if (!(await cell.count())) {
+          tried.push(`${year} ${account}: no such row`);
+          continue;
+        }
 
         await cell.click();
-        if (await total().isVisible({ timeout: 4000 }).catch(() => false)) {
+        if (await total().isVisible({ timeout: 8000 }).catch(() => false)) {
           opened = `${account} (${year})`;
           break;
         }
         // Empty or not drillable after all — shut it and try the next.
+        tried.push(
+          `${year} ${account}: ${(await modal.count())
+            ? "modal opened with no TOTAL row, so it held no detail"
+            : "modal never opened"}`,
+        );
         await page.keyboard.press("Escape");
         await expect(modal).toBeHidden();
       }
       if (opened) break;
     }
-    test.skip(!opened, "no P&L ledger with detail rows in any year the report offers");
+    test.skip(!opened, `no P&L detail in any year. Tried:\n  ${tried.join("\n  ")}`);
 
     const unfiltered = parseIdr((await total().textContent()) ?? "");
     const rowsBefore = await modal.getByRole("row").count();
