@@ -352,10 +352,10 @@
         and the manual scenario that proves it — written so each row becomes one Playwright test.</p>
       <div class="meta">
         <span>Baseline <b>bda61dc</b></span>
-        <span>Head <b>15b1b14</b></span>
-        <span><b>42</b> commits</span>
+        <span>Head <b>87235c4</b></span>
+        <span><b>51</b> commits</span>
         <span><b>9</b> feature areas</span>
-        <span><b>125</b> scenarios</span>
+        <span><b>130</b> scenarios</span>
       </div>
     </header>
 
@@ -377,7 +377,9 @@
 
       <h4>Test IDs</h4>
       <p>Prefix marks the module, so <code>INV-07</code> stays stable if scenarios are inserted above it.
-        Use the ID verbatim as the Playwright test title.</p>
+        Guards and validation tests use the ID verbatim as the test title. The two flow specs do not —
+        each of their tests is a step in one journey rather than a single scenario — so section 11 carries
+        the mapping, along with the scenarios that are still manual only.</p>
       <div class="kv">
         <dt>PRJ</dt><dd>Projects</dd>
         <dt>PRO</dt><dd>Proposals and BoQ</dd>
@@ -937,12 +939,18 @@ paymentStatus = FULLY_PAID   when balanceDue ≤ 0 and invoiceAmount > 0
           <thead><tr><th>ID</th><th>Scenario</th><th>Steps</th><th>Expected</th><th>Tag</th></tr></thead>
           <tbody>
             <tr><td class="id">REG-01</td><td>P&amp;L detail subtotal follows the filter</td>
-              <td>Financial Reports › Profit &amp; Loss › click a line such as Personnel Expense. Note the TOTAL row,
-                then apply a column filter that hides rows.</td>
+              <td>Financial Reports › Profit &amp; Loss. Set the year selector to one that has data — it opens on
+                the current year and the seeders load 2025, so a fresh database shows every line as a dash.
+                Click a drillable ledger row, note the TOTAL row in the modal's footer, then open the
+                <strong>Description</strong> column filter, untick one value and press <strong>OK</strong>.</td>
               <td>TOTAL equals the sum of the <em>visible</em> rows. It used to keep the unfiltered figure and
-                contradict the rows above it.</td><td><span class="tag pass">Accept</span></td></tr>
+                contradict the rows above it.<br>
+                <span class="note">Only the six ledgers in <code>expenseLedgers</code> plus Sales and Cost of
+                Goods drill down, along with any expanded level-3 sub-item. A heading such as "Total Expense"
+                reads like one but carries no click handler. And Escape only closes the filter dropdown —
+                nothing is applied until OK.</span></td><td><span class="tag pass">Accept</span></td></tr>
             <tr><td class="id">REG-02</td><td>Clearing the filter restores it</td>
-              <td>Clear the filter.</td>
+              <td>Press Clear in the dropdown, or Clear Filters in the modal header.</td>
               <td>TOTAL returns to the full figure.</td><td><span class="tag pass">Accept</span></td></tr>
             <tr><td class="id">REG-03</td><td>Other finance views unaffected</td>
               <td>Repeat on Balance Sheet, AP Summary, PPN In/Out, Inter Account, Depreciation, Bank Statement.</td>
@@ -976,6 +984,29 @@ paymentStatus = FULLY_PAID   when balanceDue ≤ 0 and invoiceAmount > 0
               <td>Search the Permissions page for <code>sales-items</code>.</td>
               <td>No results. Five permissions existed that no endpoint read, so granting them in the role matrix
                 did nothing.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-13</td><td>Money inputs group thousands as you type</td>
+              <td>Projects › ADD PROJECT, type <code>50000000</code> into Contract Value.</td>
+              <td>Reads <code>50.000.000</code>. Every money field was a plain number input showing an
+                unbroken run of digits. Now shared through <code>AmountInput</code>: contract value, proposal
+                and invoice billed amounts, proposal selling price, BoQ unit price, both voucher amounts and
+                all five RV reducing fields.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-14</td><td>Comma is the decimal key, dot groups</td>
+              <td>Payment Vouchers › ADD PV, type <code>1234567,89</code> into Amount.</td>
+              <td>Reads <code>1.234.567,89</code> — Indonesian convention, matching <code>formatCurrency</code>
+                everywhere it is displayed.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-15</td><td>Counts stay unformatted</td>
+              <td>Proposal, model B, put <code>1000</code> in a line item's Qty.</td>
+              <td>Stays <code>1000</code>. Grouping a count into <code>1.000</code> would read as a price, so
+                Qty, Freq, VAT rate and the title multipliers are deliberately left plain.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-16</td><td>The invoice dialog opens at all</td>
+              <td>Invoices › ISSUE INVOICE.</td>
+              <td>The dialog renders. It threw <code>useFormField should be used within &lt;FormField&gt;</code>
+                on mount and died, so <strong>no invoice could be created through the UI</strong> — the
+                read-only Customer field carried a <code>FormLabel</code> with no <code>FormField</code> around
+                it. Found by the e2e suite, not by review.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-17</td><td>The sidebar keeps its menu tree to itself</td>
+              <td>Sign in, open the browser console.</td>
+              <td>Nothing logged. Every sidebar render printed the signed-in user's full menu tree.</td><td><span class="tag pass">Accept</span></td></tr>
           </tbody>
         </table>
       </div>
@@ -1139,6 +1170,85 @@ pnpm e2e --project=viewer # what a read-only role is not offered</code></pre>
             <tr><td><code>guards.spec.ts</code></td><td class="num">36</td><td>Every rule that passes by refusing, asserted on its exact message</td></tr>
             <tr><td><code>regressions.spec.ts</code></td><td class="num">9</td><td>The repairs, including the two purely visual ones</td></tr>
             <tr><td><code>viewer.spec.ts</code></td><td class="num">8</td><td>What a read-only role is not offered</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Which scenarios the suite actually asserts</h4>
+      <p>Guards and validation carry their scenario ID as the test title, so those map one to one.
+        <code>flows.spec.ts</code> does not: each of its tests is a <em>step</em> in one journey, and a step
+        can prove several scenarios at once or only part of one. This is the mapping, so nobody has to infer
+        it from a test name.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>File</th><th>Scenarios it asserts</th></tr></thead>
+          <tbody>
+            <tr><td><code>flows.spec.ts</code></td>
+              <td><code>PRJ-01</code> <code>PRJ-02</code> <code>PRO-01</code> <code>PRO-05</code>
+                <code>PRO-06</code> <code>PRO-08</code> <code>INV-01</code> <code>INV-02</code>
+                <code>INV-09</code> <code>RV-01</code> <code>RV-02</code> <code>REG-16</code>, and
+                <code>RV-08</code> for tax type and amount but not customer</td></tr>
+            <tr><td><code>guards.spec.ts</code></td>
+              <td><code>PRJ-06..08</code> <code>PRO-06</code> <code>PRO-07</code> <code>PRO-10</code>
+                <code>PRO-12</code> <code>INV-03</code> <code>INV-04</code> <code>INV-06</code>
+                <code>INV-10..15</code> <code>RV-01</code> <code>RV-03..06</code> <code>RV-09</code>
+                <code>ACL-02..05</code> <code>ACL-10..14</code> <code>ACL-16</code> <code>ACL-19</code>
+                <code>ACL-20</code> <code>PRT-04..07</code> <code>PRT-09</code> <code>PRT-10</code>
+                <code>REG-04..06</code> <code>REG-09</code> <code>REG-10</code> <code>REG-12</code></td></tr>
+            <tr><td><code>validation.spec.ts</code></td>
+              <td>Every <code>VAL-*</code> row in section 10. Several also settle a scenario listed
+                elsewhere: <code>PRJ-03</code> <code>PRJ-04</code> as VAL-PRJ-03/04, <code>PRO-03</code> as
+                VAL-PRO-03, <code>INV-05</code> as VAL-INV-03, <code>PV-05</code> as VAL-PV-02,
+                <code>ACL-07</code> as VAL-ACL-03, <code>ACL-17</code> as VAL-ACL-07, <code>PRT-12</code> as
+                VAL-PRT-02, <code>REG-07</code> as VAL-BNK-01</td></tr>
+            <tr><td><code>regressions.spec.ts</code></td>
+              <td><code>REG-01</code> <code>REG-08</code> <code>REG-09</code> <code>REG-11</code>
+                <code>REG-13..15</code></td></tr>
+            <tr><td><code>viewer.spec.ts</code></td>
+              <td><code>PRJ-09</code> (and the same absence on Proposals, Invoices, RV and PV)
+                <code>ACL-21</code> <code>ACL-22</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Still manual only</h4>
+      <p>Twenty-eight of the scenarios have no automated assertion. They are not lower value — several are
+        the arithmetic the money depends on — they are simply not written yet. Run these by hand.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Module</th><th>Uncovered</th><th>Worth doing first</th></tr></thead>
+          <tbody>
+            <tr><td>Projects</td><td><code>PRJ-05</code> unknown customer</td><td>—</td></tr>
+            <tr><td>Proposals</td>
+              <td><code>PRO-02</code> model B per-line · <code>PRO-04</code> fee as a percentage ·
+                <code>PRO-09</code> BoQ on a WIN proposal · <code>PRO-11</code> product with no active price</td>
+              <td><code>PRO-04</code> — nothing else checks the fee and VAT arithmetic end to end</td></tr>
+            <tr><td>Invoices</td>
+              <td><code>INV-07</code> partial billing across two invoices · <code>INV-08</code> billing an
+                already-claimed item · <code>INV-16</code> deleting returns items to the pool</td>
+              <td>All three. Item claiming is the one invoice rule with no guard on it at all</td></tr>
+            <tr><td>Receive Vouchers</td>
+              <td><code>RV-07</code> one RV across several invoices · <code>RV-10</code> unknown invoice in an
+                allocation</td>
+              <td><code>RV-07</code> — splitting one voucher is how most payments actually arrive</td></tr>
+            <tr><td>Payment Vouchers</td>
+              <td><code>PV-01..04</code> create, persist optional fields, edit the amount, delete</td>
+              <td>The whole module. Only its two refusals are covered</td></tr>
+            <tr><td>Access control</td>
+              <td><code>ACL-01</code> create a role with grants · <code>ACL-06</code> create a permission ·
+                <code>ACL-08</code> menu without its permission · <code>ACL-09</code> permission without its
+                menu · <code>ACL-15</code> create staff with a role · <code>ACL-18</code> change password</td>
+              <td><code>ACL-08</code> and <code>ACL-09</code> — the two halves of a grant, and the pair that
+                produces a sidebar entry which 403s</td></tr>
+            <tr><td>Print templates</td>
+              <td><code>PRT-01</code> starters exist · <code>PRT-02</code> print an invoice ·
+                <code>PRT-03</code> print a proposal · <code>PRT-08</code> print with no active template ·
+                <code>PRT-11</code> unknown placeholder is flagged</td>
+              <td><code>PRT-02</code> — the Print action itself is never exercised, only its rendering rules</td></tr>
+            <tr><td>Regressions</td>
+              <td><code>REG-02</code> clearing the filter restores the total · <code>REG-03</code> other
+                finance views unaffected · <code>REG-17</code> the sidebar logs nothing</td>
+              <td><code>REG-02</code> — it is four lines on top of REG-01</td></tr>
           </tbody>
         </table>
       </div>
