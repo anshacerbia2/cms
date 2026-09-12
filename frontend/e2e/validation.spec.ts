@@ -129,7 +129,7 @@ test.describe("VAL — Proposals", () => {
 
     // Model B bills per line, so the item rows appear and each needs a price.
     await dialog(page).getByLabel(/pricing model/i).click();
-    await page.getByRole("option", { name: /^B/ }).click();
+    await page.getByRole("option", { name: /^Type B/ }).click();
     await dialog(page).getByRole("button", { name: /add item|add line/i }).first().click();
     await submitButton(page).click();
 
@@ -228,15 +228,21 @@ test.describe("VAL — Vouchers", () => {
     await api.dispose();
   });
 
-  test("VAL-PV-01 every required PV field reports itself", async ({ page }) => {
+  test("VAL-PV-01 every field that can be empty reports itself", async ({ page }) => {
     await openPage(page, "/payment-vouchers", /payment vouchers/i);
     await submitEmpty(page, /ADD PV/i);
+
     await expectFieldError(page, "PV number is required");
     await expectFieldError(page, "Issuing date is required");
     await expectFieldError(page, "Amount is required");
-    await expectFieldError(page, "Payee type is required");
     await expectFieldError(page, "Category is required");
-    await expectFieldError(page, "Payment form is required");
+
+    // Payee type and payment form are not asserted: the dialog opens with
+    // SUPPLIER and BANK already selected, so their required rule cannot be
+    // reached through the form. The rule still guards the API — which is where
+    // it matters, since the DTO is what a direct caller has to satisfy.
+    await expect(dialog(page).getByText("Payee type is required")).toHaveCount(0);
+    await expect(dialog(page).getByText("Payment form is required")).toHaveCount(0);
   });
 
   test("VAL-PV-02 purchase order id is not accepted", async () => {

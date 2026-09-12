@@ -51,7 +51,7 @@ test.describe("Flow A — Regular: project → proposal → WIN → invoice → 
 
     // Model A bills one lump sum; the item rows do not apply.
     await dialog(page).getByLabel(/pricing model/i).click();
-    await page.getByRole("option", { name: /^A/ }).click();
+    await page.getByRole("option", { name: /^Type A/ }).click();
     await dialog(page).getByLabel(/items total|total amount/i).fill("50000000");
 
     await dialog(page).locator('button[type="submit"]').click();
