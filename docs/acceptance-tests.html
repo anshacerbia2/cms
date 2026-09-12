@@ -352,10 +352,10 @@
         and the manual scenario that proves it — written so each row becomes one Playwright test.</p>
       <div class="meta">
         <span>Baseline <b>bda61dc</b></span>
-        <span>Head <b>d3531c0</b></span>
-        <span><b>26</b> commits</span>
+        <span>Head <b>15b1b14</b></span>
+        <span><b>42</b> commits</span>
         <span><b>9</b> feature areas</span>
-        <span><b>123</b> scenarios</span>
+        <span><b>125</b> scenarios</span>
       </div>
     </header>
 
@@ -410,7 +410,7 @@ npx prisma db seed               # roles, permissions, menus, sample master data
           <thead><tr><th>Email</th><th>Role</th><th class="num">Permissions</th><th>Used for</th></tr></thead>
           <tbody>
             <tr><td><code>admin@pcmi.com</code></td><td>admin</td><td class="num">123</td><td>Every Accept scenario</td></tr>
-            <tr><td><code>viewer@pcmi.com</code></td><td>viewer</td><td class="num">44</td><td>Read-only and Absent scenarios</td></tr>
+            <tr><td><code>viewer@pcmi.com</code></td><td>viewer</td><td class="num">36</td><td>Read-only and Absent scenarios</td></tr>
             <tr><td><code>dir@pcmi.com</code></td><td>president_director</td><td class="num">17</td><td>Narrow-role sidebar checks</td></tr>
           </tbody>
         </table>
@@ -850,6 +850,17 @@ paymentStatus = FULLY_PAID   when balanceDue ≤ 0 and invoiceAmount > 0
             <tr><td class="id">ACL-20</td><td>Cannot delete yourself</td>
               <td>Delete the account you are signed in as.</td>
               <td>Refused — <code>You cannot delete the account you are signed in as.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">ACL-21</td><td>Viewer sees no Settings group</td>
+              <td>Sign in as viewer, look at the sidebar.</td>
+              <td>Roles, Permissions, Menus and Print Templates are not rendered, and neither is the
+                Settings heading. <strong>Regression guard:</strong> the seeder used to grant viewer
+                every menu unconditionally, so a read-only account saw the whole group.</td><td><span class="tag stop">Absent</span></td></tr>
+            <tr><td class="id">ACL-22</td><td>Viewer cannot read the grant table</td>
+              <td>As viewer, type <code>/roles</code> in the address bar.</td>
+              <td>The page loads but <code>GET /api/roles</code> answers 403 and no rows appear.
+                <strong>Regression guard:</strong> the seeder's read-only rule swept in
+                <code>roles.index</code> and friends, so this used to answer 200 and disclose every
+                role and grant in the system.</td><td><span class="tag guard">Refuse</span></td></tr>
           </tbody>
         </table>
       </div>
@@ -1012,8 +1023,10 @@ paymentStatus = FULLY_PAID   when balanceDue ≤ 0 and invoiceAmount > 0
               <td>All five reducing amounts, adjustment description</td></tr>
             <tr><td class="id">VAL-PV-01</td><td>Payment Voucher</td>
               <td><code>PV number is required</code> · <code>Issuing date is required</code> ·
-                <code>Amount is required</code> · <code>Payee type is required</code> ·
-                <code>Category is required</code> · <code>Payment form is required</code></td>
+                <code>Amount is required</code> · <code>Category is required</code><br>
+                <span class="note">Payee type and payment form carry defaults (SUPPLIER, BANK), so
+                their rules exist in the schema but cannot be reached by submitting the empty
+                form — only by a direct API call.</span></td>
               <td>Due date, payment date, payee name, expense type, account, description</td></tr>
             <tr><td class="id">VAL-ACL-01</td><td>Role</td>
               <td><code>Role name is required</code> · <code>Slug is required</code></td>
@@ -1105,11 +1118,15 @@ pnpm e2e                  # everything
 pnpm e2e:ui               # pick and watch tests interactively
 pnpm e2e --grep VAL       # just the validation scenarios
 pnpm e2e --project=viewer # what a read-only role is not offered</code></pre>
-      <p>It needs the stack already running — API on <code>:3001</code>, UI on <code>:5174</code>, against a
-        seeded local database. The config deliberately starts nothing: the API needs its own database, so
-        bringing it up is a step you take, not a side effect of a test run. <strong>Never point it at
-        production</strong> — it creates and deletes records and toggles the non-VAT settlement flag on a
-        real internal account.</p>
+      <p>It expects the API on <code>127.0.0.1:3000</code> (the literal address, not
+        <code>localhost</code> — that resolves to <code>::1</code> first on Windows and the API binds IPv4
+        only) and the UI on <code>:5173</code>, against a seeded local database. The config starts the Vite
+        dev server for you and reuses one that is already up; it deliberately does not start the API, which
+        needs its own database and is a step you take rather than a side effect of a test run.
+        <strong>Never point it at production</strong> — it creates and deletes records and toggles the
+        non-VAT settlement flag on a real internal account. <code>Api.signIn()</code> refuses any
+        non-localhost API host unless <code>E2E_ALLOW_REMOTE_API=1</code> is set, so one typo is not enough
+        to reach live data.</p>
 
       <h4>What is where</h4>
       <div class="tablewrap">
@@ -1120,8 +1137,8 @@ pnpm e2e --project=viewer # what a read-only role is not offered</code></pre>
             <tr><td><code>flows.spec.ts</code></td><td class="num">11</td><td>Both project paths, walked in the browser from empty record to settled invoice</td></tr>
             <tr><td><code>validation.spec.ts</code></td><td class="num">28</td><td>Section 10 — required fields and format rules, per form</td></tr>
             <tr><td><code>guards.spec.ts</code></td><td class="num">36</td><td>Every rule that passes by refusing, asserted on its exact message</td></tr>
-            <tr><td><code>regressions.spec.ts</code></td><td class="num">7</td><td>The repairs, including the two purely visual ones</td></tr>
-            <tr><td><code>viewer.spec.ts</code></td><td class="num">4</td><td>What a read-only role is not offered</td></tr>
+            <tr><td><code>regressions.spec.ts</code></td><td class="num">9</td><td>The repairs, including the two purely visual ones</td></tr>
+            <tr><td><code>viewer.spec.ts</code></td><td class="num">8</td><td>What a read-only role is not offered</td></tr>
           </tbody>
         </table>
       </div>
