@@ -127,8 +127,6 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
 
-  console.log('Sidebar User Menus:', user?.menus);
-
   return (
     <aside
       className={cn(

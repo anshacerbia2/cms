@@ -21,7 +21,7 @@ import {
 
 test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
   test("the TOTAL row sums only the visible rows", async ({ page }) => {
-    await openPage(page, "/finance-reports", /financial reports|profit/i);
+    await openPage(page, "/finance-reports", /^financial reports$/i);
 
     // Open the Profit & Loss tab, then drill into a line that has detail rows.
     await page.getByRole("tab", { name: /profit.*loss/i }).click();

@@ -12,7 +12,15 @@ export async function syncMenuIdSequence(prisma: PrismaClient) {
   );
 }
 
-export type ModuleSpec = { module: string; label: string };
+/**
+ * Administrative modules — access control, print layouts — are the configuration
+ * of the app rather than its data, so a read-only role gets nothing there, not
+ * even the index. Without this the `readOnly` rule below would hand `viewer`
+ * `roles.index` and `permissions.index` and let it read the whole grant table.
+ */
+export type AdminOnly = { adminOnly?: boolean };
+
+export type ModuleSpec = { module: string; label: string } & AdminOnly;
 
 export type ActionSpec = {
   action: string;
@@ -30,7 +38,7 @@ export type MenuSpec = {
   /** Permission route the sidebar derives this entry's URL from. */
   route: string;
   order: number;
-};
+} & AdminOnly;
 
 /** The five actions every CRUD module exposes. */
 export const CRUD_ACTIONS: ActionSpec[] = [
@@ -53,7 +61,10 @@ async function requireRoles(prisma: PrismaClient) {
 
 /**
  * Upsert-only on purpose: this runs against production, where the auth seeder's
- * wipe-and-rebuild would destroy live menu assignments. Nothing here deletes.
+ * wipe-and-rebuild would destroy live menu assignments. Nothing here deletes —
+ * with one exception, noted at each call site: a `viewer` grant on something
+ * declared `adminOnly` is withdrawn, because an earlier run of this same seeder
+ * is the only thing that could have created it.
  */
 export async function ensurePermissions(
   prisma: PrismaClient,
@@ -63,8 +74,9 @@ export async function ensurePermissions(
   const { admin, viewer } = await requireRoles(prisma);
   let created = 0;
   let linked = 0;
+  let revoked = 0;
 
-  for (const { module, label } of modules) {
+  for (const { module, label, adminOnly } of modules) {
     for (const { action, describe, readOnly } of actions) {
       const route = `${module}.${action}`;
 
@@ -76,7 +88,9 @@ export async function ensurePermissions(
       });
       if (!existing) created++;
 
-      for (const role of [admin, ...(viewer && readOnly ? [viewer] : [])]) {
+      const grantees = [admin, ...(viewer && readOnly && !adminOnly ? [viewer] : [])];
+
+      for (const role of grantees) {
         await prisma.rolePermission.upsert({
           where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
           update: {},
@@ -84,20 +98,59 @@ export async function ensurePermissions(
         });
         linked++;
       }
+
+      // Withdraw an over-grant a previous run made before `adminOnly` existed.
+      if (viewer && adminOnly) {
+        const { count } = await prisma.rolePermission.deleteMany({
+          where: { roleId: viewer.id, permissionId: permission.id },
+        });
+        revoked += count;
+      }
     }
   }
 
-  return { created, linked };
+  return { created, linked, revoked };
+}
+
+type Roles = Awaited<ReturnType<typeof requireRoles>>;
+
+/** Grants a menu to admin, and to viewer unless the entry is administrative. */
+async function grantMenu(
+  prisma: PrismaClient,
+  roles: Roles,
+  menuId: number,
+  adminOnly?: boolean,
+) {
+  const { admin, viewer } = roles;
+
+  for (const role of [admin, ...(viewer && !adminOnly ? [viewer] : [])]) {
+    await prisma.roleMenu.upsert({
+      where: { roleId_menuId: { roleId: role.id, menuId: BigInt(menuId) } },
+      update: {},
+      create: { roleId: role.id, menuId: BigInt(menuId) },
+    });
+  }
+
+  if (viewer && adminOnly) {
+    const { count } = await prisma.roleMenu.deleteMany({
+      where: { roleId: viewer.id, menuId: BigInt(menuId) },
+    });
+    return count;
+  }
+
+  return 0;
 }
 
 /**
- * Creates the sidebar entries and grants them to admin (and viewer, when present).
+ * Creates the sidebar entries and grants them to admin (and viewer, when present
+ * and the entry is not administrative).
  * A menu whose parent is missing is skipped rather than silently reparented to
  * the top level, where it would appear as a stray root item.
  */
 export async function ensureMenus(prisma: PrismaClient, menus: MenuSpec[]) {
-  const { admin, viewer } = await requireRoles(prisma);
+  const roles = await requireRoles(prisma);
   let touched = 0;
+  let revoked = 0;
 
   for (const menu of menus) {
     const parent = await prisma.menu.findUnique({ where: { id: BigInt(menu.parentId) } });
@@ -125,24 +178,18 @@ export async function ensureMenus(prisma: PrismaClient, menus: MenuSpec[]) {
     });
     touched++;
 
-    for (const role of [admin, ...(viewer ? [viewer] : [])]) {
-      await prisma.roleMenu.upsert({
-        where: { roleId_menuId: { roleId: role.id, menuId: BigInt(menu.id) } },
-        update: {},
-        create: { roleId: role.id, menuId: BigInt(menu.id) },
-      });
-    }
+    revoked += await grantMenu(prisma, roles, menu.id, menu.adminOnly);
   }
 
   await syncMenuIdSequence(prisma);
 
-  return { touched };
+  return { touched, revoked };
 }
 
 /** Top-level sidebar group, e.g. "Settings". Groups carry no permission of their own. */
 export async function ensureMenuGroup(
   prisma: PrismaClient,
-  group: { id: number; name: string; icon: string; order: number },
+  group: { id: number; name: string; icon: string; order: number } & AdminOnly,
 ) {
   const data = {
     name: group.name,
@@ -159,14 +206,10 @@ export async function ensureMenuGroup(
     create: { id: BigInt(group.id), ...data },
   });
 
-  const { admin, viewer } = await requireRoles(prisma);
-  for (const role of [admin, ...(viewer ? [viewer] : [])]) {
-    await prisma.roleMenu.upsert({
-      where: { roleId_menuId: { roleId: role.id, menuId: BigInt(group.id) } },
-      update: {},
-      create: { roleId: role.id, menuId: BigInt(group.id) },
-    });
-  }
+  const roles = await requireRoles(prisma);
+  const revoked = await grantMenu(prisma, roles, group.id, group.adminOnly);
 
   await syncMenuIdSequence(prisma);
+
+  return { revoked };
 }

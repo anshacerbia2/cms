@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { Api } from "./support/api";
-import { dialog, openPage, row, rowAction, expectToast, acceptConfirm, parseIdr } from "./support/ui";
+import { dialog, dialogTab, openPage, row, rowAction } from "./support/ui";
 import { uniq } from "./support/env";
 
 /**
@@ -32,7 +32,7 @@ test.describe("Flow A — Regular: project → proposal → WIN → invoice → 
 
     await dialog(page).getByLabel(/customer/i).click();
     await page.getByRole("option").first().click();
-    await dialog(page).getByLabel(/^type/i).click();
+    await dialog(page).getByLabel(/project type/i).click();
     await page.getByRole("option", { name: /regular/i }).click();
 
     await dialog(page).locator('button[type="submit"]').click();
@@ -52,13 +52,14 @@ test.describe("Flow A — Regular: project → proposal → WIN → invoice → 
     // Model A bills one lump sum; the item rows do not apply.
     await dialog(page).getByLabel(/pricing model/i).click();
     await page.getByRole("option", { name: /^Type A/ }).click();
-    await dialog(page).getByLabel(/items total|total amount/i).fill("50000000");
+    await dialogTab(page, /pricing items/i);
+    await dialog(page).getByLabel(/lump sum total/i).fill("50000000");
 
     await dialog(page).locator('button[type="submit"]').click();
 
     const created = row(page, projectName).first();
     await expect(created).toBeVisible();
-    proposalCode = (await created.textContent())?.match(/P-[A-Z0-9-]+/)?.[0] ?? "";
+    proposalCode = (await created.textContent())?.match(/PRP-\d{8}-[A-Z0-9]{5}/)?.[0] ?? "";
     expect(proposalCode, "proposal code should be generated").not.toBe("");
 
     await rowAction(page, proposalCode, /edit/i);
@@ -134,7 +135,7 @@ test.describe("Flow B — FIT: project → invoice → receive voucher, no propo
     await dialog(page).getByLabel(/due date/i).fill("2026-11-30");
     await dialog(page).getByLabel(/customer/i).click();
     await page.getByRole("option").first().click();
-    await dialog(page).getByLabel(/^type/i).click();
+    await dialog(page).getByLabel(/project type/i).click();
     await page.getByRole("option", { name: /^fit/i }).click();
 
     await dialog(page).locator('button[type="submit"]').click();
@@ -168,12 +169,14 @@ test.describe("Flow B — FIT: project → invoice → receive voucher, no propo
 
     await dialog(page).getByLabel(/invoice number/i).fill(invoiceNumber);
     await dialog(page).getByLabel(/due date/i).fill("2026-10-31");
+    await dialogTab(page, /amounts/i);
     await dialog(page).getByLabel(/billed amount/i).fill("25000000");
 
     // No Tax carries no VAT, so the fee is the only uplift.
     await dialog(page).getByLabel(/tax type/i).click();
     await page.getByRole("option", { name: /no tax/i }).click();
-    await dialog(page).getByLabel(/management fee/i).fill("5");
+    // "Management Fee (%)" — the bare /management fee/ also hits its Type select.
+    await dialog(page).getByLabel(/^management fee \(/i).fill("5");
 
     await dialog(page).locator('button[type="submit"]').click();
 

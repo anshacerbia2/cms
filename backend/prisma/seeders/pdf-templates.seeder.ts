@@ -10,10 +10,11 @@ import { join } from 'path';
 import { PrismaClient } from '@prisma/client';
 import { ensureMenus, ensurePermissions, MenuSpec, ModuleSpec } from './utils/access-control';
 
-const MODULES: ModuleSpec[] = [{ module: 'pdf-templates', label: 'Print Template' }];
+// Print layouts live under Settings and are administrative, like the RBAC modules.
+const MODULES: ModuleSpec[] = [{ module: 'pdf-templates', label: 'Print Template', adminOnly: true }];
 
 const MENUS: MenuSpec[] = [
-  { id: 6004, parentId: 600, name: 'Print Templates', icon: 'Printer', route: 'pdf-templates.index', order: 4 },
+  { id: 6004, parentId: 600, name: 'Print Templates', icon: 'Printer', route: 'pdf-templates.index', order: 4, adminOnly: true },
 ];
 
 const STARTERS = [
@@ -34,11 +35,12 @@ const STARTERS = [
 export async function seedPdfTemplates(prisma: PrismaClient) {
   console.log('🖨️  Seeding print template permissions, menu and starters...');
 
-  const { created, linked } = await ensurePermissions(prisma, MODULES);
+  const { created, linked, revoked } = await ensurePermissions(prisma, MODULES);
   console.log(`✅ Print template permissions: ${created} new permission(s), ${linked} role link(s) ensured.`);
+  if (revoked) console.log(`↩️  Withdrew ${revoked} viewer grant(s) on print templates.`);
 
-  const { touched } = await ensureMenus(prisma, MENUS);
-  console.log(`✅ Print template menus: ${touched} menu row(s) ensured.`);
+  const menus = await ensureMenus(prisma, MENUS);
+  console.log(`✅ Print template menus: ${menus.touched} menu row(s) ensured.`);
 
   let seeded = 0;
 
