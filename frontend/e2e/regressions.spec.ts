@@ -51,7 +51,6 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
     // labels are hardcoded in the component's own `expenseLedgers`, so if one
     // changes the test should say which rather than quietly find nothing.
     const rowLabels = await page.getByRole("cell").allTextContents();
-    console.log("P&L rows on screen:", JSON.stringify(rowLabels));
     expect(
       rowLabels.map((label) => label.trim()),
       "the P&L table did not render the ledger rows this test drills into",
@@ -68,7 +67,6 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
     await expect(options.first()).toBeVisible();
     const years = await options.allTextContents();
     await page.keyboard.press("Escape");
-    console.log("years offered:", JSON.stringify(years));
     expect(years.length, "the report's year selector offered nothing").toBeGreaterThan(0);
 
     const cellFor = (account: string) =>
@@ -131,14 +129,12 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
       }
       if (opened) break;
     }
-    console.log("drill attempts:", JSON.stringify(tried, null, 2));
     // Deliberately not test.skip: the list reporter prints a skip as a bare
     // dash and swallows its reason, which hid two separate faults in this test.
     expect(
       opened,
       `No P&L ledger opened a detail modal with a TOTAL row. Tried:\n  ${tried.join("\n  ")}`,
     ).not.toBe("");
-    console.log("drilled into:", opened);
 
     const unfiltered = parseIdr((await total().textContent()) ?? "");
     const rowsBefore = await modal.getByRole("row").count();
@@ -159,7 +155,6 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
     // counting straight after the click reads 0 and skips the whole assertion.
     await expect(boxes.first()).toBeVisible();
     const values = (await boxes.count()) - 1;
-    console.log("description values to filter on:", values);
     test.skip(values < 2, `${opened} detail has only one Description value to filter on`);
 
     await boxes.nth(1).uncheck();
