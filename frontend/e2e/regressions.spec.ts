@@ -279,7 +279,26 @@ test.describe("REG-18 — Balance Sheet detail totals follow the filter", () => 
       `No balance sheet account opened a detail modal with a Total row. Tried:\n  ${tried.join("\n  ")}`,
     ).not.toBe("");
 
-    const unfiltered = parseIdr((await total().textContent()) ?? "");
+    /**
+     * The invariant, asserted rather than "the number moved": the footer must
+     * equal the sum of the rows on screen. Every shape puts the amount in the
+     * last cell of the row, so this holds whichever category was opened.
+     *
+     * Checking it before the filter matters too: it proves the comparison itself
+     * is sound — right cell, right parser — so a failure afterwards is the
+     * total's fault and not the test's.
+     */
+    const visibleSum = async () => {
+      const cells = await modal.locator("tbody tr td:last-child").allTextContents();
+      return cells.reduce((sum, text) => sum + (parseIdr(text) || 0), 0);
+    };
+    const footer = async () => parseIdr((await total().textContent()) ?? "");
+    const agrees = async (when: string) => {
+      const [f, v] = [await footer(), await visibleSum()];
+      expect(Math.abs(f - v), `${when}: footer ${f} vs rows ${v}`).toBeLessThan(1);
+    };
+
+    await agrees("unfiltered");
     const rowsBefore = await modal.locator("tbody tr").count();
 
     // Whichever column the modal offers first — the shape differs per category.
@@ -291,16 +310,16 @@ test.describe("REG-18 — Balance Sheet detail totals follow the filter", () => 
     const values = (await boxes.count()) - 1;
     test.skip(values < 2, `${opened} has only one value to filter on`);
 
-    await boxes.nth(1).uncheck();
+    // Untick from the end. The list sorts numerically where it can, so the first
+    // entry is often "(Blanks)" — dropping rows whose amounts are empty changes
+    // the row count without changing the total, which proves nothing.
+    await boxes.last().uncheck();
     // Escape only closes the dropdown; handleApply runs on OK and nowhere else.
     await page.getByRole("button", { name: /^OK$/ }).click();
 
     await expect.poll(async () => modal.locator("tbody tr").count()).toBeLessThan(rowsBefore);
     await expect(total()).toBeVisible();
-    expect(
-      parseIdr((await total().textContent()) ?? ""),
-      "the Total kept the figure the clicked row carried and contradicted the rows above it",
-    ).not.toBe(unfiltered);
+    await agrees("after filtering");
   });
 });
 
