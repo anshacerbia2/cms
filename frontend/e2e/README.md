@@ -109,6 +109,25 @@ if a run is killed mid-test, check it:
 UPDATE internal_accounts SET is_non_vat_settlement = false;
 ```
 
+## When sign-in fails
+
+`auth.setup.ts` reports what went wrong rather than timing out silently, and the
+message names the three causes worth checking. The most common by far:
+
+**The app is pointed at the wrong API.** `frontend/.env` sets `VITE_API_URL`, and
+Vite reads it only at startup. If it says `:3001` while the API serves `:3000`,
+every request fails and the page sits on `/login`. Fix the file, then restart
+`pnpm dev` — editing it while the dev server runs changes nothing.
+
+```
+VITE_API_URL=http://localhost:3000/api
+VITE_BACKEND_URL=http://localhost:3000
+```
+
+The other two: the database has no seeded users (`npx prisma db seed` in
+`backend/`), or the seeded password is not `password` (set `E2E_ADMIN_PASSWORD`
+and `E2E_VIEWER_PASSWORD`).
+
 ## Known gaps
 
 - The printed-document scenarios assert the rendered HTML through the API rather
