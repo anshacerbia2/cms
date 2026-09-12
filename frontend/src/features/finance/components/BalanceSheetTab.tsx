@@ -78,7 +78,6 @@ export function BalanceSheetTab() {
     category?: string;
     subItem?: string;
     accountId?: string;
-    total?: number;
     isLiability?: boolean;
   }>({ isOpen: false });
 
@@ -116,7 +115,8 @@ export function BalanceSheetTab() {
           ...row, 
           f_col1: row.colC, 
           f_col2: combinedDesc, 
-          f_col3: formatCurrency(row.colR) 
+          f_col3: formatCurrency(row.colR),
+          f_amount: Number(row.colR) || 0,
         };
       }
       if (isFixedAsset) {
@@ -124,7 +124,8 @@ export function BalanceSheetTab() {
           ...row, 
           f_col1: formatDate(row.purchaseDate), 
           f_col2: row.assetName, 
-          f_col3: formatCurrency(row.purchasePrice) 
+          f_col3: formatCurrency(row.purchasePrice),
+          f_amount: Number(row.purchasePrice) || 0,
         };
       }
       const date = row.colA || row.date || row.createdAt;
@@ -136,7 +137,8 @@ export function BalanceSheetTab() {
         f_col1: formatDate(date), 
         f_col2: reference, 
         f_col3: description, 
-        f_col4: formatCurrency(amount) 
+        f_col4: formatCurrency(amount),
+        f_amount: Number(amount) || 0,
       };
     });
   }, [displayDetails.body, isARorTax, isFixedAsset, isCashOrBank, drillDown.isLiability]);
@@ -154,6 +156,20 @@ export function BalanceSheetTab() {
     data: normalizedDetails,
     searchFields: ['f_col1', 'f_col2', 'f_col3', 'f_col4']
   });
+
+  /**
+   * Summed from the filtered rows, not from the figure the clicked row carried:
+   * the table shows what the column filters left, so a total over everything
+   * contradicts the rows above it.
+   *
+   * Cash and Bank are deliberately excluded. Their footer is the account's
+   * closing balance — the running balance on the last transaction — and summing
+   * running balances across a filtered subset means nothing.
+   */
+  const filteredDetailTotal = useMemo(
+    () => (filteredBsDetails || []).reduce((sum: number, row: any) => sum + (Number(row.f_amount) || 0), 0),
+    [filteredBsDetails],
+  );
 
   useEffect(() => {
     if (bsData && !isInitialized) {
@@ -471,7 +487,6 @@ export function BalanceSheetTab() {
                                     category: group.name, 
                                     subItem: item.accountName,
                                     accountId: item.accountId,
-                                    total: item.idr,
                                     isLiability: false
                                   });
                                 }}
@@ -579,7 +594,6 @@ export function BalanceSheetTab() {
                               category: group.name, 
                               subItem: item.accountName,
                               accountId: item.accountId,
-                              total: item.idr,
                               isLiability: true
                             })}
                           >
@@ -665,7 +679,6 @@ export function BalanceSheetTab() {
                                   isOpen: true, 
                                   category, 
                                   subItem: item.accountName,
-                                  total: item.idr,
                                   isLiability: false
                                 });
                               }}
@@ -1025,9 +1038,9 @@ export function BalanceSheetTab() {
                           Total
                         </span>
                       </td>
-                      <td className={cn("pr-8 py-4 text-right whitespace-nowrap font-bold", drillDown.isLiability ? "text-rose-600" : getAmountColor(drillDown.total || 0))}>
+                      <td className={cn("pr-8 py-4 text-right whitespace-nowrap font-bold", drillDown.isLiability ? "text-rose-600" : getAmountColor(filteredDetailTotal))}>
                         <span className="text-[14px] tabular-nums font-bold">
-                          {formatCurrency(drillDown.total || 0)}
+                          {formatCurrency(filteredDetailTotal)}
                         </span>
                       </td>
                     </tr>

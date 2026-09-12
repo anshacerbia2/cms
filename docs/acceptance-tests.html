@@ -355,7 +355,7 @@
         <span>Head <b>59d6994</b></span>
         <span><b>52</b> commits</span>
         <span><b>9</b> feature areas</span>
-        <span><b>130</b> scenarios</span>
+        <span><b>133</b> scenarios</span>
       </div>
     </header>
 
@@ -963,9 +963,22 @@ paymentStatus = FULLY_PAID   when balanceDue ≤ 0 and invoiceAmount > 0
             <tr><td class="id">REG-02</td><td>Clearing the filter restores it</td>
               <td>Press Clear in the dropdown, or Clear Filters in the modal header.</td>
               <td>TOTAL returns to the full figure.</td><td><span class="tag pass">Accept</span></td></tr>
-            <tr><td class="id">REG-03</td><td>Other finance views unaffected</td>
-              <td>Repeat on Balance Sheet, AP Summary, PPN In/Out, Inter Account, Depreciation, Bank Statement.</td>
-              <td>Each already totals the filtered rows; no change in behaviour.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-03</td><td>The other finance views total their filtered rows</td>
+              <td>AP Summary, PPN WAPU and Non-WAPU, PPN In/Out, Inter Account, Finance Revenue and
+                Finance Expense: filter a column and read the total.</td>
+              <td>Each already summed the filtered rows before this branch — verified by reading them, not
+                assumed. <strong>Balance Sheet did not</strong>, which this row previously claimed it did.
+                See <code>REG-18</code>.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-18</td><td>Balance Sheet detail subtotal follows the filter</td>
+              <td>Financial Reports › <strong>Balance</strong> tab. Pick a year with data, open an account
+                under Account Receivable, Deposit, Prepaid Tax or Fixed Assets, note the Total, then filter
+                a column and press OK.</td>
+              <td>Total equals the sum of the visible rows. It used to show the figure the clicked row
+                carried, captured when the modal opened, so filtering never moved it — the same defect as
+                <code>REG-01</code>, in the other report.<br>
+                <span class="note">Cash and Bank are excluded on purpose. Their footer is the account's
+                closing balance — the running balance on the last transaction — so it is not a sum and
+                filtering must not change it. The fix leaves that branch alone.</span></td><td><span class="tag pass">Accept</span></td></tr>
             <tr><td class="id">REG-04</td><td>Edit a bank reference</td>
               <td>Accounts &amp; Banks › Banks › row menu › Edit Reference. Change the name, save.</td>
               <td>Saved. Both the route and the service method were missing, so this used to 404.</td><td><span class="tag pass">Accept</span></td></tr>
@@ -1374,7 +1387,7 @@ pnpm e2e --project=viewer # what a read-only role is not offered</code></pre>
             <tr><td><code>flows.spec.ts</code></td><td class="num">11</td><td>Both project paths, walked in the browser from empty record to settled invoice</td></tr>
             <tr><td><code>validation.spec.ts</code></td><td class="num">28</td><td>Section 10 — required fields and format rules, per form</td></tr>
             <tr><td><code>guards.spec.ts</code></td><td class="num">51</td><td>Every rule that passes by refusing, asserted on its exact message, plus the arithmetic no screen shows</td></tr>
-            <tr><td><code>regressions.spec.ts</code></td><td class="num">10</td><td>The repairs, including the three purely visual ones</td></tr>
+            <tr><td><code>regressions.spec.ts</code></td><td class="num">11</td><td>The repairs, including the four purely visual ones</td></tr>
             <tr><td><code>viewer.spec.ts</code></td><td class="num">8</td><td>What a read-only role is not offered</td></tr>
             <tr><td><code>payment-vouchers.spec.ts</code></td><td class="num">3</td><td>PV create, round-trip, edit and delete, through the dialog</td></tr>
             <tr><td><code>access-control.spec.ts</code></td><td class="num">1</td><td>The staff row's role name and status badge, which only the page shows</td></tr>
@@ -1413,7 +1426,7 @@ pnpm e2e --project=viewer # what a read-only role is not offered</code></pre>
                 VAL-PRT-02, <code>REG-07</code> as VAL-BNK-01</td></tr>
             <tr><td><code>regressions.spec.ts</code></td>
               <td><code>REG-01</code> <code>REG-02</code> <code>REG-08</code> <code>REG-09</code>
-                <code>REG-11</code> <code>REG-13..15</code> <code>REG-17</code></td></tr>
+                <code>REG-11</code> <code>REG-13..15</code> <code>REG-17</code> <code>REG-18</code></td></tr>
             <tr><td><code>payment-vouchers.spec.ts</code></td>
               <td><code>PV-01..04</code></td></tr>
             <tr><td><code>access-control.spec.ts</code></td>

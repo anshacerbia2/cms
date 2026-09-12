@@ -187,6 +187,110 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
   });
 });
 
+test.describe("REG-18 — Balance Sheet detail totals follow the filter", () => {
+  /**
+   * The same defect REG-01 covers, in the other report. The footer showed the
+   * figure the clicked row carried, captured when the modal opened, so filtering
+   * the rows never moved it.
+   *
+   * Cash and Bank are excluded deliberately, not overlooked: their footer is the
+   * account's closing balance — the running balance on the last transaction —
+   * and summing running balances across a filtered subset means nothing. The fix
+   * leaves that branch alone, so a test that filtered it would be asserting the
+   * wrong behaviour.
+   */
+  const ADDITIVE_GROUPS = ["Account Receivable", "Fixed Assets", "Deposit", "Prepaid Tax"];
+
+  test("the Total row sums only the visible rows", async ({ page }) => {
+    await openPage(page, "/finance-reports", /^financial reports$/i);
+    await page.getByRole("tab", { name: /^balance$/i }).click();
+
+    const modal = dialog(page);
+    const total = () => modal.locator("tfoot tr").first();
+    const yearSelect = page.getByRole("combobox").filter({ hasText: /^20\d{2}$/ }).first();
+
+    await yearSelect.click();
+    const options = page.getByRole("option");
+    await expect(options.first()).toBeVisible();
+    const years = await options.allTextContents();
+    await page.keyboard.press("Escape");
+    expect(years.length, "the report's year selector offered nothing").toBeGreaterThan(0);
+
+    const tried: string[] = [];
+    let opened = "";
+
+    for (const year of years) {
+      await yearSelect.click();
+      await page.getByRole("option", { name: year, exact: true }).click();
+
+      for (const group of ADDITIVE_GROUPS) {
+        const heading = page.getByText(group, { exact: true }).first();
+        if (!(await heading.count())) {
+          tried.push(`${year} ${group}: no such group`);
+          continue;
+        }
+
+        // The groups render as collapsibles; open it, then take its first row.
+        await heading.click();
+        const item = page.locator("div.cursor-pointer").filter({ hasText: /\S/ }).nth(1);
+        if (!(await item.count())) {
+          tried.push(`${year} ${group}: no clickable account under it`);
+          continue;
+        }
+
+        await item.click();
+        if (!(await modal.isVisible({ timeout: 4000 }).catch(() => false))) {
+          tried.push(`${year} ${group}: nothing opened`);
+          continue;
+        }
+
+        await Promise.race([
+          total().waitFor({ state: "visible", timeout: 8000 }).catch(() => {}),
+          modal.getByText(/no transactions found/i).waitFor({ state: "visible", timeout: 8000 }).catch(() => {}),
+        ]);
+
+        if (await total().count()) {
+          opened = `${group} (${year})`;
+          break;
+        }
+
+        tried.push(`${year} ${group}: modal held no rows`);
+        await page.keyboard.press("Escape");
+        await expect(modal).toBeHidden();
+      }
+      if (opened) break;
+    }
+
+    expect(
+      opened,
+      `No balance sheet account opened a detail modal with a Total row. Tried:\n  ${tried.join("\n  ")}`,
+    ).not.toBe("");
+
+    const unfiltered = parseIdr((await total().textContent()) ?? "");
+    const rowsBefore = await modal.locator("tbody tr").count();
+
+    // Whichever column the modal offers first — the shape differs per category.
+    await modal.locator("thead th").filter({ has: page.locator("button") }).first()
+      .locator("button").first().click();
+
+    const boxes = page.getByRole("checkbox");
+    await expect(boxes.first()).toBeVisible();
+    const values = (await boxes.count()) - 1;
+    test.skip(values < 2, `${opened} has only one value to filter on`);
+
+    await boxes.nth(1).uncheck();
+    // Escape only closes the dropdown; handleApply runs on OK and nowhere else.
+    await page.getByRole("button", { name: /^OK$/ }).click();
+
+    await expect.poll(async () => modal.locator("tbody tr").count()).toBeLessThan(rowsBefore);
+    await expect(total()).toBeVisible();
+    expect(
+      parseIdr((await total().textContent()) ?? ""),
+      "the Total kept the figure the clicked row carried and contradicted the rows above it",
+    ).not.toBe(unfiltered);
+  });
+});
+
 test.describe("REG-17 — the sidebar keeps the menu tree to itself", () => {
   test("signing in logs nothing to the console", async ({ page }) => {
     const noise: string[] = [];
