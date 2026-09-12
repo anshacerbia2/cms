@@ -174,31 +174,6 @@ export function BalanceSheetTab() {
    * matter what the filter did. Going through the rendered text makes the total
    * and the rows the same arithmetic by construction.
    */
-  // TEMPORARY DIAGNOSTIC — remove once the filter behaviour is confirmed.
-  // Prints what the footer is actually summing, so a stale bundle, a missing
-  // f_amount and a genuinely unchanged total can be told apart.
-  useEffect(() => {
-    if (!drillDown.isOpen) return;
-    const rows = filteredBsDetails || [];
-    console.log("[BS-DIAG]", {
-      category: drillDown.category,
-      subItem: drillDown.subItem,
-      rowsShown: rows.length,
-      activeFilters: Object.fromEntries(
-        Object.entries(bsFilters).filter(([, v]) => v && v.size).map(([k, v]) => [k, [...(v as Set<string>)]]),
-      ),
-      firstRow: rows[0] && {
-        f_amount: rows[0].f_amount,
-        f_col3: rows[0].f_col3,
-        f_col4: rows[0].f_col4,
-        colR: rows[0].colR,
-        colD: rows[0].colD,
-        purchasePrice: rows[0].purchasePrice,
-      },
-      sumOfF_amount: rows.reduce((a: number, r: any) => a + (r.f_amount || 0), 0),
-    });
-  }, [filteredBsDetails, bsFilters, drillDown.isOpen, drillDown.category, drillDown.subItem]);
-
   const filteredDetailTotal = useMemo(
     () => (filteredBsDetails || []).reduce((sum: number, row: any) => sum + (row.f_amount || 0), 0),
     [filteredBsDetails],
