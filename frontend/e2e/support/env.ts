@@ -8,10 +8,13 @@
 export const UI_URL = process.env.E2E_BASE_URL ?? "http://localhost:5173";
 export const API_URL = process.env.E2E_API_URL ?? "http://127.0.0.1:3000/api";
 
-/** Seeded by `prisma db seed`. See e2e/README.md before pointing this anywhere else. */
+/**
+ * Seeded by `prisma db seed` — the password is the one `auth.seeder.ts` hashes
+ * for all three accounts. See e2e/README.md before pointing this anywhere else.
+ */
 export const ACCOUNTS = {
-  admin: { email: "admin@pcmi.com", password: process.env.E2E_ADMIN_PASSWORD ?? "password" },
-  viewer: { email: "viewer@pcmi.com", password: process.env.E2E_VIEWER_PASSWORD ?? "password" },
+  admin: { email: "admin@pcmi.com", password: process.env.E2E_ADMIN_PASSWORD ?? "admin123" },
+  viewer: { email: "viewer@pcmi.com", password: process.env.E2E_VIEWER_PASSWORD ?? "admin123" },
 } as const;
 
 export type RoleName = keyof typeof ACCOUNTS;

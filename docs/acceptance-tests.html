@@ -404,6 +404,7 @@ npx prisma db seed               # roles, permissions, menus, sample master data
         <code>prisma/scripts/</code> one at a time instead.</p>
 
       <h4>Seeded accounts</h4>
+      <p>All three share the password <code>admin123</code>, which is what <code>auth.seeder.ts</code> hashes. The suite reads it from <code>E2E_ADMIN_PASSWORD</code> and <code>E2E_VIEWER_PASSWORD</code> when set.</p>
       <div class="tablewrap">
         <table>
           <thead><tr><th>Email</th><th>Role</th><th class="num">Permissions</th><th>Used for</th></tr></thead>

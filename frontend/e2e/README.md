@@ -131,8 +131,9 @@ there, the proxy connects to nothing, and the page sits on `/login` with no
 visible error. Naming `127.0.0.1` explicitly removes the guess.
 
 The other two: the database has no seeded users (`npx prisma db seed` in
-`backend/`), or the seeded password is not `password` (set `E2E_ADMIN_PASSWORD`
-and `E2E_VIEWER_PASSWORD`).
+`backend/`), or the password differs from what `auth.seeder.ts` hashes for all
+three accounts — `admin123`. Override with `E2E_ADMIN_PASSWORD` and
+`E2E_VIEWER_PASSWORD`.
 
 ## Known gaps
 
