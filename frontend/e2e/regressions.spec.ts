@@ -42,26 +42,41 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
 
     const modal = dialog(page);
     const total = () => modal.getByRole("row").filter({ hasText: /^TOTAL/ }).first();
+    const yearSelect = page.getByRole("combobox").filter({ hasText: /^20\d{2}$/ }).first();
 
-    // Take the first drillable ledger this dataset actually has detail for.
+    // The report opens on the current year while the finance seeders load an
+    // earlier one, so on a fresh database every line reads zero with no detail
+    // behind it — which is what made this test skip instead of run. Walk the
+    // years the selector offers rather than pinning one.
+    await yearSelect.click();
+    const years = await page.getByRole("option").allTextContents();
+    await page.keyboard.press("Escape");
+
+    // Take the first drillable ledger any year actually has detail for.
     let opened = "";
-    for (const account of DRILLABLE) {
-      const cell = page
-        .getByRole("cell")
-        .filter({ hasText: new RegExp(`^\\s*${account}\\s*$`) })
-        .first();
-      if (!(await cell.count())) continue;
+    for (const year of years) {
+      await yearSelect.click();
+      await page.getByRole("option", { name: year, exact: true }).click();
 
-      await cell.click();
-      if (await total().isVisible({ timeout: 4000 }).catch(() => false)) {
-        opened = account;
-        break;
+      for (const account of DRILLABLE) {
+        const cell = page
+          .getByRole("cell")
+          .filter({ hasText: new RegExp(`^\\s*${account}\\s*$`) })
+          .first();
+        if (!(await cell.count())) continue;
+
+        await cell.click();
+        if (await total().isVisible({ timeout: 4000 }).catch(() => false)) {
+          opened = `${account} (${year})`;
+          break;
+        }
+        // Empty or not drillable after all — shut it and try the next.
+        await page.keyboard.press("Escape");
+        await expect(modal).toBeHidden();
       }
-      // Empty or not drillable after all — shut it and try the next.
-      await page.keyboard.press("Escape");
-      await expect(modal).toBeHidden();
+      if (opened) break;
     }
-    test.skip(!opened, "no P&L ledger with detail rows in this dataset");
+    test.skip(!opened, "no P&L ledger with detail rows in any year the report offers");
 
     const unfiltered = parseIdr((await total().textContent()) ?? "");
     const rowsBefore = await modal.getByRole("row").count();
