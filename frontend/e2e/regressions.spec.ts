@@ -68,19 +68,31 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
     console.log("years offered:", JSON.stringify(years));
     expect(years.length, "the report's year selector offered nothing").toBeGreaterThan(0);
 
+    const cellFor = (account: string) =>
+      page
+        .getByRole("cell")
+        .filter({ hasText: new RegExp(`^\\s*${account}\\s*$`) })
+        .first();
+
     // Take the first drillable ledger any year actually has detail for, keeping
-    // a trail so a skip says what it saw instead of going quiet.
+    // a trail so a dead end says what it saw instead of going quiet.
     const tried: string[] = [];
     let opened = "";
     for (const year of years) {
       await yearSelect.click();
       await page.getByRole("option", { name: year, exact: true }).click();
 
+      // Changing the year refetches the statement, and the rows leave the DOM
+      // while it loads. An immediate count() reads 0 and reports the row as
+      // absent — which is exactly how the year that HAS the data got skipped
+      // while the empty one appeared to work, its rows still being cached.
+      await expect(
+        cellFor(DRILLABLE[0]),
+        `the P&L table never came back after switching to ${year}`,
+      ).toBeVisible();
+
       for (const account of DRILLABLE) {
-        const cell = page
-          .getByRole("cell")
-          .filter({ hasText: new RegExp(`^\\s*${account}\\s*$`) })
-          .first();
+        const cell = cellFor(account);
         if (!(await cell.count())) {
           tried.push(`${year} ${account}: no such row`);
           continue;
