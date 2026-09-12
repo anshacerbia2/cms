@@ -114,15 +114,21 @@ UPDATE internal_accounts SET is_non_vat_settlement = false;
 `auth.setup.ts` reports what went wrong rather than timing out silently, and the
 message names the three causes worth checking. The most common by far:
 
-**The app is pointed at the wrong API.** `frontend/.env` sets `VITE_API_URL`, and
-Vite reads it only at startup. If it says `:3001` while the API serves `:3000`,
-every request fails and the page sits on `/login`. Fix the file, then restart
-`pnpm dev` — editing it while the dev server runs changes nothing.
+**The app cannot reach the API.** Copy `.env.example` to `.env` and restart
+`pnpm dev` — Vite reads it only at startup, so editing it while the dev server
+runs changes nothing.
 
 ```
-VITE_API_URL=http://localhost:3000/api
-VITE_BACKEND_URL=http://localhost:3000
+VITE_API_URL=http://127.0.0.1:3000/api
+VITE_BACKEND_URL=http://127.0.0.1:3000
 ```
+
+The address matters more than the port. Without a `.env`, `api.ts` falls back to
+the relative `/api` and `vite.config.ts` proxies it to `http://localhost:3000` —
+which fails on Windows, because the API binds `127.0.0.1` (IPv4 only, from the
+loopback fix) while `localhost` resolves to `::1` first. Nothing is listening
+there, the proxy connects to nothing, and the page sits on `/login` with no
+visible error. Naming `127.0.0.1` explicitly removes the guess.
 
 The other two: the database has no seeded users (`npx prisma db seed` in
 `backend/`), or the seeded password is not `password` (set `E2E_ADMIN_PASSWORD`
