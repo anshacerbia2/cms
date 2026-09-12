@@ -395,18 +395,20 @@ export function ProfitLossTab() {
     searchFields: ['cogs', 'displayDate'],
   });
 
+    // Summed from the filtered rows, not the source: the table shows what the
+    // column filters left, so a total over everything contradicts the rows above it.
   const cogsTotals = useMemo(() => {
-    if (!cogsData?.rows || cogsData.rows.length === 0) return null;
+    if (!filteredCogs || filteredCogs.length === 0) return null;
     const totalsRow: any = { label: 'TOTAL' };
     cogsHeaders.forEach((h) => {
-      const sum = cogsData.rows.reduce(
+      const sum = filteredCogs.reduce(
         (acc: number, r: any) => acc + parseFloat(r[h.key] ?? '0'),
         0
       );
       totalsRow[h.key] = sum.toString();
     });
     return totalsRow;
-  }, [cogsData, cogsHeaders]);
+  }, [filteredCogs, cogsHeaders]);
 
   // --- Depreciation Filter Hook ---
   const normalizedDepr = useMemo(() => {
@@ -448,26 +450,28 @@ export function ProfitLossTab() {
 
   const tableData = plData?.tableData || [];
   
+    // Summed from the filtered rows, not the source: the table shows what the
+    // column filters left, so a total over everything contradicts the rows above it.
   const totals = useMemo(() => {
     if (isDepr) {
-      if (!deprDetails || deprDetails.length === 0) return null;
+      if (!filteredDepr || filteredDepr.length === 0) return null;
       
       const res: any = { label: "TOTAL" };
       const numericFields = ["purchasePrice", "accumulated2024", ...months, "total2025", "accumulated2025", "bookValue"];
       
       numericFields.forEach(field => {
-        const sum = deprDetails.reduce((acc: number, row: any) => acc + parseFloat(row[field] || "0"), 0);
+        const sum = filteredDepr.reduce((acc: number, row: any) => acc + parseFloat(row[field] || "0"), 0);
         res[field] = sum.toString();
       });
       
       return res;
     } else if (isSales) {
-      if (!plDetails || plDetails.length === 0) return null;
-      const sumGross = plDetails.reduce((acc: number, row: any) => acc + parseFloat(row.gross || "0"), 0);
-      const sumVat = plDetails.reduce((acc: number, row: any) => acc + parseFloat(row.vat || "0"), 0);
-      const sumVatWapu = plDetails.reduce((acc: number, row: any) => acc + parseFloat(row.vatWapu || "0"), 0);
-      const sumVatNonWapu = plDetails.reduce((acc: number, row: any) => acc + parseFloat(row.vatNonWapu || "0"), 0);
-      const sumAmount = plDetails.reduce((acc: number, row: any) => acc + parseFloat(row.amount || "0"), 0);
+      if (!filteredPlDetails || filteredPlDetails.length === 0) return null;
+      const sumGross = filteredPlDetails.reduce((acc: number, row: any) => acc + parseFloat(row.gross || "0"), 0);
+      const sumVat = filteredPlDetails.reduce((acc: number, row: any) => acc + parseFloat(row.vat || "0"), 0);
+      const sumVatWapu = filteredPlDetails.reduce((acc: number, row: any) => acc + parseFloat(row.vatWapu || "0"), 0);
+      const sumVatNonWapu = filteredPlDetails.reduce((acc: number, row: any) => acc + parseFloat(row.vatNonWapu || "0"), 0);
+      const sumAmount = filteredPlDetails.reduce((acc: number, row: any) => acc + parseFloat(row.amount || "0"), 0);
       return { 
         gross: sumGross.toString(), 
         vat: sumVat.toString(), 
@@ -477,39 +481,43 @@ export function ProfitLossTab() {
         label: "TOTAL" 
       };
     } else {
-      if (!plDetails || plDetails.length === 0) return null;
-      const sum = plDetails.reduce((acc: number, row: any) => {
+      if (!filteredPlDetails || filteredPlDetails.length === 0) return null;
+      const sum = filteredPlDetails.reduce((acc: number, row: any) => {
         return acc + parseFloat(row.amount || "0");
       }, 0);
       return { amount: sum.toString(), label: "TOTAL" };
     }
-  }, [isDepr, isSales, plDetails, deprDetails]);
+  }, [isDepr, isSales, filteredPlDetails, filteredDepr, months]);
 
+    // Summed from the filtered rows, not the source: the table shows what the
+    // column filters left, so a total over everything contradicts the rows above it.
   const salesCodeTotals = useMemo(() => {
-    if (!salesCodeDetails || salesCodeDetails.length === 0) return null;
-    const sumGross = salesCodeDetails.reduce((acc: number, row: any) => acc + parseFloat(row.gross || "0"), 0);
-    const sumVat = salesCodeDetails.reduce((acc: number, row: any) => acc + parseFloat(row.vat || "0"), 0);
-    const sumAmount = salesCodeDetails.reduce((acc: number, row: any) => acc + parseFloat(row.amount || "0"), 0);
+    if (!filteredSalesCodeDetails || filteredSalesCodeDetails.length === 0) return null;
+    const sumGross = filteredSalesCodeDetails.reduce((acc: number, row: any) => acc + parseFloat(row.gross || "0"), 0);
+    const sumVat = filteredSalesCodeDetails.reduce((acc: number, row: any) => acc + parseFloat(row.vat || "0"), 0);
+    const sumAmount = filteredSalesCodeDetails.reduce((acc: number, row: any) => acc + parseFloat(row.amount || "0"), 0);
     return {
       gross: sumGross.toString(),
       vat: sumVat.toString(),
       amount: sumAmount.toString(),
       label: "TOTAL"
     };
-  }, [salesCodeDetails]);
+  }, [filteredSalesCodeDetails]);
 
+    // Summed from the filtered rows, not the source: the table shows what the
+    // column filters left, so a total over everything contradicts the rows above it.
   const cogsGroupTotals = useMemo(() => {
-    if (!cogsGroupDetails || cogsGroupDetails.length === 0) return null;
-    const sumDebit = cogsGroupDetails.reduce((acc: number, row: any) => acc + parseFloat(row.debit || "0"), 0);
-    const sumCredit = cogsGroupDetails.reduce((acc: number, row: any) => acc + parseFloat(row.credit || "0"), 0);
-    const sumAmount = cogsGroupDetails.reduce((acc: number, row: any) => acc + parseFloat(row.amount || "0"), 0);
+    if (!filteredCogsGroupDetails || filteredCogsGroupDetails.length === 0) return null;
+    const sumDebit = filteredCogsGroupDetails.reduce((acc: number, row: any) => acc + parseFloat(row.debit || "0"), 0);
+    const sumCredit = filteredCogsGroupDetails.reduce((acc: number, row: any) => acc + parseFloat(row.credit || "0"), 0);
+    const sumAmount = filteredCogsGroupDetails.reduce((acc: number, row: any) => acc + parseFloat(row.amount || "0"), 0);
     return {
       debit: sumDebit.toString(),
       credit: sumCredit.toString(),
       amount: sumAmount.toString(),
       label: "TOTAL"
     };
-  }, [cogsGroupDetails]);
+  }, [filteredCogsGroupDetails]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">

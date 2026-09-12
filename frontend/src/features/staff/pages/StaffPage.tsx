@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Shield, Mail, KeyRound } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useUsers } from "@/features/access-control/hooks/useUsers";
@@ -79,7 +80,7 @@ export default function StaffPage() {
       }
       setIsUserDialogOpen(false);
     } catch (error: any) {
-      alert(error?.response?.data?.message ?? "Failed to save staff member.");
+      toast.error(error?.response?.data?.message ?? "Failed to save staff member.");
     }
   };
 
@@ -90,7 +91,7 @@ export default function StaffPage() {
       await changePassword.mutateAsync({ id: selected.id, password });
       setIsPasswordDialogOpen(false);
     } catch (error: any) {
-      alert(error?.response?.data?.message ?? "Failed to change password.");
+      toast.error(error?.response?.data?.message ?? "Failed to change password.");
     }
   };
 
@@ -101,7 +102,7 @@ export default function StaffPage() {
       await deleteUser.mutateAsync(user.id);
     } catch (error: any) {
       // Refused when it is the account you are signed in as.
-      alert(error?.response?.data?.message ?? "Failed to remove staff member.");
+      toast.error(error?.response?.data?.message ?? "Failed to remove staff member.");
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { Plus, Search, MoreVertical, Edit2, Trash2, KeyRound } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { usePermissions } from "../hooks/usePermissions";
@@ -62,7 +63,7 @@ export default function PermissionsPage() {
       }
       setIsDialogOpen(false);
     } catch (error: any) {
-      alert(error?.response?.data?.message ?? "Failed to save permission.");
+      toast.error(error?.response?.data?.message ?? "Failed to save permission.");
     }
   };
 
@@ -74,7 +75,7 @@ export default function PermissionsPage() {
     } catch (error: any) {
       // Refused while a menu still points at it — that menu would be left with
       // no route to derive a URL from.
-      alert(error?.response?.data?.message ?? "Failed to delete permission.");
+      toast.error(error?.response?.data?.message ?? "Failed to delete permission.");
     }
   };
 

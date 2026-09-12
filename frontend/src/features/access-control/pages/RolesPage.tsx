@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { Plus, Search, MoreVertical, Edit2, Trash2, ShieldCheck, Users } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useRoles, useRole } from "../hooks/useRoles";
@@ -81,7 +82,7 @@ export default function RolesPage() {
     } catch (error: any) {
       // The API refuses to delete a role that still has users, because the
       // schema would silently null their role_id instead of failing.
-      alert(error?.response?.data?.message ?? "Failed to delete role.");
+      toast.error(error?.response?.data?.message ?? "Failed to delete role.");
     }
   };
 

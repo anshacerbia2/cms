@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { Plus, Search, MoreVertical, Edit2, Trash2, Printer, CheckCircle2 } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { usePdfTemplates, usePdfTemplate } from "../hooks/usePdfTemplates";
@@ -66,7 +67,7 @@ export default function PdfTemplatesPage() {
       }
       setIsDialogOpen(false);
     } catch (error: any) {
-      alert(error?.response?.data?.message ?? "Failed to save template.");
+      toast.error(error?.response?.data?.message ?? "Failed to save template.");
     }
   };
 
@@ -85,7 +86,7 @@ export default function PdfTemplatesPage() {
       await deleteTemplate.mutateAsync(template.id);
     } catch (error: any) {
       // Refused when it is the only template of its type — printing would break.
-      alert(error?.response?.data?.message ?? "Failed to delete template.");
+      toast.error(error?.response?.data?.message ?? "Failed to delete template.");
     }
   };
 

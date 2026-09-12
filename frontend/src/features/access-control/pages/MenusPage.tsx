@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   Plus,
   MoreVertical,
@@ -68,7 +69,7 @@ export default function MenusPage() {
       }
       setIsDialogOpen(false);
     } catch (error: any) {
-      alert(error?.response?.data?.message ?? "Failed to save menu.");
+      toast.error(error?.response?.data?.message ?? "Failed to save menu.");
     }
   };
 
@@ -80,7 +81,7 @@ export default function MenusPage() {
     } catch (error: any) {
       // Refused while it still has children, which would otherwise be promoted
       // to top level rather than removed.
-      alert(error?.response?.data?.message ?? "Failed to delete menu.");
+      toast.error(error?.response?.data?.message ?? "Failed to delete menu.");
     }
   };
 

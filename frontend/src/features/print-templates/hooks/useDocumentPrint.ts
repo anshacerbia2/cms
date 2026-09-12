@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import api from '@/lib/api';
 
 type DocumentKind = 'invoices' | 'proposals';
@@ -20,7 +21,7 @@ export function useDocumentPrint() {
     const tab = window.open('', '_blank');
 
     if (!tab) {
-      alert('Allow pop-ups for this site to print documents.');
+      toast.error('Allow pop-ups for this site to print documents.');
       return;
     }
 

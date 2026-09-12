@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { Plus, MoreVertical, Edit2, Trash2, Search, MapPin, Landmark, QrCode, Eye } from "lucide-react";
 import { useBanks } from "../hooks/useBanks";
 import { useAuthStore } from "@/store/authStore";
@@ -54,7 +55,7 @@ export function BanksTab() {
     } catch (error: any) {
       // Internal accounts reference a bank with ON DELETE RESTRICT, so one that
       // is still in use is refused rather than silently cascading.
-      alert(error?.response?.data?.message ?? "Failed to delete this bank reference.");
+      toast.error(error?.response?.data?.message ?? "Failed to delete this bank reference.");
     }
   };
 
