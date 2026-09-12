@@ -634,8 +634,14 @@ npx prisma db seed               # roles, permissions, menus, sample master data
               <td>PARTLY_PAYMENT with item 1, then a second with item 2.</td>
               <td>Both created; neither claims the other's item; each total matches its own items.</td><td><span class="tag pass">Accept</span></td></tr>
             <tr><td class="id">INV-08</td><td>Billing an already-invoiced item</td>
-              <td>PARTLY_PAYMENT selecting an item another invoice already claimed.</td>
-              <td>Refused — <code>Some selected items are not available for invoicing in this proposal.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+              <td>PARTLY_PAYMENT selecting an item another invoice already claimed, with at least one
+                other line still free.</td>
+              <td>Refused — <code>Some selected items are not available for invoicing in this proposal.</code><br>
+                <span class="note">Three refusals guard the pool and the message depends on how much is
+                left: nothing free at all answers <code>No available items to be billed for this
+                proposal.</code> and an empty selection answers <code>Select at least one proposal item to
+                bill.</code> With a two-line proposal the pool empties first and the per-item refusal is
+                unreachable, so this needs a third line.</span></td><td><span class="tag guard">Refuse</span></td></tr>
             <tr><td class="id">INV-09</td><td>No Tax carries no VAT</td>
               <td>Create with tax NO_TAX.</td>
               <td>VAT line is zero and the VAT field is disabled on the form.</td><td><span class="tag pass">Accept</span></td></tr>

@@ -250,30 +250,50 @@ test.describe("Invoices", () => {
     const { proposal, itemIds } = await api.wonProposalWithItems([
       { productId, sellingPrice: 10_000_000, qty: 1, description: "first" },
       { productId, sellingPrice: 20_000_000, qty: 1, description: "second" },
+      // A spare line, kept free on purpose: see the refusal order below.
+      { productId, sellingPrice: 30_000_000, qty: 1, description: "third" },
     ]);
-    expect(itemIds, "model B should mint one claimable item per line").toHaveLength(2);
+    expect(itemIds, "model B should mint one claimable item per line").toHaveLength(3);
 
-    // INV-07 — the two halves bill separately and neither claims the other's line.
+    const claim = async (ids: number[]) =>
+      api.expectRefusal("post", "/invoices", {
+        proposalId: Number(proposal.id),
+        customerId: await api.firstCustomerId(),
+        invoiceNumber: uniq("INV"),
+        dueDate: "2026-10-31",
+        billingType: "PARTLY_PAYMENT",
+        taxType: "TAX_NON_WAPU",
+        vatRate: 11,
+        itemIds: ids,
+      });
+
+    // INV-07 — two of the three bill separately, neither claiming the other's line.
     const first = await api.partialInvoice(proposal.id, [itemIds[0]]);
     const second = await api.partialInvoice(proposal.id, [itemIds[1]]);
     expect(Number(first.totalAmount)).toBe(10_000_000);
     expect(Number(second.totalAmount)).toBe(20_000_000);
 
-    // INV-08 — the first line is taken now.
-    const refusal = await api.expectRefusal("post", "/invoices", {
-      proposalId: Number(proposal.id),
-      customerId: await api.firstCustomerId(),
-      invoiceNumber: uniq("INV"),
-      dueDate: "2026-10-31",
-      billingType: "PARTLY_PAYMENT",
-      taxType: "TAX_NON_WAPU",
-      vatRate: 11,
-      itemIds: [itemIds[0]],
-    });
-    expect(refusal.status).toBe(400);
-    expect(refusal.message).toContain("Some selected items are not available for invoicing");
+    // INV-08 — three refusals guard the pool and they fire in this order, so the
+    // message depends on how much is left. Asking for a taken line reports the
+    // line; asking for anything once nothing is free reports the pool. That is
+    // what the spare third line is for: with only two, the pool empties first
+    // and the per-item refusal is unreachable.
+    const taken = await claim([itemIds[0]]);
+    expect(taken.status).toBe(400);
+    expect(taken.message).toContain(
+      "Some selected items are not available for invoicing in this proposal.",
+    );
 
-    // INV-16 — deleting the invoice releases its line again.
+    const nothingChosen = await claim([]);
+    expect(nothingChosen.message).toContain("Select at least one proposal item to bill.");
+
+    const third = await api.partialInvoice(proposal.id, [itemIds[2]]);
+    expect(Number(third.totalAmount)).toBe(30_000_000);
+
+    const poolEmpty = await claim([itemIds[0]]);
+    expect(poolEmpty.message).toContain("No available items to be billed for this proposal.");
+
+    // INV-16 — deleting an invoice releases its line back into the pool.
     await api.del(`/invoices/${first.id}`);
     const reissued = await api.partialInvoice(proposal.id, [itemIds[0]]);
     expect(Number(reissued.totalAmount)).toBe(10_000_000);
