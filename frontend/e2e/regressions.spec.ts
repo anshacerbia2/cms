@@ -44,6 +44,16 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
     const total = () => modal.getByRole("row").filter({ hasText: /^TOTAL/ }).first();
     const yearSelect = page.getByRole("combobox").filter({ hasText: /^20\d{2}$/ }).first();
 
+    // Prove this is the P&L table before looking for anything in it. These row
+    // labels are hardcoded in the component's own `expenseLedgers`, so if one
+    // changes the test should say which rather than quietly find nothing.
+    const rowLabels = await page.getByRole("cell").allTextContents();
+    console.log("P&L rows on screen:", JSON.stringify(rowLabels));
+    expect(
+      rowLabels.map((label) => label.trim()),
+      "the P&L table did not render the ledger rows this test drills into",
+    ).toContain(DRILLABLE[0]);
+
     // The report opens on the current year while the finance seeders load an
     // earlier one, so on a fresh database every line reads zero with no detail
     // behind it — which is what made this test skip instead of run. Walk the
@@ -55,6 +65,7 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
     await expect(options.first()).toBeVisible();
     const years = await options.allTextContents();
     await page.keyboard.press("Escape");
+    console.log("years offered:", JSON.stringify(years));
     expect(years.length, "the report's year selector offered nothing").toBeGreaterThan(0);
 
     // Take the first drillable ledger any year actually has detail for, keeping
@@ -91,7 +102,14 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
       }
       if (opened) break;
     }
-    test.skip(!opened, `no P&L detail in any year. Tried:\n  ${tried.join("\n  ")}`);
+    console.log("drill attempts:", JSON.stringify(tried, null, 2));
+    // Deliberately not test.skip: the list reporter prints a skip as a bare
+    // dash and swallows its reason, which hid two separate faults in this test.
+    expect(
+      opened,
+      `No P&L ledger opened a detail modal with a TOTAL row. Tried:\n  ${tried.join("\n  ")}`,
+    ).not.toBe("");
+    console.log("drilled into:", opened);
 
     const unfiltered = parseIdr((await total().textContent()) ?? "");
     const rowsBefore = await modal.getByRole("row").count();
@@ -108,7 +126,11 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
     // nth(0) is "(Select All)". Needing two values below it guarantees the
     // filter leaves at least one row, so the TOTAL row stays rendered.
     const boxes = page.getByRole("checkbox");
+    // Same trap as the year list: this dropdown mounts asynchronously, so
+    // counting straight after the click reads 0 and skips the whole assertion.
+    await expect(boxes.first()).toBeVisible();
     const values = (await boxes.count()) - 1;
+    console.log("description values to filter on:", values);
     test.skip(values < 2, `${opened} detail has only one Description value to filter on`);
 
     await boxes.nth(1).uncheck();
