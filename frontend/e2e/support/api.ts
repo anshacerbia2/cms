@@ -14,7 +14,29 @@ export class Api {
     readonly token: string,
   ) {}
 
+  /**
+   * Refuses to run against anything but a local API.
+   *
+   * This suite creates and deletes projects, invoices, vouchers and roles, and
+   * toggles a settlement flag on a real account. A mistyped E2E_API_URL is all
+   * that stands between it and someone's live data, so the default is to stop.
+   * E2E_ALLOW_REMOTE_API=1 for a deliberate staging run.
+   */
+  private static assertLocal() {
+    const host = new URL(API_URL).hostname;
+    const local = ["localhost", "127.0.0.1", "::1", "0.0.0.0"].includes(host);
+
+    if (!local && !process.env.E2E_ALLOW_REMOTE_API) {
+      throw new Error(
+        `Refusing to run against ${host}: this suite writes and deletes records. ` +
+          `Point E2E_API_URL at a local stack, or set E2E_ALLOW_REMOTE_API=1 if you ` +
+          `are certain the target is disposable.`,
+      );
+    }
+  }
+
   static async signIn(role: RoleName = "admin") {
+    Api.assertLocal();
     // No baseURL on purpose. Playwright resolves a relative path with URL
     // semantics, so a leading slash replaces the whole path of the base —
     // "/auth/login" against "http://host/api" resolves to "http://host/auth/login"
@@ -91,6 +113,17 @@ export class Api {
     const id = page.data?.[0]?.id;
     if (!id) throw new Error("No products seeded — run `npx prisma db seed`.");
     return Number(id);
+  }
+
+  /**
+   * A product of this test's own, for the scenarios that change a price.
+   *
+   * Patching a price rotates the version — the active row is retired and a new
+   * one created — so there is no way to put a seeded product back as it was.
+   * Creating a throwaway keeps that history out of shared data entirely.
+   */
+  async createProduct(price = 5_000_000) {
+    return this.post("/products", { name: uniq("PROD"), unit: "unit", price });
   }
 
   /** An internal account, optionally one flagged as the non-VAT settlement account. */

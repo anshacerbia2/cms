@@ -85,7 +85,10 @@ test.describe("Proposals", () => {
 
   test("PRO-12 an item keeps the price it was quoted at", async () => {
     const api = await Api.signIn();
-    const productId = await api.firstProductId();
+    // Its own product: this test changes a price, and a price change rotates the
+    // version rather than overwriting it, so a seeded product could not be put
+    // back as it was.
+    const productId = Number((await api.createProduct(7_000_000)).id);
     const project = await api.createProject();
     const proposal = await api.createProposal(project.id, {
       pricingModel: "B",
