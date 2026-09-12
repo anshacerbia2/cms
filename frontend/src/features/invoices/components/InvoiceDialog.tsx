@@ -20,6 +20,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -361,15 +362,15 @@ export function InvoiceDialog({
                       />
                     )}
 
-                    <FormItem>
-                      <FormLabel className={LABEL}>Customer</FormLabel>
+                    <div className="space-y-2">
+                      <Label className={LABEL}>Customer</Label>
                       <Input
                         value={customer?.name || ""}
                         readOnly
                         placeholder="Derived from the billing source"
                         className={`${FIELD} opacity-70`}
                       />
-                    </FormItem>
+                    </div>
 
                     <FormField
                       control={form.control}
