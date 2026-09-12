@@ -1,0 +1,1028 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sales Pipeline Acceptance Tests</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ink:        #131a2e;
+    --ink-soft:   #4a5468;
+    --ink-faint:  #737e94;
+    --navy:       #2f4392;
+    --navy-soft:  #eaedf7;
+    --gold:       #a97706;
+    --gold-soft:  #fbf3e2;
+    --paper:      #f5f7fa;
+    --surface:    #ffffff;
+    --rule:       #dde2ea;
+    --rule-soft:  #eaeef4;
+    --pass:       #14724a;
+    --pass-soft:  #e6f3ec;
+    --guard:      #8a5d05;
+    --guard-soft: #fcf2df;
+    --stop:       #a92820;
+    --stop-soft:  #fbeceb;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink:        #e8ecf4;
+      --ink-soft:   #a7b1c4;
+      --ink-faint:  #7d879b;
+      --navy:       #8fa4e8;
+      --navy-soft:  #1d2542;
+      --gold:       #e0ac4a;
+      --gold-soft:  #2e2617;
+      --paper:      #0e1320;
+      --surface:    #161c2c;
+      --rule:       #2a3349;
+      --rule-soft:  #222a3d;
+      --pass:       #5cc08c;
+      --pass-soft:  #14281f;
+      --guard:      #e0b062;
+      --guard-soft: #2b2314;
+      --stop:       #ef8b83;
+      --stop-soft:  #2e1917;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink:        #e8ecf4;
+    --ink-soft:   #a7b1c4;
+    --ink-faint:  #7d879b;
+    --navy:       #8fa4e8;
+    --navy-soft:  #1d2542;
+    --gold:       #e0ac4a;
+    --gold-soft:  #2e2617;
+    --paper:      #0e1320;
+    --surface:    #161c2c;
+    --rule:       #2a3349;
+    --rule-soft:  #222a3d;
+    --pass:       #5cc08c;
+    --pass-soft:  #14281f;
+    --guard:      #e0b062;
+    --guard-soft: #2b2314;
+    --stop:       #ef8b83;
+    --stop-soft:  #2e1917;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .shell {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 48px;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 40px 20px 96px;
+  }
+  @media (min-width: 1080px) {
+    .shell { grid-template-columns: 218px minmax(0, 1fr); gap: 56px; padding-top: 56px; }
+  }
+
+  /* ---------- contents rail ---------- */
+  .rail { font-size: 13px; }
+  @media (min-width: 1080px) {
+    .rail { position: sticky; top: 40px; align-self: start; max-height: calc(100vh - 80px); overflow-y: auto; }
+  }
+  .rail-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+  }
+  .rail ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+  .rail a {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 6px;
+    padding: 5px 8px 5px 0;
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-radius: 5px;
+    transition: color .15s, background .15s;
+  }
+  .rail a:hover, .rail a:focus-visible { color: var(--navy); background: var(--navy-soft); }
+  .rail a code { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); padding-left: 6px; }
+  .rail a:hover code { color: var(--navy); }
+
+  /* ---------- masthead ---------- */
+  .masthead { border-bottom: 2px solid var(--ink); padding-bottom: 22px; margin-bottom: 40px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0 0 12px;
+  }
+  h1 {
+    font-size: clamp(30px, 5vw, 44px);
+    font-weight: 700;
+    letter-spacing: -.028em;
+    line-height: 1.06;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+  .standfirst { font-size: 17px; color: var(--ink-soft); max-width: 62ch; margin: 0; }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    margin-top: 24px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-faint);
+  }
+  .meta b { color: var(--ink); font-weight: 500; }
+
+  /* ---------- sections ---------- */
+  section { margin-bottom: 60px; scroll-margin-top: 28px; }
+  h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin: 0 0 6px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule);
+  }
+  h2 .num { font-family: var(--mono); font-size: 11px; color: var(--gold); letter-spacing: .08em; }
+  h3 {
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -.015em;
+    margin: 34px 0 10px;
+    text-wrap: balance;
+  }
+  h4 {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 26px 0 10px;
+  }
+  p { max-width: 68ch; margin: 0 0 14px; }
+  .lede { font-size: 16px; color: var(--ink-soft); margin-top: 16px; }
+  a { color: var(--navy); }
+  code {
+    font-family: var(--mono);
+    font-size: .86em;
+    background: var(--rule-soft);
+    padding: .1em .35em;
+    border-radius: 3px;
+  }
+  ul, ol.plain { max-width: 68ch; padding-left: 20px; margin: 0 0 14px; }
+  li { margin-bottom: 5px; }
+
+  /* ---------- flow chain ---------- */
+  .flow { margin: 18px 0 26px; overflow-x: auto; padding-bottom: 4px; }
+  .chain { display: flex; align-items: stretch; gap: 0; min-width: max-content; }
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 10px 14px;
+    min-width: 130px;
+    max-width: 180px;
+  }
+  .step:first-child { border-radius: 6px 0 0 6px; }
+  .step:last-child { border-radius: 0 6px 6px 0; }
+  .step + .step { border-left: none; }
+  .step .k {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: block;
+    margin-bottom: 3px;
+  }
+  .step .v { font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; display: block; }
+  .step .n { font-size: 11.5px; color: var(--ink-soft); display: block; margin-top: 3px; line-height: 1.4; }
+  .step.term { background: var(--navy-soft); border-color: var(--navy); }
+  .step.term .v { color: var(--navy); }
+  .branch-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    padding: 0 0 6px 2px;
+  }
+
+  /* ---------- tables ---------- */
+  .tablewrap {
+    overflow-x: auto;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--surface);
+    margin: 16px 0 10px;
+  }
+  table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 13.5px; }
+  thead th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 11px 14px;
+    background: var(--rule-soft);
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  tbody td { padding: 12px 14px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.id { font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--navy); white-space: nowrap; }
+  td.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; font-family: var(--mono); font-size: 12.5px; }
+  table code { background: none; padding: 0; color: var(--ink-soft); }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .tag.pass  { background: var(--pass-soft);  color: var(--pass); }
+  .tag.guard { background: var(--guard-soft); color: var(--guard); }
+  .tag.stop  { background: var(--stop-soft);  color: var(--stop); }
+
+  /* ---------- callout ---------- */
+  .note {
+    border-left: 3px solid var(--gold);
+    background: var(--gold-soft);
+    padding: 14px 18px;
+    margin: 20px 0;
+    border-radius: 0 6px 6px 0;
+  }
+  .note p { margin: 0 0 8px; max-width: 64ch; }
+  .note p:last-child { margin: 0; }
+  .note .h {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  pre {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.55;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 14px 0;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  .kv {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 20px;
+    font-size: 13.5px;
+    margin: 14px 0 20px;
+  }
+  .kv dt { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); padding-top: 2px; }
+  .kv dd { margin: 0; }
+
+  :focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; border-radius: 3px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <nav class="rail" aria-label="Contents">
+    <p class="rail-title">Contents</p>
+    <ol>
+      <li><a href="#scope"><code>00</code><span>Scope &amp; conventions</span></a></li>
+      <li><a href="#env"><code>01</code><span>Environment</span></a></li>
+      <li><a href="#projects"><code>02</code><span>Projects</span></a></li>
+      <li><a href="#proposals"><code>03</code><span>Proposals &amp; BoQ</span></a></li>
+      <li><a href="#invoices"><code>04</code><span>Invoices</span></a></li>
+      <li><a href="#rv"><code>05</code><span>Receive Vouchers</span></a></li>
+      <li><a href="#pv"><code>06</code><span>Payment Vouchers</span></a></li>
+      <li><a href="#access"><code>07</code><span>Access control</span></a></li>
+      <li><a href="#print"><code>08</code><span>Print templates</span></a></li>
+      <li><a href="#regress"><code>09</code><span>Repaired regressions</span></a></li>
+      <li><a href="#playwright"><code>10</code><span>Notes for Playwright</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="masthead">
+      <p class="eyebrow">Acceptance plan &middot; branch <code style="background:none;padding:0;color:inherit">dev</code></p>
+      <h1>Sales Pipeline Acceptance Tests</h1>
+      <p class="standfirst">Every feature added after <code>bda61dc</code>, the flow it belongs to end to end,
+        and the manual scenario that proves it — written so each row becomes one Playwright test.</p>
+      <div class="meta">
+        <span>Baseline <b>bda61dc</b></span>
+        <span>Head <b>d3531c0</b></span>
+        <span><b>26</b> commits</span>
+        <span><b>8</b> feature areas</span>
+        <span><b>96</b> scenarios</span>
+      </div>
+    </header>
+
+    <section id="scope">
+      <h2><span class="num">00</span> Scope &amp; conventions</h2>
+      <p class="lede">The baseline <code>bda61dc</code> is the last commit before the sales pipeline work began.
+        Everything below is new since then: five pipeline modules, access control, document printing,
+        and the fixes found auditing them.</p>
+
+      <h4>Outcome tags</h4>
+      <p>Every scenario is tagged by what a pass looks like, because roughly a third of these tests pass
+        by being <em>refused</em>. A rejection is the feature working.</p>
+      <ul>
+        <li><span class="tag pass">Accept</span> the action succeeds and state changes as described.</li>
+        <li><span class="tag guard">Refuse</span> the action is rejected with a specific message. The test fails
+          if it succeeds <em>or</em> if it fails with a different message.</li>
+        <li><span class="tag stop">Absent</span> the control is not offered at all — no button, no menu item.</li>
+      </ul>
+
+      <h4>Test IDs</h4>
+      <p>Prefix marks the module, so <code>INV-07</code> stays stable if scenarios are inserted above it.
+        Use the ID verbatim as the Playwright test title.</p>
+      <div class="kv">
+        <dt>PRJ</dt><dd>Projects</dd>
+        <dt>PRO</dt><dd>Proposals and BoQ</dd>
+        <dt>INV</dt><dd>Invoices</dd>
+        <dt>RV / PV</dt><dd>Receive and Payment Vouchers</dd>
+        <dt>ACL</dt><dd>Roles, permissions, menus, staff</dd>
+        <dt>PRT</dt><dd>Print templates and Print actions</dd>
+        <dt>REG</dt><dd>Regressions repaired during the audit</dd>
+      </div>
+    </section>
+
+    <section id="env">
+      <h2><span class="num">01</span> Environment</h2>
+
+      <h4>Database, from empty</h4>
+      <pre><code>createdb cms_local
+cd backend
+npx prisma generate
+npx prisma migrate deploy        # init + sales_pipeline + pdf_templates + non_vat_flag
+npx prisma db seed               # roles, permissions, menus, sample master data</code></pre>
+      <p><code>db seed</code> already chains the sales pipeline, access control, print template and
+        master data seeders. Run it <strong>only</strong> against a local database — <code>auth.seeder.ts</code>
+        wipes the menu tables and the finance seeders overwrite real rows. Production runs the wrappers in
+        <code>prisma/scripts/</code> one at a time instead.</p>
+
+      <h4>Seeded accounts</h4>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Email</th><th>Role</th><th class="num">Permissions</th><th>Used for</th></tr></thead>
+          <tbody>
+            <tr><td><code>admin@pcmi.com</code></td><td>admin</td><td class="num">123</td><td>Every Accept scenario</td></tr>
+            <tr><td><code>viewer@pcmi.com</code></td><td>viewer</td><td class="num">44</td><td>Read-only and Absent scenarios</td></tr>
+            <tr><td><code>dir@pcmi.com</code></td><td>president_director</td><td class="num">17</td><td>Narrow-role sidebar checks</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Pages under test</h4>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Sidebar</th><th>Route</th><th>Permission gate</th></tr></thead>
+          <tbody>
+            <tr><td>Operations › Projects</td><td><code>/projects</code></td><td><code>projects.index</code></td></tr>
+            <tr><td>Operations › Proposals</td><td><code>/proposals</code></td><td><code>proposals.index</code></td></tr>
+            <tr><td>Transactions › Invoices</td><td><code>/invoices</code></td><td><code>invoices.index</code></td></tr>
+            <tr><td>Transactions › Receive Vouchers</td><td><code>/receive-vouchers</code></td><td><code>receive-vouchers.index</code></td></tr>
+            <tr><td>Transactions › Payment Vouchers</td><td><code>/payment-vouchers</code></td><td><code>payment-vouchers.index</code></td></tr>
+            <tr><td>Master Data › Staff</td><td><code>/users</code></td><td><code>users.index</code></td></tr>
+            <tr><td>Settings › Roles</td><td><code>/roles</code></td><td><code>roles.index</code></td></tr>
+            <tr><td>Settings › Permissions</td><td><code>/permissions</code></td><td><code>permissions.index</code></td></tr>
+            <tr><td>Settings › Menus</td><td><code>/menus</code></td><td><code>menus.index</code></td></tr>
+            <tr><td>Settings › Print Templates</td><td><code>/pdf-templates</code></td><td><code>pdf-templates.index</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Sidebar URLs are derived from the permission route — <code>roles.index</code> becomes
+        <code>/roles</code> — so a menu whose route is wrong lands on a blank page rather than erroring.
+        Worth asserting the sidebar link target, not just that the entry is present.</p>
+    </section>
+
+    <section id="projects">
+      <h2><span class="num">02</span> Projects</h2>
+      <p class="lede">A project's <code>type</code> is the single decision that fixes its whole downstream path,
+        and it cannot be reasoned about later — every invoice rule checks it. This is the branch to cover first.</p>
+
+      <h4>Flow A — Regular: billed through a proposal</h4>
+      <div class="flow">
+        <div class="branch-label">type = REGULAR</div>
+        <div class="chain">
+          <div class="step"><span class="k">Step 1</span><span class="v">Project</span><span class="n">type REGULAR, customer, dates, value</span></div>
+          <div class="step"><span class="k">Step 2</span><span class="v">Proposal</span><span class="n">pricing model, fee, VAT rate</span></div>
+          <div class="step"><span class="k">Step 3</span><span class="v">Sales items</span><span class="n">lump sum or per-line</span></div>
+          <div class="step"><span class="k">Step 4</span><span class="v">Status WIN</span><span class="n">mints the sales code</span></div>
+          <div class="step"><span class="k">Step 5</span><span class="v">Invoice</span><span class="n">against selected items</span></div>
+          <div class="step term"><span class="k">Step 6</span><span class="v">Receive Voucher</span><span class="n">settles the balance</span></div>
+        </div>
+      </div>
+
+      <h4>Flow B — FIT: billed directly, no proposal</h4>
+      <div class="flow">
+        <div class="branch-label">type = FIT</div>
+        <div class="chain">
+          <div class="step"><span class="k">Step 1</span><span class="v">Project</span><span class="n">type FIT, customer, dates, value</span></div>
+          <div class="step"><span class="k">Step 2</span><span class="v">Invoice</span><span class="n">amount entered directly</span></div>
+          <div class="step"><span class="k">Step 3</span><span class="v">Summary item</span><span class="n">one line, created for you</span></div>
+          <div class="step term"><span class="k">Step 4</span><span class="v">Receive Voucher</span><span class="n">settles the balance</span></div>
+        </div>
+      </div>
+      <p>A FIT project has <strong>no proposal step at all</strong> — the amount is typed on the invoice.
+        Attempting to attach a proposal to one is refused, and so is billing a REGULAR project without going
+        through a WIN proposal. Those two refusals are what keep the paths from blurring.</p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>ID</th><th>Scenario</th><th>Steps</th><th>Expected</th><th>Tag</th></tr></thead>
+          <tbody>
+            <tr><td class="id">PRJ-01</td><td>Create a REGULAR project</td>
+              <td>Projects › ADD PROJECT. Name, ref doc no, value, start/end/due dates, customer, type REGULAR.</td>
+              <td>Row appears; a generated project code is shown; type reads REGULAR.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRJ-02</td><td>Create a FIT project</td>
+              <td>Same, type FIT.</td>
+              <td>Row appears with type FIT.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRJ-03</td><td>End date before start date</td>
+              <td>Set end date earlier than start date, save.</td>
+              <td>Refused — <code>End date must be after start date</code>.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRJ-04</td><td>Due date outside the project window</td>
+              <td>Due date after end date, save.</td>
+              <td>Refused — <code>Due date must fall between start date and end date</code>.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRJ-05</td><td>Unknown customer</td>
+              <td><code>POST /api/projects</code> with a <code>customerId</code> that does not exist.</td>
+              <td>Refused — <code>Customer with ID … not found</code>.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRJ-06</td><td>Delete an empty project</td>
+              <td>Create a project, touch nothing else, delete it.</td>
+              <td>Removed from the list.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRJ-07</td><td>Delete a project that has a proposal</td>
+              <td>Create project → proposal, then delete the project.</td>
+              <td>Refused — <code>This project still has 1 proposal(s). Delete those first.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRJ-08</td><td>Delete a project that has an invoice</td>
+              <td>FIT project → invoice, then delete the project.</td>
+              <td>Refused, message names the invoice count. <strong>Regression guard:</strong> this used to succeed and orphan the invoice.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRJ-09</td><td>Viewer cannot write</td>
+              <td>Sign in as viewer, open Projects.</td>
+              <td>List renders; ADD PROJECT, Edit and Delete are not present.</td><td><span class="tag stop">Absent</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="proposals">
+      <h2><span class="num">03</span> Proposals &amp; BoQ</h2>
+      <p class="lede">Pricing model decides how the total is built, and it is not cosmetic: model A ignores line
+        items entirely, the others multiply them. WIN is a one-way door.</p>
+
+      <h4>How each pricing model computes the total</h4>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Model</th><th>Input the form collects</th><th>Total</th></tr></thead>
+          <tbody>
+            <tr><td><code>A</code></td><td>One lump-sum figure, no line items</td><td>The figure as entered</td></tr>
+            <tr><td><code>B</code></td><td>Line items with qty and selling price</td><td>Σ (qty × price)</td></tr>
+            <tr><td><code>C</code> <code>D</code></td><td>Line items with up to four titled multipliers</td><td>Σ (price × each non-zero title value)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Invoice amount is then <code>items + management fee + VAT</code>, where the fee is either a
+        percentage of items or a flat figure, and VAT is skipped entirely for a No Tax invoice.</p>
+
+      <h4>Flow</h4>
+      <div class="flow">
+        <div class="chain">
+          <div class="step"><span class="k">Step 1</span><span class="v">Draft</span><span class="n">on a REGULAR project</span></div>
+          <div class="step"><span class="k">Step 2</span><span class="v">Pricing</span><span class="n">model, fee type, VAT rate</span></div>
+          <div class="step"><span class="k">Step 3</span><span class="v">Items</span><span class="n">total recomputes on save</span></div>
+          <div class="step"><span class="k">Step 4</span><span class="v">Submitted</span><span class="n">still editable</span></div>
+          <div class="step term"><span class="k">Step 5</span><span class="v">WIN</span><span class="n">locked; BoQ and invoices unlock</span></div>
+        </div>
+      </div>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>ID</th><th>Scenario</th><th>Steps</th><th>Expected</th><th>Tag</th></tr></thead>
+          <tbody>
+            <tr><td class="id">PRO-01</td><td>Model A lump sum</td>
+              <td>New proposal on a REGULAR project, model A, enter 40,000,000.</td>
+              <td>Items total is exactly 40,000,000; no line items stored.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRO-02</td><td>Model B per-line</td>
+              <td>Model B, one item: price 10,000,000, qty 5.</td>
+              <td>Items total 50,000,000.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRO-03</td><td>Line items sent with model A</td>
+              <td><code>POST /api/proposals</code> with <code>pricingModel: "A"</code> and a non-empty <code>items</code> array.</td>
+              <td>Refused — <code>Pricing model A bills a single lump sum. Send totalAmountItems instead of items.</code>
+                <strong>Regression guard:</strong> the items used to be dropped silently, producing a zero-total proposal.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRO-04</td><td>Management fee as a percentage</td>
+              <td>Model B total 50,000,000, fee PERCENT 4, VAT 11.</td>
+              <td>Fee 2,000,000; sales 52,000,000; VAT 5,720,000; total 57,720,000.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRO-05</td><td>Proposal on a FIT project</td>
+              <td>Try to create a proposal against a FIT project.</td>
+              <td>Refused — <code>FIT projects bill directly and cannot have proposals.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRO-06</td><td>Mark WIN</td>
+              <td>Set status to WIN.</td>
+              <td>Status WIN; a sales code now exists where it was empty before.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRO-07</td><td>Edit a WIN proposal</td>
+              <td>Change any field on a WIN proposal.</td>
+              <td>Refused — <code>Proposal with status 'WIN' cannot be modified.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRO-08</td><td>WIN row offers no Edit or Delete</td>
+              <td>Open the row menu on a WIN proposal.</td>
+              <td>Neither action is listed; the row notes it is won and locked.</td><td><span class="tag stop">Absent</span></td></tr>
+            <tr><td class="id">PRO-09</td><td>Attach a BoQ to a WIN proposal</td>
+              <td>BoQ dialog on a WIN proposal, add an item with product, qty and freq.</td>
+              <td>BoQ saved and listed against the proposal.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRO-10</td><td>Attach a BoQ to a non-WIN proposal</td>
+              <td>Same against a DRAFT proposal.</td>
+              <td>Refused — a BoQ binds only to a WIN proposal.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRO-11</td><td>Product without an active price</td>
+              <td>Add a BoQ or proposal item for a product that has no active price version.</td>
+              <td>Refused — <code>Product … has no active price version.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRO-12</td><td>Price is snapshotted</td>
+              <td>Save a proposal item, then change the product's master price, then reopen the proposal.</td>
+              <td>The proposal still shows the price it was quoted at.</td><td><span class="tag pass">Accept</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="invoices">
+      <h2><span class="num">04</span> Invoices</h2>
+      <p class="lede">Two creation paths that must not cross, three tax types, two billing types, and a
+        settlement rule that only switches on once someone designates an account.</p>
+
+      <h4>Which path the API takes</h4>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Payload carries</th><th>Path</th><th>Amount comes from</th><th>Items</th></tr></thead>
+          <tbody>
+            <tr><td><code>proposalId</code></td><td>Regular</td><td>Sum of the selected proposal items</td><td>Existing items, claimed by this invoice</td></tr>
+            <tr><td><code>projectId</code> of a FIT project</td><td>FIT</td><td><code>totalAmount</code> as entered</td><td>One summary item, generated</td></tr>
+            <tr><td>Neither, or a REGULAR <code>projectId</code></td><td colspan="3">Refused — <code>Proposal ID or a valid FIT Project ID is required.</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Billing type</h4>
+      <p><code>FULL_AMOUNT</code> claims every item on the proposal and is refused if any other invoice already
+        exists against it. <code>PARTLY_PAYMENT</code> takes a chosen subset, so a proposal can be billed across
+        several invoices without double-billing a line.</p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>ID</th><th>Scenario</th><th>Steps</th><th>Expected</th><th>Tag</th></tr></thead>
+          <tbody>
+            <tr><td class="id">INV-01</td><td>Regular invoice, full amount</td>
+              <td>WIN proposal with items → ADD INVOICE, billing FULL_AMOUNT, tax TAX_NON_WAPU.</td>
+              <td>Created; total equals the proposal items; balance due equals items + fee + VAT.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">INV-02</td><td>FIT invoice, direct amount</td>
+              <td>FIT project → ADD INVOICE, amount 25,000,000, fee PERCENT 5, tax NO_TAX.</td>
+              <td>Total 25,000,000; invoice amount 26,250,000; balance due 26,250,000; one summary item.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">INV-03</td><td>Invoice from a non-WIN proposal</td>
+              <td>Try to invoice a SUBMITTED proposal.</td>
+              <td>Refused — <code>Invoice can only be generated for win proposals.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">INV-04</td><td>Invoice a REGULAR project directly</td>
+              <td><code>POST /api/invoices</code> with a REGULAR <code>projectId</code> and no proposal.</td>
+              <td>Refused — <code>Proposal ID or a valid FIT Project ID is required.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">INV-05</td><td>Zero-amount invoice</td>
+              <td>FIT invoice with <code>totalAmount: 0</code>.</td>
+              <td>Refused — <code>… produces a zero invoice amount. An invoice must bill a positive amount.</code>
+                <strong>Regression guard:</strong> this used to be accepted and created an invoice born already settled.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">INV-06</td><td>Second FULL invoice on one proposal</td>
+              <td>Invoice a proposal FULL_AMOUNT, then try a second FULL invoice.</td>
+              <td>Refused — <code>Cannot create a 'Full' invoice because other invoices already exist for this proposal.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">INV-07</td><td>Partial billing across two invoices</td>
+              <td>PARTLY_PAYMENT with item 1, then a second with item 2.</td>
+              <td>Both created; neither claims the other's item; each total matches its own items.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">INV-08</td><td>Billing an already-invoiced item</td>
+              <td>PARTLY_PAYMENT selecting an item another invoice already claimed.</td>
+              <td>Refused — <code>Some selected items are not available for invoicing in this proposal.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">INV-09</td><td>No Tax carries no VAT</td>
+              <td>Create with tax NO_TAX.</td>
+              <td>VAT line is zero and the VAT field is disabled on the form.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">INV-10</td><td>No Tax rule dormant</td>
+              <td>With no internal account marked as non-VAT, create a NO_TAX invoice naming no account.</td>
+              <td>Accepted. The rule stays off while nothing is designated.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">INV-11</td><td>No Tax rule active, account missing</td>
+              <td>Mark an account “Non-VAT settlement account”, then create a NO_TAX invoice with no account.</td>
+              <td>Refused — <code>A No Tax invoice must name the non-VAT settlement account.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">INV-12</td><td>No Tax rule active, wrong account</td>
+              <td>Same, but settle to a different account.</td>
+              <td>Refused; the message names the designated account.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">INV-13</td><td>No Tax rule active, right account</td>
+              <td>Same, settling to the marked account.</td>
+              <td>Accepted.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">INV-14</td><td>Taxed invoice is unaffected</td>
+              <td>With a designated account, create TAX_NON_WAPU settling anywhere.</td>
+              <td>Accepted. The rule applies to No Tax only.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">INV-15</td><td>Delete an invoice with a voucher</td>
+              <td>Apply an RV, then delete the invoice.</td>
+              <td>Refused — detach the RV first.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">INV-16</td><td>Deleting returns items to the pool</td>
+              <td>Partially invoice a proposal, delete that invoice, invoice the same item again.</td>
+              <td>Second invoice succeeds; the item was released.</td><td><span class="tag pass">Accept</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="rv">
+      <h2><span class="num">05</span> Receive Vouchers</h2>
+      <p class="lede">An RV is an accounting document, not a discount. It reduces an invoice through five
+        separate fields, and every one of them counts against the outstanding balance.</p>
+
+      <h4>The arithmetic each test asserts</h4>
+      <pre><code>invoiceAmount = totalAmount + managementFee + VAT      (VAT = 0 when NO_TAX)
+
+balanceDue    = max(0, invoiceAmount
+                       − amountApplied
+                       − ppnWapuDeduction
+                       − pph23Deduction
+                       − bankCharge
+                       − othersAdjustment)
+
+paymentStatus = FULLY_PAID   when balanceDue ≤ 0 and invoiceAmount > 0
+                PARTLY_PAID  when any amount has been applied
+                UNPAID       otherwise</code></pre>
+
+      <h4>Flow</h4>
+      <div class="flow">
+        <div class="chain">
+          <div class="step"><span class="k">Step 1</span><span class="v">Voucher header</span><span class="n">number, date, payer, payment form</span></div>
+          <div class="step"><span class="k">Step 2</span><span class="v">Allocations</span><span class="n">one row per invoice</span></div>
+          <div class="step"><span class="k">Step 3</span><span class="v">Deductions</span><span class="n">WAPU, PPh23, bank charge, other</span></div>
+          <div class="step term"><span class="k">Step 4</span><span class="v">Reconciled</span><span class="n">balance and status recomputed</span></div>
+        </div>
+      </div>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>ID</th><th>Scenario</th><th>Steps</th><th>Expected</th><th>Tag</th></tr></thead>
+          <tbody>
+            <tr><td class="id">RV-01</td><td>Partial settlement</td>
+              <td>Invoice of 52,000,000. RV applying 5,000,000.</td>
+              <td>Balance due 47,000,000; received 5,000,000; status PARTLY_PAID.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">RV-02</td><td>Full settlement</td>
+              <td>Apply the whole invoice amount.</td>
+              <td>Balance due 0; status FULLY_PAID.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">RV-03</td><td>Edit an existing RV upward</td>
+              <td>RV of 5,000,000 on a 52,000,000 invoice, edited to 8,000,000.</td>
+              <td>Balance due 44,000,000 — <em>not</em> 39,000,000. <strong>Regression guard:</strong> the ceiling
+                used to be measured against a balance the RV's own effect had already lowered.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">RV-04</td><td>Deductions reduce the balance too</td>
+              <td>Apply 8,000,000 plus PPh23 160,000 and bank charge 6,500.</td>
+              <td>Balance due 43,833,500; the invoice's PPh23 and bank charge totals carry those figures.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">RV-05</td><td>Over-allocation to one invoice</td>
+              <td>Allocate 100,000,000 to a 52,000,000 invoice.</td>
+              <td>Refused; message names the invoice code and its outstanding balance.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">RV-06</td><td>Allocations exceed the voucher</td>
+              <td>RV of 5,000,000 split across two invoices totalling 9,000,000.</td>
+              <td>Refused — <code>Total allocated (…) exceeds the Receive Voucher amount (…).</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">RV-07</td><td>One RV across several invoices</td>
+              <td>RV of 10,000,000 split 6,000,000 / 4,000,000 over two invoices.</td>
+              <td>Both balances drop by their own share.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">RV-08</td><td>Invoice frozen once settled</td>
+              <td>With an RV attached, change the invoice's tax type, then its total, then its customer.</td>
+              <td>Each refused — <code>Cannot change sensitive field '…' because this invoice already has linked Receive Vouchers.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">RV-09</td><td>Deleting an RV restores the invoice</td>
+              <td>Delete the RV from RV-04.</td>
+              <td>Balance due returns to the full invoice amount; received 0; status UNPAID.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">RV-10</td><td>Unknown invoice in an allocation</td>
+              <td>Allocate to an invoice id that does not exist.</td>
+              <td>Refused — <code>Invoice with ID … not found.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="pv">
+      <h2><span class="num">06</span> Payment Vouchers</h2>
+      <p class="lede">A PV records money going out. It has no reconciliation of its own — nothing recomputes
+        when one is saved — so the tests cover persistence and the payee shape.</p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>ID</th><th>Scenario</th><th>Steps</th><th>Expected</th><th>Tag</th></tr></thead>
+          <tbody>
+            <tr><td class="id">PV-01</td><td>Create a PV</td>
+              <td>ADD PV. Number, issuing date, amount, payable type SUPPLIER, manual payee name, category, source payment form.</td>
+              <td>Row appears with the amount and payee as entered.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PV-02</td><td>Optional fields persist</td>
+              <td>Include expense type, due date, payment date and description.</td>
+              <td>Reopening the row shows every field unchanged.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PV-03</td><td>Edit an amount</td>
+              <td>Change the amount and save.</td>
+              <td>New amount listed; no invoice balance anywhere changes.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PV-04</td><td>Delete a PV</td>
+              <td>Delete a PV not referenced by an RV.</td>
+              <td>Removed from the list.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PV-05</td><td>Purchase order id is rejected</td>
+              <td><code>POST /api/payment-vouchers</code> including <code>purchaseOrderId</code>.</td>
+              <td>Refused — the field is not accepted. There is no purchase order table for it to point at, and it
+                previously let callers store an id referencing nothing.</td><td><span class="tag guard">Refuse</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="access">
+      <h2><span class="num">07</span> Access control</h2>
+      <p class="lede">Before this branch the only endpoint was <code>GET /users</code>; every permission had to be
+        added by editing a seeder. Roles, permissions, menus and staff are now managed in the app.</p>
+
+      <h4>Flow — granting someone access to a new page</h4>
+      <div class="flow">
+        <div class="chain">
+          <div class="step"><span class="k">Step 1</span><span class="v">Permission</span><span class="n">module.action, e.g. projects.index</span></div>
+          <div class="step"><span class="k">Step 2</span><span class="v">Menu</span><span class="n">linked to that permission</span></div>
+          <div class="step"><span class="k">Step 3</span><span class="v">Role</span><span class="n">permission ticked, menu ticked</span></div>
+          <div class="step"><span class="k">Step 4</span><span class="v">Staff</span><span class="n">assigned that role</span></div>
+          <div class="step term"><span class="k">Step 5</span><span class="v">Sign in</span><span class="n">entry appears, page opens</span></div>
+        </div>
+      </div>
+      <div class="note">
+        <span class="h">Both halves are required</span>
+        <p>A menu ticked without its permission shows a sidebar entry that 403s on open. A permission granted
+          without its menu makes the page reachable only by typing the URL. Test both halves separately —
+          <code>ACL-08</code> and <code>ACL-09</code>.</p>
+      </div>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>ID</th><th>Scenario</th><th>Steps</th><th>Expected</th><th>Tag</th></tr></thead>
+          <tbody>
+            <tr><td class="id">ACL-01</td><td>Create a role with grants</td>
+              <td>Roles › ADD ROLE. Name, slug, tick a module's permissions via its select-all, tick a sidebar entry.</td>
+              <td>Row shows the permission and menu counts just ticked.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">ACL-02</td><td>Rename without resending grants</td>
+              <td>Edit only the description and save.</td>
+              <td>Grant counts unchanged. An omitted list means “leave alone”.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">ACL-03</td><td>Revoke everything</td>
+              <td>Untick every permission and save.</td>
+              <td>Permission count 0. An empty list means “revoke all”, which is a different thing from omitting it.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">ACL-04</td><td>Duplicate slug</td>
+              <td>Create a role with slug <code>admin</code>.</td>
+              <td>Refused — <code>Role slug "admin" is already taken.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">ACL-05</td><td>Delete a role in use</td>
+              <td>Delete a role that staff are assigned to.</td>
+              <td>Refused; message names how many users. Deleting would silently strip those accounts of every permission.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">ACL-06</td><td>Create a permission</td>
+              <td>Permissions › ADD PERMISSION, route <code>reports.index</code>.</td>
+              <td>Created and listed.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">ACL-07</td><td>Malformed route</td>
+              <td>Route <code>Not A Route</code>.</td>
+              <td>Refused — must look like <code>module.action</code>, lowercase.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">ACL-08</td><td>Menu without its permission</td>
+              <td>Give a role a menu but not the matching permission; sign in as that user and open the entry.</td>
+              <td>Entry is visible; the page refuses to load its data.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">ACL-09</td><td>Permission without its menu</td>
+              <td>Grant the permission, withhold the menu; sign in and navigate to the URL directly.</td>
+              <td>No sidebar entry, but the page works when typed.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">ACL-10</td><td>Delete a permission a menu uses</td>
+              <td>Delete <code>roles.index</code>.</td>
+              <td>Refused; the menu would be left with no route to derive a URL from.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">ACL-11</td><td>Menu id sequence</td>
+              <td>Menus › ADD MENU under Settings, then read the new row's id.</td>
+              <td>Id is above the seeded range, not 1. <strong>Regression guard:</strong> menus are seeded with
+                hardcoded ids, so the sequence sat at 1 and the first created menu would eventually collide.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">ACL-12</td><td>Menu cannot be its own parent</td>
+              <td>Set a menu's parent to itself.</td>
+              <td>Refused — <code>A menu cannot be its own parent.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">ACL-13</td><td>Menu cannot move under its own child</td>
+              <td>Set a group's parent to one of its children.</td>
+              <td>Refused — the subtree would detach from every root with no way back through the UI.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">ACL-14</td><td>Delete a group with children</td>
+              <td>Delete the Settings group.</td>
+              <td>Refused; message names the child count.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">ACL-15</td><td>Create staff with a role</td>
+              <td>Staff › ADD STAFF. Name, email, password, role, status ACTIVE.</td>
+              <td>Row shows the role's <em>name</em> and a green ACTIVE badge. <strong>Regression guard:</strong>
+                the role column used to render <code>[object Object]</code> and every account looked inactive.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">ACL-16</td><td>Password never leaves the server</td>
+              <td>Inspect the <code>GET /api/users</code> response.</td>
+              <td>No <code>password</code> field on any row. It used to return the bcrypt hash for every account.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">ACL-17</td><td>Edit cannot reset a password</td>
+              <td><code>PATCH /api/users/:id</code> including a <code>password</code> field.</td>
+              <td>Refused — <code>property password should not exist</code>. Changing one goes through its own action.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">ACL-18</td><td>Change password</td>
+              <td>Row menu › Change Password, set a new one, then sign in with it.</td>
+              <td>New password works; the old one is refused.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">ACL-19</td><td>Deactivating ends the session</td>
+              <td>Sign in as a user and keep the token. As admin, set that user to INACTIVE. Reuse the token.</td>
+              <td>401. Authorisation is read from the database per request, so it does not wait for expiry.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">ACL-20</td><td>Cannot delete yourself</td>
+              <td>Delete the account you are signed in as.</td>
+              <td>Refused — <code>You cannot delete the account you are signed in as.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="print">
+      <h2><span class="num">08</span> Print templates</h2>
+      <p class="lede">Templates are HTML with <code>{{placeholder}}</code> slots. Exactly one template per type is
+        active, and that is the one Print uses.</p>
+
+      <h4>Flow</h4>
+      <div class="flow">
+        <div class="chain">
+          <div class="step"><span class="k">Step 1</span><span class="v">Template</span><span class="n">type INVOICE or PROPOSAL</span></div>
+          <div class="step"><span class="k">Step 2</span><span class="v">Markup</span><span class="n">placeholders from the panel</span></div>
+          <div class="step"><span class="k">Step 3</span><span class="v">Active</span><span class="n">demotes the others</span></div>
+          <div class="step"><span class="k">Step 4</span><span class="v">Row › Print</span><span class="n">new tab, values filled</span></div>
+          <div class="step term"><span class="k">Step 5</span><span class="v">Print dialog</span><span class="n">Save as PDF</span></div>
+        </div>
+      </div>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>ID</th><th>Scenario</th><th>Steps</th><th>Expected</th><th>Tag</th></tr></thead>
+          <tbody>
+            <tr><td class="id">PRT-01</td><td>Starter templates exist</td>
+              <td>Open Print Templates on a freshly seeded database.</td>
+              <td>Default Invoice and Default Proposal are listed, both marked In Use.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRT-02</td><td>Print an invoice</td>
+              <td>Invoices › row menu › Print.</td>
+              <td>New tab renders the invoice with no <code>{{…}}</code> left, and the print dialog opens.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRT-03</td><td>Print a proposal</td>
+              <td>Proposals › row menu › Print.</td>
+              <td>Same, with the proposal's totals block.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRT-04</td><td>Totals match the screen</td>
+              <td>Compare the printed totals against the invoice row.</td>
+              <td>Subtotal, fee, VAT, invoice amount and balance due all agree.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRT-05</td><td>Only one template is active</td>
+              <td>Create a second INVOICE template marked active.</td>
+              <td>The previous one flips to Inactive; Print uses the new one.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRT-06</td><td>Deleting the active one promotes a successor</td>
+              <td>Delete the active INVOICE template while another exists.</td>
+              <td>The remaining template becomes active and Print still works.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRT-07</td><td>Cannot delete the last of a type</td>
+              <td>Delete the only PROPOSAL template.</td>
+              <td>Refused — create a replacement first.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRT-08</td><td>Print with no active template</td>
+              <td>Deactivate every INVOICE template, then Print an invoice.</td>
+              <td>The tab explains no active template exists and points at Settings › Print Templates.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRT-09</td><td>Values are escaped</td>
+              <td>Name a customer <code>&lt;script&gt;alert(1)&lt;/script&gt; &amp; Co</code>, then print its invoice.</td>
+              <td>The text renders literally; no script runs. Values come from user-entered records, so they are escaped.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRT-10</td><td>Placeholders are not re-expanded</td>
+              <td>Preview a template with a value that itself contains <code>{{bank_account}}</code>.</td>
+              <td>It renders as literal text; substitution runs in a single pass.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRT-11</td><td>Unknown placeholder is flagged</td>
+              <td>Add <code>{{not_a_field}}</code> to an invoice template.</td>
+              <td>The editor warns it is not filled for this type and will render blank.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">PRT-12</td><td>Duplicate name</td>
+              <td>Create a template reusing an existing name.</td>
+              <td>Refused — <code>A template named "…" already exists.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="regress">
+      <h2><span class="num">09</span> Repaired regressions</h2>
+      <p class="lede">These were already broken before this branch. They are listed separately because each one
+        has a precise “before” worth asserting against — a passing test here proves the repair, not the feature.</p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>ID</th><th>Scenario</th><th>Steps</th><th>Expected</th><th>Tag</th></tr></thead>
+          <tbody>
+            <tr><td class="id">REG-01</td><td>P&amp;L detail subtotal follows the filter</td>
+              <td>Financial Reports › Profit &amp; Loss › click a line such as Personnel Expense. Note the TOTAL row,
+                then apply a column filter that hides rows.</td>
+              <td>TOTAL equals the sum of the <em>visible</em> rows. It used to keep the unfiltered figure and
+                contradict the rows above it.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-02</td><td>Clearing the filter restores it</td>
+              <td>Clear the filter.</td>
+              <td>TOTAL returns to the full figure.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-03</td><td>Other finance views unaffected</td>
+              <td>Repeat on Balance Sheet, AP Summary, PPN In/Out, Inter Account, Depreciation, Bank Statement.</td>
+              <td>Each already totals the filtered rows; no change in behaviour.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-04</td><td>Edit a bank reference</td>
+              <td>Accounts &amp; Banks › Banks › row menu › Edit Reference. Change the name, save.</td>
+              <td>Saved. Both the route and the service method were missing, so this used to 404.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-05</td><td>Delete an unused bank</td>
+              <td>Create a bank reference, delete it.</td>
+              <td>Removed. The Delete item used to have no handler at all, so it silently did nothing.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-06</td><td>Delete a bank in use</td>
+              <td>Delete a bank an internal account references.</td>
+              <td>Refused; message names the account count.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">REG-07</td><td>Duplicate bank code</td>
+              <td>Set a bank's code to one already used.</td>
+              <td>Refused — <code>Bank code "…" is already used.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">REG-08</td><td>Internal accounts page still loads</td>
+              <td>Open Accounts &amp; Banks and switch between its tabs.</td>
+              <td>All tabs load. The new <code>/banks/:id</code> routes are declared after the literal sub-paths so
+                <code>/banks/internal-accounts</code> is not parsed as an id.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-09</td><td>Manage product categories</td>
+              <td>Products › Categories. Add one, rename it, delete it.</td>
+              <td>All three work. There was no category UI at all, and update and delete had no endpoints.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-10</td><td>Delete a category in use</td>
+              <td>Delete a category products reference.</td>
+              <td>Refused; message names the product count.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">REG-11</td><td>Row detail actions open</td>
+              <td>View Details on Customers, View Profile on Suppliers, Specifications on Products.</td>
+              <td>Each opens a detail modal. All three had no handler and did nothing.</td><td><span class="tag pass">Accept</span></td></tr>
+            <tr><td class="id">REG-12</td><td>Sales-items permissions are gone</td>
+              <td>Search the Permissions page for <code>sales-items</code>.</td>
+              <td>No results. Five permissions existed that no endpoint read, so granting them in the role matrix
+                did nothing.</td><td><span class="tag pass">Accept</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="playwright">
+      <h2><span class="num">10</span> Notes for Playwright</h2>
+
+      <div class="note">
+        <span class="h">There are no test ids yet</span>
+        <p>The frontend carries <strong>zero</strong> <code>data-testid</code> attributes and only two
+          <code>aria-label</code>s. Every selector has to come from visible text or role, which works for
+          headings and primary buttons but is fragile for the row menus, where each row renders an identical
+          unlabelled trigger.</p>
+        <p>Worth adding <code>data-testid</code> to the row menu trigger, the row itself keyed by code, and the
+          dialog submit buttons before writing many tests. Until then, scope every row interaction through
+          <code>getByRole('row', { name: … })</code> so a selector cannot drift to a neighbouring row.</p>
+      </div>
+
+      <h4>Selectors that are stable today</h4>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Target</th><th>Selector</th></tr></thead>
+          <tbody>
+            <tr><td>Primary action</td><td><code>getByRole('button', { name: 'ADD PROJECT' })</code> — the label is uppercase in the DOM</td></tr>
+            <tr><td>A specific row</td><td><code>getByRole('row', { name: /I-FIT-.*-001/ })</code> — match on the document code</td></tr>
+            <tr><td>Row menu</td><td>Scope to the row first, then <code>getByRole('button').last()</code></td></tr>
+            <tr><td>Menu item</td><td><code>getByRole('menuitem', { name: 'Print' })</code></td></tr>
+            <tr><td>Dialog</td><td><code>getByRole('dialog')</code>, then its title text</td></tr>
+            <tr><td>Failure message</td><td>Toast text. Every page reports failures through sonner, so assert on the server's own message</td></tr>
+            <tr><td>Totals row</td><td>The cell labelled <code>TOTAL</code> within the table</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Sequencing</h4>
+      <ul>
+        <li>Most scenarios need a prior state — a WIN proposal, a settled invoice. Build those through the API in
+          a fixture rather than driving the UI, and keep the UI path for the assertion under test.</li>
+        <li>Project codes, proposal codes and invoice codes are generated with a random segment, so capture the
+          created code from the response and match rows on it. Never index rows by position.</li>
+        <li><code>PRT-02</code> and <code>PRT-03</code> open a new tab and call <code>window.print()</code>. Wait
+          for the popup with <code>context.waitForEvent('page')</code> and stub <code>window.print</code>, or the
+          run blocks on a native dialog.</li>
+        <li><code>ACL-19</code> needs two sessions: keep one browser context signed in while another changes that
+          user's status.</li>
+        <li>Currency is formatted Indonesian — <code>52.000.000,00</code>. Assert on the numeric field from the
+          API, or normalise the separators before comparing.</li>
+      </ul>
+
+      <div class="note">
+        <span class="h">Not yet verified by anyone</span>
+        <p>Every figure and message in this document was checked against the running API on the dev database.
+          <strong>None of the eleven pages has been opened in a browser</strong> — the server has no browser, so
+          all verification was at the API, typecheck and build level. Expect the first UI pass to find layout
+          issues this plan cannot predict, and treat <code>REG-01</code> and <code>REG-11</code> as the highest-value
+          manual checks since they are purely visual.</p>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>
