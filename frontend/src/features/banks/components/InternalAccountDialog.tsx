@@ -36,6 +36,7 @@ const formSchema = z.object({
   branch: z.string().optional(),
   swiftCode: z.string().optional(),
   holderName: z.string().min(1, "Account holder name is required"),
+  isNonVatSettlement: z.boolean().optional(),
 });
 
 interface InternalAccountDialogProps {
@@ -66,6 +67,7 @@ export function InternalAccountDialog({
       branch: "",
       swiftCode: "",
       holderName: "PT PANCONVINCE",
+      isNonVatSettlement: false,
     },
   });
 
@@ -78,6 +80,7 @@ export function InternalAccountDialog({
         branch: account.branch || "",
         swiftCode: account.swiftCode || "",
         holderName: account.holderName,
+        isNonVatSettlement: account.isNonVatSettlement ?? false,
       });
     } else if (open) {
       form.reset({
@@ -87,6 +90,7 @@ export function InternalAccountDialog({
         branch: "",
         swiftCode: "",
         holderName: "PT PANCONVINCE",
+      isNonVatSettlement: false,
       });
     }
   }, [account, form, open]);
@@ -208,6 +212,32 @@ export function InternalAccountDialog({
                   <FormControl>
                     <Input {...field} className="h-11 rounded-xl bg-muted/20 border border-primary/10 shadow-none font-extrabold uppercase tracking-tight focus-visible:border-primary/30 transition-all" />
                   </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="isNonVatSettlement"
+              render={({ field }) => (
+                <FormItem>
+                  <label className="flex items-start gap-2.5 cursor-pointer rounded-xl bg-muted/20 border border-primary/10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 mt-0.5 rounded accent-primary"
+                      checked={!!field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                    />
+                    <span>
+                      <span className="block text-[11px] font-extrabold uppercase tracking-widest text-primary">
+                        Non-VAT settlement account
+                      </span>
+                      <span className="block text-[10px] text-muted-foreground font-medium mt-0.5">
+                        No Tax invoices must settle here. While no account is marked, the
+                        rule is not enforced.
+                      </span>
+                    </span>
+                  </label>
                 </FormItem>
               )}
             />

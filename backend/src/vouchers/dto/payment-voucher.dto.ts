@@ -30,7 +30,9 @@ export class CreatePaymentVoucherDto {
   @IsNotEmpty()
   category: string;
 
-  @IsOptional() @Type(() => Number) @IsNumber() purchaseOrderId?: number;
+  // purchase_order_id exists on the table but there is no PurchaseOrder model to
+  // reference, so accepting it here only let callers store an id pointing at
+  // nothing. Re-add once purchase orders are actually modelled.
   @IsOptional() @IsString() expenseType?: string;
   @IsOptional() @IsString() description?: string;
 

@@ -41,9 +41,22 @@ export function BanksTab() {
   const { can } = useAuthStore();
   const { 
     banksQuery, 
+    deleteBank,
   } = useBanks({
     banks: { page, search: debouncedSearch, limit: 10, enabled: true },
   });
+
+  const handleDelete = async (bank: Bank) => {
+    if (!confirm(`Delete bank reference "${bank.bankName}"?`)) return;
+
+    try {
+      await deleteBank.mutateAsync(bank.id);
+    } catch (error: any) {
+      // Internal accounts reference a bank with ON DELETE RESTRICT, so one that
+      // is still in use is refused rather than silently cascading.
+      alert(error?.response?.data?.message ?? "Failed to delete this bank reference.");
+    }
+  };
 
   const handleCreate = () => {
     setSelectedBank(null);
@@ -198,7 +211,10 @@ export function BanksTab() {
                           <QrCode size={14} className="mr-2" /> View QR Code
                         </DropdownMenuItem>
                         {can('banks.delete') && (
-                          <DropdownMenuItem className="text-[10px] font-bold uppercase text-destructive cursor-pointer">
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(bank)}
+                            className="text-[10px] font-bold uppercase text-destructive cursor-pointer"
+                          >
                             <Trash2 size={14} className="mr-2" /> Delete
                           </DropdownMenuItem>
                         )}

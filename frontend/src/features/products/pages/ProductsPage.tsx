@@ -3,6 +3,7 @@ import { Plus, Search, MoreVertical, Edit2, Trash2, Eye, Truck, Tag, Ruler } fro
 import { useDebounce } from "use-debounce";
 import { useProducts } from "../hooks/useProducts";
 import { CategoryManagerDialog } from "../components/CategoryManagerDialog";
+import { DetailModal } from "@/components/common/DetailModal";
 import { useAuthStore } from "@/store/authStore";
 import { useSuppliers } from "../../suppliers/hooks/useSuppliers";
 import { 
@@ -69,6 +70,7 @@ export default function ProductsPage() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const handleCreate = () => {
@@ -232,7 +234,10 @@ export default function ProductsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-premium border-primary/10 p-1 bg-white backdrop-blur-xl animate-in zoom-in-95 duration-200">
-                          <DropdownMenuItem className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors">
+                          <DropdownMenuItem
+                            onClick={() => setDetailProduct(product)}
+                            className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors"
+                          >
                             <Eye size={14} />
                             <span>Specifications</span>
                           </DropdownMenuItem>
@@ -287,6 +292,25 @@ export default function ProductsPage() {
         onDelete={(id) => deleteCategory.mutateAsync(id)}
         isBusy={
           createCategory.isPending || updateCategory.isPending || deleteCategory.isPending
+        }
+      />
+
+      <DetailModal
+        open={!!detailProduct}
+        onOpenChange={(open) => !open && setDetailProduct(null)}
+        title={detailProduct?.name || ""}
+        subtitle={detailProduct?.code}
+        icon={<Ruler className="w-8 h-8 text-secondary shrink-0" strokeWidth={2.5} />}
+        data={
+          detailProduct
+            ? [
+                { label: "Code", value: detailProduct.code },
+                { label: "Unit", value: detailProduct.unit },
+                { label: "Category", value: detailProduct.category?.name || "—" },
+                { label: "Supplier", value: detailProduct.supplier?.name || "—" },
+                { label: "Description", value: detailProduct.description || "—" },
+              ]
+            : []
         }
       />
     </PageContainer>

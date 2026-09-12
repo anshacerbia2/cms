@@ -305,6 +305,9 @@ model InternalAccount {
   branch     String?             @db.VarChar(255)
   swiftCode  String?             @map("swift_code") @db.VarChar(20)
   holderName String              @map("holder_name") @db.VarChar(255)
+  /// Settlement account for No Tax invoices. The rule was previously carried by a
+  /// hardcoded account number, which broke the moment the account changed.
+  isNonVatSettlement Boolean     @default(false) @map("is_non_vat_settlement")
   createdAt  DateTime            @default(now()) @map("created_at")
   updatedAt  DateTime            @updatedAt @map("updated_at")
 

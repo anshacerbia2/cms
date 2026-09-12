@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Eye } from "lucide-react";
 import { useDebounce } from "use-debounce";
-import { useCustomers } from "../hooks/useCustomers";
+import { useCustomers, useCustomer } from "../hooks/useCustomers";
 import { useAuthStore } from "@/store/authStore";
 import { 
   Table, 
@@ -27,6 +27,7 @@ import { PaginationControls } from "@/components/common/PaginationControls";
 
 import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
+import { DetailModal } from "@/components/common/DetailModal";
 import { Users } from "lucide-react";
 
 export default function CustomersPage() {
@@ -47,6 +48,10 @@ export default function CustomersPage() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  // The list response carries only counts; billing options and PICs come from
+  // the detail endpoint.
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const { data: detailCustomer } = useCustomer(detailId);
 
   const handleCreate = () => {
     setSelectedCustomer(null);
@@ -190,7 +195,10 @@ export default function CustomersPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-premium border-primary/10 p-1 bg-white backdrop-blur-xl">
-                          <DropdownMenuItem className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors">
+                          <DropdownMenuItem
+                            onClick={() => setDetailId(customer.id)}
+                            className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors"
+                          >
                             <Eye size={14} />
                             <span>View Details</span>
                           </DropdownMenuItem>
@@ -232,6 +240,42 @@ export default function CustomersPage() {
         onSubmit={handleSubmit}
         customer={selectedCustomer}
         isSubmitting={createCustomer.isPending || updateCustomer.isPending}
+      />
+
+      <DetailModal
+        open={!!detailId && !!detailCustomer}
+        onOpenChange={(open) => !open && setDetailId(null)}
+        title={detailCustomer?.name || ""}
+        subtitle={detailCustomer?.code}
+        icon={<Users className="w-8 h-8 text-secondary shrink-0" strokeWidth={2.5} />}
+        data={
+          detailCustomer
+            ? [
+                { label: "Code", value: detailCustomer.code },
+                { label: "Status", value: detailCustomer.status },
+                { label: "Bank", value: detailCustomer.bankName || "—" },
+                { label: "Account Number", value: detailCustomer.bankAccountNumber || "—" },
+                { label: "Account Name", value: detailCustomer.bankAccountName || "—" },
+                {
+                  label: "Billing Options",
+                  value:
+                    detailCustomer.billingOptions?.length
+                      ? detailCustomer.billingOptions
+                          .map((o) => o.cpName || o.address || "—")
+                          .join(", ")
+                      : "—",
+                },
+                {
+                  label: "PICs",
+                  value:
+                    detailCustomer.pics?.length
+                      ? detailCustomer.pics.map((pic) => pic.name).join(", ")
+                      : "—",
+                },
+                { label: "Notes", value: detailCustomer.notes || "—" },
+              ]
+            : []
+        }
       />
     </PageContainer>
   );
