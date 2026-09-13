@@ -210,19 +210,25 @@ export class FinanceReportService {
     
     const depreciation = totalDepreciation.negated();
     
-    // 6. Calculate Income Tax (PPH-23)
+    // 6. Income Tax — the corporate tax charge, from its own ledger.
+    //
+    // This used to sum the PPh-23 bukti potong instead: entries under ledger
+    // "Account Receivable" / "AR Prepaid Tax". Those are tax the customer
+    // withholds from an invoice — a prepayment PCMI can credit later, carried
+    // as a receivable. They are not the tax charge, and nothing the accountant
+    // did could change them, because they accumulate one certificate at a time.
+    //
+    // The charge is the figure from the SPT, posted as a single entry on the
+    // "Income Tax" ledger of the Non Cash & Bank account. Debit less credit, so
+    // a correction posted as a credit is honoured rather than ignored.
+    //
+    // No entry means no charge, which is the mid-year case: income tax is nil
+    // and profit after tax equals profit before tax.
     const incomeTaxTransactions = await this.prisma.financialTransaction.findMany({
       where: {
         AND: [
           where,
-          { colF: { contains: 'Account Receivable', mode: 'insensitive' } },
-          { colG: { contains: 'AR Prepaid Tax', mode: 'insensitive' } },
-          {
-            OR: [
-              { colH: { contains: 'pph-23', mode: 'insensitive' } },
-              { colH: { contains: 'pph 23', mode: 'insensitive' } }
-            ]
-          },
+          { colF: { equals: 'Income Tax', mode: 'insensitive' } },
           {
             internalAccount: {
               type: 'OTHER',
@@ -236,7 +242,8 @@ export class FinanceReportService {
     let incomeTax = new Prisma.Decimal(0);
     for (const trx of incomeTaxTransactions) {
       const debit = new Prisma.Decimal(trx.colC || 0);
-      incomeTax = incomeTax.minus(debit);
+      const credit = new Prisma.Decimal(trx.colD || 0);
+      incomeTax = incomeTax.minus(debit).plus(credit);
     }
 
     // Income Tax override removed for pure calculation
