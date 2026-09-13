@@ -102,7 +102,8 @@ const formSchema = z.object({
       return;
     }
 
-    if (values.pricingModel === "A" || values.pricingModel === "B") return;
+    // Model A returned above, so B is the only one left to skip before C and D.
+    if (values.pricingModel === "B") return;
 
     // Models C and D multiply the price by each titled value. A row with no
     // titles totals to the bare price and looks deliberate; a key without its
