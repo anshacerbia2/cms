@@ -352,10 +352,10 @@
         and the manual scenario that proves it — written so each row becomes one Playwright test.</p>
       <div class="meta">
         <span>Baseline <b>bda61dc</b></span>
-        <span>Head <b>59d6994</b></span>
-        <span><b>52</b> commits</span>
+        <span>Head <b>87895c9</b></span>
+        <span><b>60</b> commits</span>
         <span><b>9</b> feature areas</span>
-        <span><b>130</b> scenarios</span>
+        <span><b>135</b> scenarios</span>
       </div>
     </header>
 
@@ -582,6 +582,26 @@ npx prisma db seed               # roles, permissions, menus, sample master data
             <tr><td class="id">PRO-11</td><td>Product without an active price</td>
               <td>Add a BoQ or proposal item for a product that has no active price version.</td>
               <td>Refused — <code>Product … has no active price version.</code></td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRO-13</td><td>VAT rate is 1 or 11, nothing else</td>
+              <td>Create proposals at 1 and at 11, then try 0, 10 and 500.</td>
+              <td>The first two are accepted; the rest refused with <code>vatRate must be one of: 1,
+                11</code>. <strong>Legacy parity:</strong> the Laravel request pinned this to
+                <code>in:[1,11]</code> on the proposal and the invoice. The port had loosened it to any
+                non-negative number, so 500 was a valid rate and was billed as written.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRO-14</td><td>Each model needs what it bills from</td>
+              <td>Model A with no <code>totalAmountItems</code>; then B, C and D each with an empty
+                <code>items</code> array.</td>
+              <td>All four refused, each naming its model. Both used to save a zero-total proposal that
+                reads like a real quote. <strong>Legacy parity:</strong>
+                <code>required_if:pricing_model,A</code> and
+                <code>required_if:pricing_model,B,C,D|array|min:1</code>.</td><td><span class="tag guard">Refuse</span></td></tr>
+            <tr><td class="id">PRO-15</td><td>Models C and D need a complete label-and-value pair</td>
+              <td>A C-model item with no titles; then one with only a key; then only a value; then a value
+                of zero. Finally a real one: price 1,000,000 with Days 3 and Crew 2.</td>
+              <td>The first four refused, the last totals 6,000,000. The total is price × each titled
+                value, so a row with no titles quietly totals to the bare price and reads as deliberate,
+                and a key without its value multiplies by nothing while looking filled in. Zero counts as
+                absent — a multiplier of nought erases the line.</td><td><span class="tag guard">Refuse</span></td></tr>
             <tr><td class="id">PRO-12</td><td>Price is snapshotted</td>
               <td>Save a proposal item, then change the product's master price, then reopen the proposal.</td>
               <td>The proposal still shows the price it was quoted at.</td><td><span class="tag pass">Accept</span></td></tr>
@@ -1156,15 +1176,29 @@ paymentStatus = FULLY_PAID   when balanceDue ≤ 0 and invoiceAmount > 0
               <td>Model A sent with a non-empty <code>items</code> array — <code>Pricing model A bills a
                 single lump sum. Send totalAmountItems instead of items.</code> The form hides the item
                 rows for A, so this too is an API-only path</td><td>API</td></tr>
-            <tr><td><code>totalAmountItems</code></td><td>Model A's lump sum. Optional, and
-              <strong>zero is accepted</strong> — a proposal with no value is a legal record</td>
-              <td>Negative — <code>@Min(0)</code></td><td>API</td></tr>
+            <tr><td><code>totalAmountItems</code></td><td>Model A's lump sum. Zero is accepted — a nil
+              quote is a legal record — but the field must be present</td>
+              <td>Absent on model A — <code>Pricing model A bills a single lump sum, so totalAmountItems
+                is required.</code> It used to save a zero-total proposal that read like a real quote.
+                Negative — <code>@Min(0)</code></td><td>form + API</td></tr>
+            <tr><td><code>items</code></td><td>The line items models B, C and D bill from. At least one</td>
+              <td>Empty on B, C or D — <code>Pricing model … bills per line item, so at least one item is
+                required.</code> Sent at all on model A — see <code>PRO-03</code></td><td>form + API</td></tr>
+            <tr><td><code>items[].title1..4</code>, models C and D</td>
+              <td>A label and a value together. The total is price × each titled value, so at least one
+                complete pair is required</td>
+              <td>A key without its value, or a value without its key —
+                <code>Both title1Key and title1Value must be provided together.</code> No pair at all —
+                <code>At least one title key and value pair must be provided.</code> A value of zero counts
+                as absent, since a multiplier of nought erases the line</td><td>form + API</td></tr>
             <tr><td><code>managementFee</code></td><td>A percentage or a flat figure, depending on
               <code>managementFeeType</code>. Optional, floor of 0</td>
               <td>Negative</td><td>API</td></tr>
-            <tr><td><code>vatRate</code></td><td>Any non-negative number. <strong>No upper bound at either
-              layer</strong> — a VAT rate of 500 is stored and billed as written</td>
-              <td>Negative only</td><td>API</td></tr>
+            <tr><td><code>vatRate</code></td><td>Exactly <code>1</code> or <code>11</code>, the two rates this
+              business bills at. Optional; the form defaults to 11</td>
+              <td>Anything else — <code>vatRate must be one of: 1, 11</code>. It used to accept any
+                non-negative number, so 500 was a valid rate and was billed as written</td>
+              <td>form + API</td></tr>
             <tr><td><code>items[].sellingPrice</code></td><td>Non-empty digits per row</td>
               <td>Empty — <code>Required</code>, inline on that row. Negative — <code>@Min(0)</code></td>
               <td>form / API</td></tr>
@@ -1212,8 +1246,9 @@ paymentStatus = FULLY_PAID   when balanceDue ≤ 0 and invoiceAmount > 0
               <td>A NO_TAX invoice that does not settle to the designated account, once one is marked —
                 <code>A No Tax invoice must name the non-VAT settlement account.</code> Dormant until
                 someone designates one</td><td>API</td></tr>
-            <tr><td><code>vatRate</code></td><td>Non-negative, no ceiling, same as the proposal</td>
-              <td>Negative only</td><td>API</td></tr>
+            <tr><td><code>vatRate</code></td><td><code>1</code> or <code>11</code>, same as the proposal and
+              read from the same constant</td>
+              <td>Anything else — <code>vatRate must be one of: 1, 11</code></td><td>form + API</td></tr>
             <tr><td><code>taxType</code> <code>totalAmount</code> <code>customerId</code>, on edit</td>
               <td>Changes, while no voucher is attached</td>
               <td>Any change once an RV is applied — <code>Cannot change sensitive field '…' because this
@@ -1399,7 +1434,7 @@ pnpm e2e --project=viewer # what a read-only role is not offered</code></pre>
                 <code>RV-08</code> for tax type and amount but not customer</td></tr>
             <tr><td><code>guards.spec.ts</code></td>
               <td><code>PRJ-05..08</code> <code>PRO-02</code> <code>PRO-04</code> <code>PRO-06</code>
-                <code>PRO-07</code> <code>PRO-09..12</code> <code>INV-03</code> <code>INV-04</code>
+                <code>PRO-07</code> <code>PRO-09..15</code> <code>INV-03</code> <code>INV-04</code>
                 <code>INV-06..08</code> <code>INV-10..16</code> <code>RV-01</code> <code>RV-03..07</code>
                 <code>RV-09</code> <code>RV-10</code> <code>ACL-01..06</code> <code>ACL-08..14</code>
                 <code>ACL-16</code> <code>ACL-18..20</code> <code>PRT-01</code> <code>PRT-03..07</code>

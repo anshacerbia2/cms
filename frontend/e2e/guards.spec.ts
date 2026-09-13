@@ -119,6 +119,125 @@ test.describe("Proposals", () => {
     await api.dispose();
   });
 
+  test("PRO-13 the VAT rate is one of the two this business bills at", async () => {
+    const api = await Api.signIn();
+    const project = await api.createProject();
+
+    for (const vatRate of [1, 11]) {
+      const proposal = await api.createProposal(project.id, { vatRate });
+      expect(Number(proposal.vatRate)).toBe(vatRate);
+    }
+
+    // Legacy pinned this to in:[1,11]; the port had let anything through and
+    // billed it as written, so a rate of 500 was a valid quote.
+    for (const vatRate of [0, 10, 500]) {
+      const refusal = await api.expectRefusal("post", "/proposals", {
+        projectId: Number(project.id),
+        pricingModel: "A",
+        totalAmountItems: 1_000_000,
+        vatRate,
+      });
+      expect(refusal.status, `vatRate ${vatRate}`).toBe(400);
+      expect(refusal.message).toContain("vatRate must be one of: 1, 11");
+    }
+
+    await api.dispose();
+  });
+
+  test("PRO-14 model A needs its lump sum, and B, C and D need line items", async () => {
+    const api = await Api.signIn();
+    const project = await api.createProject();
+
+    // Model A with no figure used to save as a zero-total proposal that reads
+    // like a real quote.
+    const noLumpSum = await api.expectRefusal("post", "/proposals", {
+      projectId: Number(project.id),
+      pricingModel: "A",
+      managementFeeType: "PERCENT",
+      managementFee: 0,
+      vatRate: 11,
+    });
+    expect(noLumpSum.status).toBe(400);
+    expect(noLumpSum.message).toContain(
+      "Pricing model A bills a single lump sum, so totalAmountItems is required.",
+    );
+
+    // And the mirror: a per-line model with nothing to bill.
+    for (const pricingModel of ["B", "C", "D"]) {
+      const noItems = await api.expectRefusal("post", "/proposals", {
+        projectId: Number(project.id),
+        pricingModel,
+        managementFeeType: "PERCENT",
+        managementFee: 0,
+        vatRate: 11,
+        items: [],
+      });
+      expect(noItems.status, pricingModel).toBe(400);
+      expect(noItems.message).toContain(
+        `Pricing model ${pricingModel} bills per line item, so at least one item is required.`,
+      );
+    }
+
+    await api.dispose();
+  });
+
+  test("PRO-15 models C and D need a complete label-and-value pair", async () => {
+    const api = await Api.signIn();
+    const project = await api.createProject();
+    const base = {
+      projectId: Number(project.id),
+      pricingModel: "C",
+      managementFeeType: "PERCENT",
+      managementFee: 0,
+      vatRate: 11,
+    };
+
+    // A row with no multiplier at all totals to the bare selling price, which
+    // reads as a deliberate figure rather than an unfinished row.
+    const bare = await api.expectRefusal("post", "/proposals", {
+      ...base,
+      items: [{ sellingPrice: 1_000_000, description: "no titles" }],
+    });
+    expect(bare.status).toBe(400);
+    expect(bare.message).toContain("At least one title key and value pair must be provided.");
+
+    // Half a pair is worse: a key with no value multiplies by nothing.
+    const halfPair = await api.expectRefusal("post", "/proposals", {
+      ...base,
+      items: [{ sellingPrice: 1_000_000, title1Key: "Days" }],
+    });
+    expect(halfPair.status).toBe(400);
+    expect(halfPair.message).toContain("Both title1Key and title1Value must be provided together.");
+
+    const valueOnly = await api.expectRefusal("post", "/proposals", {
+      ...base,
+      items: [{ sellingPrice: 1_000_000, title1Value: 3 }],
+    });
+    expect(valueOnly.status).toBe(400);
+    expect(valueOnly.message).toContain("Both title1Key and title1Value must be provided together.");
+
+    // A zero multiplier erases the line, so it counts as absent rather than as
+    // a value someone meant to type.
+    const zeroValue = await api.expectRefusal("post", "/proposals", {
+      ...base,
+      items: [{ sellingPrice: 1_000_000, title1Key: "Days", title1Value: 0 }],
+    });
+    expect(zeroValue.status).toBe(400);
+
+    // And the shape that works: price x 3 x 2.
+    const ok = await api.post("/proposals", {
+      ...base,
+      items: [{
+        sellingPrice: 1_000_000,
+        title1Key: "Days", title1Value: 3,
+        title2Key: "Crew", title2Value: 2,
+      }],
+    });
+    expect(Number(ok.totalAmountItems)).toBe(6_000_000);
+
+    await api.dispose();
+  });
+
   test("PRO-09 a BoQ binds to a won proposal", async () => {
     const api = await Api.signIn();
     const productId = Number((await api.createProduct()).id);

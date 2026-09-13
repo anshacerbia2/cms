@@ -1,7 +1,8 @@
 import {
-  IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsInt, IsArray, ValidateNested, Min,
+  IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsInt, IsIn, IsArray, ValidateNested, Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { VAT_RATES, VAT_RATE_MESSAGE } from '../../common/constants/vat';
 
 export enum ProposalStatus {
   DRAFT = 'DRAFT',
@@ -93,7 +94,7 @@ export class CreateProposalDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  @Min(0)
+  @IsIn(VAT_RATES as unknown as number[], { message: VAT_RATE_MESSAGE })
   vatRate?: number;
 
   @IsOptional()
