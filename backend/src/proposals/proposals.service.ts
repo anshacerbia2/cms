@@ -262,6 +262,14 @@ export class ProposalsService {
         );
       }
 
+      // Legacy required it too (`required_if:pricing_model,A`). Without this a
+      // model A proposal saves with a zero total and reads as a real quote.
+      if (context.totalAmountItems === undefined || context.totalAmountItems === null) {
+        throw new BadRequestException(
+          'Pricing model A bills a single lump sum, so totalAmountItems is required.',
+        );
+      }
+
       const total = Number(context.totalAmountItems ?? 0);
 
       return {
@@ -277,6 +285,15 @@ export class ProposalsService {
           },
         ],
       };
+    }
+
+    // Models B, C and D bill per line, so a proposal with no lines has nothing
+    // to bill. Legacy required at least one (`required_if:pricing_model,B,C,D`);
+    // the port accepted none and quietly produced a zero total.
+    if (items.length === 0) {
+      throw new BadRequestException(
+        `Pricing model ${pricingModel} bills per line item, so at least one item is required.`,
+      );
     }
 
     const built: BuiltItem[] = [];
@@ -305,6 +322,12 @@ export class ProposalsService {
         title1Value = qty;
         totalPrice = qty * sellingPrice;
       } else {
+        // Models C and D multiply the price by each titled value, so a row whose
+        // titles are all blank silently totals to the bare selling price and
+        // reads as a deliberate figure. Legacy refused that, and refused a key
+        // without its value, which would multiply by nothing just as quietly.
+        this.assertTitlePairs(item);
+
         totalPrice = [item.title1Value, item.title2Value, item.title3Value, item.title4Value].reduce<number>(
           (acc, value) => (value ? acc * Number(value) : acc),
           sellingPrice,
@@ -340,6 +363,43 @@ export class ProposalsService {
     }
 
     return { items: built, total };
+  }
+
+  /**
+   * A titled multiplier is a key and a value together. One without the other is
+   * half an instruction: a key with no value multiplies by nothing, a value with
+   * no key has no label on the printed quote. At least one complete pair has to
+   * be present, or models C and D are model A wearing a different name.
+   */
+  private assertTitlePairs(item: ProposalItemDto) {
+    const pairs = [
+      ['title1Key', 'title1Value'],
+      ['title2Key', 'title2Value'],
+      ['title3Key', 'title3Value'],
+      ['title4Key', 'title4Value'],
+    ] as const;
+
+    let complete = 0;
+
+    for (const [keyField, valueField] of pairs) {
+      const key = (item as any)[keyField];
+      const value = (item as any)[valueField];
+
+      // Zero counts as absent: a multiplier of nought erases the line.
+      const hasKey = key !== undefined && key !== null && String(key).trim() !== '';
+      const hasValue = value !== undefined && value !== null && Number(value) !== 0;
+
+      if (hasKey !== hasValue) {
+        throw new BadRequestException(
+          `Both ${keyField} and ${valueField} must be provided together.`,
+        );
+      }
+      if (hasKey) complete++;
+    }
+
+    if (complete === 0) {
+      throw new BadRequestException('At least one title key and value pair must be provided.');
+    }
   }
 
   private emptyItem(): BuiltItem {

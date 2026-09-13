@@ -62,7 +62,79 @@ const formSchema = z.object({
   pricingModelDescription: z.string().optional(),
   totalAmountItems: z.string().optional(),
   items: z.array(itemSchema),
-});
+})
+  /**
+   * The pricing model decides which of the fields below are required, so these
+   * rules cannot live on the fields themselves. Without them the form submits
+   * happily and the API answers with a toast — the user is told, but not where,
+   * and whatever they typed is still on screen unmarked.
+   *
+   * These mirror the server exactly. If one side is ever changed, change both.
+   */
+  .superRefine((values, ctx) => {
+    const TITLES = [1, 2, 3, 4] as const;
+
+    if (values.vatRate && !["1", "11"].includes(values.vatRate.trim())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["vatRate"],
+        message: "VAT rate must be 1 or 11",
+      });
+    }
+
+    if (values.pricingModel === "A") {
+      if (!values.totalAmountItems?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["totalAmountItems"],
+          message: "Lump sum total is required for model A",
+        });
+      }
+      return;
+    }
+
+    if (values.items.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["items"],
+        message: `Model ${values.pricingModel} bills per line item, so add at least one`,
+      });
+      return;
+    }
+
+    if (values.pricingModel === "A" || values.pricingModel === "B") return;
+
+    // Models C and D multiply the price by each titled value. A row with no
+    // titles totals to the bare price and looks deliberate; a key without its
+    // value multiplies by nothing.
+    values.items.forEach((item, index) => {
+      let complete = 0;
+
+      for (const slot of TITLES) {
+        const key = (item as Record<string, unknown>)[`title${slot}Key`];
+        const value = (item as Record<string, unknown>)[`title${slot}Value`];
+        const hasKey = typeof key === "string" && key.trim() !== "";
+        const hasValue = value !== undefined && value !== null && String(value).trim() !== "" && Number(value) !== 0;
+
+        if (hasKey !== hasValue) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["items", index, hasKey ? `title${slot}Value` : `title${slot}Key`],
+            message: "Label and value go together",
+          });
+        }
+        if (hasKey && hasValue) complete++;
+      }
+
+      if (complete === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["items", index, "title1Key"],
+          message: "Add at least one label and value",
+        });
+      }
+    });
+  });
 
 type FormValues = z.infer<typeof formSchema>;
 

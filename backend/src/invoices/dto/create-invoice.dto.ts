@@ -1,5 +1,6 @@
-import { IsString, IsOptional, IsEnum, IsNumber, IsInt, IsArray, IsDateString, Min, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsNumber, IsInt, IsIn, IsArray, IsDateString, Min, IsNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
+import { VAT_RATES, VAT_RATE_MESSAGE } from '../../common/constants/vat';
 
 export enum InvoiceBillingType {
   PARTLY_PAYMENT = 'PARTLY_PAYMENT',
@@ -108,6 +109,6 @@ export class CreateInvoiceDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  @Min(0)
+  @IsIn(VAT_RATES as unknown as number[], { message: VAT_RATE_MESSAGE })
   vatRate?: number;
 }
