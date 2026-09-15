@@ -4,6 +4,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { seedBanks } from '../seeders/banks.seeder';
 import { FISCAL_YEAR } from './utils/layout';
+import { assertSafeToReplace } from './utils/guard';
 import { seedBankStatements2026 } from './bank-statements.seeder';
 import { seedInterAccount2026 } from './inter-account.seeder';
 import { seedDepreciation2026 } from './depreciation.seeder';
@@ -17,6 +18,13 @@ async function main() {
   console.log(`🌱 Starting ${FISCAL_YEAR} seeding...`);
 
   try {
+    // Checked before anything is written, so a refusal changes nothing.
+    if (!(await assertSafeToReplace(prisma))) {
+      await prisma.$disconnect();
+      await pool.end();
+      process.exit(1);
+    }
+
     // Bank master and internal accounts are not year-specific, and the 2026
     // ledger needs them to resolve each sheet. Upserts, so re-running is safe.
     await seedBanks(prisma);
