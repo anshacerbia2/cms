@@ -1572,8 +1572,14 @@ export function ProfitLossTab() {
                 // Other Income is one of the expenses now, so it takes their weight
                   // rather than the lighter one used under PROFITABILITY.
                   const isOtherProfitItem = ["Depreciation", "Income Tax"].includes(row.account);
-                const hasSubItems = tableData.some((r: any) => r.level === 3 && r.parentLedger === row.account);
-                const isExpanded = expandedLedgers.has(row.account);
+                // A sub-ledger can carry the same name as the ledger it sits
+                // under - "Other Income" appears at both levels - and the
+                // expander is keyed by name, so without the level check the
+                // sub-item shows its parent's chevron and toggles it.
+                const hasSubItems =
+                  row.level !== 3 &&
+                  tableData.some((r: any) => r.level === 3 && r.parentLedger === row.account);
+                const isExpanded = row.level !== 3 && expandedLedgers.has(row.account);
 
 
 
@@ -1594,12 +1600,15 @@ export function ProfitLossTab() {
                       transition-all duration-200 border-b
                     `}
                     onClick={() => {
-                      if (isExpense || isSales || isCogs) {
-                        setSelectedLedger(row.account);
-                        setSelectedSubItem(null);
-                      } else if (row.level === 3) {
+                      // Level checked first: a sub-ledger may share its parent's name,
+                      // and matching on the name alone would open the parent's
+                      // breakdown instead of this row's.
+                      if (row.level === 3) {
                         setSelectedLedger(row.parentLedger);
                         setSelectedSubItem(row.account);
+                      } else if (isExpense || isSales || isCogs) {
+                        setSelectedLedger(row.account);
+                        setSelectedSubItem(null);
                       }
                     }}
                   >
