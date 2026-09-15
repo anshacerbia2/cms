@@ -55,10 +55,20 @@ export class SalesService {
     if (year && !isNaN(year)) {
       where.tagYear = year;
     }
-    const data = await this.prisma.salesRecord.findMany({ where, orderBy: [{ id: 'asc' }] });
+    const data = await this.prisma.salesRecord.findMany({
+      where,
+      orderBy: [{ id: 'asc' }],
+      include: { amounts: { select: { internalAccountId: true, amount: true } } },
+    });
     return data.map(item => ({
       ...item,
       id: Number(item.id),
+      // The same payment figures as the colM..colW columns beside them, but
+      // keyed by the account rather than by a position the table fixes.
+      amounts: item.amounts.map((a) => ({
+        accountId: Number(a.internalAccountId),
+        amount: formatDecimal(a.amount),
+      })),
       colH: formatDecimal(item.colH),
       colI: formatDecimal(item.colI),
       colJ: formatDecimal(item.colJ),
@@ -79,6 +89,40 @@ export class SalesService {
       colAA: formatDecimal(item.colAA),
       colAB: formatDecimal(item.colAB),
       colAC: formatDecimal(item.colAC),
+    }));
+  }
+
+  /**
+   * The accounts a year's invoices were actually settled through, in the order
+   * they should be shown.
+   *
+   * The table's columns come from this rather than from a fixed list, so an
+   * account that appears for the first time in a new workbook shows up without
+   * anyone touching the code, and one with no movement takes up no width.
+   */
+  async getSalesAccounts(year?: number): Promise<any[]> {
+    const where: any = {};
+    if (year && !isNaN(year)) {
+      where.salesRecord = { tagYear: year };
+    }
+
+    const used = await this.prisma.salesRecordAmount.groupBy({
+      by: ['internalAccountId'],
+      where,
+    });
+    if (used.length === 0) return [];
+
+    const accounts = await this.prisma.internalAccount.findMany({
+      where: { id: { in: used.map((u) => u.internalAccountId) } },
+      // Accounts with no position set fall to the end rather than to the front.
+      orderBy: [{ displayOrder: 'asc' }, { id: 'asc' }],
+    });
+
+    return accounts.map((a) => ({
+      id: Number(a.id),
+      // Falls back to the holder only so a new account is never a blank header.
+      name: a.displayName ?? a.holderName,
+      order: a.displayOrder,
     }));
   }
 

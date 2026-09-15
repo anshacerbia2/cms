@@ -58,6 +58,13 @@ export class SalesController {
     return this.salesService.getAllSales(year ? Number(year) : undefined);
   }
 
+  /** The accounts this year's invoices were settled through, in display order. */
+  @Get('accounts')
+  @Permissions('sales.index')
+  async getSalesAccounts(@Query('year') year?: string) {
+    return this.salesService.getSalesAccounts(year ? Number(year) : undefined);
+  }
+
   @Get('export/excel')
   @Permissions('sales.index')
   async exportSales(@Query('year') year: string, @Res() res: Response) {
