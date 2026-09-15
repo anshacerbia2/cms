@@ -313,9 +313,16 @@ export class FinanceReportService {
           select: { colG: true, colC: true, colD: true }
         });
 
+        // Grouped on the trimmed, lower-cased name, so "Other expense" and
+        // "Other Expense" are one sub-ledger rather than two. The first
+        // spelling seen is the one shown.
         const groups = new Map<string, Prisma.Decimal>();
+        const labels = new Map<string, string>();
         subTrxs.forEach(t => {
-          const key = t.colG || 'Other';
+          const name = (t.colG || 'Other').trim();
+          const key = name.toLowerCase();
+          if (!labels.has(key)) labels.set(key, name);
+
           const debit = new Prisma.Decimal(t.colC || 0);
           const credit = new Prisma.Decimal(t.colD || 0);
           const net = credit.minus(debit);
@@ -324,8 +331,8 @@ export class FinanceReportService {
         });
 
         const subItems = Array.from(groups.entries())
-          .map(([label, total]) => ({
-            account: label,
+          .map(([key, total]) => ({
+            account: labels.get(key) ?? key,
             total: formatDecimal(total),
             isSubItem: true,
             level: 3,
@@ -443,9 +450,16 @@ export class FinanceReportService {
           select: { colG: true, colC: true, colD: true }
         });
 
+        // Grouped on the trimmed, lower-cased name, so "Other expense" and
+        // "Other Expense" are one sub-ledger rather than two. The first
+        // spelling seen is the one shown.
         const groups = new Map<string, Prisma.Decimal>();
+        const labels = new Map<string, string>();
         subTrxs.forEach(t => {
-          const key = t.colG || 'Other';
+          const name = (t.colG || 'Other').trim();
+          const key = name.toLowerCase();
+          if (!labels.has(key)) labels.set(key, name);
+
           const debit = new Prisma.Decimal(t.colC || 0);
           const credit = new Prisma.Decimal(t.colD || 0);
           const net = credit.minus(debit);
@@ -454,8 +468,8 @@ export class FinanceReportService {
         });
 
         subItems = Array.from(groups.entries())
-          .map(([label, total]) => ({
-            label,
+          .map(([key, total]) => ({
+            label: labels.get(key) ?? key,
             total: formatDecimal(total)
           }))
           .filter(s => s.total !== "0.0000");
