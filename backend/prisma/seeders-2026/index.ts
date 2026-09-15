@@ -9,6 +9,9 @@ import { seedBankStatements2026 } from './bank-statements.seeder';
 import { seedInterAccount2026 } from './inter-account.seeder';
 import { seedDepreciation2026 } from './depreciation.seeder';
 import { seedSales2026 } from './sales.seeder';
+import { seedAccountReceivable2026 } from './account-receivable.seeder';
+import { seedAccountPayable2026 } from './account-payable.seeder';
+import { seedPpnInOut2026 } from './ppn-in-out.seeder';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -33,6 +36,13 @@ async function main() {
     await seedInterAccount2026(prisma);
     await seedDepreciation2026(prisma);
     await seedSales2026(prisma);
+
+    // These three wait on workbooks the accountant has not sent yet. Each one
+    // reports that it was skipped and leaves its table alone, so the rest of
+    // the year still loads.
+    await seedAccountReceivable2026(prisma);
+    await seedAccountPayable2026(prisma);
+    await seedPpnInOut2026(prisma);
 
     console.log(`🚀 ${FISCAL_YEAR} seeding completed successfully.`);
   } catch (error) {

@@ -1,3 +1,7 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import { cleanCurrency, cleanString, excelDateToJSDate } from '../../seeders/utils/excel';
+
 /**
  * The fiscal year every seeder in this folder writes to.
  */
@@ -76,4 +80,110 @@ export function buildColumnMap(headerRow: any[], specs: SlotSpec[]): ColumnMap {
 
   const unclaimed = [...byKey.keys()].filter((k) => !claimed.has(k));
   return { indexes, missing, unclaimed };
+}
+
+/**
+ * Matches only the headers that sit between two column positions.
+ *
+ * Some of these sheets use the same word twice - "IDR" names both the
+ * end-of-year balance and the outstanding balance - so a single pass over the
+ * whole row would give the first one both slots. Restricting the search to the
+ * block a slot belongs to keeps the two apart without relying on the group
+ * label above them, which carries a year and therefore changes every book.
+ *
+ * Indexes come back as positions in the original row, not in the window.
+ */
+export function buildColumnMapInRange(
+  headerRow: any[],
+  specs: SlotSpec[],
+  from: number,
+  to: number,
+): ColumnMap {
+  // Blanking outside the window rather than slicing keeps the indexes absolute.
+  const windowed = headerRow.map((cell, index) => (index >= from && index <= to ? cell : ''));
+  return buildColumnMap(windowed, specs);
+}
+
+/**
+ * Finds this year's workbook by what its name contains.
+ *
+ * The files arrive named after the day they were exported
+ * ("PCMI-Sales-14Sept26.xlsx"), so a hard-coded filename would break on every
+ * new send. Matching on the subject instead means a re-export can simply be
+ * dropped into the folder.
+ */
+export function findWorkbook(keywords: string[]): string | null {
+  const dir = path.join(process.cwd(), 'prisma', 'seed-data-2026');
+  if (!fs.existsSync(dir)) return null;
+
+  const match = fs
+    .readdirSync(dir)
+    .filter((name) => /\.xlsx?$/i.test(name) && !name.startsWith('~$'))
+    .find((name) => {
+      const key = normalizeLabel(name.replace(/\.xlsx?$/i, ''));
+      return keywords.some((k) => key.includes(k));
+    });
+
+  return match ? path.join(dir, match) : null;
+}
+
+/**
+ * The exchange rate sits in the column after "USD" and is headed by the rate
+ * itself ("14,500.00"), which changes every year, so it cannot be found by
+ * name. It is taken by position, and only when that column has no heading of
+ * its own to claim it.
+ */
+export function rateColumnAfter(headerRow: any[], usdIndex: number | undefined): number | undefined {
+  if (usdIndex === undefined) return undefined;
+  const next = usdIndex + 1;
+  const label = String(headerRow[next] ?? '').trim();
+  if (label === '') return next;
+  // A bare number is the rate itself rather than a name for something else.
+  return isNumeric(label.replace(/,/g, '')) ? next : undefined;
+}
+
+/** Says which columns the workbook did not supply, and which it supplied that nothing reads. */
+export function reportLayout(maps: ColumnMap[], specs: SlotSpec[], readByPosition: string[] = []) {
+  const missing = maps.flatMap((m) => m.missing);
+  const ignored = new Set(readByPosition.map(normalizeLabel));
+  const unclaimed = maps.flatMap((m) => m.unclaimed).filter((k) => !ignored.has(k));
+
+  if (missing.length > 0) {
+    const names = missing
+      .map((s) => `${s} (${specs.find((x) => x.slot === s)!.headers[0]})`)
+      .join(', ');
+    console.warn(`⚠️  Not in this workbook, stored as null: ${names}`);
+  }
+  if (unclaimed.length > 0) {
+    console.warn(`⚠️  Column(s) in the workbook that nothing reads, DROPPED: ${unclaimed.join(', ')}`);
+  }
+}
+
+/** Says how much was left below the blank row, so a truncated load is never silent. */
+export function reportTail(rows: any[][], stoppedAt: number) {
+  if (stoppedAt < 0) return;
+  const below = rows.slice(stoppedAt + 1).filter((row) => !isBlankRow(row)).length;
+  if (below > 0) {
+    console.warn(
+      `ℹ️  Stopped at the blank row on line ${stoppedAt + 1}; ${below} further non-empty row(s) below were not read.`,
+    );
+  }
+}
+
+/** Converts one cell the way its slot expects, so every seeder reads alike. */
+export function readCell(value: any, kind: SlotSpec['kind']) {
+  switch (kind) {
+    case 'money':
+      return cleanCurrency(value);
+    case 'int': {
+      // Whole cell or nothing. Stripping the letters out of a label like
+      // "AP PPn 2025" would turn a ledger name into a fiscal year.
+      const text = String(value ?? '').trim().replace(/[,\s]/g, '');
+      return /^-?\d+$/.test(text) ? parseInt(text, 10) : null;
+    }
+    case 'date':
+      return excelDateToJSDate(value);
+    default:
+      return cleanString(value);
+  }
 }

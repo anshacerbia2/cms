@@ -20,6 +20,9 @@ export async function assertSafeToReplace(prisma: PrismaClient): Promise<boolean
     ['sales_records', await prisma.salesRecord.count({ where: { tagYear: FISCAL_YEAR } })],
     ['depreciation', await prisma.depreciation.count({ where: { tagYear: FISCAL_YEAR } })],
     ['inter_account', await prisma.interAccount.count({ where: { tagYear: FISCAL_YEAR } })],
+    ['account_receivables', await prisma.accountReceivable.count({ where: { tagYear: FISCAL_YEAR } })],
+    ['account_payables', await prisma.accountPayable.count({ where: { tagYear: FISCAL_YEAR } })],
+    ['ppn_in_out', await prisma.ppnInOut.count({ where: { tagYear: FISCAL_YEAR } })],
   ];
 
   const existing = counts.filter(([, n]) => n > 0);
