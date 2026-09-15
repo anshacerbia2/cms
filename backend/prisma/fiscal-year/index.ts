@@ -64,7 +64,7 @@ function selected() {
   if (unknown.length > 0) {
     console.error(`❌ No seeder called: ${unknown.join(', ')}`);
     console.error(`   Pick from: ${SEEDERS.map((s) => s.name).join(', ')}`);
-    console.error(`   For example: pnpm seed:${FISCAL_YEAR} --only=receivable,payable`);
+    console.error(`   For example: pnpm seed:year --year=${FISCAL_YEAR} --only=receivable,payable`);
     return null;
   }
   return chosen;

@@ -54,9 +54,9 @@ export async function assertSafeToReplace(
   console.error(
     `\n   Any ${FISCAL_YEAR} transaction entered through the application would be lost.` +
       `\n   To load only what is new, name it:\n` +
-      `\n     pnpm seed:${FISCAL_YEAR} --only=receivable,payable\n` +
+      `\n     pnpm seed:year --year=${FISCAL_YEAR} --only=receivable,payable\n` +
       `\n   If the workbooks are the source of truth for everything above:\n` +
-      `\n     pnpm seed:${FISCAL_YEAR} --replace\n`,
+      `\n     pnpm seed:year --year=${FISCAL_YEAR} --replace\n`,
   );
   return false;
 }
