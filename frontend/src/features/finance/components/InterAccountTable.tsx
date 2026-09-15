@@ -364,8 +364,8 @@ export const InterAccountTable: React.FC = () => {
                       Grand Totals ({filteredAndSortedData.length} records)
                     </TableCell>
                     {cols.slice(1).map(c => (
-                      <TableCell key={`grand-${c.k}`} className={`text-right ${getAmountColor((grandTotals as any)[c.k].toString())}`}>
-                        {formatCurrency((grandTotals as any)[c.k].toString())}
+                      <TableCell key={`grand-${c.k}`} className={`text-right ${getAmountColor(((grandTotals as any)[c.k] ?? 0).toString())}`}>
+                        {formatCurrency(((grandTotals as any)[c.k] ?? 0).toString())}
                       </TableCell>
                     ))}
                     <TableCell className="bg-secondary/[0.02]" />

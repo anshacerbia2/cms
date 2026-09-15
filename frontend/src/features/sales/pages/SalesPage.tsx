@@ -186,7 +186,7 @@ export default function SalesPage() {
     );
 
   const salesGrandTotals = useMemo(() => {
-    return filteredAndSortedSales.reduce((acc: any, curr: any) => ({
+    const byColumn = filteredAndSortedSales.reduce((acc: any, curr: any) => ({
       colH: acc.colH.plus(new Decimal(cleanAmount(curr.colH))),
       colI: acc.colI.plus(new Decimal(cleanAmount(curr.colI))),
       colJ: acc.colJ.plus(new Decimal(cleanAmount(curr.colJ))),
@@ -212,12 +212,12 @@ export default function SalesPage() {
       colN: new Decimal(0), colO: new Decimal(0), colP: new Decimal(0), colQ: new Decimal(0), colR: new Decimal(0), 
       colS: new Decimal(0), colT: new Decimal(0), colU: new Decimal(0), colV: new Decimal(0), colW: new Decimal(0), 
       colX: new Decimal(0), colZ: new Decimal(0), colAA: new Decimal(0), colAB: new Decimal(0), colAC: new Decimal(0),
-      ...sumAccounts(filteredAndSortedSales),
     });
+    return { ...byColumn, ...sumAccounts(filteredAndSortedSales) };
   }, [filteredAndSortedSales, accountColumns]);
 
   const salesPageSubtotals = useMemo(() => {
-    return paginatedSales.reduce((acc: any, curr: any) => ({
+    const byColumn = paginatedSales.reduce((acc: any, curr: any) => ({
       colH: acc.colH.plus(new Decimal(cleanAmount(curr.colH))),
       colI: acc.colI.plus(new Decimal(cleanAmount(curr.colI))),
       colJ: acc.colJ.plus(new Decimal(cleanAmount(curr.colJ))),
@@ -243,8 +243,8 @@ export default function SalesPage() {
       colN: new Decimal(0), colO: new Decimal(0), colP: new Decimal(0), colQ: new Decimal(0), colR: new Decimal(0), 
       colS: new Decimal(0), colT: new Decimal(0), colU: new Decimal(0), colV: new Decimal(0), colW: new Decimal(0), 
       colX: new Decimal(0), colZ: new Decimal(0), colAA: new Decimal(0), colAB: new Decimal(0), colAC: new Decimal(0),
-      ...sumAccounts(paginatedSales),
     });
+    return { ...byColumn, ...sumAccounts(paginatedSales) };
   }, [paginatedSales, accountColumns]);
 
   return (
@@ -477,7 +477,7 @@ export default function SalesPage() {
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesPageSubtotals.colK.toString())}`}>{formatCurrency(salesPageSubtotals.colK.toString())}</TableCell>
                     {/* <TableCell className="py-3 bg-secondary/[0.01]" /> */}
                     {accountColumns.map((account) => (
-                      <TableCell key={account.id} className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals[accountKey(account.id)].toString())}</TableCell>
+                      <TableCell key={account.id} className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(((salesPageSubtotals as any)[accountKey(account.id)] ?? 0).toString())}</TableCell>
                     ))}
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colX.toString())}</TableCell>
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colZ.toString())}</TableCell>
@@ -499,7 +499,7 @@ export default function SalesPage() {
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesGrandTotals.colK.toString())}`}>{formatCurrency(salesGrandTotals.colK.toString())}</TableCell>
                     {/* <TableCell className="py-3 bg-secondary/[0.02]" /> */}
                     {accountColumns.map((account) => (
-                      <TableCell key={account.id} className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals[accountKey(account.id)].toString())}</TableCell>
+                      <TableCell key={account.id} className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(((salesGrandTotals as any)[accountKey(account.id)] ?? 0).toString())}</TableCell>
                     ))}
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colX.toString())}</TableCell>
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colZ.toString())}</TableCell>

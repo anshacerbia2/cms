@@ -161,7 +161,7 @@ export function ApSummaryTab() {
   };
 
   const subtotalTotals = useMemo(() => {
-    return paginatedAP.reduce((acc, curr) => {
+    const byColumn = paginatedAP.reduce((acc, curr) => {
       return {
         colE: acc.colE.plus(new Decimal(clean(curr.colE))),
         colK: acc.colK.plus(new Decimal(clean(curr.colK))),
@@ -181,12 +181,12 @@ export function ApSummaryTab() {
       colN: new Decimal(0), colO: new Decimal(0), colP: new Decimal(0),
       colQ: new Decimal(0), colR: new Decimal(0), colS: new Decimal(0),
       colU: new Decimal(0),
-      ...sumAccounts(paginatedAP),
     });
+    return { ...byColumn, ...sumAccounts(paginatedAP) };
   }, [paginatedAP, accountColumns]);
 
   const grandTotals = useMemo(() => {
-    return filteredAndSortedAP.reduce((acc, curr) => {
+    const byColumn = filteredAndSortedAP.reduce((acc, curr) => {
       return {
         colE: acc.colE.plus(new Decimal(clean(curr.colE))),
         colK: acc.colK.plus(new Decimal(clean(curr.colK))),
@@ -206,8 +206,8 @@ export function ApSummaryTab() {
       colN: new Decimal(0), colO: new Decimal(0), colP: new Decimal(0),
       colQ: new Decimal(0), colR: new Decimal(0), colS: new Decimal(0),
       colU: new Decimal(0),
-      ...sumAccounts(filteredAndSortedAP),
     });
+    return { ...byColumn, ...sumAccounts(filteredAndSortedAP) };
   }, [filteredAndSortedAP, accountColumns]);
 
   const handleEdit = (row: any) => {
@@ -477,8 +477,8 @@ export function ApSummaryTab() {
                     {/* <TableCell></TableCell> */}
 
                     {accountColumns.map((account) => (
-                      <TableCell key={account.id} className={`text-right whitespace-nowrap ${getValueColor((subtotalTotals as any)[accountKey(account.id)].toString())}`}>
-                        {formatCurrency((subtotalTotals as any)[accountKey(account.id)].toString())}
+                      <TableCell key={account.id} className={`text-right whitespace-nowrap ${getValueColor(((subtotalTotals as any)[accountKey(account.id)] ?? 0).toString())}`}>
+                        {formatCurrency(((subtotalTotals as any)[accountKey(account.id)] ?? 0).toString())}
                       </TableCell>
                     ))}
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colU.toString())}</TableCell>
@@ -494,8 +494,8 @@ export function ApSummaryTab() {
                     {/* <TableCell></TableCell> */}
 
                     {accountColumns.map((account) => (
-                      <TableCell key={account.id} className={`text-right whitespace-nowrap ${getValueColor((grandTotals as any)[accountKey(account.id)].toString())}`}>
-                        {formatCurrency((grandTotals as any)[accountKey(account.id)].toString())}
+                      <TableCell key={account.id} className={`text-right whitespace-nowrap ${getValueColor(((grandTotals as any)[accountKey(account.id)] ?? 0).toString())}`}>
+                        {formatCurrency(((grandTotals as any)[accountKey(account.id)] ?? 0).toString())}
                       </TableCell>
                     ))}
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(grandTotals.colU.toString())}</TableCell>

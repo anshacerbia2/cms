@@ -145,7 +145,7 @@ export default function AccountReceivablePage() {
   }, [filteredAndSortedData, page]);
 
   const subtotalTotals = useMemo(() => {
-    return paginatedData.reduce((acc, curr) => {
+    const byColumn = paginatedData.reduce((acc, curr) => {
       return {
         colF: acc.colF.plus(new Decimal(cleanAmount(curr.colF))),
         colJ: acc.colJ.plus(new Decimal(cleanAmount(curr.colJ))),
@@ -161,12 +161,12 @@ export default function AccountReceivablePage() {
       colF: new Decimal(0), colJ: new Decimal(0), colK: new Decimal(0), 
       colL: new Decimal(0), colM: new Decimal(0), colN: new Decimal(0), 
       colO: new Decimal(0), colP: new Decimal(0), colR: new Decimal(0),
-      ...sumAccounts(paginatedData),
     });
+    return { ...byColumn, ...sumAccounts(paginatedData) };
   }, [paginatedData, accountColumns]);
 
   const grandTotals = useMemo(() => {
-    return filteredAndSortedData.reduce((acc, curr) => {
+    const byColumn = filteredAndSortedData.reduce((acc, curr) => {
       return {
         colF: acc.colF.plus(new Decimal(cleanAmount(curr.colF))),
         colJ: acc.colJ.plus(new Decimal(cleanAmount(curr.colJ))),
@@ -182,8 +182,8 @@ export default function AccountReceivablePage() {
       colF: new Decimal(0), colJ: new Decimal(0), colK: new Decimal(0), 
       colL: new Decimal(0), colM: new Decimal(0), colN: new Decimal(0), 
       colO: new Decimal(0), colP: new Decimal(0), colR: new Decimal(0),
-      ...sumAccounts(filteredAndSortedData),
     });
+    return { ...byColumn, ...sumAccounts(filteredAndSortedData) };
   }, [filteredAndSortedData, accountColumns]);
 
   const handleEdit = (row: any) => {
@@ -446,8 +446,8 @@ export default function AccountReceivablePage() {
                     </TableCell>
                     
                     {accountColumns.map((account) => (
-                      <TableCell key={account.id} className={`text-right ${getAmountColor((subtotalTotals as any)[accountKey(account.id)].toString(), true)}`}>
-                        {formatCurrency((subtotalTotals as any)[accountKey(account.id)].toString())}
+                      <TableCell key={account.id} className={`text-right ${getAmountColor(((subtotalTotals as any)[accountKey(account.id)] ?? 0).toString(), true)}`}>
+                        {formatCurrency(((subtotalTotals as any)[accountKey(account.id)] ?? 0).toString())}
                       </TableCell>
                     ))}
                     
@@ -467,8 +467,8 @@ export default function AccountReceivablePage() {
                     </TableCell>
                     
                     {accountColumns.map((account) => (
-                      <TableCell key={account.id} className={`text-right ${getAmountColor((grandTotals as any)[accountKey(account.id)].toString(), true)}`}>
-                        {formatCurrency((grandTotals as any)[accountKey(account.id)].toString())}
+                      <TableCell key={account.id} className={`text-right ${getAmountColor(((grandTotals as any)[accountKey(account.id)] ?? 0).toString(), true)}`}>
+                        {formatCurrency(((grandTotals as any)[accountKey(account.id)] ?? 0).toString())}
                       </TableCell>
                     ))}
                     
