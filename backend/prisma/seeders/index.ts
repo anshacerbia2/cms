@@ -10,7 +10,7 @@ import { seedMasterDataPermissions } from './master-data.seeder';
 import { seedCustomers } from './customers.seeder';
 import { seedSuppliers } from './suppliers.seeder';
 import { seedProducts } from './products.seeder';
-import { seedBankMutation, seedBanks } from './banks.seeder';
+import { seedBanks } from './banks.seeder';
 import { seedFinance } from './finance.seeder';
 import { seedEquity } from './equity.seeder';
 

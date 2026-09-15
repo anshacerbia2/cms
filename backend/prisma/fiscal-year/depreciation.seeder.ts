@@ -2,7 +2,7 @@ import { PrismaClient, Prisma, DepreciationType } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as XLSX from 'xlsx';
-import { cleanCurrency, cleanString, excelDateToJSDate } from '../seeders/utils/excel';
+import { cleanCurrency, cleanString, excelDateToJSDate } from '../utils/excel';
 import { DATA_DIR, FISCAL_YEAR, isNumeric, normalizeLabel, findWorkbook } from './utils/layout';
 
 const WORKBOOK = 'PCMI-Depreciation-14Sept26.xlsx';

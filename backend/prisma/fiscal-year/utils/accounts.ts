@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { cleanCurrency } from '../../seeders/utils/excel';
+import { cleanCurrency } from '../../utils/excel';
 import { normalizeLabel } from './layout';
 
 /**

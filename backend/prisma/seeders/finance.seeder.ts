@@ -7,7 +7,7 @@ import {
   cleanString, 
   isRowEmpty,
   formatExcelDate
-} from './utils/excel';
+} from '../utils/excel';
 
 export async function seedFinance(prisma: PrismaClient) {
   // Only the three tables this seeder actually fills. It used to clear sales

@@ -1,6 +1,6 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
-import { cleanCurrency, cleanString } from '../seeders/utils/excel';
+import { cleanCurrency, cleanString } from '../utils/excel';
 import {
   DATA_DIR,
   FISCAL_YEAR,

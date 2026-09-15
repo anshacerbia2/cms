@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { cleanCurrency, cleanString, excelDateToJSDate } from '../../seeders/utils/excel';
+import { cleanCurrency, cleanString, excelDateToJSDate } from '../../utils/excel';
 
 /**
  * The fiscal year this run writes to, and the folder its workbooks sit in.

@@ -2,7 +2,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as XLSX from 'xlsx';
-import { cleanCurrency, cleanString } from '../seeders/utils/excel';
+import { cleanCurrency, cleanString } from '../utils/excel';
 import {
   findWorkbook,
   DATA_DIR,
