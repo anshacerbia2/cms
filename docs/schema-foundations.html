@@ -1,0 +1,579 @@
+<title>Dari Kolom ke Relasi</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --paper:      #FBFCFD;
+    --surface:    #FFFFFF;
+    --ink:        #16202B;
+    --muted:      #5A6875;
+    --faint:      #8895A2;
+    --rule:       #DFE5EA;
+    --rule-soft:  #EDF1F4;
+    --accent:     #2D4A7C;
+    --accent-bg:  #EBF0F8;
+    --critical:   #A3342B;
+    --critical-bg:#FBEDEB;
+    --gap:        #8A5A0C;
+    --gap-bg:     #FBF3E4;
+    --ok:         #1B6144;
+    --ok-bg:      #E8F3ED;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --slab: "Bitter", Georgia, "Times New Roman", serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #0E1318;
+      --surface:    #161D25;
+      --ink:        #E4EAF0;
+      --muted:      #A0AEBC;
+      --faint:      #7A8794;
+      --rule:       #2A343F;
+      --rule-soft:  #212A33;
+      --accent:     #8FADDC;
+      --accent-bg:  #1A2434;
+      --critical:   #E9938A;
+      --critical-bg:#2C1A18;
+      --gap:        #D8A957;
+      --gap-bg:     #2A2216;
+      --ok:         #6FBF97;
+      --ok-bg:      #152620;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:      #0E1318;
+    --surface:    #161D25;
+    --ink:        #E4EAF0;
+    --muted:      #A0AEBC;
+    --faint:      #7A8794;
+    --rule:       #2A343F;
+    --rule-soft:  #212A33;
+    --accent:     #8FADDC;
+    --accent-bg:  #1A2434;
+    --critical:   #E9938A;
+    --critical-bg:#2C1A18;
+    --gap:        #D8A957;
+    --gap-bg:     #2A2216;
+    --ok:         #6FBF97;
+    --ok-bg:      #152620;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 56px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 52px;
+  }
+
+  /* masthead */
+  .masthead { display: flex; flex-direction: column; gap: 16px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0;
+  }
+  h1 {
+    font-family: var(--slab);
+    font-size: clamp(32px, 5.5vw, 46px);
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1.08;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 18.5px;
+    color: var(--muted);
+    margin: 0;
+    max-width: 62ch;
+  }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 6px 26px;
+    font-family: var(--mono); font-size: 11.5px; color: var(--faint);
+    border-top: 1px solid var(--rule); padding-top: 14px;
+  }
+  .meta b { color: var(--ink); font-weight: 500; }
+
+  section { display: flex; flex-direction: column; gap: 18px; }
+  h2 {
+    font-family: var(--slab);
+    font-size: 25px; font-weight: 600; letter-spacing: -.012em;
+    margin: 0; padding-bottom: 10px; border-bottom: 2px solid var(--ink);
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--slab);
+    font-size: 18px; font-weight: 600; margin: 14px 0 0;
+    text-wrap: balance;
+  }
+  h4 {
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    letter-spacing: .15em; text-transform: uppercase;
+    color: var(--faint); margin: 10px 0 0;
+  }
+  p { margin: 0; max-width: 68ch; }
+  ul { margin: 0; padding-left: 20px; max-width: 68ch; display: flex; flex-direction: column; gap: 7px; }
+  code {
+    font-family: var(--mono); font-size: .855em;
+    background: var(--rule-soft); padding: .12em .36em; border-radius: 3px;
+  }
+  a { color: var(--accent); }
+
+  /* the three problem classes — numbered because the order is the work order */
+  .klas { display: flex; flex-direction: column; gap: 14px; }
+  .klas-head { display: flex; align-items: baseline; gap: 14px; }
+  .klas-no {
+    font-family: var(--mono); font-size: 32px; font-weight: 700;
+    line-height: 1; color: var(--rule); flex-shrink: 0;
+  }
+  .klas.now .klas-no { color: var(--critical); }
+  .klas-title { font-family: var(--slab); font-size: 21px; font-weight: 600; margin: 0; }
+  .klas-tag {
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 3px; white-space: nowrap;
+  }
+  .t-now  { background: var(--critical-bg); color: var(--critical); }
+  .t-next { background: var(--gap-bg);      color: var(--gap); }
+  .t-late { background: var(--rule-soft);   color: var(--muted); }
+  .t-ok   { background: var(--ok-bg);       color: var(--ok); }
+
+  /* tables */
+  .scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+  thead th {
+    text-align: left; font-family: var(--mono); font-size: 10px; font-weight: 700;
+    letter-spacing: .13em; text-transform: uppercase; color: var(--faint);
+    padding: 10px 14px; background: var(--rule-soft);
+    border-bottom: 1px solid var(--rule); white-space: nowrap;
+  }
+  tbody td { padding: 11px 14px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.mono, th.mono { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+  td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+
+  /* callout */
+  .note {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-bg);
+    padding: 16px 20px; border-radius: 0 6px 6px 0;
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .note.warn { border-left-color: var(--gap); background: var(--gap-bg); }
+  .note .h {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
+  }
+  .note.warn .h { color: var(--gap); }
+  .note p { max-width: 64ch; }
+
+  pre {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.55;
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 0;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  .before-after { display: grid; gap: 14px; }
+  @media (min-width: 720px) { .before-after { grid-template-columns: 1fr 1fr; } }
+  .ba-col { display: flex; flex-direction: column; gap: 7px; }
+  .ba-label {
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--faint);
+  }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Rencana desain &middot; skema finance</p>
+    <h1>Dari Kolom ke Relasi</h1>
+    <p class="standfirst">Tujuh tabel finance menyimpan rekening, pihak, dan waktu sebagai posisi kolom.
+      Dokumen ini memetakan apa yang harus jadi relasi, dengan urutan berdasarkan risiko — dan mencatat
+      setiap celah yang sengaja dibiarkan kosong.</p>
+    <div class="meta">
+      <span>Basis <b>54d5ea0</b></span>
+      <span><b>39</b> model</span>
+      <span><b>7</b> tabel tanpa relasi</span>
+      <span><b>3</b> jenis masalah</span>
+      <span>Ditulis <b>15 Sep 2026</b></span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Yang ditemukan</h2>
+    <p>Ada dua dunia dalam satu database, dan keduanya tidak saling mengenal.</p>
+
+    <div class="before-after">
+      <div class="ba-col">
+        <span class="ba-label">Sales pipeline — relasi rapi</span>
+        <div class="scroll">
+          <table>
+            <tbody>
+              <tr><td class="mono">Invoice</td><td class="num">5 FK</td></tr>
+              <tr><td class="mono">SalesItem</td><td class="num">5 FK</td></tr>
+              <tr><td class="mono">BoqItem</td><td class="num">3 FK</td></tr>
+              <tr><td class="mono">ReceiveVoucher</td><td class="num">2 FK</td></tr>
+              <tr><td class="mono">Project · Proposal · Boq</td><td class="num">1 FK</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="ba-col">
+        <span class="ba-label">Finance — nol relasi</span>
+        <div class="scroll">
+          <table>
+            <tbody>
+              <tr><td class="mono">SalesRecord</td><td class="num">26 kolom</td></tr>
+              <tr><td class="mono">AccountPayable</td><td class="num">22 kolom</td></tr>
+              <tr><td class="mono">Depreciation</td><td class="num">21 kolom</td></tr>
+              <tr><td class="mono">AccountReceivable</td><td class="num">19 kolom</td></tr>
+              <tr><td class="mono">PpnInOut</td><td class="num">19 kolom</td></tr>
+              <tr><td class="mono">InterAccount</td><td class="num">16 kolom</td></tr>
+              <tr><td class="mono">TaxLedger</td><td class="num">15 kolom</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <p>Tujuh tabel, 138 kolom tanpa nama, tidak satu pun foreign key. Satu-satunya pengecualian di dunia itu
+      <code>FinancialTransaction</code>, yang punya <code>internal_account_id</code> — dan justru itu bukti
+      bahwa polanya bisa diperbaiki.</p>
+
+    <div class="note warn">
+      <span class="h">Yang paling perlu diputuskan</span>
+      <p><code>sales_records</code> menyimpan <b>484 invoice</b>. Tabel <code>invoices</code> pipeline
+        menyimpan <b>0</b>. Keduanya menggambarkan hal yang sama, dan tidak ada satu pun kolom yang
+        menghubungkan — benangnya cuma <code>invoices.sales_code</code>, sebuah string tanpa jaminan apa pun.</p>
+      <p>Begitu pipeline dipakai sungguhan, setiap invoice tercatat dua kali: sekali lewat spreadsheet ke
+        <code>sales_records</code>, sekali lewat aplikasi ke <code>invoices</code>. Dua angka penjualan, dua
+        piutang, tidak ada yang tahu mana yang benar.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tiga jenis masalah</h2>
+    <p>Bukan tujuh tabel dengan penyakit sama. Tiga jenis berbeda, dan urutan di bawah ini adalah urutan
+      pengerjaan — dari yang sedang meledak ke yang bisa menunggu.</p>
+
+    <div class="klas now">
+      <div class="klas-head">
+        <span class="klas-no">1</span>
+        <div>
+          <h3 class="klas-title">Rekening sebagai posisi kolom</h3>
+          <span class="klas-tag t-now">Sedang meledak</span>
+        </div>
+      </div>
+      <p>Empat tabel menyimpan rekening bank sebagai kolom. Satu bank baru dari Kang Ryan memecahkan
+        keempatnya sekaligus, plus sembilan file frontend.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Tabel</th><th class="mono">Kolom</th><th class="num">Rekening</th><th class="num">Slot sisa</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">inter_account</td><td class="mono">colC..colO</td><td class="num">13</td><td class="num" style="color:var(--critical);font-weight:700">1</td></tr>
+            <tr><td class="mono">sales_records</td><td class="mono">colM..colW</td><td class="num">11</td><td class="num">2</td></tr>
+            <tr><td class="mono">account_payable</td><td class="mono">colK..colS</td><td class="num">9</td><td class="num">—</td></tr>
+            <tr><td class="mono">account_receivable</td><td class="mono">colJ..colP</td><td class="num">7</td><td class="num">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><code>inter_account</code> punya <code>colA</code>–<code>colP</code>, tiga belas sudah terpakai.
+        <b>Sisa satu slot.</b> Bank kedua yang masuk memaksa migrasi skema di tengah tahun buku.</p>
+    </div>
+
+    <div class="klas">
+      <div class="klas-head">
+        <span class="klas-no">2</span>
+        <div>
+          <h3 class="klas-title">Pihak sebagai teks bebas</h3>
+          <span class="klas-tag t-next">Menyusul</span>
+        </div>
+      </div>
+      <p>Pelanggan, pemasok, dan nomor invoice disimpan sebagai string. Pelanggan yang sama punya ejaan
+        berbeda di dua tempat, dan tidak ada cara menggabungkannya selain mencocokkan teks.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Tabel</th><th class="mono">Kolom</th><th>Isinya</th><th>Seharusnya</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">account_receivable</td><td class="mono">colD</td><td>Subject</td><td class="mono">→ customers</td></tr>
+            <tr><td class="mono">account_payable</td><td class="mono">colC</td><td>Vendor</td><td class="mono">→ suppliers</td></tr>
+            <tr><td class="mono">ppn_in_out</td><td class="mono">colD</td><td>Client/Supplier</td><td class="mono">→ customers / suppliers</td></tr>
+            <tr><td class="mono">ppn_in_out</td><td class="mono">colE</td><td>Invoice No</td><td class="mono">→ invoices</td></tr>
+            <tr><td class="mono">tax_ledger</td><td class="mono">colD</td><td>Client/Supplier</td><td class="mono">→ customers / suppliers</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Contoh nyata dari data sekarang: <code>"Bank Mandiri (Persero) Tbk,"</code> — dengan koma di ujungnya.
+        Pencocokan longgar akan menyatukan hal yang tidak sama, dan itu lebih berbahaya daripada membiarkannya
+        teks.</p>
+    </div>
+
+    <div class="klas">
+      <div class="klas-head">
+        <span class="klas-no">3</span>
+        <div>
+          <h3 class="klas-title">Waktu sebagai posisi kolom</h3>
+          <span class="klas-tag t-late">Bisa menunggu</span>
+        </div>
+      </div>
+      <p><code>depreciation</code> menyimpan dua belas bulan sebagai dua belas kolom:</p>
+      <pre><code>col_f  s/d 2024        col_g  Jan-25  …  col_r  Dec-25
+col_s  total 2025      col_t  s/d 2025     col_u  book value</code></pre>
+      <p>Dan datanya membuktikan kolom itu <b>dipakai ulang tiap tahun</b> — baris 2026 mengisi
+        <code>col_g</code>–<code>col_r</code> juga, yang sekarang berarti Jan–Des 2026. Nama kolomnya bohong;
+        maknanya hanya bisa dipahami lewat <code>tagYear</code>.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th class="mono">tagYear</th><th class="num">Baris</th><th class="num">Isi Jan</th><th class="num">Isi Des</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">2025</td><td class="num">84</td><td class="num">33</td><td class="num">33</td></tr>
+            <tr><td class="mono">2026</td><td class="num">98</td><td class="num">38</td><td class="num">38</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Ini bukan masalah relasi, tapi masalah model — penyusutan bulanan seharusnya baris, bukan kolom.
+        Tidak meledak saat bank bertambah, jadi prioritasnya paling rendah.</p>
+    </div>
+
+    <div class="klas">
+      <div class="klas-head">
+        <span class="klas-no">4</span>
+        <div>
+          <h3 class="klas-title">Sekadar nama yang buruk</h3>
+          <span class="klas-tag t-ok">Murah</span>
+        </div>
+      </div>
+      <p><code>ppn_in_out</code> dan <code>tax_ledger</code> tidak menyembunyikan entitas apa pun — kolomnya
+        PPN, WAPU, Masukan, Sub Ledger. Cukup diganti nama lewat <code>@map</code>:
+        <b>nol migrasi data</b>, karena nama kolom database tidak berubah sama sekali.</p>
+      <pre><code>basicPrice  Decimal?  @map("col_h")   // kode pakai basicPrice, DB tetap col_h</code></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Kontrak</h2>
+    <p>Aturan yang mengikat seluruh pengerjaan. Ditetapkan supaya perubahan besar ini tidak pernah menghentikan
+      pekerjaan finance yang sedang berjalan.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th class="mono">#</th><th>Aturan</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">1</td><td><b>Setiap relasi baru nullable.</b> Tidak ada satu pun jalur tulis yang ada sekarang boleh pecah.</td></tr>
+          <tr><td class="mono">2</td><td><b>Kolom lama tetap sumber kebenaran</b> sampai FK-nya terisi.</td></tr>
+          <tr><td class="mono">3</td><td><b>Baca: pakai FK kalau ada,</b> jatuh ke kolom lama kalau kosong.</td></tr>
+          <tr><td class="mono">4</td><td><b>Setiap relasi yang belum bisa diisi masuk daftar celah</b> — tabel apa, kolom apa, datanya dari mana, kenapa kosong.</td></tr>
+          <tr><td class="mono">5</td><td><b>Tidak ada yang jadi required</b> sampai daftar celahnya bersih dan disetujui.</td></tr>
+          <tr><td class="mono">6</td><td><b>Lapisan impor tidak boleh menebak.</b> Header tak dikenal menghentikan impor dengan pesan jelas, bukan diabaikan.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Daftar celah</h2>
+    <p>Relasi yang akan lahir kosong karena datanya memang belum ada. Dicatat di sini, bukan dibiarkan jadi
+      kejutan — ini yang dimaksud aturan 4.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Relasi</th><th>Datanya dari</th><th>Kenapa kosong</th><th>Terisi kalau</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">sales_records<br>→ invoices</td>
+            <td>pipeline Invoice</td>
+            <td><code>invoices</code> masih 0 baris; 484 baris historis tidak punya project maupun proposal</td>
+            <td>keputusan soal 484 baris diambil (lihat bawah)</td>
+          </tr>
+          <tr>
+            <td class="mono">sales_records<br>→ customers</td>
+            <td>master Customer</td>
+            <td>nama pelanggan teks bebas, ejaan tidak seragam</td>
+            <td>dicocokkan bertahap, manual untuk yang meragukan</td>
+          </tr>
+          <tr>
+            <td class="mono">account_payable<br>→ suppliers</td>
+            <td>master Supplier</td>
+            <td>vendor teks bebas</td>
+            <td>sama seperti di atas</td>
+          </tr>
+          <tr>
+            <td class="mono">inter_account<br>→ internal_accounts</td>
+            <td>master rekening</td>
+            <td><b>3 dari 13 kolom tidak punya rekening:</b> <code>BJB</code>, <code>Mandiri Plasa Mandiri</code>, <code>PPn In and Out</code></td>
+            <td>dua yang pertama dibuat; yang ketiga butuh keputusan — itu bukan rekening</td>
+          </tr>
+          <tr>
+            <td class="mono">ppn_in_out<br>→ invoices</td>
+            <td>pipeline Invoice</td>
+            <td>bergantung baris pertama</td>
+            <td>menyusul setelahnya</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Bentuk target</h2>
+
+    <h3>inter_account — satu baris, satu transfer</h3>
+    <p>Data sekarang menyimpan <b>matriks pasangan rekening</b>, bukan daftar transfer. Dari 228 baris, hanya
+      <b>64 yang benar-benar transfer</b> — 164 sisanya kombinasi pasangan bernilai nol, bawaan tata letak
+      spreadsheet.</p>
+    <div class="before-after">
+      <div class="ba-col">
+        <span class="ba-label">Sekarang</span>
+        <pre><code>colB  "BCA Sahardjo to BCA Juanda"
+colC  -50000      ← asal
+colD   50000      ← tujuan
+colE..colO  0     ← 11 kolom nol</code></pre>
+      </div>
+      <div class="ba-col">
+        <span class="ba-label">Target</span>
+        <pre><code>fromAccountId  → InternalAccount
+toAccountId    → InternalAccount
+amount         50000
+date, description, tagYear</code></pre>
+      </div>
+    </div>
+    <p>Matriks penuh tetap bisa dirender UI lewat cross join antar rekening — itu urusan tampilan, bukan
+      urusan penyimpanan.</p>
+
+    <h3>sales_records — pembayaran jadi baris</h3>
+    <p>Kolom bank mencatat pembayaran masuk ke rekening mana: 106 baris satu rekening, 209 baris terbagi dua,
+      169 belum dibayar. Pipeline sudah memodelkan hal yang sama, lebih lengkap.</p>
+    <div class="before-after">
+      <div class="ba-col">
+        <span class="ba-label">sales_records</span>
+        <pre><code>colM  1224000   ← "masuk BCA Sahardjo"
+
+(tanpa nomor voucher)
+(tanpa tanggal)
+(tanpa pembayar)
+(tanpa potongan)</code></pre>
+      </div>
+      <div class="ba-col">
+        <span class="ba-label">pipeline — sudah ada</span>
+        <pre><code>ReceiveVoucher
+  internalAccountId → rekening
+  rvNumber, rvDate, payer, amount
+InvoiceReceiveVoucher
+  amountApplied
+  ppnWapu, pph23, bankCharge</code></pre>
+      </div>
+    </div>
+    <div class="note">
+      <span class="h">Kesimpulan</span>
+      <p><code>sales_records</code> bukan entitas terpisah — dia <b>ringkasan pipih</b> dari sesuatu yang sudah
+        dimodelkan benar. Targetnya: jadi laporan yang dihitung dari <code>invoices</code> +
+        <code>receive_vouchers</code>, bukan tabel yang ditulis sendiri.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Pemisahan impor dan penyimpanan</h2>
+    <p>Akar semua masalah di atas: <b>bentuk spreadsheet dipakai langsung sebagai bentuk database.</b> Jadi
+      setiap kali tata letaknya berubah, itu jadi masalah skema. <code>tagYear</code> bukan penyebabnya —
+      <code>tagYear</code> benar dan memang perlu. Yang salah: kolom membawa makna yang berubah tiap tahun.</p>
+    <pre><code>Excel (berubah tiap tahun)
+      ↓   lapisan impor — menyerap ketidakkonsistenan
+      ↓   memetakan: kolom → baris, posisi → relasi
+Database (bentuknya tetap)</code></pre>
+    <p>Setelah pemisahan ini, workbook boleh menambah kolom, menggeser urutan, atau mulai dari bulan Maret.
+      Semuanya cuma terjemahan yang berbeda — <b>nol perubahan skema</b>. Kang Ryan bebas bekerja persis
+      seperti sekarang.</p>
+
+    <div class="note">
+      <span class="h">Separuhnya sudah ada</span>
+      <p>Seeder 2026 sudah mencocokkan kolom <b>berdasarkan nama header, bukan posisi</b> —
+        <code>buildColumnMap()</code> dan <code>normalizeLabel()</code>, yang membuat <code>"B N I"</code>
+        cocok dengan <code>bni</code>. Instingnya sudah benar. Yang belum: tujuannya masih kolom tetap.
+        Sudah dibaca berdasarkan nama, tapi ditulis ke <code>colH</code>.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Urutan pengerjaan</h2>
+    <p>Setiap langkah adalah irisan vertikal yang berdiri sendiri: skema, seeder, service, UI, dan pembuktian
+      angka — selesai, dirilis, baru lanjut. Bukan mengubah semua skema dulu lalu mengejar semua UI.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th class="mono">#</th><th>Langkah</th><th class="num">File</th><th>Kenapa urutannya di sini</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">1</td><td><code>inter_account</code> → relasi rekening</td><td class="num">~6</td><td>Paling mendesak — sisa satu slot. Tabel terkecil, 64 baris nyata, jadi pembuktiannya paling mudah</td></tr>
+          <tr><td class="mono">2</td><td><code>account_receivable</code> + <code>account_payable</code></td><td class="num">~8</td><td>Pola yang sama, sudah terbukti di langkah 1</td></tr>
+          <tr><td class="mono">3</td><td>Ganti nama kolom lewat <code>@map</code></td><td class="num">~20</td><td>Nol migrasi data. Dikerjakan per tabel, ikut irisan di atas</td></tr>
+          <tr><td class="mono">4</td><td>FK pihak — customer, supplier</td><td class="num">~10</td><td>Nullable di sebelah teks; pencocokan bertahap</td></tr>
+          <tr><td class="mono">5</td><td><code>sales_records</code> → laporan</td><td class="num">~10</td><td>Menunggu keputusan 484 baris historis</td></tr>
+          <tr><td class="mono">6</td><td><code>depreciation</code> bulanan → baris</td><td class="num">~6</td><td>Paling tidak mendesak</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Cara membuktikan angkanya tidak bergeser</h2>
+    <p>Satu aturan, tanpa pengecualian: <b>setiap angka, per rekening, per tahun, sebelum dan sesudah, harus
+      sama persis.</b> Bukan totalnya saja — total bisa cocok sementara dua rekening tertukar.</p>
+    <ul>
+      <li>Sebelum migrasi: simpan cuplikan tiap tabel per rekening per tahun ke berkas.</li>
+      <li>Sesudah backfill: hitung ulang dari bentuk baru, bandingkan baris per baris.</li>
+      <li>Selisih apa pun — termasuk satu sen — menghentikan langkah itu. Tidak ada toleransi pembulatan;
+        seluruh nilai uang berupa <code>Decimal(19,4)</code>.</li>
+      <li>Neraca dan Laba Rugi dibandingkan lewat API, bukan lewat query — karena itu yang dilihat pengguna.</li>
+    </ul>
+    <div class="note warn">
+      <span class="h">Prasyarat</span>
+      <p>Pembuktian ini hanya berarti kalau angka acuannya sudah benar. Impor 2026 baru masuk dan
+        <b>Kang Ryan belum memverifikasi satu angka pun</b>. Langkah 1 sebaiknya menunggu sampai empat workbook
+        sisanya masuk dan neraca 2026 ketemu — kalau tidak, kita hanya membuktikan hasilnya sama dengan data
+        yang belum tentu benar.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Yang perlu diputuskan Kang Ryan</h2>
+    <p>Tiga pertanyaan yang jawabannya ada di akuntansi, bukan di kode. Pengerjaan langkah 5 menunggu jawaban
+      pertama.</p>
+
+    <h4>1 &middot; Nasib 484 invoice historis</h4>
+    <p>Pipeline mewajibkan invoice lahir dari proposal WIN atau project FIT. 484 baris lama tidak punya
+      keduanya. Pilihannya:</p>
+    <ul>
+      <li><b>Bekukan sebagai arsip</b> — <code>sales_records</code> jadi read-only untuk 2025 ke bawah, pipeline
+        mulai dari nol. Paling murah dan paling jujur, tapi laporan lintas tahun membaca dua sumber.</li>
+      <li><b>Pindahkan ke <code>invoices</code></b> — butuh project sintetis atau pelonggaran aturan untuk
+        invoice historis.</li>
+    </ul>
+
+    <h4>2 &middot; <code>PPn In and Out</code> itu apa</h4>
+    <p>Dia menempati satu kolom di <code>inter_account</code> seolah rekening, tapi tidak ada di
+      <code>internal_accounts</code> dan bukan rekening bank. Apakah dia rekening internal yang belum dibuat,
+      atau kategori yang seharusnya dimodelkan lain?</p>
+
+    <h4>3 &middot; <code>BJB</code> dan <code>Mandiri Plasa Mandiri</code></h4>
+    <p>Dua kolom bank yang tidak punya rekening di master. Apakah keduanya rekening sungguhan yang belum
+      didaftarkan, atau sisa kolom dari tata letak lama yang sudah tidak dipakai?</p>
+  </section>
+
+</div>
