@@ -38,9 +38,23 @@ const SEEDERS = [
   { name: 'ppn', tables: ['ppn_in_out'], run: seedPpnInOut2026 },
 ];
 
-/** SEED_ONLY=receivable,payable restricts the run to those workbooks. */
+/**
+ * Reads a setting from either the command line or the environment.
+ *
+ * `SEED_ONLY=x pnpm ...` is not a thing on Windows cmd, where it is read as a
+ * command name, so everything can also be given as a flag.
+ */
+function option(flag: string, variable: string): string {
+  const prefix = `--${flag}=`;
+  const arg = process.argv.slice(2).find((a) => a.startsWith(prefix));
+  if (arg) return arg.slice(prefix.length).trim();
+  if (process.argv.slice(2).includes(`--${flag}`)) return '1';
+  return (process.env[variable] ?? '').trim();
+}
+
+/** --only=receivable,payable restricts the run to those workbooks. */
 function selected() {
-  const only = (process.env.SEED_ONLY ?? '').trim();
+  const only = option('only', 'SEED_ONLY');
   if (only === '') return SEEDERS;
 
   const wanted = only.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -50,6 +64,7 @@ function selected() {
   if (unknown.length > 0) {
     console.error(`❌ No seeder called: ${unknown.join(', ')}`);
     console.error(`   Pick from: ${SEEDERS.map((s) => s.name).join(', ')}`);
+    console.error(`   For example: pnpm seed:${FISCAL_YEAR} --only=receivable,payable`);
     return null;
   }
   return chosen;
@@ -72,7 +87,8 @@ async function main() {
   try {
     // Checked before anything is written, so a refusal changes nothing.
     const tables = chosen.flatMap((s) => s.tables);
-    if (!(await assertSafeToReplace(prisma, tables))) {
+    const replace = option('replace', 'SEED_REPLACE_EXISTING') === '1';
+    if (!(await assertSafeToReplace(prisma, tables, replace))) {
       await prisma.$disconnect();
       await pool.end();
       process.exit(1);

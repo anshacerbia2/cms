@@ -20,6 +20,13 @@ Urutannya penting — kolom baru tidak ada di Prisma client sampai di-generate.
    cd backend && npx prisma generate
    ```
 
+   Kalau ada workbook 2026 baru yang belum dimuat, sebutkan namanya supaya
+   tabel lain tidak ikut dibangun ulang:
+
+   ```
+   pnpm seed:2026 --only=receivable,payable
+   ```
+
 2. Restart API dev dan dev server frontend — bukan cuma refresh browser.
 3. Hard reload halaman (Ctrl+Shift+R) supaya bundle lama tidak tersangkut.
 

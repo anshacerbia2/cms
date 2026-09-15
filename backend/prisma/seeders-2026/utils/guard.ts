@@ -28,7 +28,11 @@ const COUNTERS: Record<string, (p: PrismaClient) => Promise<number>> = {
  * Only the tables this run will actually write are checked. Loading a workbook
  * that has just arrived must not be blocked by a table it never touches.
  */
-export async function assertSafeToReplace(prisma: PrismaClient, tables: string[]): Promise<boolean> {
+export async function assertSafeToReplace(
+  prisma: PrismaClient,
+  tables: string[],
+  replace = process.env[OVERRIDE] === '1',
+): Promise<boolean> {
   const counts: [string, number][] = [];
   for (const table of tables) {
     const count = COUNTERS[table];
@@ -38,8 +42,8 @@ export async function assertSafeToReplace(prisma: PrismaClient, tables: string[]
   const existing = counts.filter(([, n]) => n > 0);
   if (existing.length === 0) return true;
 
-  if (process.env[OVERRIDE] === '1') {
-    console.log(`♻️  Replacing existing ${FISCAL_YEAR} data (${OVERRIDE}=1):`);
+  if (replace) {
+    console.log(`♻️  Replacing existing ${FISCAL_YEAR} data:`);
     for (const [table, n] of existing) console.log(`     ${table}: ${n} rows`);
     return true;
   }
@@ -50,9 +54,9 @@ export async function assertSafeToReplace(prisma: PrismaClient, tables: string[]
   console.error(
     `\n   Any ${FISCAL_YEAR} transaction entered through the application would be lost.` +
       `\n   To load only what is new, name it:\n` +
-      `\n     SEED_ONLY=receivable,payable pnpm seed:${FISCAL_YEAR}\n` +
+      `\n     pnpm seed:${FISCAL_YEAR} --only=receivable,payable\n` +
       `\n   If the workbooks are the source of truth for everything above:\n` +
-      `\n     ${OVERRIDE}=1 pnpm seed:${FISCAL_YEAR}\n`,
+      `\n     pnpm seed:${FISCAL_YEAR} --replace\n`,
   );
   return false;
 }
