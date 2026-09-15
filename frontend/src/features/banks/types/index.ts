@@ -18,6 +18,10 @@ export interface InternalAccount {
   branch?: string;
   swiftCode?: string;
   holderName: string;
+  /** The header the finance tables show this account under. */
+  displayName?: string | null;
+  /** Where it sits when accounts are shown side by side, lowest first. */
+  displayOrder?: number | null;
   bank?: Bank;
   createdAt: string;
   updatedAt: string;
@@ -40,6 +44,8 @@ export interface CreateInternalAccountInput {
   branch?: string;
   swiftCode?: string;
   holderName: string;
+  displayName?: string;
+  displayOrder?: number;
 }
 
 export interface UpdateInternalAccountInput extends Partial<CreateInternalAccountInput> {

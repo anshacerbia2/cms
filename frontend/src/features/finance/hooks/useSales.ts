@@ -14,6 +14,7 @@ export function useSales() {
       ...options,
     });
 
+
   const getAllSales = (year?: number, options?: any) =>
     useQuery<any[]>({
       queryKey: ["finance", "sales", "all", year],

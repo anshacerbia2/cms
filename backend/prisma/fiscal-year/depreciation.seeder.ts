@@ -2,8 +2,8 @@ import { PrismaClient, Prisma, DepreciationType } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as XLSX from 'xlsx';
-import { cleanCurrency, cleanString, excelDateToJSDate } from '../seeders/utils/excel';
-import { FISCAL_YEAR, isNumeric, normalizeLabel } from './utils/layout';
+import { cleanCurrency, cleanString, excelDateToJSDate } from '../utils/excel';
+import { DATA_DIR, FISCAL_YEAR, isNumeric, normalizeLabel, findWorkbook } from './utils/layout';
 
 const WORKBOOK = 'PCMI-Depreciation-14Sept26.xlsx';
 
@@ -35,14 +35,16 @@ function headerLooksRight(rows: any[][]): boolean {
   );
 }
 
-export async function seedDepreciation2026(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
+export async function seedDepreciation(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
   console.log(`🏢 Seeding ${FISCAL_YEAR} depreciation register...`);
 
   let wb = workbook;
   if (!wb) {
-    const filePath = path.join(process.cwd(), 'prisma', 'seed-data-2026', WORKBOOK);
-    if (!fs.existsSync(filePath)) {
-      console.error(`❌ Workbook not found at: ${filePath}`);
+    const filePath = findWorkbook(['depreciation']);
+    if (!filePath) {
+      console.warn(
+        `⏭️  No workbook matching ["depreciation"] in prisma/${DATA_DIR} — skipped.`,
+      );
       return;
     }
     wb = XLSX.readFile(filePath);

@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { formatDecimal } from '../../common/utils/format.utils';
+import {
+  syncAccountAmounts, INTER_ACCOUNT_COLUMNS, findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
 import { parseIntSafe } from '../../common/utils/parse.utils';
 
 @Injectable()
@@ -24,6 +26,8 @@ export class InterAccountService {
       colN: row.colN ? formatDecimal(row.colN) : null,
       colO: row.colO ? formatDecimal(row.colO) : null,
       colP: row.colP ? formatDecimal(row.colP) : null,
+      // The same figures the fixed columns carry, keyed by account.
+      amounts: serializeAmounts(row.amounts),
     };
   }
 
@@ -32,7 +36,8 @@ export class InterAccountService {
     
     const data = await this.prisma.interAccount.findMany({
       where,
-      orderBy: { id: 'asc' }
+      orderBy: { id: 'asc' },
+      include: { amounts: { select: { internalAccountId: true, amount: true } } },
     });
 
     return data.map(this.mapDecimals);
@@ -58,6 +63,7 @@ export class InterAccountService {
         skip: Number(skip),
         take: Number(limit),
         orderBy: { id: 'asc' },
+        include: { amounts: { select: { internalAccountId: true, amount: true } } },
       }),
       this.prisma.interAccount.count({ where }),
     ]);
@@ -75,7 +81,8 @@ export class InterAccountService {
 
   async getInterAccountById(id: number) {
     const item = await this.prisma.interAccount.findUnique({
-      where: { id }
+      where: { id },
+      include: { amounts: { select: { internalAccountId: true, amount: true } } },
     });
     if (!item) return null;
     return this.mapDecimals(item);
@@ -105,7 +112,17 @@ export class InterAccountService {
       tagYear: parsedTagYear,
     }));
 
-    return this.prisma.interAccount.createMany({ data });
+    const savedRows = await this.prisma.interAccount.createManyAndReturn({ data });
+    for (const row of savedRows) {
+      await syncAccountAmounts(this.prisma, {
+        amountModel: this.prisma.interAccountAmount,
+        parentKey: 'interAccountId',
+        parentId: row.id,
+        columns: INTER_ACCOUNT_COLUMNS,
+        row,
+      });
+    }
+    return { count: savedRows.length };
   }
 
   async createInterAccount(data: any) {
@@ -114,7 +131,7 @@ export class InterAccountService {
       throw new BadRequestException('tagYear is required and must be a valid number');
     }
 
-    return this.prisma.interAccount.create({
+    const saved = await this.prisma.interAccount.create({
       data: {
         colB: data.colB || null,
         colC: data.colC?.toString() || null,
@@ -133,6 +150,14 @@ export class InterAccountService {
         tagYear: parsedTagYear,
       },
     });
+    await syncAccountAmounts(this.prisma, {
+      amountModel: this.prisma.interAccountAmount,
+      parentKey: 'interAccountId',
+      parentId: saved.id,
+      columns: INTER_ACCOUNT_COLUMNS,
+      row: saved,
+    });
+    return saved;
   }
 
   async updateInterAccount(id: number, data: any) {
@@ -152,10 +177,18 @@ export class InterAccountService {
     if ('colN' in data) updateData.colN = data.colN?.toString() || null;
     if ('colO' in data) updateData.colO = data.colO?.toString() || null;
 
-    return this.prisma.interAccount.update({
+    const saved = await this.prisma.interAccount.update({
       where: { id },
       data: updateData
     });
+    await syncAccountAmounts(this.prisma, {
+      amountModel: this.prisma.interAccountAmount,
+      parentKey: 'interAccountId',
+      parentId: saved.id,
+      columns: INTER_ACCOUNT_COLUMNS,
+      row: saved,
+    });
+    return saved;
   }
 
   async deleteInterAccount(id: number) {
@@ -163,4 +196,14 @@ export class InterAccountService {
       where: { id }
     });
   }
+
+  /** The accounts this year's rows were posted against, in display order. */
+  async getInterAccountAccounts(year?: number): Promise<AccountColumn[]> {
+    return findAccountColumns(this.prisma, {
+      amountModel: this.prisma.interAccountAmount,
+      parentRelation: 'interAccount',
+      year,
+    });
+  }
+
 }

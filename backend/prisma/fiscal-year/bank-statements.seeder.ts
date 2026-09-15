@@ -7,13 +7,13 @@ import {
   cleanCurrency,
   cleanString,
   isRowEmpty,
-} from '../seeders/utils/excel';
+} from '../utils/excel';
 
 /**
  * Every row lands in FISCAL_YEAR regardless of the date it carries, matching
  * how the 2025 seeder treats its own workbook.
  */
-import { FISCAL_YEAR } from './utils/layout';
+import { DATA_DIR, FISCAL_YEAR, findWorkbook } from './utils/layout';
 
 const WORKBOOK = 'PCMI-Bank Statements-14Sept26.xlsx';
 
@@ -194,14 +194,16 @@ function verify(
 }
 
 /** `workbook` overrides the file on disk, which the layout tests rely on. */
-export async function seedBankStatements2026(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
+export async function seedBankStatements(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
   console.log(`🏛️  Seeding ${FISCAL_YEAR} bank statements (ledger)...`);
 
   let wb = workbook;
   if (!wb) {
-    const filePath = path.join(process.cwd(), 'prisma', 'seed-data-2026', WORKBOOK);
-    if (!fs.existsSync(filePath)) {
-      console.error(`❌ Workbook not found at: ${filePath}`);
+    const filePath = findWorkbook(['statements', 'mutation']);
+    if (!filePath) {
+      console.warn(
+        `⏭️  No workbook matching ["statements", "mutation"] in prisma/${DATA_DIR} — skipped.`,
+      );
       return;
     }
     wb = XLSX.readFile(filePath);

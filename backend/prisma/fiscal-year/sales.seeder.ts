@@ -2,8 +2,10 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as XLSX from 'xlsx';
-import { cleanCurrency, cleanString, excelDateToJSDate } from '../seeders/utils/excel';
+import { cleanCurrency, cleanString, excelDateToJSDate } from '../utils/excel';
 import {
+  findWorkbook,
+  DATA_DIR,
   FISCAL_YEAR,
   buildColumnMap,
   isBlankRow,
@@ -11,6 +13,12 @@ import {
   normalizeLabel,
   type SlotSpec,
 } from './utils/layout';
+import {
+  linkAccountAmounts,
+  readAccountColumns,
+  readRowAmounts,
+  type RowAmounts,
+} from './utils/accounts';
 
 const WORKBOOK = 'PCMI-Sales-14Sept26.xlsx';
 
@@ -100,14 +108,16 @@ function readLayout(rows: any[][]): Layout | null {
   return { headerRow, firstDataRow, labels };
 }
 
-export async function seedSales2026(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
+export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
   console.log(`🧾 Seeding ${FISCAL_YEAR} sales invoices...`);
 
   let wb = workbook;
   if (!wb) {
-    const filePath = path.join(process.cwd(), 'prisma', 'seed-data-2026', WORKBOOK);
-    if (!fs.existsSync(filePath)) {
-      console.error(`❌ Workbook not found at: ${filePath}`);
+    const filePath = findWorkbook(['sales']);
+    if (!filePath) {
+      console.warn(
+        `⏭️  No workbook matching ["sales"] in prisma/${DATA_DIR} — skipped.`,
+      );
       return;
     }
     wb = XLSX.readFile(filePath);
@@ -120,7 +130,39 @@ export async function seedSales2026(prisma: PrismaClient, workbook?: XLSX.WorkBo
     return;
   }
 
-  const map = buildColumnMap(layout.labels, SLOTS);
+
+  // The bank block a second time, read as accounts rather than as slots, so a
+  // column this table has no slot for still lands. It runs from the first bank
+  // up to Outstanding, which is where the payment columns stop.
+  const firstBank = layout.labels.findIndex((c) => normalizeLabel(c) === 'bcasahardjo');
+  // The block ends at the outstanding column, which the 2026 book heads
+  // "OUTSTANDING" and the 2025 one simply "IDR".
+  const ends = ['outstanding', 'idr'];
+  let blockEnd = layout.labels.length;
+  for (let i = firstBank + 1; i < layout.labels.length; i++) {
+    if (ends.includes(normalizeLabel(layout.labels[i]))) {
+      blockEnd = i;
+      break;
+    }
+  }
+  // The 2025 book heads both the receivable and the outstanding column "IDR",
+  // which no name-based mapping can tell apart. Their positions around the bank
+  // block do: one sits before it, the other closes it.
+  const labels = [...layout.labels];
+  for (let i = 0; i < firstBank; i++) {
+    if (normalizeLabel(labels[i]) === 'idr') labels[i] = 'Account Receivable';
+  }
+  if (normalizeLabel(labels[blockEnd]) === 'idr') labels[blockEnd] = 'Outstanding';
+
+  const map = buildColumnMap(labels, SLOTS);
+  const accounts = readAccountColumns(labels, firstBank, blockEnd - 1);
+  if (accounts.unknown.length > 0) {
+    console.error(
+      `❌ Heading(s) that name no account we know: ${accounts.unknown.join(', ')}.` +
+        ' Add the account under Account & Bank first — nothing seeded.',
+    );
+    return;
+  }
 
   const removed = await prisma.salesRecord.deleteMany({ where: { tagYear: FISCAL_YEAR } });
   if (removed.count > 0) console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} rows.`);
@@ -128,6 +170,7 @@ export async function seedSales2026(prisma: PrismaClient, workbook?: XLSX.WorkBo
   // Reads to the first fully blank row, which separates the invoices from the
   // totals block, exactly as the 2025 seeder does.
   const records: Prisma.SalesRecordCreateManyInput[] = [];
+  const perRow: RowAmounts[] = [];
   for (let i = layout.firstDataRow; i < rows.length; i++) {
     const row = rows[i];
     if (isBlankRow(row)) break;
@@ -138,6 +181,7 @@ export async function seedSales2026(prisma: PrismaClient, workbook?: XLSX.WorkBo
       record[spec.slot] = index === undefined ? null : convert(row[index], spec.kind);
     }
     records.push(record);
+    perRow.push(readRowAmounts(row, accounts.columns));
   }
 
   if (records.length === 0) {
@@ -147,6 +191,15 @@ export async function seedSales2026(prisma: PrismaClient, workbook?: XLSX.WorkBo
 
   await prisma.salesRecord.createMany({ data: records });
   console.log(`✅ Seeded ${records.length} sales invoices for ${FISCAL_YEAR}.`);
+
+  await linkAccountAmounts({
+    prisma,
+    amountModel: prisma.salesRecordAmount,
+    parentModel: prisma.salesRecord,
+    parentKey: 'salesRecordId',
+    tagYear: FISCAL_YEAR,
+    perRow,
+  });
 
   if (map.missing.length > 0) {
     const names = map.missing

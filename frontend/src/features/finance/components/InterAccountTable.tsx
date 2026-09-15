@@ -18,6 +18,7 @@ import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
 import { DetailModal } from "@/components/common/DetailModal";
 
 import { useInterAccount } from '../hooks/useInterAccount';
+import { useAccountColumns, accountKey } from '../hooks/useAccountColumns';
 import { toast } from "sonner";
 import EditInterAccountModal from "./EditInterAccountModal";
 import AddInterAccountModal from "./AddInterAccountModal";
@@ -65,6 +66,12 @@ export const InterAccountTable: React.FC = () => {
     return years;
   }, []);
 
+  const accountColumns = useAccountColumns(
+    "inter-account",
+    yearFilter !== "all" ? yearNum : undefined,
+    { enabled: !!yearFilter }
+  );
+
   const { data: interAccountData, isLoading, deleteInterAccount, refetch } = useInterAccount({ 
     page: 1, 
     limit: 10000,
@@ -106,6 +113,14 @@ export const InterAccountTable: React.FC = () => {
       rawColO: row.colO,
       colP: formatCurrency(row.colP),
       rawColP: row.colP,
+      // The same figures the fixed columns carry, keyed by account. The raw
+      // copy is what the totals add up, exactly as they do for the columns.
+      ...Object.fromEntries(
+        (row.amounts ?? []).flatMap((a: any) => [
+          [accountKey(a.accountId), formatCurrency(a.amount)],
+          [`raw_${accountKey(a.accountId)}`, a.amount],
+        ])
+      ),
     }));
   }, [allDataRaw]);
 
@@ -123,51 +138,53 @@ export const InterAccountTable: React.FC = () => {
     searchFields: ['colA', 'colB']
   });
 
-  const calcTotals = (data: any[]) => {
-    return data.reduce((acc, curr) => {
-      const getNum = (val: any) => {
-        if (!val || val === "-" || val === "") return new Decimal(0);
-        if (typeof val === 'object' && typeof val.toNumber === 'function') {
-          return new Decimal(val.toNumber());
-        }
-        
-        // Try parsing the raw value directly first (e.g. "1000.0000" from API)
-        const numStr = String(val).trim();
-        if (/^-?\d*\.?\d+$/.test(numStr)) {
-          return new Decimal(numStr);
-        }
+  const cols: { k: string; l: string; num?: boolean; isDate?: boolean }[] = [
+    { k: 'colB', l: 'Description' },
+    // One column per account this year's transfers moved between. The header
+    // and the order come from Account & Bank, not from here.
+    ...accountColumns.map((account) => ({ k: accountKey(account.id), l: account.name, num: true })),
+    // Not an account: the VAT clearing position keeps its own column, always
+    // shown, read straight from colO.
+    { k: 'colO', l: 'PPn In and Out', num: true },
+  ];
 
-        let cleaned = numStr.replace(/[A-Z]{3}\s?/g, "");
-        cleaned = cleaned.replace(/\./g, ""); // Remove thousands separator
-        cleaned = cleaned.replace(/,/g, "."); // Convert decimal separator
-        cleaned = cleaned.replace(/[^0-9.-]+/g, "");
-        return cleaned ? new Decimal(cleaned) : new Decimal(0);
-      };
-      return {
-        colC: acc.colC.plus(getNum(curr.rawColC ?? curr.colC)),
-        colD: acc.colD.plus(getNum(curr.rawColD ?? curr.colD)),
-        colE: acc.colE.plus(getNum(curr.rawColE ?? curr.colE)),
-        colF: acc.colF.plus(getNum(curr.rawColF ?? curr.colF)),
-        colG: acc.colG.plus(getNum(curr.rawColG ?? curr.colG)),
-        colH: acc.colH.plus(getNum(curr.rawColH ?? curr.colH)),
-        colI: acc.colI.plus(getNum(curr.rawColI ?? curr.colI)),
-        colJ: acc.colJ.plus(getNum(curr.rawColJ ?? curr.colJ)),
-        colK: acc.colK.plus(getNum(curr.rawColK ?? curr.colK)),
-        colL: acc.colL.plus(getNum(curr.rawColL ?? curr.colL)),
-        colM: acc.colM.plus(getNum(curr.rawColM ?? curr.colM)),
-        colN: acc.colN.plus(getNum(curr.rawColN ?? curr.colN)),
-        colO: acc.colO.plus(getNum(curr.rawColO ?? curr.colO)),
-        colP: acc.colP.plus(getNum(curr.rawColP ?? curr.colP)),
-      };
-    }, { 
-      colC: new Decimal(0), colD: new Decimal(0), colE: new Decimal(0), colF: new Decimal(0),
-      colG: new Decimal(0), colH: new Decimal(0), colI: new Decimal(0), colJ: new Decimal(0),
-      colK: new Decimal(0), colL: new Decimal(0), colM: new Decimal(0), colN: new Decimal(0),
-      colO: new Decimal(0), colP: new Decimal(0),
-    });
+  /** Reads a figure whichever shape it arrives in: Decimal, raw, or formatted. */
+  const toDecimal = (val: any) => {
+    if (!val || val === "-" || val === "") return new Decimal(0);
+    if (typeof val === 'object' && typeof val.toNumber === 'function') {
+      return new Decimal(val.toNumber());
+    }
+
+    // Try parsing the raw value directly first (e.g. "1000.0000" from API)
+    const numStr = String(val).trim();
+    if (/^-?\d*\.?\d+$/.test(numStr)) {
+      return new Decimal(numStr);
+    }
+
+    let cleaned = numStr.replace(/[A-Z]{3}\s?/g, "");
+    cleaned = cleaned.replace(/\./g, ""); // Remove thousands separator
+    cleaned = cleaned.replace(/,/g, "."); // Convert decimal separator
+    cleaned = cleaned.replace(/[^0-9.-]+/g, "");
+    return cleaned ? new Decimal(cleaned) : new Decimal(0);
   };
 
-  const grandTotals = useMemo(() => calcTotals(filteredAndSortedData), [filteredAndSortedData]);
+  /**
+   * Totals every numeric column the table is showing, whatever they are. The
+   * columns are no longer a fixed list, so neither is this.
+   */
+  const calcTotals = (data: any[]) => {
+    const numeric = cols.filter((c) => c.num);
+    const totals: Record<string, Decimal> = {};
+    for (const col of numeric) totals[col.k] = new Decimal(0);
+    for (const row of data) {
+      for (const col of numeric) {
+        totals[col.k] = totals[col.k].plus(toDecimal(row[`raw_${col.k}`] ?? row[col.k]));
+      }
+    }
+    return totals;
+  };
+
+  const grandTotals = useMemo(() => calcTotals(filteredAndSortedData), [filteredAndSortedData, accountColumns]);
 
   const handleEdit = (id: number) => {
     setSelectedRecordId(id);
@@ -195,22 +212,6 @@ export const InterAccountTable: React.FC = () => {
   };
 
 
-  const cols: { k: string; l: string; num?: boolean; isDate?: boolean }[] = [
-    { k: 'colB', l: 'Description' },
-    { k: 'colC', l: 'BCA Sahardjo', num: true },
-    { k: 'colD', l: 'BCA Juanda', num: true },
-    { k: 'colE', l: 'Mandiri Mid Plaza', num: true },
-    { k: 'colF', l: 'BRI Sahardjo', num: true },
-    { k: 'colG', l: 'BTN', num: true },
-    { k: 'colH', l: 'BJB', num: true },
-    { k: 'colI', l: 'Bank Raya', num: true },
-    { k: 'colJ', l: 'BRI Tebet', num: true },
-    { k: 'colK', l: 'Manidiri Plaza Mandiri', num: true },
-    { k: 'colL', l: 'BNI', num: true },
-    { k: 'colM', l: 'Cash IDR', num: true },
-    { k: 'colN', l: 'Non Cash Bank', num: true },
-    { k: 'colO', l: 'PPn In and Out', num: true },
-  ];
 
   return (
     <div className="space-y-6 mt-6">
@@ -366,8 +367,8 @@ export const InterAccountTable: React.FC = () => {
                       Grand Totals ({filteredAndSortedData.length} records)
                     </TableCell>
                     {cols.slice(1).map(c => (
-                      <TableCell key={`grand-${c.k}`} className={`text-right ${getAmountColor((grandTotals as any)[c.k].toString())}`}>
-                        {formatCurrency((grandTotals as any)[c.k].toString())}
+                      <TableCell key={`grand-${c.k}`} className={`text-right ${getAmountColor(((grandTotals as any)[c.k] ?? 0).toString())}`}>
+                        {formatCurrency(((grandTotals as any)[c.k] ?? 0).toString())}
                       </TableCell>
                     ))}
                     <TableCell className="bg-secondary/[0.02]" />

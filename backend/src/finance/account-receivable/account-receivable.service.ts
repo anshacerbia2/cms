@@ -3,6 +3,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../common/interfaces/paginated-result.interface';
 import { formatDecimal } from '../../common/utils/format.utils';
+import {
+  syncAccountAmounts, ACCOUNT_RECEIVABLE_COLUMNS, findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
 import { parseIntSafe } from '../../common/utils/parse.utils';
 
 @Injectable()
@@ -15,7 +17,12 @@ export class AccountReceivableService {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
-      this.prisma.accountReceivable.findMany({ skip, take: limit, orderBy: [{ id: 'asc' }] }),
+      this.prisma.accountReceivable.findMany({
+        skip,
+        take: limit,
+        orderBy: [{ id: 'asc' }],
+        include: { amounts: { select: { internalAccountId: true, amount: true } } },
+      }),
       this.prisma.accountReceivable.count(),
     ]);
 
@@ -23,6 +30,8 @@ export class AccountReceivableService {
       data: data.map(item => ({
         ...item,
         id: Number(item.id),
+        // The same figures the fixed columns carry, keyed by account.
+        amounts: serializeAmounts(item.amounts),
         colF: formatDecimal(item.colF),
         colG: formatDecimal(item.colG),
         colH: formatDecimal(item.colH),
@@ -45,10 +54,16 @@ export class AccountReceivableService {
     if (year && !isNaN(year)) {
       where.tagYear = year;
     }
-    const data = await this.prisma.accountReceivable.findMany({ where, orderBy: [{ id: 'asc' }] });
+    const data = await this.prisma.accountReceivable.findMany({
+      where,
+      orderBy: [{ id: 'asc' }],
+      include: { amounts: { select: { internalAccountId: true, amount: true } } },
+    });
     return data.map(item => ({
       ...item,
       id: Number(item.id),
+      // The same figures the fixed columns carry, keyed by account.
+      amounts: serializeAmounts(item.amounts),
       colF: formatDecimal(item.colF),
       colG: formatDecimal(item.colG),
       colH: formatDecimal(item.colH),
@@ -70,7 +85,7 @@ export class AccountReceivableService {
       throw new BadRequestException('tagYear is required and must be a valid number');
     }
 
-    return this.prisma.accountReceivable.create({
+    const saved = await this.prisma.accountReceivable.create({
       data: {
         colB: data.colB || null,
         colC: data.colC || null,
@@ -91,6 +106,14 @@ export class AccountReceivableService {
         tagYear: parsedTagYear,
       },
     });
+    await syncAccountAmounts(this.prisma, {
+      amountModel: this.prisma.accountReceivableAmount,
+      parentKey: 'accountReceivableId',
+      parentId: saved.id,
+      columns: ACCOUNT_RECEIVABLE_COLUMNS,
+      row: saved,
+    });
+    return saved;
   }
 
   async updateAR(id: number, data: any): Promise<any> {
@@ -112,10 +135,18 @@ export class AccountReceivableService {
     if ('colR' in data) updateData.colR = data.colR?.toString() || null;
     if ('colS' in data) updateData.colS = data.colS?.toString() || null;
 
-    return this.prisma.accountReceivable.update({
+    const saved = await this.prisma.accountReceivable.update({
       where: { id },
       data: updateData,
     });
+    await syncAccountAmounts(this.prisma, {
+      amountModel: this.prisma.accountReceivableAmount,
+      parentKey: 'accountReceivableId',
+      parentId: saved.id,
+      columns: ACCOUNT_RECEIVABLE_COLUMNS,
+      row: saved,
+    });
+    return saved;
   }
 
   async deleteAR(id: number): Promise<any> {
@@ -150,8 +181,26 @@ export class AccountReceivableService {
       tagYear: parsedTagYear,
     }));
 
-    return this.prisma.accountReceivable.createMany({
-      data: records,
+    const savedRows = await this.prisma.accountReceivable.createManyAndReturn({ data: records });
+    for (const row of savedRows) {
+      await syncAccountAmounts(this.prisma, {
+        amountModel: this.prisma.accountReceivableAmount,
+        parentKey: 'accountReceivableId',
+        parentId: row.id,
+        columns: ACCOUNT_RECEIVABLE_COLUMNS,
+        row,
+      });
+    }
+    return { count: savedRows.length };
+  }
+
+  /** The accounts this year's rows were posted against, in display order. */
+  async getARAccounts(year?: number): Promise<AccountColumn[]> {
+    return findAccountColumns(this.prisma, {
+      amountModel: this.prisma.accountReceivableAmount,
+      parentRelation: 'accountReceivable',
+      year,
     });
   }
+
 }

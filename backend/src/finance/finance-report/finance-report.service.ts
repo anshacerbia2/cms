@@ -249,10 +249,16 @@ export class FinanceReportService {
     // Income Tax override removed for pure calculation
     // 7. Final Financial Logic
     const grossProfit = netSales.plus(cogsTotal); 
-    const operatingExpenses = personnelExpense.plus(officeExpense).plus(marketingExpense).plus(financialExpense);
-    const operatingProfit = grossProfit.plus(operatingExpenses); 
-    const otherIncomeNet = otherIncomeTotal.plus(depreciation);
-    const profitBeforeTax = operatingProfit.plus(otherIncomeNet);
+    // Other income is reported among the expenses at the client's request, so
+    // it is counted in their total and operating profit is struck after it.
+    // Profit before tax is unchanged either way: the same terms, regrouped.
+    const operatingExpenses = personnelExpense
+      .plus(officeExpense)
+      .plus(marketingExpense)
+      .plus(financialExpense)
+      .plus(otherIncomeTotal);
+    const operatingProfit = grossProfit.plus(operatingExpenses);
+    const profitBeforeTax = operatingProfit.plus(depreciation);
     
     const netProfit = profitBeforeTax.plus(incomeTax);
 
@@ -282,11 +288,13 @@ export class FinanceReportService {
       { account: "Office Expense", total: formatDecimal(officeExpense), isSubItem: true, level: 2, ledgerFilter: { equals: 'Office Expense', mode: 'insensitive' } },
       { account: "Marketing Expense", total: formatDecimal(marketingExpense), isSubItem: true, level: 2, ledgerFilter: { equals: 'Marketing Expense', mode: 'insensitive' } },
       { account: "Financial Expense", total: formatDecimal(financialExpense), isSubItem: true, level: 2, ledgerFilter: { equals: 'Financial Expense', mode: 'insensitive' } },
+      // Breaks down by sub-ledger like the expenses it sits with. The filter is
+      // the same one its total is computed from, so the parts add up to it.
+      { account: "Other Income", total: formatDecimal(otherIncomeTotal), isSubItem: true, level: 2, ledgerFilter: { contains: 'other income', mode: 'insensitive' } },
       { account: "Total Expense", total: formatDecimal(operatingExpenses), isTotal: true, level: 1 },
       
       { account: "PROFITABILITY", total: 0, isHeader: true, level: 0 },
       { account: "Operating Profit", total: formatDecimal(operatingProfit), level: 1 },
-      { account: "Other Income", total: formatDecimal(otherIncomeTotal), isSubItem: true, level: 2 /*, ledgerFilter: { contains: 'other income', mode: 'insensitive' }*/ },
       { account: "Depreciation", total: formatDecimal(depreciation), hasInfo: true, isSubItem: true, level: 2 },
       { account: "PROFIT BEFORE TAX", total: formatDecimal(profitBeforeTax), isTotal: true, level: 1 },
       { account: "Income Tax", total: formatDecimal(incomeTax), isSubItem: true, level: 1 },
@@ -305,9 +313,16 @@ export class FinanceReportService {
           select: { colG: true, colC: true, colD: true }
         });
 
+        // Grouped on the trimmed, lower-cased name, so "Other expense" and
+        // "Other Expense" are one sub-ledger rather than two. The first
+        // spelling seen is the one shown.
         const groups = new Map<string, Prisma.Decimal>();
+        const labels = new Map<string, string>();
         subTrxs.forEach(t => {
-          const key = t.colG || 'Other';
+          const name = (t.colG || 'Other').trim();
+          const key = name.toLowerCase();
+          if (!labels.has(key)) labels.set(key, name);
+
           const debit = new Prisma.Decimal(t.colC || 0);
           const credit = new Prisma.Decimal(t.colD || 0);
           const net = credit.minus(debit);
@@ -316,8 +331,8 @@ export class FinanceReportService {
         });
 
         const subItems = Array.from(groups.entries())
-          .map(([label, total]) => ({
-            account: label,
+          .map(([key, total]) => ({
+            account: labels.get(key) ?? key,
             total: formatDecimal(total),
             isSubItem: true,
             level: 3,
@@ -411,8 +426,8 @@ export class FinanceReportService {
       { key: "Office Expense", label: "Office Expense", ledgerFilter: { equals: 'Office Expense', mode: 'insensitive' } },
       { key: "Marketing Expense", label: "Marketing Expense", ledgerFilter: { equals: 'Marketing Expense', mode: 'insensitive' } },
       { key: "Financial Expense", label: "Financial Expense", ledgerFilter: { equals: 'Financial Expense', mode: 'insensitive' } },
+      { key: "Other Income", label: "Other Income (Expense)" },
       { key: "OPERATING PROFIT", label: "OPERATING PROFIT" },
-      { key: "Other Income", label: "Other Income (Expense)" /*, ledgerFilter: { contains: 'other income', mode: 'insensitive' }*/ },
       { key: "PROFIT BEFORE TAX", label: "PROFIT BEFORE TAX" },
       { key: "INCOME TAX", label: "INCOME TAX" },
       { key: "PROFIT AFTER TAX", label: "PROFIT AFTER TAX" }
@@ -435,9 +450,16 @@ export class FinanceReportService {
           select: { colG: true, colC: true, colD: true }
         });
 
+        // Grouped on the trimmed, lower-cased name, so "Other expense" and
+        // "Other Expense" are one sub-ledger rather than two. The first
+        // spelling seen is the one shown.
         const groups = new Map<string, Prisma.Decimal>();
+        const labels = new Map<string, string>();
         subTrxs.forEach(t => {
-          const key = t.colG || 'Other';
+          const name = (t.colG || 'Other').trim();
+          const key = name.toLowerCase();
+          if (!labels.has(key)) labels.set(key, name);
+
           const debit = new Prisma.Decimal(t.colC || 0);
           const credit = new Prisma.Decimal(t.colD || 0);
           const net = credit.minus(debit);
@@ -446,8 +468,8 @@ export class FinanceReportService {
         });
 
         subItems = Array.from(groups.entries())
-          .map(([label, total]) => ({
-            label,
+          .map(([key, total]) => ({
+            label: labels.get(key) ?? key,
             total: formatDecimal(total)
           }))
           .filter(s => s.total !== "0.0000");
@@ -1369,6 +1391,25 @@ export class FinanceReportService {
       tx: depositRecords.length
     });
 
+    // Time deposits are the other kind of deposit held, and are read the same
+    // way: their own receivable type, taken at its outstanding balance.
+    const timeDepositRecords = arRecordsRaw.filter(r =>
+      !processedArIds.has(r.id) &&
+      r.colB?.toLowerCase().includes('ar time deposit')
+    );
+
+    const timeDepositTotal = timeDepositRecords.reduce((acc, r) => {
+      processedArIds.add(r.id);
+      return acc.plus(new Prisma.Decimal(r.colR || 0));
+    }, new Prisma.Decimal(0));
+
+    depositItems.push({
+      accountName: 'Time Deposit',
+      idr: formatDecimal(timeDepositTotal),
+      code: '1302',
+      tx: timeDepositRecords.length
+    });
+
 
     // AR Prepaid Tax
     const prepaidTaxItems = [];
@@ -1447,7 +1488,7 @@ export class FinanceReportService {
 
 
     // ASSETS TOTAL
-    const totalAssets = bankTotal.plus(cashTotal).plus(arTotal).plus(depositTotal).plus(prepaidTaxTotal).plus(totalBookValue);
+    const totalAssets = bankTotal.plus(cashTotal).plus(arTotal).plus(depositTotal).plus(timeDepositTotal).plus(prepaidTaxTotal).plus(totalBookValue);
 
 
     // Liabilities & Equity

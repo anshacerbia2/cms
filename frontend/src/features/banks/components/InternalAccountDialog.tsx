@@ -36,6 +36,8 @@ const formSchema = z.object({
   branch: z.string().optional(),
   swiftCode: z.string().optional(),
   holderName: z.string().min(1, "Account holder name is required"),
+  displayName: z.string().max(100).optional(),
+  displayOrder: z.string().optional(),
   isNonVatSettlement: z.boolean().optional(),
 });
 
@@ -47,6 +49,17 @@ interface InternalAccountDialogProps {
   account?: InternalAccount | null;
   isSubmitting?: boolean;
   isLoadingBanks?: boolean;
+}
+
+/** An empty position box means no position at all, which is not the same as 0. */
+function normalize(values: any) {
+  return {
+    ...values,
+    displayName: values.displayName?.trim() ? values.displayName.trim() : undefined,
+    displayOrder: values.displayOrder?.trim()
+      ? Number(values.displayOrder)
+      : undefined,
+  };
 }
 
 export function InternalAccountDialog({
@@ -67,6 +80,8 @@ export function InternalAccountDialog({
       branch: "",
       swiftCode: "",
       holderName: "PT PANCONVINCE",
+      displayName: "",
+      displayOrder: "",
       isNonVatSettlement: false,
     },
   });
@@ -80,6 +95,8 @@ export function InternalAccountDialog({
         branch: account.branch || "",
         swiftCode: account.swiftCode || "",
         holderName: account.holderName,
+        displayName: account.displayName || "",
+        displayOrder: account.displayOrder != null ? String(account.displayOrder) : "",
         isNonVatSettlement: account.isNonVatSettlement ?? false,
       });
     } else if (open) {
@@ -90,6 +107,8 @@ export function InternalAccountDialog({
         branch: "",
         swiftCode: "",
         holderName: "PT PANCONVINCE",
+      displayName: "",
+      displayOrder: "",
       isNonVatSettlement: false,
       });
     }
@@ -111,7 +130,7 @@ export function InternalAccountDialog({
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="px-8 py-8 space-y-6">
+          <form onSubmit={form.handleSubmit((values) => onSubmit(normalize(values)))} className="px-8 py-8 space-y-6">
             <FormField
               control={form.control}
               name="bankId"
@@ -215,6 +234,54 @@ export function InternalAccountDialog({
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-[1fr_auto] gap-3">
+              <FormField
+                control={form.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                      <User size={12} /> Column header
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="e.g. BCA Juanda"
+                        className="h-11 rounded-xl bg-muted/20 border border-primary/10 shadow-none font-extrabold tracking-tight focus-visible:border-primary/30 transition-all"
+                      />
+                    </FormControl>
+                    <p className="text-[10px] text-muted-foreground font-medium mt-1">
+                      What the finance tables call this account. Left empty, it has no column.
+                    </p>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="displayOrder"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
+                      Position
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="number"
+                        min={0}
+                        placeholder="1"
+                        className="h-11 w-24 rounded-xl bg-muted/20 border border-primary/10 shadow-none font-extrabold tracking-tight text-center focus-visible:border-primary/30 transition-all"
+                      />
+                    </FormControl>
+                    <p className="text-[10px] text-muted-foreground font-medium mt-1">
+                      Lowest first.
+                    </p>
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}

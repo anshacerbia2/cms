@@ -44,6 +44,13 @@ export class AccountReceivableController {
   async getAllAR(@Query('year') year?: string) {
     return this.arService.getAllAR(year ? Number(year) : undefined);
   }
+  /** The accounts this year's rows were posted against, in display order. */
+  @Get('accounts')
+  @Permissions('account-receivable.index')
+  async getAccountColumns(@Query('year') year?: string) {
+    return this.arService.getARAccounts(year ? Number(year) : undefined);
+  }
+
   @Get('export/excel')
   @Permissions('account-receivable.index')
   async exportExcel(@Query('year') year: string, @Res() res: Response) {

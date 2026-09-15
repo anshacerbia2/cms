@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useAccountColumns, accountKey } from "../hooks/useAccountColumns";
 import { useAccountPayable } from "../hooks/useAccountPayable";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { ExcelColumnFilter } from "./ExcelColumnFilter";
@@ -44,6 +45,17 @@ import {
 } from "@/components/ui/select";
 import { useExcelFilter } from "../hooks/useExcelFilter";
 
+/** This table's own number parser, kept exactly as the totals have always
+ * read it, so moving the columns cannot move the figures. */
+const clean = (val: any) => {
+  const s = String(val || "0");
+  if (s === "-" || s === "") return "0";
+  let cleaned = s.replace(/[A-Z]{3}\s?/g, "");
+  cleaned = cleaned.replace(/\./g, "");
+  cleaned = cleaned.replace(/,/g, ".");
+  return cleaned.replace(/[^0-9.-]+/g, "") || "0";
+};
+
 export function ApSummaryTab() {
   const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -62,6 +74,23 @@ export function ApSummaryTab() {
   }, []);
 
   const { getAllAP, deleteAP } = useAccountPayable();
+  const accountColumns = useAccountColumns(
+    "account-payable",
+    apYearFilter !== "all" ? yearNum : undefined,
+    { enabled: !!apYearFilter }
+  );
+
+  /** Adds up one account column across the rows given. */
+  const sumAccounts = (rows: any[]) =>
+    Object.fromEntries(
+      accountColumns.map((account) => [
+        accountKey(account.id),
+        rows.reduce(
+          (total, row) => total.plus(new Decimal(clean(row[accountKey(account.id)]))),
+          new Decimal(0),
+        ),
+      ]),
+    );
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
@@ -94,6 +123,10 @@ export function ApSummaryTab() {
       colR: formatCurrency(row.colR),        // Non CB
       colS: formatCurrency(row.colS),        // AP In and Out
       colU: formatCurrency(row.colU),        // Outstanding IDR
+      // The same figures the fixed columns carry, keyed by account.
+      ...Object.fromEntries(
+        (row.amounts ?? []).map((a: any) => [accountKey(a.accountId), formatCurrency(a.amount)])
+      ),
     }));
   }, [allAPRaw]);
 
@@ -128,15 +161,7 @@ export function ApSummaryTab() {
   };
 
   const subtotalTotals = useMemo(() => {
-    return paginatedAP.reduce((acc, curr) => {
-      const clean = (val: any) => {
-        const s = String(val || "0");
-        if (s === "-" || s === "") return "0";
-        let cleaned = s.replace(/[A-Z]{3}\s?/g, "");
-        cleaned = cleaned.replace(/\./g, "");
-        cleaned = cleaned.replace(/,/g, ".");
-        return cleaned.replace(/[^0-9.-]+/g, "") || "0";
-      };
+    const byColumn = paginatedAP.reduce((acc, curr) => {
       return {
         colE: acc.colE.plus(new Decimal(clean(curr.colE))),
         colK: acc.colK.plus(new Decimal(clean(curr.colK))),
@@ -157,18 +182,11 @@ export function ApSummaryTab() {
       colQ: new Decimal(0), colR: new Decimal(0), colS: new Decimal(0),
       colU: new Decimal(0),
     });
-  }, [paginatedAP]);
+    return { ...byColumn, ...sumAccounts(paginatedAP) };
+  }, [paginatedAP, accountColumns]);
 
   const grandTotals = useMemo(() => {
-    return filteredAndSortedAP.reduce((acc, curr) => {
-      const clean = (val: any) => {
-        const s = String(val || "0");
-        if (s === "-" || s === "") return "0";
-        let cleaned = s.replace(/[A-Z]{3}\s?/g, "");
-        cleaned = cleaned.replace(/\./g, "");
-        cleaned = cleaned.replace(/,/g, ".");
-        return cleaned.replace(/[^0-9.-]+/g, "") || "0";
-      };
+    const byColumn = filteredAndSortedAP.reduce((acc, curr) => {
       return {
         colE: acc.colE.plus(new Decimal(clean(curr.colE))),
         colK: acc.colK.plus(new Decimal(clean(curr.colK))),
@@ -189,7 +207,8 @@ export function ApSummaryTab() {
       colQ: new Decimal(0), colR: new Decimal(0), colS: new Decimal(0),
       colU: new Decimal(0),
     });
-  }, [filteredAndSortedAP]);
+    return { ...byColumn, ...sumAccounts(filteredAndSortedAP) };
+  }, [filteredAndSortedAP, accountColumns]);
 
   const handleEdit = (row: any) => {
     const rawRecord = allAPRaw?.find((r: any) => r.id === row.id) || row;
@@ -353,16 +372,9 @@ export function ApSummaryTab() {
                 </TableHead>
                 */}
 
-                {[
-                  { key: 'colK', label: 'BCA Shardjo' },
-                  { key: 'colL', label: 'BCA Juanda' },
-                  { key: 'colM', label: 'Mandiri Mid Plaza' },
-                  { key: 'colN', label: 'BTN' },
-                  { key: 'colO', label: 'BRI Shardjo' },
-                  { key: 'colP', label: 'BRI Tebet' },
-                  { key: 'colQ', label: 'Cash IDR' },
-                  { key: 'colR', label: 'Non CB' },
-                ].map((col) => (
+                {/* One column per account this year's payables were settled
+                    through. The header and the order come from Account & Bank. */}
+                {accountColumns.map((account) => ({ key: accountKey(account.id), label: account.name })).map((col) => (
                   <TableHead key={col.key} className="text-right w-36 whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
                       {col.label}
@@ -371,12 +383,15 @@ export function ApSummaryTab() {
                   </TableHead>
                 ))}
 
+                {/* Not an account: the VAT clearing position keeps its own
+                    column, read straight from colS. */}
                 <TableHead className="text-right w-40 whitespace-nowrap">
                   <div className="flex items-center justify-end gap-1">
                     AP In and Out
                     <ExcelColumnFilter columnKey="colS" label="AP In and Out" data={getCascadingData("colS")} activeFilters={apFilters["colS"]} onFilterChange={(v) => { setApFilters(p => ({...p, colS: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colS", direction: d})} />
                   </div>
                 </TableHead>
+
 
                 <TableHead className="text-right w-40 whitespace-nowrap">
                   <div className="flex items-center justify-end gap-1">
@@ -391,7 +406,7 @@ export function ApSummaryTab() {
             <TableBody>
               {apLoading ? (
                 <TableRow>
-                  <TableCell colSpan={20} className="h-96 text-center">
+                  <TableCell colSpan={12 + accountColumns.length} className="h-96 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin" />
                       <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/40 animate-pulse">Synchronizing Accounts Payable...</p>
@@ -400,7 +415,7 @@ export function ApSummaryTab() {
                 </TableRow>
               ) : paginatedAP.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={20} className="h-64 text-center opacity-20">
+                  <TableCell colSpan={12 + accountColumns.length} className="h-64 text-center opacity-20">
                     <p className="mt-4 font-black uppercase tracking-widest">No match found</p>
                   </TableCell>
                 </TableRow>
@@ -418,12 +433,11 @@ export function ApSummaryTab() {
                     {/* <TableCell className="px-4 text-primary/60 truncate max-w-[150px]" title={row.colH}>{row.colH}</TableCell> */}
                     {/* <TableCell className="px-4 text-primary/60 truncate max-w-[150px]" title={row.colI}>{row.colI}</TableCell> */}
 
-                    {['colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'].map(col => (
-                      <TableCell key={col} className={`text-right font-bold whitespace-nowrap ${getValueColor(row[col])}`}>
-                        {row[col]}
+                    {accountColumns.map((account) => (
+                      <TableCell key={account.id} className={`text-right font-bold whitespace-nowrap ${getValueColor(row[accountKey(account.id)])}`}>
+                        {row[accountKey(account.id)]}
                       </TableCell>
                     ))}
-
                     <TableCell className={`text-right font-bold whitespace-nowrap ${getValueColor(row.colS)}`}>
                       {row.colS}
                     </TableCell>
@@ -471,15 +485,14 @@ export function ApSummaryTab() {
                       Subtotal (Page {apPage})
                     </TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colE.toString())}</TableCell>
-                    {/* <TableCell></TableCell> */}
-                    {/* <TableCell></TableCell> */}
+                    <TableCell />
+                    <TableCell />
 
-                    {['colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'].map(col => (
-                      <TableCell key={col} className={`text-right whitespace-nowrap ${getValueColor(subtotalTotals[col as keyof typeof subtotalTotals].toString())}`}>
-                        {formatCurrency(subtotalTotals[col as keyof typeof subtotalTotals].toString())}
+                    {accountColumns.map((account) => (
+                      <TableCell key={account.id} className={`text-right whitespace-nowrap ${getValueColor(((subtotalTotals as any)[accountKey(account.id)] ?? 0).toString())}`}>
+                        {formatCurrency(((subtotalTotals as any)[accountKey(account.id)] ?? 0).toString())}
                       </TableCell>
                     ))}
-
                     <TableCell className={`text-right whitespace-nowrap ${getValueColor(subtotalTotals.colS.toString())}`}>{formatCurrency(subtotalTotals.colS.toString())}</TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colU.toString())}</TableCell>
                     <TableCell></TableCell>
@@ -490,15 +503,14 @@ export function ApSummaryTab() {
                       Period Totals ({filteredAndSortedAP.length} results)
                     </TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(grandTotals.colE.toString())}</TableCell>
-                    {/* <TableCell></TableCell> */}
-                    {/* <TableCell></TableCell> */}
+                    <TableCell />
+                    <TableCell />
 
-                    {['colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'].map(col => (
-                      <TableCell key={col} className={`text-right whitespace-nowrap ${getValueColor(grandTotals[col as keyof typeof grandTotals].toString())}`}>
-                        {formatCurrency(grandTotals[col as keyof typeof grandTotals].toString())}
+                    {accountColumns.map((account) => (
+                      <TableCell key={account.id} className={`text-right whitespace-nowrap ${getValueColor(((grandTotals as any)[accountKey(account.id)] ?? 0).toString())}`}>
+                        {formatCurrency(((grandTotals as any)[accountKey(account.id)] ?? 0).toString())}
                       </TableCell>
                     ))}
-
                     <TableCell className={`text-right whitespace-nowrap ${getValueColor(grandTotals.colS.toString())}`}>{formatCurrency(grandTotals.colS.toString())}</TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(grandTotals.colU.toString())}</TableCell>
                     <TableCell></TableCell>

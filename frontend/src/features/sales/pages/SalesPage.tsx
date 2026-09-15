@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useSales } from "../../finance/hooks/useSales";
+import { useAccountColumns, accountKey } from "../../finance/hooks/useAccountColumns";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { ExcelColumnFilter } from "../../finance/components/ExcelColumnFilter";
 import { formatCurrency, formatDate, cleanAmount, getAmountColor } from "@/lib/utils";
@@ -65,6 +66,11 @@ export default function SalesPage() {
   }, []);
 
   const { getAllSales, deleteSales } = useSales();
+  const accountColumns = useAccountColumns(
+    "sales",
+    salesYearFilter !== "all" ? yearNum : undefined,
+    { enabled: !!salesYearFilter }
+  );
   const { data: allSalesRaw, isLoading: salesLoading, refetch: refetchSales } = getAllSales(
     salesYearFilter !== "all" ? yearNum : undefined,
     { enabled: !!salesYearFilter }
@@ -103,6 +109,11 @@ export default function SalesPage() {
       colAB: formatCurrency(row.colAB),
       colAC: formatCurrency(row.colAC),
       colAD: row.colAD || "-",
+      // The same payment figures the colM..colW columns carry, keyed by
+      // account so the table can show whichever accounts this year used.
+      ...Object.fromEntries(
+        (row.amounts ?? []).map((a: any) => [accountKey(a.accountId), formatCurrency(a.amount)])
+      ),
     }));
   }, [allSalesRaw]);
 
@@ -162,8 +173,20 @@ export default function SalesPage() {
   };
 
 
+  /** Adds up one account column across the rows given. */
+  const sumAccounts = (rows: any[]) =>
+    Object.fromEntries(
+      accountColumns.map((account) => [
+        accountKey(account.id),
+        rows.reduce(
+          (total, row) => total.plus(new Decimal(cleanAmount(row[accountKey(account.id)]))),
+          new Decimal(0),
+        ),
+      ]),
+    );
+
   const salesGrandTotals = useMemo(() => {
-    return filteredAndSortedSales.reduce((acc: any, curr: any) => ({
+    const byColumn = filteredAndSortedSales.reduce((acc: any, curr: any) => ({
       colH: acc.colH.plus(new Decimal(cleanAmount(curr.colH))),
       colI: acc.colI.plus(new Decimal(cleanAmount(curr.colI))),
       colJ: acc.colJ.plus(new Decimal(cleanAmount(curr.colJ))),
@@ -188,12 +211,13 @@ export default function SalesPage() {
       colH: new Decimal(0), colI: new Decimal(0), colJ: new Decimal(0), colK: new Decimal(0), colM: new Decimal(0), 
       colN: new Decimal(0), colO: new Decimal(0), colP: new Decimal(0), colQ: new Decimal(0), colR: new Decimal(0), 
       colS: new Decimal(0), colT: new Decimal(0), colU: new Decimal(0), colV: new Decimal(0), colW: new Decimal(0), 
-      colX: new Decimal(0), colZ: new Decimal(0), colAA: new Decimal(0), colAB: new Decimal(0), colAC: new Decimal(0)
+      colX: new Decimal(0), colZ: new Decimal(0), colAA: new Decimal(0), colAB: new Decimal(0), colAC: new Decimal(0),
     });
-  }, [filteredAndSortedSales]);
+    return { ...byColumn, ...sumAccounts(filteredAndSortedSales) };
+  }, [filteredAndSortedSales, accountColumns]);
 
   const salesPageSubtotals = useMemo(() => {
-    return paginatedSales.reduce((acc: any, curr: any) => ({
+    const byColumn = paginatedSales.reduce((acc: any, curr: any) => ({
       colH: acc.colH.plus(new Decimal(cleanAmount(curr.colH))),
       colI: acc.colI.plus(new Decimal(cleanAmount(curr.colI))),
       colJ: acc.colJ.plus(new Decimal(cleanAmount(curr.colJ))),
@@ -218,9 +242,10 @@ export default function SalesPage() {
       colH: new Decimal(0), colI: new Decimal(0), colJ: new Decimal(0), colK: new Decimal(0), colM: new Decimal(0), 
       colN: new Decimal(0), colO: new Decimal(0), colP: new Decimal(0), colQ: new Decimal(0), colR: new Decimal(0), 
       colS: new Decimal(0), colT: new Decimal(0), colU: new Decimal(0), colV: new Decimal(0), colW: new Decimal(0), 
-      colX: new Decimal(0), colZ: new Decimal(0), colAA: new Decimal(0), colAB: new Decimal(0), colAC: new Decimal(0)
+      colX: new Decimal(0), colZ: new Decimal(0), colAA: new Decimal(0), colAB: new Decimal(0), colAC: new Decimal(0),
     });
-  }, [paginatedSales]);
+    return { ...byColumn, ...sumAccounts(paginatedSales) };
+  }, [paginatedSales, accountColumns]);
 
   return (
     <PageContainer>
@@ -345,39 +370,17 @@ export default function SalesPage() {
                   <div className="flex items-center gap-1">Date Received <ExcelColumnFilter columnKey="colL" label="Date Received" data={getCascadingData("colL")} activeFilters={salesFilters["colL"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colL: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colL", direction: d}); setSalesPage(1); }} type="date" dateKey="rawColL" /></div>
                 </TableHead> */}
 
-                <TableHead className="w-40 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">BCA Sahardjo <ExcelColumnFilter columnKey="colM" label="BCA Sahardjo" data={getCascadingData("colM")} activeFilters={salesFilters["colM"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colM: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colM", direction: d}); setSalesPage(1); }} /></div>
-                </TableHead>
-                <TableHead className="w-40 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">BCA Juanda <ExcelColumnFilter columnKey="colN" label="BCA Juanda" data={getCascadingData("colN")} activeFilters={salesFilters["colN"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colN: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colN", direction: d}); setSalesPage(1); }} /></div>
-                </TableHead>
-                <TableHead className="w-40 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">Mandiri Mid <ExcelColumnFilter columnKey="colO" label="Mandiri Mid" data={getCascadingData("colO")} activeFilters={salesFilters["colO"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colO: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colO", direction: d}); setSalesPage(1); }} /></div>
-                </TableHead>
-                <TableHead className="w-40 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">Mandiri Plasa <ExcelColumnFilter columnKey="colP" label="Mandiri Plasa" data={getCascadingData("colP")} activeFilters={salesFilters["colP"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colP: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colP", direction: d}); setSalesPage(1); }} /></div>
-                </TableHead>
-                <TableHead className="w-40 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">BRI Tebet <ExcelColumnFilter columnKey="colQ" label="BRI Tebet" data={getCascadingData("colQ")} activeFilters={salesFilters["colQ"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colQ: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colQ", direction: d}); setSalesPage(1); }} /></div>
-                </TableHead>
-                <TableHead className="w-40 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">BRI Sahardjo <ExcelColumnFilter columnKey="colR" label="BRI Sahardjo" data={getCascadingData("colR")} activeFilters={salesFilters["colR"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colR: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colR", direction: d}); setSalesPage(1); }} /></div>
-                </TableHead>
-                <TableHead className="w-40 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">BTN <ExcelColumnFilter columnKey="colS" label="BTN" data={getCascadingData("colS")} activeFilters={salesFilters["colS"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colS: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colS", direction: d}); setSalesPage(1); }} /></div>
-                </TableHead>
-                <TableHead className="w-40 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">Bank Raya <ExcelColumnFilter columnKey="colT" label="Bank Raya" data={getCascadingData("colT")} activeFilters={salesFilters["colT"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colT: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colT", direction: d}); setSalesPage(1); }} /></div>
-                </TableHead>
-                <TableHead className="w-40 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">BNI <ExcelColumnFilter columnKey="colU" label="BNI" data={getCascadingData("colU")} activeFilters={salesFilters["colU"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colU: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colU", direction: d}); setSalesPage(1); }} /></div>
-                </TableHead>
-                <TableHead className="w-40 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">Cash IDR <ExcelColumnFilter columnKey="colV" label="Cash IDR" data={getCascadingData("colV")} activeFilters={salesFilters["colV"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colV: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colV", direction: d}); setSalesPage(1); }} /></div>
-                </TableHead>
-                <TableHead className="w-40 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">Non CB <ExcelColumnFilter columnKey="colW" label="Non CB" data={getCascadingData("colW")} activeFilters={salesFilters["colW"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colW: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colW", direction: d}); setSalesPage(1); }} /></div>
-                </TableHead>
+                {/* One column per account that actually took money this year.
+                    The header, the order and which accounts appear at all come
+                    from Account & Bank, not from this file. */}
+                {accountColumns.map((account) => {
+                  const key = accountKey(account.id);
+                  return (
+                    <TableHead key={key} className="w-40 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1">{account.name} <ExcelColumnFilter columnKey={key} label={account.name} data={getCascadingData(key)} activeFilters={salesFilters[key]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, [key]: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key, direction: d}); setSalesPage(1); }} /></div>
+                    </TableHead>
+                  );
+                })}
                 <TableHead className="w-40 px-4 text-right">
                   <div className="flex items-center justify-end gap-1">Outstanding <ExcelColumnFilter columnKey="colX" label="Outstanding" data={getCascadingData("colX")} activeFilters={salesFilters["colX"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colX: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colX", direction: d}); setSalesPage(1); }} /></div>
                 </TableHead>
@@ -402,7 +405,7 @@ export default function SalesPage() {
             <TableBody>
               {salesLoading ? (
                 <TableRow>
-                  <TableCell colSpan={28} className="h-96 text-center">
+                  <TableCell colSpan={17 + accountColumns.length} className="h-96 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin"></div>
                       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 animate-pulse">Synchronizing Global Sales Data...</p>
@@ -411,7 +414,7 @@ export default function SalesPage() {
                 </TableRow>
               ) : paginatedSales.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={28} className="h-64 text-center opacity-20">
+                  <TableCell colSpan={17 + accountColumns.length} className="h-64 text-center opacity-20">
                     <Search size={48} className="mx-auto" />
                     <p className="mt-4 font-black uppercase tracking-widest">No sales records found</p>
                   </TableCell>
@@ -433,17 +436,9 @@ export default function SalesPage() {
                       <TableCell className="px-4 w-40 text-right">{row.colK}</TableCell>
                       {/* <TableCell className="px-4 w-40">{row.colL}</TableCell> */}
 
-                      <TableCell className="px-4 w-40 text-right">{row.colM}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colN}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colO}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colP}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colQ}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colR}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colS}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colT}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colU}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colV}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colW}</TableCell>
+                      {accountColumns.map((account) => (
+                        <TableCell key={account.id} className="px-4 w-40 text-right">{row[accountKey(account.id)]}</TableCell>
+                      ))}
 
                       <TableCell className="px-4 w-40 text-right font-bold">{row.colX}</TableCell>
                       <TableCell className="px-4 w-40 text-right">{row.colZ}</TableCell>
@@ -481,17 +476,9 @@ export default function SalesPage() {
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesPageSubtotals.colJ.toString())}`}>{formatCurrency(salesPageSubtotals.colJ.toString())}</TableCell>
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesPageSubtotals.colK.toString())}`}>{formatCurrency(salesPageSubtotals.colK.toString())}</TableCell>
                     {/* <TableCell className="py-3 bg-secondary/[0.01]" /> */}
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colM.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colN.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colO.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colP.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colQ.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colR.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colS.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colT.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colU.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colV.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colW.toString())}</TableCell>
+                    {accountColumns.map((account) => (
+                      <TableCell key={account.id} className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(((salesPageSubtotals as any)[accountKey(account.id)] ?? 0).toString())}</TableCell>
+                    ))}
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colX.toString())}</TableCell>
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colZ.toString())}</TableCell>
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesPageSubtotals.colAA.toString())}</TableCell>
@@ -511,17 +498,9 @@ export default function SalesPage() {
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesGrandTotals.colJ.toString())}`}>{formatCurrency(salesGrandTotals.colJ.toString())}</TableCell>
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesGrandTotals.colK.toString())}`}>{formatCurrency(salesGrandTotals.colK.toString())}</TableCell>
                     {/* <TableCell className="py-3 bg-secondary/[0.02]" /> */}
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colM.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colN.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colO.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colP.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colQ.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colR.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colS.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colT.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colU.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colV.toString())}</TableCell>
-                    <TableCell className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colW.toString())}</TableCell>
+                    {accountColumns.map((account) => (
+                      <TableCell key={account.id} className="py-3 text-right text-emerald-600/90 pr-4 whitespace-nowrap">{formatCurrency(((salesGrandTotals as any)[accountKey(account.id)] ?? 0).toString())}</TableCell>
+                    ))}
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colX.toString())}</TableCell>
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colZ.toString())}</TableCell>
                     <TableCell className="py-3 text-right text-rose-600/90 pr-4 whitespace-nowrap">{formatCurrency(salesGrandTotals.colAA.toString())}</TableCell>

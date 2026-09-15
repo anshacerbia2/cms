@@ -2,14 +2,22 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as XLSX from 'xlsx';
-import { cleanCurrency, cleanString } from '../seeders/utils/excel';
+import { cleanCurrency, cleanString } from '../utils/excel';
 import {
+  findWorkbook,
+  DATA_DIR,
   FISCAL_YEAR,
   buildColumnMap,
   isBlankRow,
   normalizeLabel,
   type SlotSpec,
 } from './utils/layout';
+import {
+  linkAccountAmounts,
+  readAccountColumns,
+  readRowAmounts,
+  type RowAmounts,
+} from './utils/accounts';
 
 const WORKBOOK = 'PCMI-InterAccount-14Sept26.xlsx';
 
@@ -43,14 +51,16 @@ function findHeaderRow(rows: any[][]): number {
   );
 }
 
-export async function seedInterAccount2026(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
+export async function seedInterAccount(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
   console.log(`🔁 Seeding ${FISCAL_YEAR} inter-account matrix...`);
 
   let wb = workbook;
   if (!wb) {
-    const filePath = path.join(process.cwd(), 'prisma', 'seed-data-2026', WORKBOOK);
-    if (!fs.existsSync(filePath)) {
-      console.error(`❌ Workbook not found at: ${filePath}`);
+    const filePath = findWorkbook(['interaccount', 'inter']);
+    if (!filePath) {
+      console.warn(
+        `⏭️  No workbook matching ["interaccount", "inter"] in prisma/${DATA_DIR} — skipped.`,
+      );
       return;
     }
     wb = XLSX.readFile(filePath);
@@ -63,7 +73,20 @@ export async function seedInterAccount2026(prisma: PrismaClient, workbook?: XLSX
     return;
   }
 
-  const map = buildColumnMap(rows[headerRow], SLOTS);
+  const header: any[] = rows[headerRow];
+  const map = buildColumnMap(header, SLOTS);
+
+  // Read the same block a second time as a list of accounts. A column with no
+  // slot still lands this way, which is the whole point of the relation.
+  const anchor = header.findIndex((cell) => normalizeLabel(cell) === 'bcasahardjo');
+  const accounts = readAccountColumns(header, anchor, header.length - 1);
+  if (accounts.unknown.length > 0) {
+    console.error(
+      `❌ Heading(s) that name no account we know: ${accounts.unknown.join(', ')}.` +
+        ' Add the account under Account & Bank first — nothing seeded.',
+    );
+    return;
+  }
 
   const removed = await prisma.interAccount.deleteMany({ where: { tagYear: FISCAL_YEAR } });
   if (removed.count > 0) console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} rows.`);
@@ -72,6 +95,7 @@ export async function seedInterAccount2026(prisma: PrismaClient, workbook?: XLSX
   // The totals below the matrix leave that first column empty, so they are
   // skipped without needing to guess where the data stops.
   const records: Prisma.InterAccountCreateManyInput[] = [];
+  const perRow: RowAmounts[] = [];
   for (let i = headerRow + 1; i < rows.length; i++) {
     const row = rows[i];
     if (isBlankRow(row)) continue;
@@ -84,6 +108,7 @@ export async function seedInterAccount2026(prisma: PrismaClient, workbook?: XLSX
       record[spec.slot] = index === undefined ? null : cleanCurrency(row[index]);
     }
     records.push(record);
+    perRow.push(readRowAmounts(row, accounts.columns));
   }
 
   if (records.length === 0) {
@@ -93,6 +118,15 @@ export async function seedInterAccount2026(prisma: PrismaClient, workbook?: XLSX
 
   await prisma.interAccount.createMany({ data: records });
   console.log(`✅ Seeded ${records.length} inter-account rows for ${FISCAL_YEAR}.`);
+
+  await linkAccountAmounts({
+    prisma,
+    amountModel: prisma.interAccountAmount,
+    parentModel: prisma.interAccount,
+    parentKey: 'interAccountId',
+    tagYear: FISCAL_YEAR,
+    perRow,
+  });
 
   if (map.missing.length > 0) {
     const names = map.missing

@@ -143,7 +143,10 @@ export class BanksService {
         include: {
           bank: true,
         },
-        orderBy: { createdAt: 'desc' },
+        // The order the accounts are shown in across the finance tables, so
+        // this list reads the same way. Accounts with no position set fall to
+        // the end rather than jumping the queue.
+        orderBy: [{ displayOrder: 'asc' }, { createdAt: 'desc' }],
       }),
       this.prisma.internalAccount.count({ where }),
     ]);
