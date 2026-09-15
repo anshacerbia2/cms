@@ -264,3 +264,42 @@ export function readCell(value: any, kind: SlotSpec['kind']) {
       return cleanString(value);
   }
 }
+
+/**
+ * Refuses a sheet whose column does not hold what that position is supposed to.
+ *
+ * Columns read by position are the ones a re-shaped workbook silently breaks:
+ * nothing about a spreadsheet says which column is which, and nothing about the
+ * database does either, so a shifted book loads cleanly and wrongly. Checking
+ * that the values look like what was expected is the only signal left.
+ *
+ * Returns true when the column is fine, and explains itself when it is not.
+ */
+export function columnHolds(
+  rows: any[][],
+  index: number,
+  expectation: { label: string; looksRight: (value: string) => boolean },
+): boolean {
+  const values = rows
+    .map((row) => String((row || [])[index] ?? '').trim())
+    .filter((v) => v !== '' && v !== '-');
+  if (values.length === 0) return true;
+
+  const right = values.filter(expectation.looksRight).length;
+  if (right >= values.length / 2) return true;
+
+  const sample = [...new Set(values)].slice(0, 5).join(', ');
+  const letter = String.fromCharCode(65 + index);
+  console.error(
+    `❌ Column ${letter} should hold ${expectation.label} but holds: ${sample}.` +
+      `\n   Only ${right} of ${values.length} look right. Nothing seeded.`,
+  );
+  return false;
+}
+
+/** A cell that reads as a date, whether Excel handed it over as a serial or as text. */
+export function looksLikeDate(value: string): boolean {
+  const serial = Number(value);
+  if (Number.isFinite(serial) && serial > 20000 && serial < 60000) return true;
+  return !Number.isNaN(Date.parse(value)) || /\d{1,2}[-/ ][A-Za-z]{3}/.test(value);
+}

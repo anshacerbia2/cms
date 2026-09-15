@@ -106,6 +106,22 @@ export async function seedPpnInOut(prisma: PrismaClient) {
     return;
   }
 
+  // The column saying which side of PPN a row is has no heading either, and is
+  // read as the neighbour of "No Faktur". Every value names PPN one way or
+  // another, so a column that does not is the wrong one.
+  const kinds = records
+    .map((r: any) => String(r.colB ?? '').trim())
+    .filter((v: string) => v !== '' && v !== '-');
+  const mentionsPpn = kinds.filter((v: string) => /ppn/i.test(v)).length;
+  if (kinds.length > 0 && mentionsPpn < kinds.length / 2) {
+    const sample = [...new Set(kinds)].slice(0, 5).join(', ');
+    console.error(
+      `❌ Column ${String.fromCharCode(65 + kindIndex)} should say which side of PPN but holds: ${sample}.` +
+        `\n   Only ${mentionsPpn} of ${kinds.length} mention PPN. Nothing seeded.`,
+    );
+    return;
+  }
+
   const removed = await prisma.ppnInOut.deleteMany({ where: { tagYear: FISCAL_YEAR } });
   if (removed.count > 0) console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} rows.`);
 

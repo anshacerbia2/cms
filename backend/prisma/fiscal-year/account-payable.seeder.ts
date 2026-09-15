@@ -115,10 +115,24 @@ export async function seedAccountPayable(prisma: PrismaClient) {
   // belongs to ("COGS", "AP Expense") and the project it was spent on. Neither
   // has ever had a heading, so they are read as the anchor's left-hand
   // neighbours: an inserted column on the far left moves them along with it.
-  const ledgerIndex = anchor - 3;
-  const projectIndex = anchor - 2;
-  if (ledgerIndex < 0) {
-    console.warn('⚠️  Payment block starts too early for the ledger columns — both stored as null.');
+  // The ledger and the project it was spent on have never had a heading, so
+  // they are placed as the bank block's left-hand neighbours. A book that
+  // leaves them out entirely puts figures there instead, and those are not the
+  // columns we meant: better an empty ledger than a ledger full of amounts.
+  let ledgerIndex = anchor - 3;
+  let projectIndex = anchor - 2;
+  const sample = rows
+    .slice(headerIndex + 1, headerIndex + 60)
+    .map((row) => String((row || [])[ledgerIndex] ?? '').trim())
+    .filter((v) => v !== '' && v !== '-');
+  const wordy = sample.filter((v) => /[a-z]/i.test(v)).length;
+  if (ledgerIndex < 0 || (sample.length > 0 && wordy < sample.length / 2)) {
+    console.warn(
+      `⚠️  No ledger or project column in this workbook — both stored as null.` +
+        (sample.length > 0 ? ` Column ${String.fromCharCode(65 + ledgerIndex)} holds figures.` : ''),
+    );
+    ledgerIndex = -1;
+    projectIndex = -1;
   }
 
   const records: Prisma.AccountPayableCreateManyInput[] = [];
@@ -135,7 +149,7 @@ export async function seedAccountPayable(prisma: PrismaClient) {
     const record: any = {
       colG: rateIndex === undefined ? null : cleanCurrency(row[rateIndex]),
       colH: ledgerIndex < 0 ? null : cleanString(row[ledgerIndex]),
-      colI: ledgerIndex < 0 ? null : cleanString(row[projectIndex]),
+      colI: projectIndex < 0 ? null : cleanString(row[projectIndex]),
       colJ: '',
       colT: '',
       tagYear: FISCAL_YEAR,
