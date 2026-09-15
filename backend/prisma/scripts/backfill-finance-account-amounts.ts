@@ -21,9 +21,6 @@ import {
  */
 const REPLACE = process.env.BACKFILL_REPLACE_EXISTING === '1';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
-
 type TableSpec = {
   label: string;
   columns: ColumnAccountMap;
@@ -35,7 +32,8 @@ type TableSpec = {
   parentKey: string;
 };
 
-const TABLES: TableSpec[] = [
+function tablesFor(prisma: PrismaClient): TableSpec[] {
+  return [
   {
     label: 'inter_account',
     columns: INTER_ACCOUNT_COLUMNS,
@@ -64,10 +62,11 @@ const TABLES: TableSpec[] = [
     amounts: () => prisma.accountPayableAmount,
     parentKey: 'accountPayableId',
   } as any,
-];
+  ];
+}
 
 /** Turns a spreadsheet label into the internal account it stands for. */
-async function resolveAccounts(labels: string[]) {
+async function resolveAccounts(prisma: PrismaClient, labels: string[]) {
   const byLabel = new Map<string, bigint>();
   const unknown: string[] = [];
 
@@ -94,11 +93,12 @@ async function resolveAccounts(labels: string[]) {
   return { byLabel, unknown };
 }
 
-async function main() {
+export async function backfillAccountAmounts(prisma: PrismaClient) {
   console.log('🔗 Linking finance columns to internal accounts...\n');
 
+  const TABLES = tablesFor(prisma);
   const labels = [...new Set(TABLES.flatMap((t) => Object.values(t.columns)))];
-  const { byLabel, unknown } = await resolveAccounts(labels);
+  const { byLabel, unknown } = await resolveAccounts(prisma, labels);
 
   let failed = false;
 
@@ -153,19 +153,19 @@ async function main() {
     console.log(`\nℹ️  No internal account for: ${unknown.join(', ')} — no figures use them.`);
   }
 
-  await verify();
-  if (failed) process.exit(1);
+  await verify(prisma);
+  if (failed) throw new Error('Some columns name an account that does not exist.');
 }
 
 /**
  * Adds the columns up one way and the linked rows up the other. The two totals
  * have to agree per account, or the copy lost something.
  */
-async function verify() {
+async function verify(prisma: PrismaClient) {
   console.log('\n🔍 Checking the totals match, account by account:');
   let bad = 0;
 
-  for (const table of TABLES) {
+  for (const table of tablesFor(prisma)) {
     const amounts = (table as any).amounts();
     const rows = await table.read();
     const fromColumns = new Map<string, Prisma.Decimal>();
@@ -191,7 +191,7 @@ async function verify() {
     }
 
     for (const [label, total] of fromColumns) {
-      const id = (await resolveAccounts([label])).byLabel.get(label);
+      const id = (await resolveAccounts(prisma, [label])).byLabel.get(label);
       const linked = id === undefined ? new Prisma.Decimal(0) : (fromLines.get(id.toString()) ?? new Prisma.Decimal(0));
       const agrees = total.equals(linked);
       if (!agrees) bad++;
@@ -209,12 +209,17 @@ async function verify() {
   if (bad > 0) process.exitCode = 1;
 }
 
-main()
-  .catch((e) => {
-    console.error('❌ Backfill failed:', e);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-    await pool.end();
-  });
+/** Run on its own: `pnpm backfill:account-amounts`. */
+if (require.main === module) {
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
+  backfillAccountAmounts(prisma)
+    .catch((e) => {
+      console.error('❌ Backfill failed:', e);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+      await pool.end();
+    });
+}

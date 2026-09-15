@@ -16,6 +16,7 @@ import { seedAccountReceivable } from './account-receivable.seeder';
 import { seedPpnInOut } from './ppn-in-out.seeder';
 import { seedEquity } from './equity.seeder';
 import { seedInterAccount } from './inter-account.seeder';
+import { backfillAccountAmounts } from '../scripts/backfill-finance-account-amounts';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -48,6 +49,12 @@ async function main() {
     await seedPpnInOut(prisma);
     await seedEquity(prisma);
     await seedInterAccount(prisma);
+
+    // The finance tables keep their per-account columns, and this puts the
+    // same figures in the rows that name their account. A database seeded
+    // from scratch is then consistent without anyone remembering a second
+    // command.
+    await backfillAccountAmounts(prisma);
 
     console.log('🚀 Seeding completed successfully.');
   } catch (error) {

@@ -14,6 +14,12 @@ import {
   readCell,
   type SlotSpec,
 } from './utils/layout';
+import {
+  linkAccountAmounts,
+  readAccountColumns,
+  readRowAmounts,
+  type RowAmounts,
+} from './utils/accounts';
 
 const ANCHOR = 'bcasahardjo';
 
@@ -88,6 +94,17 @@ export async function seedAccountPayable2026(prisma: PrismaClient) {
     console.warn('⚠️  No "OUTSTANDING" heading found — outstanding balances will be null.');
   }
 
+  // The payment block a second time, read as accounts rather than as slots, so
+  // a column this table has no slot for still lands.
+  const accounts = readAccountColumns(header, anchor, outstanding - 1);
+  if (accounts.unknown.length > 0) {
+    console.error(
+      `❌ Heading(s) that name no account we know: ${accounts.unknown.join(', ')}.` +
+        ' Add the account under Account & Bank first — nothing seeded.',
+    );
+    return;
+  }
+
   const opening = buildColumnMapInRange(header, OPENING, 0, anchor - 1);
   const channels = buildColumnMapInRange(header, CHANNELS, anchor, outstanding - 1);
   const closing = buildColumnMapInRange(header, OUTSTANDING, outstanding, header.length);
@@ -104,6 +121,7 @@ export async function seedAccountPayable2026(prisma: PrismaClient) {
   }
 
   const records: Prisma.AccountPayableCreateManyInput[] = [];
+  const perRow: RowAmounts[] = [];
   let stoppedAt = -1;
 
   for (let i = headerIndex + 1; i < rows.length; i++) {
@@ -132,6 +150,7 @@ export async function seedAccountPayable2026(prisma: PrismaClient) {
       }
     }
     records.push(record);
+    perRow.push(readRowAmounts(row, accounts.columns));
   }
 
   if (records.length === 0) {
@@ -144,6 +163,15 @@ export async function seedAccountPayable2026(prisma: PrismaClient) {
 
   await prisma.accountPayable.createMany({ data: records });
   console.log(`✅ Seeded ${records.length} account payable rows for ${FISCAL_YEAR}.`);
+
+  await linkAccountAmounts({
+    prisma,
+    amountModel: prisma.accountPayableAmount,
+    parentModel: prisma.accountPayable,
+    parentKey: 'accountPayableId',
+    tagYear: FISCAL_YEAR,
+    perRow,
+  });
 
   reportLayout(
     [opening, channels, closing],

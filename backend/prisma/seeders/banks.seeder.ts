@@ -69,21 +69,21 @@ export async function seedBanks(prisma: PrismaClient) {
 
   // Seed sample Internal Accounts using the loaded bankIds
   const legacyAccounts = [
-    { bankBrand: 'BCA', accountNo: '5750 489 666', branch: 'Sahardjo', holderName: 'RD Hidianitje', type: 'BANK' },
-    { bankBrand: 'BCA', accountNo: '5350 285 999', branch: 'Juanda', holderName: 'PT Panconvince Mitra International', type: 'BANK' },
-    { bankBrand: 'MANDIRI', accountNo: '122 000 487 5566', branch: 'Mid Plaza', holderName: 'PT Panconvince Mitra International', type: 'BANK' },
-    { bankBrand: 'MANDIRI', accountNo: '', branch: 'PM', holderName: 'PT Panconvince Mitra International', type: 'BANK' },
-    { bankBrand: 'BRI', accountNo: '1125 0100 0255 301', branch: 'Sahardjo', holderName: 'PT Panconvince Mitra International', type: 'BANK' },
-    { bankBrand: 'BRI', accountNo: '', branch: 'Tebet', holderName: 'PT Panconvince Mitra International', type: 'BANK' },
-    { bankBrand: 'BTN', accountNo: '00001 01 30 001293 5', branch: 'Sahardjo', holderName: 'PT Panconvince Mitra International', type: 'BANK' },
-    { bankBrand: 'BANK RAYA', accountNo: '001 001 001 907 409', branch: '', holderName: 'PT Panconvince Mitra International', type: 'BANK' },
-    { bankBrand: 'BNI', accountNo: '', branch: '', holderName: 'PT Panconvince Mitra International', type: 'BANK' },
-    { accountNo: '', branch: '', holderName: 'Meery Ferdian', type: 'CASH' },
-    { accountNo: '', branch: '', holderName: 'Non Cash & Bank', type: 'OTHER' },
+    { bankBrand: 'BCA', accountNo: '5750 489 666', branch: 'Sahardjo', holderName: 'RD Hidianitje', type: 'BANK', displayName: 'BCA Sahardjo', displayOrder: 1 },
+    { bankBrand: 'BCA', accountNo: '5350 285 999', branch: 'Juanda', holderName: 'PT Panconvince Mitra International', type: 'BANK', displayName: 'BCA Juanda', displayOrder: 2 },
+    { bankBrand: 'MANDIRI', accountNo: '122 000 487 5566', branch: 'Mid Plaza', holderName: 'PT Panconvince Mitra International', type: 'BANK', displayName: 'Mandiri Mid Plaza', displayOrder: 3 },
+    { bankBrand: 'MANDIRI', accountNo: '', branch: 'PM', holderName: 'PT Panconvince Mitra International', type: 'BANK', displayName: 'Mandiri Plasa Mandiri', displayOrder: 4 },
+    { bankBrand: 'BRI', accountNo: '1125 0100 0255 301', branch: 'Sahardjo', holderName: 'PT Panconvince Mitra International', type: 'BANK', displayName: 'BRI Sahardjo', displayOrder: 5 },
+    { bankBrand: 'BRI', accountNo: '', branch: 'Tebet', holderName: 'PT Panconvince Mitra International', type: 'BANK', displayName: 'BRI Tebet', displayOrder: 6 },
+    { bankBrand: 'BTN', accountNo: '00001 01 30 001293 5', branch: 'Sahardjo', holderName: 'PT Panconvince Mitra International', type: 'BANK', displayName: 'BTN', displayOrder: 7 },
+    { bankBrand: 'BANK RAYA', accountNo: '001 001 001 907 409', branch: '', holderName: 'PT Panconvince Mitra International', type: 'BANK', displayName: 'Bank Raya', displayOrder: 8 },
+    { bankBrand: 'BNI', accountNo: '', branch: '', holderName: 'PT Panconvince Mitra International', type: 'BANK', displayName: 'BNI', displayOrder: 9 },
+    { accountNo: '', branch: '', holderName: 'Meery Ferdian', type: 'CASH', displayName: 'Cash IDR', displayOrder: 10 },
+    { accountNo: '', branch: '', holderName: 'Non Cash & Bank', type: 'OTHER', displayName: 'Non CB', displayOrder: 11 },
     // Not a bank: the control account VAT is cleared through. Money moves into
     // it from BCA Juanda, Mandiri Mid Plaza and Non Cash & Bank, and the
     // payable side records the VAT position against it.
-    { accountNo: '', branch: '', holderName: 'PPn In and Out', type: 'OTHER' },
+    { accountNo: '', branch: '', holderName: 'PPn In and Out', type: 'OTHER', displayName: 'PPn In and Out', displayOrder: 12 },
   ];
 
   for (const acc of legacyAccounts) {

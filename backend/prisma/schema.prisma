@@ -305,6 +305,12 @@ model InternalAccount {
   branch             String?             @db.VarChar(255)
   swiftCode          String?             @map("swift_code") @db.VarChar(20)
   holderName         String              @map("holder_name") @db.VarChar(255)
+  /// What the finance tables call this account in a column header. Derived
+  /// names do not work: the holder of BCA Sahardjo is a person, and the cash
+  /// and control accounts have no bank to take a name from.
+  displayName        String?             @map("display_name") @db.VarChar(100)
+  /// Left-to-right position wherever accounts are shown side by side.
+  displayOrder       Int?                @map("display_order")
   /// Settlement account for No Tax invoices. The rule was previously carried by a
   /// hardcoded account number, which broke the moment the account changed.
   isNonVatSettlement Boolean             @default(false) @map("is_non_vat_settlement")
