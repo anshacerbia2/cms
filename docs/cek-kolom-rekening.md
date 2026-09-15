@@ -4,8 +4,12 @@ Empat tabel finance tidak lagi punya kolom bank tetap. Kolomnya sekarang lahir d
 rekening yang benar-benar dipakai di tahun itu. Ini daftar yang perlu dibuktikan di
 layar, lengkap dengan angka acuan dari `cms_dev`.
 
-Harus sudah ada di lokal: **9f3ca6a** (perbaikan total yang hilang) dan **eb5d8e5**
-(jalur tulis). Kalau belum, halaman Account Payable dan Account Receivable masih blank.
+Harus sudah ada di lokal: **b173c7e** atau setelahnya. Kalau belum sampai **9f3ca6a**,
+halaman Account Payable dan Account Receivable masih blank.
+
+`PPn In and Out` **bukan rekening** — dia posisi kliring PPN, jadi kolomnya tetap ada
+di AR, AP dan Inter Account tapi dibaca langsung dari kolomnya sendiri, bukan lewat
+relasi. Dia selalu tampil, di tahun mana pun, walau isinya nol.
 
 ---
 
@@ -40,10 +44,9 @@ Urutannya penting — kolom baru tidak ada di Prisma client sampai di-generate.
 
 Di sinilah nama dan urutan kolom sekarang hidup. Kalau bagian ini benar, sisanya mengikuti.
 
-- [ ] Ada **12 rekening**, dan yang ke-12 adalah `PPn In and Out` bertipe `OTHER` tanpa bank
+- [ ] Ada **11 rekening** — `PPn In and Out` **tidak** ada di daftar ini
 - [ ] Urutan daftarnya: BCA Sahardjo, BCA Juanda, Mandiri Mid Plaza, Mandiri Plasa
-      Mandiri, BRI Sahardjo, BRI Tebet, BTN, Bank Raya, BNI, Cash IDR, Non CB,
-      PPn In and Out
+      Mandiri, BRI Sahardjo, BRI Tebet, BTN, Bank Raya, BNI, Cash IDR, Non CB
 - [ ] Tombol edit membuka dialog yang punya field **Column header** dan **Position**,
       di antara *Registered Holder* dan checkbox Non-VAT
 - [ ] ⚠️ **BUKTI UTAMA** — Ubah *Column header* BCA Juanda jadi `BCA JD` → simpan →
@@ -95,21 +98,27 @@ Di sinilah nama dan urutan kolom sekarang hidup. Kalau bagian ini benar, sisanya
 
 *menu Finance → Account Receivable*
 
-Hanya ada data 2025. Dulu tujuh kolom dideklarasikan, sekarang enam.
+Workbook 2026 baru masuk: 1.241 baris. Dan dia membawa kolom **BNI**, yang tabel ini
+tidak punya kolom tetapnya sama sekali — inilah kasus yang dulu pasti hilang.
 
-### Grand Total yang harus keluar — AR 2025
+### Grand Total yang harus keluar — AR
 
-| Rekening | 2025 |
-|---|---:|
-| BCA Sahardjo | -1.312.802.624,00 |
-| BCA Juanda | -193.596.229,00 |
-| Mandiri Mid Plaza | 4.324.055.188,40 |
-| BRI Sahardjo | -11.333.953,00 |
-| Cash IDR | -2.812.641,00 |
-| Non CB | -1.223.931.227,00 |
+| Rekening | 2025 | 2026 |
+|---|---:|---:|
+| BCA Sahardjo | -1.312.802.624,00 | 1.665.245.866,00 |
+| BCA Juanda | -193.596.229,00 | -2.034.608.434,00 |
+| Mandiri Mid Plaza | 4.324.055.188,40 | 636.941.015,00 |
+| BRI Sahardjo | -11.333.953,00 | 171.794.700,00 |
+| BNI | — | **728.648.649,00** |
+| Cash IDR | -2.812.641,00 | -515.401,00 |
+| Non CB | -1.223.931.227,00 | 4.335.822.748,00 |
+| PPn In and Out *(kolom tetap)* | 0 | 0 |
 
-- [ ] 2025 menampilkan **6 kolom**, dan `PPn In and Out` **tidak** muncul
-      *(kolomnya ada di Excel tapi isinya nol sepanjang 2025)*
+- [ ] 2025 → **6 kolom rekening**, 2026 → **7 kolom rekening**, dan di dua-duanya ada
+      satu kolom tetap `PPn In and Out` di paling kanan sebelum Outstanding
+- [ ] ⚠️ **INI YANG PALING PENTING DI HALAMAN INI** — 2026 punya kolom **BNI** berisi
+      728.648.649. Tabel `account_receivables` tidak punya kolom tetap untuk BNI;
+      angka ini masuk lewat relasi. Sebelum hari ini dia akan terbuang.
 - [ ] Header-nya `BCA Sahardjo` dan `BRI Sahardjo` — bukan lagi salah ketik
       `BCA Suhardjo` / `BRI Suhardjo`, dan `Mandiri Mid Plaza` bukan `MANDIRI MP`
 - [ ] Angka Grand Total cocok dengan tabel di atas
@@ -131,24 +140,25 @@ Hanya ada data 2025. Dulu tujuh kolom dideklarasikan, sekarang enam.
 > aplikasi dan tidak ada di workbook mana pun, jadi DB lo yang di-seed dari Excel tidak
 > punya baris itu. Bukan bug.
 
-### Grand Total yang harus keluar — AP 2025
+Workbook 2026 baru masuk juga: 138 baris.
 
-| Rekening | di laptop lo | di cms_dev server |
-|---|---:|---:|
-| BCA Sahardjo | 686.680.889,00 | 686.680.889,00 |
-| BCA Juanda | 149.183.884,00 | 149.183.884,00 |
-| Mandiri Mid Plaza | -393.065.428,00 | -393.065.428,00 |
-| BRI Sahardjo | -1.500.000,00 | -1.500.000,00 |
-| BRI Tebet | -154.034.667,00 | -154.034.667,00 |
-| Cash IDR | -2.892.500,00 | -2.892.500,00 |
-| Non CB | **1.918.040.013,16** | 2.580.118.243,16 |
-| PPn In and Out | -3.323.562.928,00 | -3.323.562.928,00 |
+### Grand Total yang harus keluar — AP
 
-- [ ] 2025 menampilkan **8 kolom**, dan `BTN` **tidak** muncul
-      *(kolom BTN dideklarasikan selama ini padahal tidak pernah ada pembayaran lewat
-      sana di 2025)*
-- [ ] Kolom terakhir bernama `PPn In and Out`, bukan lagi `AP In and Out` yang terpisah
-      dari yang lain
+| Rekening | 2025 di laptop lo | 2025 di server | 2026 |
+|---|---:|---:|---:|
+| BCA Sahardjo | 686.680.889,00 | 686.680.889,00 | -2.502.112.075,00 |
+| BCA Juanda | 149.183.884,00 | 149.183.884,00 | -381.062.971,00 |
+| Mandiri Mid Plaza | -393.065.428,00 | -393.065.428,00 | -2.693.223.417,00 |
+| BRI Sahardjo | -1.500.000,00 | -1.500.000,00 | 981.875.826,00 |
+| BRI Tebet | -154.034.667,00 | -154.034.667,00 | — |
+| Cash IDR | -2.892.500,00 | -2.892.500,00 | -204.500,00 |
+| Non CB | **1.918.040.013,16** | 2.580.118.243,16 | -219.630.033,00 |
+| AP In and Out *(kolom tetap)* | -3.323.562.928,00 | -3.323.562.928,00 | 0 |
+
+- [ ] 2025 → **7 kolom rekening**, 2026 → **6 kolom rekening**, ditambah satu kolom
+      tetap `AP In and Out` di dua-duanya
+- [ ] `BTN` tidak muncul di tahun mana pun
+      *(kolomnya dideklarasikan selama ini padahal tidak pernah dipakai)*
 - [ ] Header `BCA Sahardjo` / `BRI Sahardjo` — bukan `Shardjo`
 - [ ] Angka Grand Total cocok dengan kolom "di laptop lo"
 - [ ] ⚠️ **PALING RAWAN** — Subtotal dan Period Totals sejajar
@@ -160,7 +170,8 @@ Hanya ada data 2025. Dulu tujuh kolom dideklarasikan, sekarang enam.
 
 *menu Finance → Inter Account*
 
-Yang paling banyak berubah: dulu 13 kolom tetap, sekarang 11 di 2025 dan 9 di 2026.
+Yang paling banyak berubah: dulu 13 kolom tetap, sekarang 10 kolom rekening di 2025 dan
+9 di 2026, ditambah satu kolom tetap `PPn In and Out` di dua-duanya.
 Tabel ini juga satu-satunya yang totalnya sudah tidak menyebut kolom satu per satu.
 
 ### Grand Totals yang harus keluar — Inter Account
@@ -178,11 +189,12 @@ Tabel ini juga satu-satunya yang totalnya sudah tidak menyebut kolom satu per sa
 | BNI | -1.150.000.000,00 | -1.260.299.052,00 |
 | Cash IDR | 132.686.063,00 | 93.226.705,00 |
 | Non CB | 4.183.261.449,00 | 9.620.479.623,00 |
-| PPn In and Out | 3.926.669.655,00 | — |
+| PPn In and Out *(kolom tetap)* | 3.926.669.655,00 | 0 |
 
-- [ ] 2025 → **11 kolom**, 2026 → **9 kolom**
+- [ ] 2025 → **10 kolom rekening**, 2026 → **9 kolom rekening**, plus kolom tetap
+      `PPn In and Out` di dua-duanya
 - [ ] `Bank Raya` muncul di 2026 tapi tidak di 2025 — kebalikan dari
-      `Mandiri Plasa Mandiri`, `BRI Tebet` dan `PPn In and Out`.
+      `Mandiri Plasa Mandiri` dan `BRI Tebet`.
       *Ini bukti paling jelas bahwa set kolomnya ikut data, bukan tetap.*
 - [ ] `BJB` tidak muncul di tahun mana pun
       *(ada kolomnya di setiap workbook, tidak pernah sekali pun berisi angka)*
