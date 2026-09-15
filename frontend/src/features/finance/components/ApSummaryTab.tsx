@@ -397,7 +397,7 @@ export function ApSummaryTab() {
             <TableBody>
               {apLoading ? (
                 <TableRow>
-                  <TableCell colSpan={20} className="h-96 text-center">
+                  <TableCell colSpan={12 + accountColumns.length} className="h-96 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin" />
                       <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/40 animate-pulse">Synchronizing Accounts Payable...</p>
@@ -406,7 +406,7 @@ export function ApSummaryTab() {
                 </TableRow>
               ) : paginatedAP.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={20} className="h-64 text-center opacity-20">
+                  <TableCell colSpan={12 + accountColumns.length} className="h-64 text-center opacity-20">
                     <p className="mt-4 font-black uppercase tracking-widest">No match found</p>
                   </TableCell>
                 </TableRow>

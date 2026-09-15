@@ -405,7 +405,7 @@ export default function SalesPage() {
             <TableBody>
               {salesLoading ? (
                 <TableRow>
-                  <TableCell colSpan={28} className="h-96 text-center">
+                  <TableCell colSpan={17 + accountColumns.length} className="h-96 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin"></div>
                       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 animate-pulse">Synchronizing Global Sales Data...</p>
@@ -414,7 +414,7 @@ export default function SalesPage() {
                 </TableRow>
               ) : paginatedSales.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={28} className="h-64 text-center opacity-20">
+                  <TableCell colSpan={17 + accountColumns.length} className="h-64 text-center opacity-20">
                     <Search size={48} className="mx-auto" />
                     <p className="mt-4 font-black uppercase tracking-widest">No sales records found</p>
                   </TableCell>
