@@ -169,6 +169,21 @@ export async function seedAccountReceivable(prisma: PrismaClient) {
     return;
   }
 
+  // The type column has no heading, so it is placed by counting, and counting
+  // is what a re-shaped workbook breaks. Every receivable type is written
+  // "AR something", so a column that holds years or blanks instead is not the
+  // one we meant, and loading it would be worse than not loading at all.
+  const types = records.map((r: any) => String(r.colB ?? '').trim()).filter(Boolean);
+  const looksLikeType = types.filter((t) => /^ar\s/i.test(t)).length;
+  if (types.length > 0 && looksLikeType < types.length / 2) {
+    const sample = [...new Set(types)].slice(0, 5).join(', ');
+    console.error(
+      `❌ Column ${String.fromCharCode(65 + typeIndex)} should hold receivable types but holds: ${sample}.` +
+        `\n   Only ${looksLikeType} of ${types.length} start with "AR". Nothing seeded.`,
+    );
+    return;
+  }
+
   const removed = await prisma.accountReceivable.deleteMany({ where: { tagYear: FISCAL_YEAR } });
   if (removed.count > 0) console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} rows.`);
 
