@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAccountReceivable } from "../hooks/useAccountReceivable";
+import { useAccountColumns, accountKey } from "../hooks/useAccountColumns";
 import { useExcelFilter } from "../hooks/useExcelFilter";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { ExcelColumnFilter } from "../components/ExcelColumnFilter";
@@ -66,6 +67,11 @@ export default function AccountReceivablePage() {
   }, []);
 
   const { getAllAR, deleteAR } = useAccountReceivable();
+  const accountColumns = useAccountColumns(
+    "account-receivable",
+    arYearFilter !== "all" ? yearNum : undefined,
+    { enabled: !!arYearFilter }
+  );
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
@@ -77,6 +83,18 @@ export default function AccountReceivablePage() {
     arYearFilter !== "all" ? yearNum : undefined,
     { enabled: !!arYearFilter }
   );
+
+  /** Adds up one account column across the rows given. */
+  const sumAccounts = (rows: any[]) =>
+    Object.fromEntries(
+      accountColumns.map((account) => [
+        accountKey(account.id),
+        rows.reduce(
+          (total, row) => total.plus(new Decimal(cleanAmount(row[accountKey(account.id)]))),
+          new Decimal(0),
+        ),
+      ]),
+    );
 
   const displayAR = useMemo(() => {
     return (allARRaw || []).map((row: any) => ({
@@ -95,6 +113,10 @@ export default function AccountReceivablePage() {
       colN: formatCurrency(row.colN),
       colO: formatCurrency(row.colO),
       colP: formatCurrency(row.colP),
+      // The same figures the fixed columns carry, keyed by account.
+      ...Object.fromEntries(
+        (row.amounts ?? []).map((a: any) => [accountKey(a.accountId), formatCurrency(a.amount)])
+      ),
       colR: formatCurrency(row.colR),
     }));
   }, [allARRaw]);
@@ -138,9 +160,10 @@ export default function AccountReceivablePage() {
     }, { 
       colF: new Decimal(0), colJ: new Decimal(0), colK: new Decimal(0), 
       colL: new Decimal(0), colM: new Decimal(0), colN: new Decimal(0), 
-      colO: new Decimal(0), colP: new Decimal(0), colR: new Decimal(0)
+      colO: new Decimal(0), colP: new Decimal(0), colR: new Decimal(0),
+      ...sumAccounts(paginatedData),
     });
-  }, [paginatedData]);
+  }, [paginatedData, accountColumns]);
 
   const grandTotals = useMemo(() => {
     return filteredAndSortedData.reduce((acc, curr) => {
@@ -158,9 +181,10 @@ export default function AccountReceivablePage() {
     }, { 
       colF: new Decimal(0), colJ: new Decimal(0), colK: new Decimal(0), 
       colL: new Decimal(0), colM: new Decimal(0), colN: new Decimal(0), 
-      colO: new Decimal(0), colP: new Decimal(0), colR: new Decimal(0)
+      colO: new Decimal(0), colP: new Decimal(0), colR: new Decimal(0),
+      ...sumAccounts(filteredAndSortedData),
     });
-  }, [filteredAndSortedData]);
+  }, [filteredAndSortedData, accountColumns]);
 
   const handleEdit = (row: any) => {
     const rawRecord = allARRaw?.find((r: any) => r.id === row.id) || row;
@@ -315,15 +339,9 @@ export default function AccountReceivablePage() {
                   </div>
                 </TableHead>
 
-                {[
-                  { key: 'colJ', label: 'BCA Suhardjo' },
-                  { key: 'colK', label: 'BCA Juanda' },
-                  { key: 'colL', label: 'MANDIRI MP' },
-                  { key: 'colM', label: 'BRI Suhardjo' },
-                  { key: 'colN', label: 'Cash IDR' },
-                  { key: 'colO', label: 'Non CB' },
-                  { key: 'colP', label: 'PPn In and Out' }
-                ].map((col) => (
+                {/* One column per account this year's receivables were settled
+                    through. The header and the order come from Account & Bank. */}
+                {accountColumns.map((account) => ({ key: accountKey(account.id), label: account.name })).map((col) => (
                   <TableHead key={col.key} className="text-right w-36 whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
                       {col.label}
@@ -344,7 +362,7 @@ export default function AccountReceivablePage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={13} className="h-64 text-center">
+                  <TableCell colSpan={8 + accountColumns.length} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin" />
                       <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/40">Synchronizing Accounts Receivable...</p>
@@ -353,7 +371,7 @@ export default function AccountReceivablePage() {
                 </TableRow>
               ) : paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={13} className="h-64 text-center opacity-20">
+                  <TableCell colSpan={8 + accountColumns.length} className="h-64 text-center opacity-20">
                     <p className="font-black uppercase tracking-widest">No records found</p>
                   </TableCell>
                 </TableRow>
@@ -374,15 +392,11 @@ export default function AccountReceivablePage() {
                         {row.colF}
                       </TableCell>
                       
-                      {['colJ', 'colK', 'colL', 'colM', 'colN', 'colO'].map(col => (
-                        <TableCell key={col} className={`text-right font-bold ${getAmountColor(row[col], true)}`}>
-                          {row[col]}
+                      {accountColumns.map((account) => (
+                        <TableCell key={account.id} className={`text-right font-bold ${getAmountColor(row[accountKey(account.id)], true)}`}>
+                          {row[accountKey(account.id)]}
                         </TableCell>
                       ))}
-
-                      <TableCell className={`text-right font-bold ${getAmountColor(row.colP, false)}`}>
-                        {row.colP}
-                      </TableCell>
 
                       <TableCell className={`text-right font-black ${getAmountColor(row.colR, false)}`}>
                         {row.colR}
@@ -431,15 +445,11 @@ export default function AccountReceivablePage() {
                       {formatCurrency(subtotalTotals.colF.toString())}
                     </TableCell>
                     
-                    {['colJ', 'colK', 'colL', 'colM', 'colN', 'colO'].map(col => (
-                      <TableCell key={col} className={`text-right ${getAmountColor(subtotalTotals[col as keyof typeof subtotalTotals].toString(), true)}`}>
-                        {formatCurrency(subtotalTotals[col as keyof typeof subtotalTotals].toString())}
+                    {accountColumns.map((account) => (
+                      <TableCell key={account.id} className={`text-right ${getAmountColor((subtotalTotals as any)[accountKey(account.id)].toString(), true)}`}>
+                        {formatCurrency((subtotalTotals as any)[accountKey(account.id)].toString())}
                       </TableCell>
                     ))}
-
-                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colP.toString(), false)}`}>
-                      {formatCurrency(subtotalTotals.colP.toString())}
-                    </TableCell>
                     
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colR.toString(), false)}`}>
                       {formatCurrency(subtotalTotals.colR.toString())}
@@ -456,15 +466,11 @@ export default function AccountReceivablePage() {
                       {formatCurrency(grandTotals.colF.toString())}
                     </TableCell>
                     
-                    {['colJ', 'colK', 'colL', 'colM', 'colN', 'colO'].map(col => (
-                      <TableCell key={col} className={`text-right ${getAmountColor(grandTotals[col as keyof typeof grandTotals].toString(), true)}`}>
-                        {formatCurrency(grandTotals[col as keyof typeof grandTotals].toString())}
+                    {accountColumns.map((account) => (
+                      <TableCell key={account.id} className={`text-right ${getAmountColor((grandTotals as any)[accountKey(account.id)].toString(), true)}`}>
+                        {formatCurrency((grandTotals as any)[accountKey(account.id)].toString())}
                       </TableCell>
                     ))}
-
-                    <TableCell className={`text-right ${getAmountColor(grandTotals.colP.toString(), false)}`}>
-                      {formatCurrency(grandTotals.colP.toString())}
-                    </TableCell>
                     
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colR.toString(), false)}`}>
                       {formatCurrency(grandTotals.colR.toString())}

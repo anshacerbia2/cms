@@ -35,6 +35,13 @@ export class InterAccountController {
     return this.interAccountService.getAllInterAccount(year ? Number(year) : undefined);
   }
 
+  /** The accounts this year's rows were posted against, in display order. */
+  @Get('accounts')
+  @Permissions('inter-account.index')
+  async getAccountColumns(@Query('year') year?: string) {
+    return this.interAccountService.getInterAccountAccounts(year ? Number(year) : undefined);
+  }
+
   @Get('export/excel')
   @Permissions('inter-account.index')
   async exportInterAccount(@Query('year') year: string, @Res() res: Response) {

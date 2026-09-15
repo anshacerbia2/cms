@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { formatDecimal } from '../../common/utils/format.utils';
+import { findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
 import { parseIntSafe, parseDateSafe } from '../../common/utils/parse.utils';
 
 @Injectable()
@@ -13,7 +14,12 @@ export class AccountPayableService {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
-      this.prisma.accountPayable.findMany({ skip, take: limit, orderBy: [{ id: 'asc' }] }),
+      this.prisma.accountPayable.findMany({
+        skip,
+        take: limit,
+        orderBy: [{ id: 'asc' }],
+        include: { amounts: { select: { internalAccountId: true, amount: true } } },
+      }),
       this.prisma.accountPayable.count(),
     ]);
 
@@ -21,6 +27,8 @@ export class AccountPayableService {
       data: data.map((item: any) => ({
         ...item,
         id: Number(item.id),
+        // The same figures the fixed columns carry, keyed by account.
+        amounts: serializeAmounts(item.amounts),
         colB: item.colB ? Number(item.colB) : null,
         colE: formatDecimal(item.colE),   // EOY IDR
         colF: formatDecimal(item.colF),   // EOY USD
@@ -48,10 +56,16 @@ export class AccountPayableService {
     if (year && !isNaN(year)) {
       where.tagYear = year;
     }
-    const data = await this.prisma.accountPayable.findMany({ where, orderBy: [{ id: 'asc' }] });
+    const data = await this.prisma.accountPayable.findMany({
+      where,
+      orderBy: [{ id: 'asc' }],
+      include: { amounts: { select: { internalAccountId: true, amount: true } } },
+    });
     return data.map((item: any) => ({
       ...item,
       id: Number(item.id),
+      // The same figures the fixed columns carry, keyed by account.
+      amounts: serializeAmounts(item.amounts),
       colB: item.colB ? Number(item.colB) : null,
       colE: formatDecimal(item.colE),   // EOY IDR
       colF: formatDecimal(item.colF),   // EOY USD
@@ -176,5 +190,15 @@ export class AccountPayableService {
     });
   }
 
+
+
+  /** The accounts this year's rows were posted against, in display order. */
+  async getAPAccounts(year?: number): Promise<AccountColumn[]> {
+    return findAccountColumns(this.prisma, {
+      amountModel: this.prisma.accountPayableAmount,
+      parentRelation: 'accountPayable',
+      year,
+    });
+  }
 
 }

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PaginationParams, PaginatedResponse } from "./useFinance";
-import { salesService, type SalesAccount } from "../services/sales.service";
+import { salesService } from "../services/sales.service";
 
 export function useSales() {
   const queryClient = useQueryClient();
@@ -14,12 +14,6 @@ export function useSales() {
       ...options,
     });
 
-  const getSalesAccounts = (year?: number, options?: any) =>
-    useQuery<SalesAccount[]>({
-      queryKey: ["finance", "sales", "accounts", year],
-      queryFn: () => salesService.getSalesAccounts(year),
-      ...options,
-    });
 
   const getAllSales = (year?: number, options?: any) =>
     useQuery<any[]>({
@@ -73,7 +67,6 @@ export function useSales() {
     });
 
   return {
-    getSalesAccounts,
     getSales,
     getAllSales,
     createSales,

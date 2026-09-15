@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useSales } from "../../finance/hooks/useSales";
+import { useAccountColumns, accountKey } from "../../finance/hooks/useAccountColumns";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { ExcelColumnFilter } from "../../finance/components/ExcelColumnFilter";
 import { formatCurrency, formatDate, cleanAmount, getAmountColor } from "@/lib/utils";
@@ -41,9 +42,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/** The filter and sort machinery keys off strings, so each account gets one. */
-const accountKey = (id: number) => `acct_${id}`;
-
 export default function SalesPage() {
   const { can } = useAuthStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -67,12 +65,12 @@ export default function SalesPage() {
     return years;
   }, []);
 
-  const { getAllSales, getSalesAccounts, deleteSales } = useSales();
-  const { data: accountsRaw } = getSalesAccounts(
+  const { getAllSales, deleteSales } = useSales();
+  const accountColumns = useAccountColumns(
+    "sales",
     salesYearFilter !== "all" ? yearNum : undefined,
     { enabled: !!salesYearFilter }
   );
-  const accountColumns = accountsRaw ?? [];
   const { data: allSalesRaw, isLoading: salesLoading, refetch: refetchSales } = getAllSales(
     salesYearFilter !== "all" ? yearNum : undefined,
     { enabled: !!salesYearFilter }

@@ -4,6 +4,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../common/interfaces/paginated-result.interface';
 import { formatDecimal } from '../../common/utils/format.utils';
 import { parseIntSafe, parseDateSafe } from '../../common/utils/parse.utils';
+import { findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
 
 
 
@@ -65,10 +66,7 @@ export class SalesService {
       id: Number(item.id),
       // The same payment figures as the colM..colW columns beside them, but
       // keyed by the account rather than by a position the table fixes.
-      amounts: item.amounts.map((a) => ({
-        accountId: Number(a.internalAccountId),
-        amount: formatDecimal(a.amount),
-      })),
+      amounts: serializeAmounts(item.amounts),
       colH: formatDecimal(item.colH),
       colI: formatDecimal(item.colI),
       colJ: formatDecimal(item.colJ),
@@ -92,38 +90,12 @@ export class SalesService {
     }));
   }
 
-  /**
-   * The accounts a year's invoices were actually settled through, in the order
-   * they should be shown.
-   *
-   * The table's columns come from this rather than from a fixed list, so an
-   * account that appears for the first time in a new workbook shows up without
-   * anyone touching the code, and one with no movement takes up no width.
-   */
-  async getSalesAccounts(year?: number): Promise<any[]> {
-    const where: any = {};
-    if (year && !isNaN(year)) {
-      where.salesRecord = { tagYear: year };
-    }
-
-    const used = await this.prisma.salesRecordAmount.groupBy({
-      by: ['internalAccountId'],
-      where,
+  async getSalesAccounts(year?: number): Promise<AccountColumn[]> {
+    return findAccountColumns(this.prisma, {
+      amountModel: this.prisma.salesRecordAmount,
+      parentRelation: 'salesRecord',
+      year,
     });
-    if (used.length === 0) return [];
-
-    const accounts = await this.prisma.internalAccount.findMany({
-      where: { id: { in: used.map((u) => u.internalAccountId) } },
-      // Accounts with no position set fall to the end rather than to the front.
-      orderBy: [{ displayOrder: 'asc' }, { id: 'asc' }],
-    });
-
-    return accounts.map((a) => ({
-      id: Number(a.id),
-      // Falls back to the holder only so a new account is never a blank header.
-      name: a.displayName ?? a.holderName,
-      order: a.displayOrder,
-    }));
   }
 
   async createBulkSales(payload: any[], tagYear: number): Promise<any> {

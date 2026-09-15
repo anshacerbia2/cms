@@ -1,12 +1,6 @@
 import api from "@/lib/api";
 import { PaginationParams, PaginatedResponse } from "../hooks/useFinance";
 
-/** One account column of the sales table, as the server decides it. */
-export interface SalesAccount {
-  id: number;
-  name: string;
-  order: number | null;
-}
 
 export const salesService = {
   getSales: async (params: PaginationParams): Promise<PaginatedResponse<any>> => {
@@ -19,11 +13,6 @@ export const salesService = {
     return Array.isArray(data) ? data : (data as any).data || [];
   },
 
-  /** The accounts this year's invoices were settled through, in display order. */
-  getSalesAccounts: async (year?: number): Promise<SalesAccount[]> => {
-    const { data } = await api.get("/finance/sales/accounts", { params: { year } });
-    return Array.isArray(data) ? data : [];
-  },
 
   createSales: async (payload: any): Promise<any> => {
     const { data } = await api.post("/finance/sales", payload);

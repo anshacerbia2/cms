@@ -47,6 +47,13 @@ export class AccountPayableController {
   async getAllAccountPayables(@Query('year') year?: string) {
     return this.accountPayableService.getAllAccountPayables(year ? Number(year) : undefined);
   }
+  /** The accounts this year's rows were posted against, in display order. */
+  @Get('accounts')
+  @Permissions('account-payable.index')
+  async getAccountColumns(@Query('year') year?: string) {
+    return this.accountPayableService.getAPAccounts(year ? Number(year) : undefined);
+  }
+
   @Get('export/excel')
   @Permissions('account-payable.index')
   async exportExcel(@Query('year') year: string, @Res() res: Response) {

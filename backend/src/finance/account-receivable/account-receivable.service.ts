@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../common/interfaces/paginated-result.interface';
 import { formatDecimal } from '../../common/utils/format.utils';
+import { findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
 import { parseIntSafe } from '../../common/utils/parse.utils';
 
 @Injectable()
@@ -15,7 +16,12 @@ export class AccountReceivableService {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
-      this.prisma.accountReceivable.findMany({ skip, take: limit, orderBy: [{ id: 'asc' }] }),
+      this.prisma.accountReceivable.findMany({
+        skip,
+        take: limit,
+        orderBy: [{ id: 'asc' }],
+        include: { amounts: { select: { internalAccountId: true, amount: true } } },
+      }),
       this.prisma.accountReceivable.count(),
     ]);
 
@@ -23,6 +29,8 @@ export class AccountReceivableService {
       data: data.map(item => ({
         ...item,
         id: Number(item.id),
+        // The same figures the fixed columns carry, keyed by account.
+        amounts: serializeAmounts(item.amounts),
         colF: formatDecimal(item.colF),
         colG: formatDecimal(item.colG),
         colH: formatDecimal(item.colH),
@@ -45,10 +53,16 @@ export class AccountReceivableService {
     if (year && !isNaN(year)) {
       where.tagYear = year;
     }
-    const data = await this.prisma.accountReceivable.findMany({ where, orderBy: [{ id: 'asc' }] });
+    const data = await this.prisma.accountReceivable.findMany({
+      where,
+      orderBy: [{ id: 'asc' }],
+      include: { amounts: { select: { internalAccountId: true, amount: true } } },
+    });
     return data.map(item => ({
       ...item,
       id: Number(item.id),
+      // The same figures the fixed columns carry, keyed by account.
+      amounts: serializeAmounts(item.amounts),
       colF: formatDecimal(item.colF),
       colG: formatDecimal(item.colG),
       colH: formatDecimal(item.colH),
@@ -154,4 +168,14 @@ export class AccountReceivableService {
       data: records,
     });
   }
+
+  /** The accounts this year's rows were posted against, in display order. */
+  async getARAccounts(year?: number): Promise<AccountColumn[]> {
+    return findAccountColumns(this.prisma, {
+      amountModel: this.prisma.accountReceivableAmount,
+      parentRelation: 'accountReceivable',
+      year,
+    });
+  }
+
 }
