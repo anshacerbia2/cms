@@ -194,7 +194,7 @@ function verify(
 }
 
 /** `workbook` overrides the file on disk, which the layout tests rely on. */
-export async function seedBankStatements2026(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
+export async function seedBankStatements(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
   console.log(`🏛️  Seeding ${FISCAL_YEAR} bank statements (ledger)...`);
 
   let wb = workbook;

@@ -51,7 +51,7 @@ function findHeaderRow(rows: any[][]): number {
   );
 }
 
-export async function seedInterAccount2026(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
+export async function seedInterAccount(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
   console.log(`🔁 Seeding ${FISCAL_YEAR} inter-account matrix...`);
 
   let wb = workbook;

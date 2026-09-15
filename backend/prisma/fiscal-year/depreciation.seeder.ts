@@ -35,7 +35,7 @@ function headerLooksRight(rows: any[][]): boolean {
   );
 }
 
-export async function seedDepreciation2026(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
+export async function seedDepreciation(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
   console.log(`🏢 Seeding ${FISCAL_YEAR} depreciation register...`);
 
   let wb = workbook;

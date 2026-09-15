@@ -108,7 +108,7 @@ function readLayout(rows: any[][]): Layout | null {
   return { headerRow, firstDataRow, labels };
 }
 
-export async function seedSales2026(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
+export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
   console.log(`🧾 Seeding ${FISCAL_YEAR} sales invoices...`);
 
   let wb = workbook;

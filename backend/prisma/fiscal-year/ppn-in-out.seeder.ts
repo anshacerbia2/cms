@@ -43,7 +43,7 @@ const SLOTS: SlotSpec[] = [
   { slot: 'colS', headers: ['subledger3'], kind: 'text' },
 ];
 
-export async function seedPpnInOut2026(prisma: PrismaClient) {
+export async function seedPpnInOut(prisma: PrismaClient) {
   console.log(`🧾 Seeding ${FISCAL_YEAR} PPN in/out...`);
 
   const filePath = findWorkbook(['ppn']);

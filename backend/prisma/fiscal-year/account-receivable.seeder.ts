@@ -55,7 +55,7 @@ const OUTSTANDING: SlotSpec[] = [
   { slot: 'colS', headers: ['usd'], kind: 'money' },
 ];
 
-export async function seedAccountReceivable2026(prisma: PrismaClient) {
+export async function seedAccountReceivable(prisma: PrismaClient) {
   console.log(`🧾 Seeding ${FISCAL_YEAR} account receivable...`);
 
   const filePath = findWorkbook(['ar', 'receivable', 'receiveable']);

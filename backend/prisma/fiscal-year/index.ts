@@ -5,13 +5,13 @@ import { Pool } from 'pg';
 import { seedBanks } from '../seeders/banks.seeder';
 import { FISCAL_YEAR, useFiscalYear } from './utils/layout';
 import { assertSafeToReplace } from './utils/guard';
-import { seedBankStatements2026 } from './bank-statements.seeder';
-import { seedInterAccount2026 } from './inter-account.seeder';
-import { seedDepreciation2026 } from './depreciation.seeder';
-import { seedSales2026 } from './sales.seeder';
-import { seedAccountReceivable2026 } from './account-receivable.seeder';
-import { seedAccountPayable2026 } from './account-payable.seeder';
-import { seedPpnInOut2026 } from './ppn-in-out.seeder';
+import { seedBankStatements } from './bank-statements.seeder';
+import { seedInterAccount } from './inter-account.seeder';
+import { seedDepreciation } from './depreciation.seeder';
+import { seedSales } from './sales.seeder';
+import { seedAccountReceivable } from './account-receivable.seeder';
+import { seedAccountPayable } from './account-payable.seeder';
+import { seedPpnInOut } from './ppn-in-out.seeder';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -28,14 +28,14 @@ const SEEDERS = [
   {
     name: 'bank-statements',
     tables: ['financial_transactions', 'fiscal_periods'],
-    run: seedBankStatements2026,
+    run: seedBankStatements,
   },
-  { name: 'inter-account', tables: ['inter_account'], run: seedInterAccount2026 },
-  { name: 'depreciation', tables: ['depreciation'], run: seedDepreciation2026 },
-  { name: 'sales', tables: ['sales_records'], run: seedSales2026 },
-  { name: 'receivable', tables: ['account_receivables'], run: seedAccountReceivable2026 },
-  { name: 'payable', tables: ['account_payables'], run: seedAccountPayable2026 },
-  { name: 'ppn', tables: ['ppn_in_out'], run: seedPpnInOut2026 },
+  { name: 'inter-account', tables: ['inter_account'], run: seedInterAccount },
+  { name: 'depreciation', tables: ['depreciation'], run: seedDepreciation },
+  { name: 'sales', tables: ['sales_records'], run: seedSales },
+  { name: 'receivable', tables: ['account_receivables'], run: seedAccountReceivable },
+  { name: 'payable', tables: ['account_payables'], run: seedAccountPayable },
+  { name: 'ppn', tables: ['ppn_in_out'], run: seedPpnInOut },
 ];
 
 /**
