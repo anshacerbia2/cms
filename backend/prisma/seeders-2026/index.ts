@@ -3,7 +3,11 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { seedBanks } from '../seeders/banks.seeder';
-import { FISCAL_YEAR, seedBankStatements2026 } from './bank-statements.seeder';
+import { FISCAL_YEAR } from './utils/layout';
+import { seedBankStatements2026 } from './bank-statements.seeder';
+import { seedInterAccount2026 } from './inter-account.seeder';
+import { seedDepreciation2026 } from './depreciation.seeder';
+import { seedSales2026 } from './sales.seeder';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -18,6 +22,9 @@ async function main() {
     await seedBanks(prisma);
 
     await seedBankStatements2026(prisma);
+    await seedInterAccount2026(prisma);
+    await seedDepreciation2026(prisma);
+    await seedSales2026(prisma);
 
     console.log(`🚀 ${FISCAL_YEAR} seeding completed successfully.`);
   } catch (error) {

@@ -10,10 +10,10 @@ import {
 } from '../seeders/utils/excel';
 
 /**
- * The fiscal year this workbook belongs to. Every row lands here regardless of
- * the date it carries, matching how the 2025 seeder treats its own workbook.
+ * Every row lands in FISCAL_YEAR regardless of the date it carries, matching
+ * how the 2025 seeder treats its own workbook.
  */
-export const FISCAL_YEAR = 2026;
+import { FISCAL_YEAR } from './utils/layout';
 
 const WORKBOOK = 'PCMI-Bank Statements-14Sept26.xlsx';
 

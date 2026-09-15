@@ -8,9 +8,12 @@ import {
   excelDateToJSDate
 } from './utils/excel';
 
+/** The fiscal year this seeder owns. Later years have their own seeders. */
+const TAG_YEAR = 2025;
+
 export async function seedSales(prisma: PrismaClient) {
-  // Clear existing sales records
-  await prisma.salesRecord.deleteMany({});
+  // Scoped to this seeder's own year, so it does not wipe later years.
+  await prisma.salesRecord.deleteMany({ where: { tagYear: TAG_YEAR } });
   
   const filePath = path.join(process.cwd(), 'prisma', 'seed-data', 'sales.xlsx');
   const workbook = XLSX.readFile(filePath);
@@ -63,7 +66,7 @@ export async function seedSales(prisma: PrismaClient) {
       colAB: cleanCurrency(row[27]),           // WAPU
       colAC: cleanCurrency(row[28]),           // NON WAPU
       colAD: cleanString(row[29]),             // Remarks
-      tagYear: 2025,
+      tagYear: TAG_YEAR,
     });
   }
 
