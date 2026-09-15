@@ -4,8 +4,7 @@ Empat tabel finance tidak lagi punya kolom bank tetap. Kolomnya sekarang lahir d
 rekening yang benar-benar dipakai di tahun itu. Ini daftar yang perlu dibuktikan di
 layar, lengkap dengan angka acuan dari `cms_dev`.
 
-Harus sudah ada di lokal: **b173c7e** atau setelahnya. Kalau belum sampai **9f3ca6a**,
-halaman Account Payable dan Account Receivable masih blank.
+Harus sudah ada di lokal: **baef7da** atau setelahnya.
 
 `PPn In and Out` **bukan rekening** — dia posisi kliring PPN, jadi kolomnya tetap ada
 di AR, AP dan Inter Account tapi dibaca langsung dari kolomnya sendiri, bukan lewat
@@ -17,19 +16,19 @@ relasi. Dia selalu tampil, di tahun mana pun, walau isinya nol.
 
 Urutannya penting — kolom baru tidak ada di Prisma client sampai di-generate.
 
-1. Tarik commit terbaru dan regenerate client:
+1. Tarik commit terbaru, lalu bangun ulang database:
 
    ```
    git pull --ff-only server dev
-   cd backend && npx prisma generate
+   cd backend && pnpm install
+   npx prisma migrate reset
+   npx prisma db seed
+   pnpm seed:year --year=2025
+   pnpm seed:year --year=2026
    ```
 
-   Kalau ada workbook 2026 baru yang belum dimuat, sebutkan namanya supaya
-   tabel lain tidak ikut dibangun ulang:
-
-   ```
-   pnpm seed:2026 --only=receivable,payable
-   ```
+   `migrate reset` **tidak** menjalankan seed sendiri di Prisma 7, jadi `db seed`
+   harus dipanggil terpisah.
 
 2. Restart API dev dan dev server frontend — bukan cuma refresh browser.
 3. Hard reload halaman (Ctrl+Shift+R) supaya bundle lama tidak tersangkut.
@@ -98,7 +97,7 @@ Di sinilah nama dan urutan kolom sekarang hidup. Kalau bagian ini benar, sisanya
 
 *menu Finance → Account Receivable*
 
-Workbook 2026 baru masuk: 1.241 baris. Dan dia membawa kolom **BNI**, yang tabel ini
+Workbook 2026 sudah masuk: 1.241 baris. Dan dia membawa kolom **BNI**, yang tabel ini
 tidak punya kolom tetapnya sama sekali — inilah kasus yang dulu pasti hilang.
 
 ### Grand Total yang harus keluar — AR
@@ -133,34 +132,27 @@ tidak punya kolom tetapnya sama sekali — inilah kasus yang dulu pasti hilang.
 
 *menu Finance → Account Payable, tab Summary*
 
-> **Satu angka di laptop lo memang beda dari server.**
-> `Non CB` di DB lo **1.918.040.013,16**, di `cms_dev` server **2.580.118.243,16**.
->
-> Selisihnya 662.078.230,00 — persis baris `AP Tax / PPh Badan 2025` yang diinput lewat
-> aplikasi dan tidak ada di workbook mana pun, jadi DB lo yang di-seed dari Excel tidak
-> punya baris itu. Bukan bug.
-
-Workbook 2026 baru masuk juga: 138 baris.
+Workbook 2026 sudah masuk juga: 138 baris.
 
 ### Grand Total yang harus keluar — AP
 
-| Rekening | 2025 di laptop lo | 2025 di server | 2026 |
-|---|---:|---:|---:|
-| BCA Sahardjo | 686.680.889,00 | 686.680.889,00 | -2.502.112.075,00 |
-| BCA Juanda | 149.183.884,00 | 149.183.884,00 | -381.062.971,00 |
-| Mandiri Mid Plaza | -393.065.428,00 | -393.065.428,00 | -2.693.223.417,00 |
-| BRI Sahardjo | -1.500.000,00 | -1.500.000,00 | 981.875.826,00 |
-| BRI Tebet | -154.034.667,00 | -154.034.667,00 | — |
-| Cash IDR | -2.892.500,00 | -2.892.500,00 | -204.500,00 |
-| Non CB | **1.918.040.013,16** | 2.580.118.243,16 | -219.630.033,00 |
-| AP In and Out *(kolom tetap)* | -3.323.562.928,00 | -3.323.562.928,00 | 0 |
+| Rekening | 2025 | 2026 |
+|---|---:|---:|
+| BCA Sahardjo | 686.680.889,00 | -2.502.112.075,00 |
+| BCA Juanda | 149.183.884,00 | -381.062.971,00 |
+| Mandiri Mid Plaza | -393.065.428,00 | -2.693.223.417,00 |
+| BRI Sahardjo | -1.500.000,00 | 981.875.826,00 |
+| BRI Tebet | -154.034.667,00 | — |
+| Cash IDR | -2.892.500,00 | -204.500,00 |
+| Non CB | 2.580.118.243,16 | -219.630.033,00 |
+| AP In and Out *(kolom tetap)* | -3.323.562.928,00 | 0 |
 
 - [ ] 2025 → **7 kolom rekening**, 2026 → **6 kolom rekening**, ditambah satu kolom
       tetap `AP In and Out` di dua-duanya
 - [ ] `BTN` tidak muncul di tahun mana pun
       *(kolomnya dideklarasikan selama ini padahal tidak pernah dipakai)*
 - [ ] Header `BCA Sahardjo` / `BRI Sahardjo` — bukan `Shardjo`
-- [ ] Angka Grand Total cocok dengan kolom "di laptop lo"
+- [ ] Angka Grand Total cocok dengan tabel di atas
 - [ ] ⚠️ **PALING RAWAN** — Subtotal dan Period Totals sejajar
 - [ ] Filter dan sort di kolom rekening berfungsi
 
@@ -203,6 +195,34 @@ Tabel ini juga satu-satunya yang totalnya sudah tidak menyebut kolom satu per sa
 - [ ] ⚠️ **PALING RAWAN** — Baris Grand Totals sejajar di bawah kolomnya.
       *Di tabel ini urutan deklarasi kode sempat salah dan bikin error saat render
       pertama; sudah diperbaiki, tapi justru di sini yang perlu dilihat.*
+
+---
+
+## Profit & Loss
+
+*menu Finance → Profit Loss*
+
+Permintaan klien: `OTHER INCOME (EXPENSE)` pindah dari anak Operating Profit
+menjadi anak Expense, dan ikut dijumlahkan ke Total Expense.
+
+| | 2025 | 2026 |
+|---|---:|---:|
+| Total Expense | -5.221.563.593,50 | -3.856.274.555,05 |
+| Operating Profit | 4.384.474.943,36 | 1.152.108.110,95 |
+| Other Income (Expense) | 1.068.692.349,45 | -4.145.342,05 |
+| Depreciation | -418.228.940,33 | -463.458.784,99 |
+| PROFIT BEFORE TAX | 3.966.246.003,03 | 688.649.325,96 |
+| PROFIT AFTER TAX | 3.966.246.003,03 | 688.649.325,96 |
+
+- [ ] Baris `Other Income (Expense)` sekarang ada di blok **EXPENSES**, di bawah
+      `Financial Expense` dan di atas `Total Expense`
+- [ ] Sudah **tidak ada lagi** di blok PROFITABILITY
+- [ ] Hurufnya setebal `Personnel Expense` dkk, bukan lebih tipis
+- [ ] ⚠️ **PROFIT BEFORE TAX dan PROFIT AFTER TAX tidak boleh berubah** dari angka
+      sebelumnya — 3.966.246.003,03 di 2025. Kalau bergeser, pengelompokannya salah.
+- [ ] Kartu ringkasan `OPERATING PROFIT` di atas tabel ikut angka baru
+      (4.384.474.943,36 untuk 2025)
+- [ ] Klik baris `Other Income (Expense)` → breakdown-nya masih terbuka
 
 ---
 
