@@ -2,6 +2,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { cleanString } from '../seeders/utils/excel';
 import {
+  DATA_DIR,
   FISCAL_YEAR,
   buildColumnMap,
   findWorkbook,
@@ -48,7 +49,7 @@ export async function seedPpnInOut2026(prisma: PrismaClient) {
   const filePath = findWorkbook(['ppn']);
   if (!filePath) {
     console.warn(
-      `⏭️  No PPN in/out workbook in prisma/seed-data-2026 — skipped, ${FISCAL_YEAR} rows left as they are.`,
+      `⏭️  No PPN in/out workbook in prisma/${DATA_DIR} — skipped, ${FISCAL_YEAR} rows left as they are.`,
     );
     return;
   }

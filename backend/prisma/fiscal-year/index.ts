@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { seedBanks } from '../seeders/banks.seeder';
-import { FISCAL_YEAR } from './utils/layout';
+import { FISCAL_YEAR, useFiscalYear } from './utils/layout';
 import { assertSafeToReplace } from './utils/guard';
 import { seedBankStatements2026 } from './bank-statements.seeder';
 import { seedInterAccount2026 } from './inter-account.seeder';
@@ -70,7 +70,19 @@ function selected() {
   return chosen;
 }
 
+/** Which folder a year's workbooks live in. */
+function dataDirFor(year: number) {
+  return year === 2026 ? 'seed-data-2026' : 'seed-data';
+}
+
 async function main() {
+  const year = Number(option('year', 'SEED_YEAR') || FISCAL_YEAR);
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+    console.error(`❌ Not a fiscal year: ${option('year', 'SEED_YEAR')}`);
+    process.exit(1);
+  }
+  useFiscalYear(year, dataDirFor(year));
+
   const chosen = selected();
   if (!chosen) {
     await prisma.$disconnect();

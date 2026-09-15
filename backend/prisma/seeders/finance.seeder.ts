@@ -8,7 +8,6 @@ import {
   isRowEmpty,
   formatExcelDate
 } from './utils/excel';
-import { seedDepreciation } from './depreciation.seeder';
 
 export async function seedFinance(prisma: PrismaClient) {
   // Only the three tables this seeder actually fills. It used to clear sales
@@ -100,7 +99,5 @@ export async function seedFinance(prisma: PrismaClient) {
     console.log(`✅ Seeded ${revenues.length} Revenues and ${expenses.length} Expenses from Project PL`);
   }
 
-  // --- 3. ASSETS SHEET ---
-  await seedDepreciation(prisma);
 
 }

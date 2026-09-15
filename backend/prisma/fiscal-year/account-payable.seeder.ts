@@ -2,6 +2,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { cleanCurrency, cleanString } from '../seeders/utils/excel';
 import {
+  DATA_DIR,
   FISCAL_YEAR,
   buildColumnMapInRange,
   findWorkbook,
@@ -59,7 +60,7 @@ export async function seedAccountPayable2026(prisma: PrismaClient) {
   const filePath = findWorkbook(['ap', 'payable']);
   if (!filePath) {
     console.warn(
-      `⏭️  No account payable workbook in prisma/seed-data-2026 — skipped, ${FISCAL_YEAR} rows left as they are.`,
+      `⏭️  No account payable workbook in prisma/${DATA_DIR} — skipped, ${FISCAL_YEAR} rows left as they are.`,
     );
     return;
   }

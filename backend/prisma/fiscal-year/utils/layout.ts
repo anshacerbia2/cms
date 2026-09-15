@@ -3,9 +3,18 @@ import * as path from 'path';
 import { cleanCurrency, cleanString, excelDateToJSDate } from '../../seeders/utils/excel';
 
 /**
- * The fiscal year every seeder in this folder writes to.
+ * The fiscal year this run writes to, and the folder its workbooks sit in.
+ *
+ * Both were constants, which is the only reason a second copy of every seeder
+ * had to exist for a second year. They are set once at startup instead.
  */
-export const FISCAL_YEAR = 2026;
+export let FISCAL_YEAR = 2026;
+export let DATA_DIR = 'seed-data-2026';
+
+export function useFiscalYear(year: number, dir: string) {
+  FISCAL_YEAR = year;
+  DATA_DIR = dir;
+}
 
 /**
  * Collapses a spreadsheet header into a comparison key: lowercase, with
@@ -114,7 +123,7 @@ export function buildColumnMapInRange(
  * word, which is what matching on the raw text would give.
  */
 export function findWorkbook(keywords: string[]): string | null {
-  const dir = path.join(process.cwd(), 'prisma', 'seed-data-2026');
+  const dir = path.join(process.cwd(), 'prisma', DATA_DIR);
   if (!fs.existsSync(dir)) return null;
 
   const wanted = keywords.map((k) => k.toLowerCase());

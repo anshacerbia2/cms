@@ -12,14 +12,7 @@ import { seedSuppliers } from './suppliers.seeder';
 import { seedProducts } from './products.seeder';
 import { seedBankMutation, seedBanks } from './banks.seeder';
 import { seedFinance } from './finance.seeder';
-import { seedAccountReceivable } from './account-receivable.seeder';
-import { seedPpnInOut } from './ppn-in-out.seeder';
 import { seedEquity } from './equity.seeder';
-import { seedAccountPayable } from './account-payable.seeder';
-import { seedDepreciation } from './depreciation.seeder';
-import { seedSales } from './sales.seeder';
-import { seedInterAccount } from './inter-account.seeder';
-import { backfillAccountAmounts } from '../scripts/backfill-finance-account-amounts';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -44,28 +37,18 @@ async function main() {
     
     // Bank Master & Internal Accounts
     await seedBanks(prisma);
-    await seedBankMutation(prisma);
 
     // Comprehensive Financial Data (from Excel)
     await seedFinance(prisma);
-    await seedAccountReceivable(prisma);
-    await seedPpnInOut(prisma);
     await seedEquity(prisma);
-    await seedInterAccount(prisma);
-    // Sales and payable used to be started from inside seedFinance, which hid
-    // them from this list and ran payable twice once it was added here.
-    // Depreciation was never called at all.
-    await seedSales(prisma);
-    await seedAccountPayable(prisma);
-    await seedDepreciation(prisma);
 
     // The finance tables keep their per-account columns, and this puts the
     // same figures in the rows that name their account. A database seeded
     // from scratch is then consistent without anyone remembering a second
     // command.
-    // Scoped to the year this seeder just rewrote. Rebuilding every year would
-    // undo what the 2026 workbooks brought in that no column can hold.
-    await backfillAccountAmounts(prisma, { replace: true, tagYear: 2025 });
+    // No fiscal year is loaded here any more. A year's books come from its own
+    // workbooks, through `pnpm seed:year --year=YYYY`, so this can be run at
+    // any time without touching a single ledger row.
 
     console.log('🚀 Seeding completed successfully.');
   } catch (error) {

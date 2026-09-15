@@ -4,6 +4,8 @@ import * as path from 'path';
 import * as XLSX from 'xlsx';
 import { cleanCurrency, cleanString, excelDateToJSDate } from '../seeders/utils/excel';
 import {
+  findWorkbook,
+  DATA_DIR,
   FISCAL_YEAR,
   buildColumnMap,
   isBlankRow,
@@ -111,9 +113,11 @@ export async function seedSales2026(prisma: PrismaClient, workbook?: XLSX.WorkBo
 
   let wb = workbook;
   if (!wb) {
-    const filePath = path.join(process.cwd(), 'prisma', 'seed-data-2026', WORKBOOK);
-    if (!fs.existsSync(filePath)) {
-      console.error(`❌ Workbook not found at: ${filePath}`);
+    const filePath = findWorkbook(['sales']);
+    if (!filePath) {
+      console.warn(
+        `⏭️  No workbook matching ["sales"] in prisma/${DATA_DIR} — skipped.`,
+      );
       return;
     }
     wb = XLSX.readFile(filePath);
@@ -126,18 +130,32 @@ export async function seedSales2026(prisma: PrismaClient, workbook?: XLSX.WorkBo
     return;
   }
 
-  const map = buildColumnMap(layout.labels, SLOTS);
 
   // The bank block a second time, read as accounts rather than as slots, so a
   // column this table has no slot for still lands. It runs from the first bank
   // up to Outstanding, which is where the payment columns stop.
   const firstBank = layout.labels.findIndex((c) => normalizeLabel(c) === 'bcasahardjo');
-  const outstanding = layout.labels.findIndex((c) => normalizeLabel(c) === 'outstanding');
-  const accounts = readAccountColumns(
-    layout.labels,
-    firstBank,
-    (outstanding < 0 ? layout.labels.length : outstanding) - 1,
-  );
+  // The block ends at the outstanding column, which the 2026 book heads
+  // "OUTSTANDING" and the 2025 one simply "IDR".
+  const ends = ['outstanding', 'idr'];
+  let blockEnd = layout.labels.length;
+  for (let i = firstBank + 1; i < layout.labels.length; i++) {
+    if (ends.includes(normalizeLabel(layout.labels[i]))) {
+      blockEnd = i;
+      break;
+    }
+  }
+  // The 2025 book heads both the receivable and the outstanding column "IDR",
+  // which no name-based mapping can tell apart. Their positions around the bank
+  // block do: one sits before it, the other closes it.
+  const labels = [...layout.labels];
+  for (let i = 0; i < firstBank; i++) {
+    if (normalizeLabel(labels[i]) === 'idr') labels[i] = 'Account Receivable';
+  }
+  if (normalizeLabel(labels[blockEnd]) === 'idr') labels[blockEnd] = 'Outstanding';
+
+  const map = buildColumnMap(labels, SLOTS);
+  const accounts = readAccountColumns(labels, firstBank, blockEnd - 1);
   if (accounts.unknown.length > 0) {
     console.error(
       `❌ Heading(s) that name no account we know: ${accounts.unknown.join(', ')}.` +

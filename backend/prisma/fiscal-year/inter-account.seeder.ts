@@ -4,6 +4,8 @@ import * as path from 'path';
 import * as XLSX from 'xlsx';
 import { cleanCurrency, cleanString } from '../seeders/utils/excel';
 import {
+  findWorkbook,
+  DATA_DIR,
   FISCAL_YEAR,
   buildColumnMap,
   isBlankRow,
@@ -54,9 +56,11 @@ export async function seedInterAccount2026(prisma: PrismaClient, workbook?: XLSX
 
   let wb = workbook;
   if (!wb) {
-    const filePath = path.join(process.cwd(), 'prisma', 'seed-data-2026', WORKBOOK);
-    if (!fs.existsSync(filePath)) {
-      console.error(`❌ Workbook not found at: ${filePath}`);
+    const filePath = findWorkbook(['interaccount', 'inter']);
+    if (!filePath) {
+      console.warn(
+        `⏭️  No workbook matching ["interaccount", "inter"] in prisma/${DATA_DIR} — skipped.`,
+      );
       return;
     }
     wb = XLSX.readFile(filePath);
