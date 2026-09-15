@@ -288,7 +288,9 @@ export class FinanceReportService {
       { account: "Office Expense", total: formatDecimal(officeExpense), isSubItem: true, level: 2, ledgerFilter: { equals: 'Office Expense', mode: 'insensitive' } },
       { account: "Marketing Expense", total: formatDecimal(marketingExpense), isSubItem: true, level: 2, ledgerFilter: { equals: 'Marketing Expense', mode: 'insensitive' } },
       { account: "Financial Expense", total: formatDecimal(financialExpense), isSubItem: true, level: 2, ledgerFilter: { equals: 'Financial Expense', mode: 'insensitive' } },
-      { account: "Other Income", total: formatDecimal(otherIncomeTotal), isSubItem: true, level: 2 },
+      // Breaks down by sub-ledger like the expenses it sits with. The filter is
+      // the same one its total is computed from, so the parts add up to it.
+      { account: "Other Income", total: formatDecimal(otherIncomeTotal), isSubItem: true, level: 2, ledgerFilter: { contains: 'other income', mode: 'insensitive' } },
       { account: "Total Expense", total: formatDecimal(operatingExpenses), isTotal: true, level: 1 },
       
       { account: "PROFITABILITY", total: 0, isHeader: true, level: 0 },

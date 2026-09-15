@@ -438,6 +438,9 @@ export function ApSummaryTab() {
                         {row[accountKey(account.id)]}
                       </TableCell>
                     ))}
+                    <TableCell className={`text-right font-bold whitespace-nowrap ${getValueColor(row.colS)}`}>
+                      {row.colS}
+                    </TableCell>
                     <TableCell className="text-right font-medium text-primary whitespace-nowrap">
                       {row.colU}
                     </TableCell>
@@ -482,14 +485,15 @@ export function ApSummaryTab() {
                       Subtotal (Page {apPage})
                     </TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colE.toString())}</TableCell>
-                    {/* <TableCell></TableCell> */}
-                    {/* <TableCell></TableCell> */}
+                    <TableCell />
+                    <TableCell />
 
                     {accountColumns.map((account) => (
                       <TableCell key={account.id} className={`text-right whitespace-nowrap ${getValueColor(((subtotalTotals as any)[accountKey(account.id)] ?? 0).toString())}`}>
                         {formatCurrency(((subtotalTotals as any)[accountKey(account.id)] ?? 0).toString())}
                       </TableCell>
                     ))}
+                    <TableCell className={`text-right whitespace-nowrap ${getValueColor(subtotalTotals.colS.toString())}`}>{formatCurrency(subtotalTotals.colS.toString())}</TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colU.toString())}</TableCell>
                     <TableCell></TableCell>
                   </TableRow>
@@ -499,14 +503,15 @@ export function ApSummaryTab() {
                       Period Totals ({filteredAndSortedAP.length} results)
                     </TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(grandTotals.colE.toString())}</TableCell>
-                    {/* <TableCell></TableCell> */}
-                    {/* <TableCell></TableCell> */}
+                    <TableCell />
+                    <TableCell />
 
                     {accountColumns.map((account) => (
                       <TableCell key={account.id} className={`text-right whitespace-nowrap ${getValueColor(((grandTotals as any)[accountKey(account.id)] ?? 0).toString())}`}>
                         {formatCurrency(((grandTotals as any)[accountKey(account.id)] ?? 0).toString())}
                       </TableCell>
                     ))}
+                    <TableCell className={`text-right whitespace-nowrap ${getValueColor(grandTotals.colS.toString())}`}>{formatCurrency(grandTotals.colS.toString())}</TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(grandTotals.colU.toString())}</TableCell>
                     <TableCell></TableCell>
                   </TableRow>
