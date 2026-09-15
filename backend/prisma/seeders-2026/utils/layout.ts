@@ -105,27 +105,34 @@ export function buildColumnMapInRange(
 }
 
 /**
- * Finds this year's workbook by what its name contains.
+ * Finds this year's workbook by what its name says it holds.
  *
  * The files arrive named after the day they were exported
- * ("PCMI-Sales-14Sept26.xlsx"), so a hard-coded filename would break on every
- * new send. Matching on the subject instead means a re-export can simply be
- * dropped into the folder.
+ * ("PCMI-AR-14Sept26.xlsx"), so a hard-coded filename would break on every new
+ * send. The name is split on its separators and each piece compared whole:
+ * "AR" is a piece of "PCMI-AR-14Sept26", but never a stray "ar" inside a longer
+ * word, which is what matching on the raw text would give.
  */
 export function findWorkbook(keywords: string[]): string | null {
   const dir = path.join(process.cwd(), 'prisma', 'seed-data-2026');
   if (!fs.existsSync(dir)) return null;
 
+  const wanted = keywords.map((k) => k.toLowerCase());
   const match = fs
     .readdirSync(dir)
     .filter((name) => /\.xlsx?$/i.test(name) && !name.startsWith('~$'))
     .find((name) => {
-      const key = normalizeLabel(name.replace(/\.xlsx?$/i, ''));
-      return keywords.some((k) => key.includes(k));
+      const pieces = name
+        .replace(/\.xlsx?$/i, '')
+        .split(/[^A-Za-z]+/)
+        .map((piece) => piece.toLowerCase())
+        .filter(Boolean);
+      return pieces.some((piece) => wanted.includes(piece));
     });
 
   return match ? path.join(dir, match) : null;
 }
+
 
 /**
  * The exchange rate sits in the column after "USD" and is headed by the rate
@@ -142,8 +149,26 @@ export function rateColumnAfter(headerRow: any[], usdIndex: number | undefined):
   return isNumeric(label.replace(/,/g, '')) ? next : undefined;
 }
 
-/** Says which columns the workbook did not supply, and which it supplied that nothing reads. */
-export function reportLayout(maps: ColumnMap[], specs: SlotSpec[], readByPosition: string[] = []) {
+/**
+ * Says which columns the workbook did not supply, and which it supplied that
+ * nothing reads.
+ *
+ * A heading with no column behind it is only worth shouting about when there
+ * are figures under it. Warning on the empty ones too would mean a warning on
+ * every load, which is how a real one gets missed.
+ */
+export function reportLayout(
+  maps: ColumnMap[],
+  specs: SlotSpec[],
+  readByPosition: string[] = [],
+  data?: {
+    header: any[];
+    rows: any[][];
+    firstDataRow: number;
+    /** Headers whose figures were kept against an account instead. */
+    keptAsRelation?: string[];
+  },
+) {
   const missing = maps.flatMap((m) => m.missing);
   const ignored = new Set(readByPosition.map(normalizeLabel));
   const unclaimed = maps.flatMap((m) => m.unclaimed).filter((k) => !ignored.has(k));
@@ -154,8 +179,51 @@ export function reportLayout(maps: ColumnMap[], specs: SlotSpec[], readByPositio
       .join(', ');
     console.warn(`⚠️  Not in this workbook, stored as null: ${names}`);
   }
-  if (unclaimed.length > 0) {
-    console.warn(`⚠️  Column(s) in the workbook that nothing reads, DROPPED: ${unclaimed.join(', ')}`);
+
+  if (unclaimed.length === 0) return;
+
+  if (!data) {
+    console.warn(`⚠️  Column(s) in the workbook that nothing reads: ${unclaimed.join(', ')}`);
+    return;
+  }
+
+  const kept = new Set((data.keptAsRelation ?? []).map(normalizeLabel));
+  const relational: string[] = [];
+  const withFigures: string[] = [];
+  const empty: string[] = [];
+  for (const key of unclaimed) {
+    // This table has no column of its own for the account, but the figures
+    // went in against the account itself, which is the point of the relation.
+    if (kept.has(key)) {
+      relational.push(key);
+      continue;
+    }
+    const index = data.header.findIndex((cell) => normalizeLabel(cell) === key);
+    const used =
+      index >= 0 &&
+      data.rows
+        .slice(data.firstDataRow)
+        .some((row) => {
+          const text = String((row || [])[index] ?? '').trim();
+          if (text === '' || text === '-') return false;
+          const value = Number(text.replace(/[^0-9.-]/g, ''));
+          return Number.isNaN(value) ? true : value !== 0;
+        });
+    (used ? withFigures : empty).push(key);
+  }
+
+  if (relational.length > 0) {
+    console.log(
+      `🆕 No fixed column for: ${relational.join(', ')} — kept against the account instead.`,
+    );
+  }
+  if (withFigures.length > 0) {
+    console.error(
+      `❌ Column(s) holding figures that nothing can take, LOST: ${withFigures.join(', ')}`,
+    );
+  }
+  if (empty.length > 0) {
+    console.warn(`ℹ️  Column(s) present but empty, ignored: ${empty.join(', ')}`);
   }
 }
 

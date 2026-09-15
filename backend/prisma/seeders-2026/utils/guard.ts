@@ -4,6 +4,18 @@ import { FISCAL_YEAR } from './layout';
 /** Set this to 1 to allow the seeders to replace data that is already there. */
 const OVERRIDE = 'SEED_REPLACE_EXISTING';
 
+/** How to count a year's rows in each table a seeder writes. */
+const COUNTERS: Record<string, (p: PrismaClient) => Promise<number>> = {
+  financial_transactions: (p) => p.financialTransaction.count({ where: { tagYear: FISCAL_YEAR } }),
+  fiscal_periods: (p) => p.fiscalPeriod.count({ where: { year: FISCAL_YEAR } }),
+  sales_records: (p) => p.salesRecord.count({ where: { tagYear: FISCAL_YEAR } }),
+  depreciation: (p) => p.depreciation.count({ where: { tagYear: FISCAL_YEAR } }),
+  inter_account: (p) => p.interAccount.count({ where: { tagYear: FISCAL_YEAR } }),
+  account_receivables: (p) => p.accountReceivable.count({ where: { tagYear: FISCAL_YEAR } }),
+  account_payables: (p) => p.accountPayable.count({ where: { tagYear: FISCAL_YEAR } }),
+  ppn_in_out: (p) => p.ppnInOut.count({ where: { tagYear: FISCAL_YEAR } }),
+};
+
 /**
  * Every seeder in this folder clears its fiscal year before loading the
  * workbook, which is what makes a re-run reproducible. That is harmless while
@@ -12,18 +24,16 @@ const OVERRIDE = 'SEED_REPLACE_EXISTING';
  *
  * So the first run, into an empty year, proceeds silently. A later run stops
  * and says what it would delete, because by then the rows may not be ours.
+ *
+ * Only the tables this run will actually write are checked. Loading a workbook
+ * that has just arrived must not be blocked by a table it never touches.
  */
-export async function assertSafeToReplace(prisma: PrismaClient): Promise<boolean> {
-  const counts: [string, number][] = [
-    ['financial_transactions', await prisma.financialTransaction.count({ where: { tagYear: FISCAL_YEAR } })],
-    ['fiscal_periods', await prisma.fiscalPeriod.count({ where: { year: FISCAL_YEAR } })],
-    ['sales_records', await prisma.salesRecord.count({ where: { tagYear: FISCAL_YEAR } })],
-    ['depreciation', await prisma.depreciation.count({ where: { tagYear: FISCAL_YEAR } })],
-    ['inter_account', await prisma.interAccount.count({ where: { tagYear: FISCAL_YEAR } })],
-    ['account_receivables', await prisma.accountReceivable.count({ where: { tagYear: FISCAL_YEAR } })],
-    ['account_payables', await prisma.accountPayable.count({ where: { tagYear: FISCAL_YEAR } })],
-    ['ppn_in_out', await prisma.ppnInOut.count({ where: { tagYear: FISCAL_YEAR } })],
-  ];
+export async function assertSafeToReplace(prisma: PrismaClient, tables: string[]): Promise<boolean> {
+  const counts: [string, number][] = [];
+  for (const table of tables) {
+    const count = COUNTERS[table];
+    if (count) counts.push([table, await count(prisma)]);
+  }
 
   const existing = counts.filter(([, n]) => n > 0);
   if (existing.length === 0) return true;
@@ -39,7 +49,9 @@ export async function assertSafeToReplace(prisma: PrismaClient): Promise<boolean
   for (const [table, n] of existing) console.error(`     ${table}: ${n} rows`);
   console.error(
     `\n   Any ${FISCAL_YEAR} transaction entered through the application would be lost.` +
-      `\n   If the workbooks are the source of truth and that is what you want:\n` +
+      `\n   To load only what is new, name it:\n` +
+      `\n     SEED_ONLY=receivable,payable pnpm seed:${FISCAL_YEAR}\n` +
+      `\n   If the workbooks are the source of truth for everything above:\n` +
       `\n     ${OVERRIDE}=1 pnpm seed:${FISCAL_YEAR}\n`,
   );
   return false;

@@ -57,7 +57,7 @@ const OUTSTANDING: SlotSpec[] = [
 export async function seedAccountReceivable2026(prisma: PrismaClient) {
   console.log(`🧾 Seeding ${FISCAL_YEAR} account receivable...`);
 
-  const filePath = findWorkbook(['receivable', 'receiveable']);
+  const filePath = findWorkbook(['ar', 'receivable', 'receiveable']);
   if (!filePath) {
     console.warn(
       `⏭️  No account receivable workbook in prisma/seed-data-2026 — skipped, ${FISCAL_YEAR} rows left as they are.`,
@@ -178,6 +178,12 @@ export async function seedAccountReceivable2026(prisma: PrismaClient) {
     [opening, channels, closing],
     [...OPENING, ...CHANNELS, ...OUTSTANDING],
     rateIndex === undefined ? [] : [String(header[rateIndex] ?? '')],
+    {
+      header,
+      rows,
+      firstDataRow: headerIndex + 1,
+      keptAsRelation: accounts.columns.map((c) => c.header),
+    },
   );
   reportTail(rows, stoppedAt);
 }

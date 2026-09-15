@@ -33,7 +33,14 @@ export const ACCOUNT_ALIASES: { display: string; headers: string[] }[] = [
  * keeps its own column and is skipped here rather than stopping the seeder as
  * an unknown heading would.
  */
-const NOT_ACCOUNTS = new Set(['ppninandout', 'apinandout']);
+const NOT_ACCOUNTS = new Set([
+  'ppninandout',
+  // What the payable sheet calls it.
+  'apinandout',
+  // And what the 2026 receivable sheet calls the same column.
+  'apppnnonwapu',
+  'apppnwapu',
+]);
 
 const BY_HEADER = new Map<string, string>();
 for (const alias of ACCOUNT_ALIASES) {
