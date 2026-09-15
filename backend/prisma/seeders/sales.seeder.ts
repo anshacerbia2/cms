@@ -73,5 +73,17 @@ export async function seedSales(prisma: PrismaClient) {
   if (sales.length > 0) {
     await prisma.salesRecord.createMany({ data: sales });
     console.log(`✅ Seeded ${sales.length} transactions from Sales Module (${filePath})`);
+
+    // Every row read here is filed under this seeder's year, whatever the
+    // sheet's own Year column says. Saying so is the difference between a
+    // known inconsistency and a silent one.
+    const elsewhere = sales.filter((row) => row.colD != null && row.colD !== TAG_YEAR).length;
+    const undated = sales.filter((row) => row.colD == null).length;
+    if (elsewhere > 0 || undated > 0) {
+      console.warn(
+        `⚠️  Filed under ${TAG_YEAR} regardless: ${elsewhere} row(s) the sheet dates to` +
+          ` another year, ${undated} with no year at all.`,
+      );
+    }
   }
 }

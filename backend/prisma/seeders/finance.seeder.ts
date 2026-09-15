@@ -8,26 +8,19 @@ import {
   isRowEmpty,
   formatExcelDate
 } from './utils/excel';
-import { seedAccountPayable } from './account-payable.seeder';
-import { seedSales } from './sales.seeder';
 import { seedDepreciation } from './depreciation.seeder';
 
 export async function seedFinance(prisma: PrismaClient) {
-  // Clear existing data to prevent duplicates. Sales records are scoped to
-  // 2025, because seedSales owns that year and later years have their own
-  // seeders; an unscoped delete here would wipe them.
-  await prisma.salesRecord.deleteMany({ where: { tagYear: 2025 } });
-  await prisma.accountReceivable.deleteMany({ where: { tagYear: 2025 } });
+  // Only the three tables this seeder actually fills. It used to clear sales
+  // records and receivables as well, which it has never written: the sales
+  // seeder owns one and the receivable seeder the other, so a run of this left
+  // whichever of them had gone first with nothing.
   await prisma.financeRevenue.deleteMany();
   await prisma.financeExpense.deleteMany();
   await prisma.profitLossSummary.deleteMany();
 
   const filePath = path.join(process.cwd(), 'prisma', 'seed-data', 'finance-report.xlsx');
   const workbook = XLSX.readFile(filePath);
-
-  // Modularized seeders
-  await seedAccountPayable(prisma);
-  await seedSales(prisma);
 
   // --- 1. P&L SUMMARY (from 'PL' sheet) ---
   const plSheet = workbook.Sheets['PL'];

@@ -17,6 +17,7 @@ import { seedPpnInOut } from './ppn-in-out.seeder';
 import { seedEquity } from './equity.seeder';
 import { seedAccountPayable } from './account-payable.seeder';
 import { seedDepreciation } from './depreciation.seeder';
+import { seedSales } from './sales.seeder';
 import { seedInterAccount } from './inter-account.seeder';
 import { backfillAccountAmounts } from '../scripts/backfill-finance-account-amounts';
 
@@ -51,16 +52,12 @@ async function main() {
     await seedPpnInOut(prisma);
     await seedEquity(prisma);
     await seedInterAccount(prisma);
-    // Left out until now, which meant a database built from scratch had an
-    // empty Account Payable and Depreciation while every other finance table
-    // was full.
+    // Sales and payable used to be started from inside seedFinance, which hid
+    // them from this list and ran payable twice once it was added here.
+    // Depreciation was never called at all.
+    await seedSales(prisma);
     await seedAccountPayable(prisma);
     await seedDepreciation(prisma);
-    // seedSales is deliberately not here. Its workbook mixes years - 39 rows
-    // dated 2024, 13 dated 2026, 27 with no year at all - and the seeder tags
-    // every row it reads as 2025, which would put 2026 invoices in 2025.
-    // Production holds a filtered subset of 260 rows and nobody recorded what
-    // the filter was, so this waits on an answer rather than guessing one.
 
     // The finance tables keep their per-account columns, and this puts the
     // same figures in the rows that name their account. A database seeded
