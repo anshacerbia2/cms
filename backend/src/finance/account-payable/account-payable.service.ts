@@ -1,7 +1,8 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { formatDecimal } from '../../common/utils/format.utils';
-import { findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
+import {
+  syncAccountAmounts, ACCOUNT_PAYABLE_COLUMNS, findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
 import { parseIntSafe, parseDateSafe } from '../../common/utils/parse.utils';
 
 @Injectable()
@@ -92,7 +93,7 @@ export class AccountPayableService {
       throw new BadRequestException('tagYear is required and must be a valid number');
     }
 
-    return this.prisma.accountPayable.create({
+    const saved = await this.prisma.accountPayable.create({
       data: {
         colA: data.colA || null,
         colB: parseIntSafe(data.colB),
@@ -117,6 +118,14 @@ export class AccountPayableService {
         tagYear: parsedTagYear,
       },
     });
+    await syncAccountAmounts(this.prisma, {
+      amountModel: this.prisma.accountPayableAmount,
+      parentKey: 'accountPayableId',
+      parentId: saved.id,
+      columns: ACCOUNT_PAYABLE_COLUMNS,
+      row: saved,
+    });
+    return saved;
   }
 
   async updateAccountPayable(id: number, data: any) {
@@ -142,10 +151,18 @@ export class AccountPayableService {
     if ('colU' in data) updateData.colU = data.colU?.toString() || null;
     if ('colV' in data) updateData.colV = data.colV?.toString() || null;
 
-    return this.prisma.accountPayable.update({
+    const saved = await this.prisma.accountPayable.update({
       where: { id },
       data: updateData,
     });
+    await syncAccountAmounts(this.prisma, {
+      amountModel: this.prisma.accountPayableAmount,
+      parentKey: 'accountPayableId',
+      parentId: saved.id,
+      columns: ACCOUNT_PAYABLE_COLUMNS,
+      row: saved,
+    });
+    return saved;
   }
 
   async deleteAccountPayable(id: number) {
@@ -185,9 +202,17 @@ export class AccountPayableService {
       colV: row.colV?.toString() || null,   // Outstanding USD
       tagYear: parsedTagYear,
     }));
-    return this.prisma.accountPayable.createMany({
-      data: records,
-    });
+    const savedRows = await this.prisma.accountPayable.createManyAndReturn({ data: records });
+    for (const row of savedRows) {
+      await syncAccountAmounts(this.prisma, {
+        amountModel: this.prisma.accountPayableAmount,
+        parentKey: 'accountPayableId',
+        parentId: row.id,
+        columns: ACCOUNT_PAYABLE_COLUMNS,
+        row,
+      });
+    }
+    return { count: savedRows.length };
   }
 
 

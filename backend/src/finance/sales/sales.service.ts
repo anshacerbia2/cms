@@ -4,7 +4,8 @@ import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../common/interfaces/paginated-result.interface';
 import { formatDecimal } from '../../common/utils/format.utils';
 import { parseIntSafe, parseDateSafe } from '../../common/utils/parse.utils';
-import { findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
+import {
+  syncAccountAmounts, SALES_RECORD_COLUMNS, findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
 
 
 
@@ -137,7 +138,17 @@ export class SalesService {
       tagYear: parsedTagYear,
     }));
 
-    return this.prisma.salesRecord.createMany({ data });
+    const savedRows = await this.prisma.salesRecord.createManyAndReturn({ data });
+    for (const row of savedRows) {
+      await syncAccountAmounts(this.prisma, {
+        amountModel: this.prisma.salesRecordAmount,
+        parentKey: 'salesRecordId',
+        parentId: row.id,
+        columns: SALES_RECORD_COLUMNS,
+        row,
+      });
+    }
+    return { count: savedRows.length };
   }
 
   async getSalesById(id: number): Promise<any> {
@@ -203,10 +214,18 @@ export class SalesService {
     if ('colAC' in data) updateData.colAC = data.colAC?.toString() || null;
     if ('colAD' in data) updateData.colAD = data.colAD || null;
 
-    return this.prisma.salesRecord.update({
+    const saved = await this.prisma.salesRecord.update({
       where: { id },
       data: updateData
     });
+    await syncAccountAmounts(this.prisma, {
+      amountModel: this.prisma.salesRecordAmount,
+      parentKey: 'salesRecordId',
+      parentId: saved.id,
+      columns: SALES_RECORD_COLUMNS,
+      row: saved,
+    });
+    return saved;
   }
 
   async deleteSales(id: number): Promise<any> {

@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { formatDecimal } from '../../common/utils/format.utils';
-import { findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
+import {
+  syncAccountAmounts, INTER_ACCOUNT_COLUMNS, findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
 import { parseIntSafe } from '../../common/utils/parse.utils';
 
 @Injectable()
@@ -111,7 +112,17 @@ export class InterAccountService {
       tagYear: parsedTagYear,
     }));
 
-    return this.prisma.interAccount.createMany({ data });
+    const savedRows = await this.prisma.interAccount.createManyAndReturn({ data });
+    for (const row of savedRows) {
+      await syncAccountAmounts(this.prisma, {
+        amountModel: this.prisma.interAccountAmount,
+        parentKey: 'interAccountId',
+        parentId: row.id,
+        columns: INTER_ACCOUNT_COLUMNS,
+        row,
+      });
+    }
+    return { count: savedRows.length };
   }
 
   async createInterAccount(data: any) {
@@ -120,7 +131,7 @@ export class InterAccountService {
       throw new BadRequestException('tagYear is required and must be a valid number');
     }
 
-    return this.prisma.interAccount.create({
+    const saved = await this.prisma.interAccount.create({
       data: {
         colB: data.colB || null,
         colC: data.colC?.toString() || null,
@@ -139,6 +150,14 @@ export class InterAccountService {
         tagYear: parsedTagYear,
       },
     });
+    await syncAccountAmounts(this.prisma, {
+      amountModel: this.prisma.interAccountAmount,
+      parentKey: 'interAccountId',
+      parentId: saved.id,
+      columns: INTER_ACCOUNT_COLUMNS,
+      row: saved,
+    });
+    return saved;
   }
 
   async updateInterAccount(id: number, data: any) {
@@ -158,10 +177,18 @@ export class InterAccountService {
     if ('colN' in data) updateData.colN = data.colN?.toString() || null;
     if ('colO' in data) updateData.colO = data.colO?.toString() || null;
 
-    return this.prisma.interAccount.update({
+    const saved = await this.prisma.interAccount.update({
       where: { id },
       data: updateData
     });
+    await syncAccountAmounts(this.prisma, {
+      amountModel: this.prisma.interAccountAmount,
+      parentKey: 'interAccountId',
+      parentId: saved.id,
+      columns: INTER_ACCOUNT_COLUMNS,
+      row: saved,
+    });
+    return saved;
   }
 
   async deleteInterAccount(id: number) {
