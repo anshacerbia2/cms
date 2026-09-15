@@ -1569,7 +1569,9 @@ export function ProfitLossTab() {
                 const isCogs = row.account === "Cost of Goods";
                 const isClickable = isExpense || isSales || isCogs || row.level === 3;
                 const isSpecialBold = ["Operating Profit", "PROFIT BEFORE TAX"].includes(row.account);
-                const isOtherProfitItem = ["Other Income", "Depreciation", "Income Tax"].includes(row.account);
+                // Other Income is one of the expenses now, so it takes their weight
+                  // rather than the lighter one used under PROFITABILITY.
+                  const isOtherProfitItem = ["Depreciation", "Income Tax"].includes(row.account);
                 const hasSubItems = tableData.some((r: any) => r.level === 3 && r.parentLedger === row.account);
                 const isExpanded = expandedLedgers.has(row.account);
 
