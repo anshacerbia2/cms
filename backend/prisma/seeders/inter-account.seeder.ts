@@ -7,9 +7,13 @@ import {
   isRowEmpty,
 } from './utils/excel';
 
+/** The fiscal year this seeder owns. Later years have their own seeders. */
+const TAG_YEAR = 2025;
+
 export async function seedInterAccount(prisma: PrismaClient) {
   console.log('🌱 Seeding Inter Account...');
-  await prisma.interAccount.deleteMany();
+  // Scoped to this seeder's own year, so it does not wipe later years.
+  await prisma.interAccount.deleteMany({ where: { tagYear: TAG_YEAR } });
   
   const filePath = path.join(process.cwd(), 'prisma', 'seed-data', 'inter-account.xlsx');
   
@@ -44,7 +48,7 @@ export async function seedInterAccount(prisma: PrismaClient) {
           colN: cleanCurrency(row[12]),
           colO: cleanCurrency(row[13]),
           colP: cleanCurrency(row[14]),
-          tagYear: 2025,
+          tagYear: TAG_YEAR,
         });
       }
       

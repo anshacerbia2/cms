@@ -13,8 +13,10 @@ import { seedSales } from './sales.seeder';
 import { seedDepreciation } from './depreciation.seeder';
 
 export async function seedFinance(prisma: PrismaClient) {
-  // Clear existing data to prevent duplicates
-  await prisma.salesRecord.deleteMany();
+  // Clear existing data to prevent duplicates. Sales records are scoped to
+  // 2025, because seedSales owns that year and later years have their own
+  // seeders; an unscoped delete here would wipe them.
+  await prisma.salesRecord.deleteMany({ where: { tagYear: 2025 } });
   await prisma.accountReceivable.deleteMany();
   await prisma.financeRevenue.deleteMany();
   await prisma.financeExpense.deleteMany();

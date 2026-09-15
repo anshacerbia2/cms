@@ -1,4 +1,4 @@
-import { PrismaClient, DepreciationType } from '@prisma/client';
+﻿import { PrismaClient, DepreciationType } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import * as path from 'path';
 import { 
@@ -8,8 +8,12 @@ import {
   isRowEmpty 
 } from './utils/excel';
 
+/** The fiscal year this seeder owns. Later years have their own seeders. */
+const TAG_YEAR = 2025;
+
 export async function seedDepreciation(prisma: PrismaClient) {
-  await prisma.depreciation.deleteMany();
+  // Scoped to this seeder's own year, so it does not wipe later years.
+  await prisma.depreciation.deleteMany({ where: { tagYear: TAG_YEAR } });
   const assetFilePath = path.join(process.cwd(), 'prisma', 'seed-data', 'depreciation.xlsx');
   const assetWorkbook = XLSX.readFile(assetFilePath);
   const assetSheet = assetWorkbook.Sheets[assetWorkbook.SheetNames[0]];
@@ -46,7 +50,7 @@ export async function seedDepreciation(prisma: PrismaClient) {
         colT: cleanCurrency(row[19]),
         colU: cleanCurrency(row[20]),
         type: DepreciationType.OFFICE_EQUIPMENT,
-        tagYear: 2025,
+        tagYear: TAG_YEAR,
       });
     }
 
@@ -78,7 +82,7 @@ export async function seedDepreciation(prisma: PrismaClient) {
         colT: cleanCurrency(row[19]),
         colU: cleanCurrency(row[20]),
         type: DepreciationType.VEHICLE,
-        tagYear: 2025,
+        tagYear: TAG_YEAR,
       });
     }
 

@@ -121,6 +121,9 @@ export async function seedBanks(prisma: PrismaClient) {
   console.log('✅ Internal accounts seeding completed.');
 }
 
+/** The fiscal year this seeder owns. Later years have their own seeders. */
+const TAG_YEAR = 2025;
+
 const FISCAL_OPENINGS_2025: Record<string, number> = {
   'BCA Sho': 39994324.36,
   'BCA Juanda': 1927869846.48,
@@ -152,9 +155,11 @@ const SHEET_TO_ACCOUNT: Record<string, any> = {
 export async function seedBankMutation(prisma: PrismaClient, workbook?: XLSX.WorkBook) {
   console.log('🏛️ Seeding bank mutations (ledger)...');
 
-  // Clear existing data to prevent duplicates
-  await prisma.financialTransaction.deleteMany();
-  await prisma.fiscalPeriod.deleteMany();
+  // Clear existing data to prevent duplicates. Scoped to this seeder's own
+  // fiscal year, because later years are loaded by their own seeders and an
+  // unscoped delete here would wipe them.
+  await prisma.financialTransaction.deleteMany({ where: { tagYear: TAG_YEAR } });
+  await prisma.fiscalPeriod.deleteMany({ where: { year: TAG_YEAR } });
   // If no workbook provided, load it manually from the default path
   let wb = workbook;
   if (!wb) {
@@ -220,7 +225,7 @@ export async function seedBankMutation(prisma: PrismaClient, workbook?: XLSX.Wor
         colG: cleanString(row[6]),
         colH: cleanString(row[7]),
         colI: cleanString(row[8]),
-        tagYear: 2025,
+        tagYear: TAG_YEAR,
       });
     }
 
@@ -314,7 +319,7 @@ export async function seedBankMutation(prisma: PrismaClient, workbook?: XLSX.Wor
     --- LEGACY BLOCK END --- */
 
     // NEW LOGIC: Force all transactions from the Excel sheet into fiscal year 2025
-    const forcedYear = 2025;
+    const forcedYear = TAG_YEAR;
     let openingBalance = FISCAL_OPENINGS_2025[sheetName] !== undefined ? FISCAL_OPENINGS_2025[sheetName] : 0;
     
     // Upsert Fiscal Period for 2025
