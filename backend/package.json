@@ -22,6 +22,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "revoke:finance-create": "tsx run-revoke-create-permissions.ts",
+    "seed:accounts": "tsx prisma/scripts/internal-accounts.ts",
+    "backfill:account-amounts": "tsx prisma/scripts/backfill-finance-account-amounts.ts",
     "seed:2026": "tsx prisma/seeders-2026/index.ts"
   },
   "dependencies": {
