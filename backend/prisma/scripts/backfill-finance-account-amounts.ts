@@ -2,14 +2,13 @@ import 'dotenv/config';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
-import { SHEET_TO_ACCOUNT } from '../seeders/banks.seeder';
 import {
   ACCOUNT_PAYABLE_COLUMNS,
   ACCOUNT_RECEIVABLE_COLUMNS,
   INTER_ACCOUNT_COLUMNS,
   SALES_RECORD_COLUMNS,
   type ColumnAccountMap,
-} from './finance-account-columns';
+} from '../../src/finance/common/account-columns';
 
 /**
  * Copies the per-account columns of the four finance tables into the rows that
@@ -65,31 +64,13 @@ function tablesFor(prisma: PrismaClient): TableSpec[] {
   ];
 }
 
-/** Turns a spreadsheet label into the internal account it stands for. */
+/** Turns a column's account name into the account it stands for. */
 async function resolveAccounts(prisma: PrismaClient, labels: string[]) {
-  const byLabel = new Map<string, bigint>();
-  const unknown: string[] = [];
-
-  for (const label of labels) {
-    const identity = SHEET_TO_ACCOUNT[label];
-    if (!identity) {
-      unknown.push(label);
-      continue;
-    }
-    const account = await prisma.internalAccount.findUnique({
-      where: {
-        accountNo_type_holderName_branch: {
-          accountNo: identity.accountNo || '',
-          type: identity.type,
-          holderName: identity.holderName,
-          branch: identity.branch || '',
-        },
-      },
-    });
-    if (!account) unknown.push(label);
-    else byLabel.set(label, account.id);
-  }
-
+  const accounts = await prisma.internalAccount.findMany({
+    where: { displayName: { in: labels } },
+  });
+  const byLabel = new Map(accounts.map((a) => [a.displayName as string, a.id]));
+  const unknown = labels.filter((l) => !byLabel.has(l));
   return { byLabel, unknown };
 }
 

@@ -21,12 +21,19 @@ export const ACCOUNT_ALIASES: { display: string; headers: string[] }[] = [
   { display: 'BNI', headers: ['bni'] },
   { display: 'Cash IDR', headers: ['cashidr'] },
   { display: 'Non CB', headers: ['noncb', 'noncashbank'] },
-  // The payable sheet calls the VAT control account "AP In and Out".
-  { display: 'PPn In and Out', headers: ['ppninandout', 'apinandout'] },
   // Present as a column in older books, never used. It has no account of its
   // own, so a book that starts putting figures here will stop the seeder.
   { display: 'BJB', headers: ['bjb'] },
 ];
+
+/**
+ * Headings in the account block that are not accounts.
+ *
+ * PPn In and Out is a VAT clearing position, not an account anyone holds, so it
+ * keeps its own column and is skipped here rather than stopping the seeder as
+ * an unknown heading would.
+ */
+const NOT_ACCOUNTS = new Set(['ppninandout', 'apinandout']);
 
 const BY_HEADER = new Map<string, string>();
 for (const alias of ACCOUNT_ALIASES) {
@@ -50,7 +57,9 @@ export function readAccountColumns(header: any[], from: number, to: number) {
   for (let i = from; i <= to && i < header.length; i++) {
     const text = String(header[i] ?? '').trim();
     if (text === '') continue;
-    const display = BY_HEADER.get(normalizeLabel(text));
+    const key = normalizeLabel(text);
+    if (NOT_ACCOUNTS.has(key)) continue;
+    const display = BY_HEADER.get(key);
     if (display === undefined) unknown.push(text);
     else columns.push({ index: i, display, header: text });
   }

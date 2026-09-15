@@ -80,10 +80,6 @@ export async function seedBanks(prisma: PrismaClient) {
     { bankBrand: 'BNI', accountNo: '', branch: '', holderName: 'PT Panconvince Mitra International', type: 'BANK', displayName: 'BNI', displayOrder: 9 },
     { accountNo: '', branch: '', holderName: 'Meery Ferdian', type: 'CASH', displayName: 'Cash IDR', displayOrder: 10 },
     { accountNo: '', branch: '', holderName: 'Non Cash & Bank', type: 'OTHER', displayName: 'Non CB', displayOrder: 11 },
-    // Not a bank: the control account VAT is cleared through. Money moves into
-    // it from BCA Juanda, Mandiri Mid Plaza and Non Cash & Bank, and the
-    // payable side records the VAT position against it.
-    { accountNo: '', branch: '', holderName: 'PPn In and Out', type: 'OTHER', displayName: 'PPn In and Out', displayOrder: 12 },
   ];
 
   for (const acc of legacyAccounts) {
@@ -154,7 +150,6 @@ export const SHEET_TO_ACCOUNT: Record<string, any> = {
   'BNI': { type: 'BANK', branch: '', holderName: 'PT Panconvince Mitra International', accountNo: '' },
   'Cash IDR': { type: 'CASH', branch: '', holderName: 'Meery Ferdian', accountNo: '' },
   'Non CB': { type: 'OTHER', branch: '', holderName: 'Non Cash & Bank', accountNo: '' },
-  'PPn In and Out': { type: 'OTHER', branch: '', holderName: 'PPn In and Out', accountNo: '' },
 };
 
 export async function seedBankMutation(prisma: PrismaClient, workbook?: XLSX.WorkBook) {

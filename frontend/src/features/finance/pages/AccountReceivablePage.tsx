@@ -350,6 +350,15 @@ export default function AccountReceivablePage() {
                   </TableHead>
                 ))}
 
+                {/* Not an account: the VAT clearing position keeps its own
+                    column, read straight from colP. */}
+                <TableHead className="text-right w-36 whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-1">
+                    PPn In and Out
+                    <ExcelColumnFilter columnKey="colP" label="PPn In and Out" data={getCascadingData("colP")} activeFilters={filters["colP"]} onFilterChange={(v) => { setFilters(p => ({...p, colP: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colP", direction: d})} />
+                  </div>
+                </TableHead>
+
                 <TableHead className="text-right w-36">
                   <div className="flex items-center justify-end gap-1">
                     Outstanding IDR
@@ -397,6 +406,10 @@ export default function AccountReceivablePage() {
                           {row[accountKey(account.id)]}
                         </TableCell>
                       ))}
+
+                      <TableCell className={`text-right font-bold ${getAmountColor(row.colP, false)}`}>
+                        {row.colP}
+                      </TableCell>
 
                       <TableCell className={`text-right font-black ${getAmountColor(row.colR, false)}`}>
                         {row.colR}
@@ -450,6 +463,10 @@ export default function AccountReceivablePage() {
                         {formatCurrency(((subtotalTotals as any)[accountKey(account.id)] ?? 0).toString())}
                       </TableCell>
                     ))}
+
+                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colP.toString(), false)}`}>
+                      {formatCurrency(subtotalTotals.colP.toString())}
+                    </TableCell>
                     
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colR.toString(), false)}`}>
                       {formatCurrency(subtotalTotals.colR.toString())}
@@ -471,6 +488,10 @@ export default function AccountReceivablePage() {
                         {formatCurrency(((grandTotals as any)[accountKey(account.id)] ?? 0).toString())}
                       </TableCell>
                     ))}
+
+                    <TableCell className={`text-right ${getAmountColor(grandTotals.colP.toString(), false)}`}>
+                      {formatCurrency(grandTotals.colP.toString())}
+                    </TableCell>
                     
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colR.toString(), false)}`}>
                       {formatCurrency(grandTotals.colR.toString())}

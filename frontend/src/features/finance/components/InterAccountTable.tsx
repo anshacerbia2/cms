@@ -143,6 +143,9 @@ export const InterAccountTable: React.FC = () => {
     // One column per account this year's transfers moved between. The header
     // and the order come from Account & Bank, not from here.
     ...accountColumns.map((account) => ({ k: accountKey(account.id), l: account.name, num: true })),
+    // Not an account: the VAT clearing position keeps its own column, always
+    // shown, read straight from colO.
+    { k: 'colO', l: 'PPn In and Out', num: true },
   ];
 
   /** Reads a figure whichever shape it arrives in: Decimal, raw, or formatted. */

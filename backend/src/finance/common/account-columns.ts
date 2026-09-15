@@ -64,6 +64,10 @@ export function serializeAmounts(amounts: { internalAccountId: bigint; amount: a
  * Which account each fixed column of the finance tables stands for, by the name
  * the account is shown under.
  *
+ * PPn In and Out is deliberately absent. It is a VAT clearing position, not an
+ * account anyone holds, so it stays a plain column of its table, keyed by
+ * tagYear like the rest of the sheet.
+ *
  * The columns are not in the same order twice - receivable has no BTN at all,
  * payable no Bank Raya, and sales puts Mandiri Plasa Mandiri where
  * inter-account puts BTN - so the mapping is written out per table.
@@ -83,7 +87,6 @@ export const INTER_ACCOUNT_COLUMNS: ColumnAccountMap = {
   colL: 'BNI',
   colM: 'Cash IDR',
   colN: 'Non CB',
-  colO: 'PPn In and Out',
 };
 
 export const SALES_RECORD_COLUMNS: ColumnAccountMap = {
@@ -107,7 +110,6 @@ export const ACCOUNT_RECEIVABLE_COLUMNS: ColumnAccountMap = {
   colM: 'BRI Sahardjo',
   colN: 'Cash IDR',
   colO: 'Non CB',
-  colP: 'PPn In and Out',
 };
 
 export const ACCOUNT_PAYABLE_COLUMNS: ColumnAccountMap = {
@@ -119,8 +121,6 @@ export const ACCOUNT_PAYABLE_COLUMNS: ColumnAccountMap = {
   colP: 'BRI Tebet',
   colQ: 'Cash IDR',
   colR: 'Non CB',
-  // The payable sheet calls it "AP In and Out"; it is the same control account.
-  colS: 'PPn In and Out',
 };
 
 /**

@@ -383,6 +383,15 @@ export function ApSummaryTab() {
                   </TableHead>
                 ))}
 
+                {/* Not an account: the VAT clearing position keeps its own
+                    column, read straight from colS. */}
+                <TableHead className="text-right w-40 whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-1">
+                    AP In and Out
+                    <ExcelColumnFilter columnKey="colS" label="AP In and Out" data={getCascadingData("colS")} activeFilters={apFilters["colS"]} onFilterChange={(v) => { setApFilters(p => ({...p, colS: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colS", direction: d})} />
+                  </div>
+                </TableHead>
+
 
                 <TableHead className="text-right w-40 whitespace-nowrap">
                   <div className="flex items-center justify-end gap-1">
