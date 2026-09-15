@@ -116,6 +116,13 @@ export async function seedAccountReceivable(prisma: PrismaClient) {
   const closing = buildColumnMapInRange(header, OUTSTANDING, outstanding, header.length);
   const rateIndex = rateColumnAfter(header, opening.indexes['colG']);
 
+  // Description sits three columns right of the type in every book seen so far.
+  const descriptionIndex = opening.indexes['colE'];
+  const typeIndex = descriptionIndex === undefined ? 1 : descriptionIndex - 3;
+  if (descriptionIndex === undefined) {
+    console.warn('⚠️  No DESCRIPTION heading — type, year and client read from the left edge.');
+  }
+
   const records: Prisma.AccountReceivableCreateManyInput[] = [];
   const perRow: RowAmounts[] = [];
   let stoppedAt = -1;
@@ -131,11 +138,13 @@ export async function seedAccountReceivable(prisma: PrismaClient) {
 
     const record: any = {
       colA: '',
-      // These three carry no heading in any book, so they are read by position
-      // from the left edge: type, year, then who owes it.
-      colB: cleanString(row[1]),
-      colC: cleanString(row[2]),
-      colD: cleanString(row[3]),
+      // Type, year and who owes it. None of the three carries a heading, so
+      // they are placed relative to the description column, which does: the
+      // 2026 book has no blank first column and every book before it did, so
+      // counting from the left edge put all three one column out.
+      colB: cleanString(row[typeIndex]),
+      colC: cleanString(row[typeIndex + 1]),
+      colD: cleanString(row[typeIndex + 2]),
       colI: '',
       colQ: '',
       colH: rateIndex === undefined ? null : cleanCurrency(row[rateIndex]),

@@ -1375,6 +1375,25 @@ export class FinanceReportService {
       tx: depositRecords.length
     });
 
+    // Time deposits are the other kind of deposit held, and are read the same
+    // way: their own receivable type, taken at its outstanding balance.
+    const timeDepositRecords = arRecordsRaw.filter(r =>
+      !processedArIds.has(r.id) &&
+      r.colB?.toLowerCase().includes('ar time deposit')
+    );
+
+    const timeDepositTotal = timeDepositRecords.reduce((acc, r) => {
+      processedArIds.add(r.id);
+      return acc.plus(new Prisma.Decimal(r.colR || 0));
+    }, new Prisma.Decimal(0));
+
+    depositItems.push({
+      accountName: 'Time Deposit',
+      idr: formatDecimal(timeDepositTotal),
+      code: '1302',
+      tx: timeDepositRecords.length
+    });
+
 
     // AR Prepaid Tax
     const prepaidTaxItems = [];
@@ -1453,7 +1472,7 @@ export class FinanceReportService {
 
 
     // ASSETS TOTAL
-    const totalAssets = bankTotal.plus(cashTotal).plus(arTotal).plus(depositTotal).plus(prepaidTaxTotal).plus(totalBookValue);
+    const totalAssets = bankTotal.plus(cashTotal).plus(arTotal).plus(depositTotal).plus(timeDepositTotal).plus(prepaidTaxTotal).plus(totalBookValue);
 
 
     // Liabilities & Equity
