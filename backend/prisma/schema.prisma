@@ -297,26 +297,30 @@ model Bank {
 }
 
 model InternalAccount {
-  id         BigInt              @id @default(autoincrement())
-  bankId     BigInt?             @map("bank_id")
-  userId     BigInt?             @map("user_id") // Links to owner/responsible user
-  type       InternalAccountType @default(BANK)
-  accountNo  String?             @map("account_no") @db.VarChar(50)
-  branch     String?             @db.VarChar(255)
-  swiftCode  String?             @map("swift_code") @db.VarChar(20)
-  holderName String              @map("holder_name") @db.VarChar(255)
+  id                 BigInt              @id @default(autoincrement())
+  bankId             BigInt?             @map("bank_id")
+  userId             BigInt?             @map("user_id") // Links to owner/responsible user
+  type               InternalAccountType @default(BANK)
+  accountNo          String?             @map("account_no") @db.VarChar(50)
+  branch             String?             @db.VarChar(255)
+  swiftCode          String?             @map("swift_code") @db.VarChar(20)
+  holderName         String              @map("holder_name") @db.VarChar(255)
   /// Settlement account for No Tax invoices. The rule was previously carried by a
   /// hardcoded account number, which broke the moment the account changed.
-  isNonVatSettlement Boolean     @default(false) @map("is_non_vat_settlement")
-  createdAt  DateTime            @default(now()) @map("created_at")
-  updatedAt  DateTime            @updatedAt @map("updated_at")
+  isNonVatSettlement Boolean             @default(false) @map("is_non_vat_settlement")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
 
-  bank            Bank?                  @relation(fields: [bankId], references: [id], onDelete: Restrict)
-  fiscalPeriods   FiscalPeriod[]
-  transactions    FinancialTransaction[]
-  invoices        Invoice[]
-  receiveVouchers ReceiveVoucher[]
-  paymentVouchers PaymentVoucher[]
+  bank                     Bank?                     @relation(fields: [bankId], references: [id], onDelete: Restrict)
+  fiscalPeriods            FiscalPeriod[]
+  transactions             FinancialTransaction[]
+  invoices                 Invoice[]
+  receiveVouchers          ReceiveVoucher[]
+  paymentVouchers          PaymentVoucher[]
+  interAccountAmounts      InterAccountAmount[]
+  salesRecordAmounts       SalesRecordAmount[]
+  accountReceivableAmounts AccountReceivableAmount[]
+  accountPayableAmounts    AccountPayableAmount[]
 
   @@unique([accountNo, type, holderName, branch])
   @@map("internal_accounts")
@@ -415,6 +419,8 @@ model SalesRecord {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
+  amounts SalesRecordAmount[]
+
   @@map("sales_records")
 }
 
@@ -442,6 +448,8 @@ model AccountReceivable {
   tagYear   Int
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  amounts AccountReceivableAmount[]
 
   @@map("account_receivables")
 }
@@ -473,6 +481,8 @@ model AccountPayable {
   tagYear   Int
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  amounts AccountPayableAmount[]
 
   @@map("account_payables")
 }
@@ -652,6 +662,8 @@ model InterAccount {
   tagYear   Int
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  amounts InterAccountAmount[]
 
   @@map("inter_account")
 }
@@ -1045,4 +1057,92 @@ model PdfTemplate {
   @@index([type])
   @@index([isActive])
   @@map("pdf_templates")
+}
+
+/// One account's share of a inter_account row.
+///
+/// The spreadsheet gives every account a column of its own, so the accounts a
+/// year can use are fixed by the table's shape: a new bank means a migration,
+/// and a book that names an account we have no column for loses those figures
+/// entirely. Naming the account in a row instead removes that ceiling.
+model InterAccountAmount {
+  id                BigInt   @id @default(autoincrement())
+  interAccountId    BigInt   @map("inter_account_id")
+  internalAccountId BigInt   @map("internal_account_id")
+  amount            Decimal  @db.Decimal(19, 4)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  interAccount    InterAccount    @relation(fields: [interAccountId], references: [id], onDelete: Cascade)
+  internalAccount InternalAccount @relation(fields: [internalAccountId], references: [id], onDelete: Restrict)
+
+  @@unique([interAccountId, internalAccountId])
+  @@index([internalAccountId])
+  @@map("inter_account_amounts")
+}
+
+/// One account's share of a sales_records row.
+///
+/// The spreadsheet gives every account a column of its own, so the accounts a
+/// year can use are fixed by the table's shape: a new bank means a migration,
+/// and a book that names an account we have no column for loses those figures
+/// entirely. Naming the account in a row instead removes that ceiling.
+model SalesRecordAmount {
+  id                BigInt   @id @default(autoincrement())
+  salesRecordId     BigInt   @map("sales_record_id")
+  internalAccountId BigInt   @map("internal_account_id")
+  amount            Decimal  @db.Decimal(19, 4)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  salesRecord     SalesRecord     @relation(fields: [salesRecordId], references: [id], onDelete: Cascade)
+  internalAccount InternalAccount @relation(fields: [internalAccountId], references: [id], onDelete: Restrict)
+
+  @@unique([salesRecordId, internalAccountId])
+  @@index([internalAccountId])
+  @@map("sales_record_amounts")
+}
+
+/// One account's share of a account_receivables row.
+///
+/// The spreadsheet gives every account a column of its own, so the accounts a
+/// year can use are fixed by the table's shape: a new bank means a migration,
+/// and a book that names an account we have no column for loses those figures
+/// entirely. Naming the account in a row instead removes that ceiling.
+model AccountReceivableAmount {
+  id                  BigInt   @id @default(autoincrement())
+  accountReceivableId BigInt   @map("account_receivable_id")
+  internalAccountId   BigInt   @map("internal_account_id")
+  amount              Decimal  @db.Decimal(19, 4)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  accountReceivable AccountReceivable @relation(fields: [accountReceivableId], references: [id], onDelete: Cascade)
+  internalAccount   InternalAccount   @relation(fields: [internalAccountId], references: [id], onDelete: Restrict)
+
+  @@unique([accountReceivableId, internalAccountId])
+  @@index([internalAccountId])
+  @@map("account_receivable_amounts")
+}
+
+/// One account's share of a account_payables row.
+///
+/// The spreadsheet gives every account a column of its own, so the accounts a
+/// year can use are fixed by the table's shape: a new bank means a migration,
+/// and a book that names an account we have no column for loses those figures
+/// entirely. Naming the account in a row instead removes that ceiling.
+model AccountPayableAmount {
+  id                BigInt   @id @default(autoincrement())
+  accountPayableId  BigInt   @map("account_payable_id")
+  internalAccountId BigInt   @map("internal_account_id")
+  amount            Decimal  @db.Decimal(19, 4)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  accountPayable  AccountPayable  @relation(fields: [accountPayableId], references: [id], onDelete: Cascade)
+  internalAccount InternalAccount @relation(fields: [internalAccountId], references: [id], onDelete: Restrict)
+
+  @@unique([accountPayableId, internalAccountId])
+  @@index([internalAccountId])
+  @@map("account_payable_amounts")
 }
