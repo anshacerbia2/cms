@@ -8,9 +8,16 @@ import {
   excelDateToJSDate,
 } from './utils/excel';
 
+/**
+ * The year this seeder owns. Its clear-down is scoped to it, because later
+ * years are loaded by their own seeders and an unscoped delete here would take
+ * them with it.
+ */
+const TAG_YEAR = 2025;
+
 export async function seedPpnInOut(prisma: PrismaClient) {
   console.log('🌱 Seeding PPN In/out...');
-  await prisma.ppnInOut.deleteMany();
+  await prisma.ppnInOut.deleteMany({ where: { tagYear: TAG_YEAR } });
   
   const filePath = path.join(process.cwd(), 'prisma', 'seed-data', 'ppn-in-out.xlsx');
   
@@ -50,7 +57,7 @@ export async function seedPpnInOut(prisma: PrismaClient) {
           colQ: cleanString(row[16]),
           colR: cleanString(row[17]),
           colS: cleanString(row[18]),
-          tagYear: 2025,
+          tagYear: TAG_YEAR,
         });
       }
       

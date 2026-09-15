@@ -18,13 +18,25 @@ import {
  * of truth until the reports read the new rows instead. This only adds the same
  * figures in a shape that can hold an account the table has no column for.
  */
-const REPLACE = process.env.BACKFILL_REPLACE_EXISTING === '1';
+export type BackfillOptions = {
+  /**
+   * Rebuild rows that are already linked. The full seed does this for the year
+   * it has just rewritten, because it rewrote the columns underneath them.
+   */
+  replace?: boolean;
+  /**
+   * Restrict to one fiscal year. Rebuilding every year would be wrong: a year
+   * loaded by the 2026 seeders can hold figures for an account this table has
+   * no column for, and those cannot be derived from the columns again.
+   */
+  tagYear?: number;
+};
 
 type TableSpec = {
   label: string;
   columns: ColumnAccountMap;
   /** Reads the parent rows, returning id plus the mapped columns. */
-  read: () => Promise<any[]>;
+  read: (tagYear?: number) => Promise<any[]>;
   /** The amounts table that hangs off it. */
   amounts: any;
   /** What the amount row calls its parent. */
@@ -36,28 +48,32 @@ function tablesFor(prisma: PrismaClient): TableSpec[] {
   {
     label: 'inter_account',
     columns: INTER_ACCOUNT_COLUMNS,
-    read: () => prisma.interAccount.findMany(),
+    read: (tagYear?: number) =>
+      prisma.interAccount.findMany({ where: tagYear ? { tagYear } : {} }),
     amounts: () => prisma.interAccountAmount,
     parentKey: 'interAccountId',
   } as any,
   {
     label: 'sales_records',
     columns: SALES_RECORD_COLUMNS,
-    read: () => prisma.salesRecord.findMany(),
+    read: (tagYear?: number) =>
+      prisma.salesRecord.findMany({ where: tagYear ? { tagYear } : {} }),
     amounts: () => prisma.salesRecordAmount,
     parentKey: 'salesRecordId',
   } as any,
   {
     label: 'account_receivables',
     columns: ACCOUNT_RECEIVABLE_COLUMNS,
-    read: () => prisma.accountReceivable.findMany(),
+    read: (tagYear?: number) =>
+      prisma.accountReceivable.findMany({ where: tagYear ? { tagYear } : {} }),
     amounts: () => prisma.accountReceivableAmount,
     parentKey: 'accountReceivableId',
   } as any,
   {
     label: 'account_payables',
     columns: ACCOUNT_PAYABLE_COLUMNS,
-    read: () => prisma.accountPayable.findMany(),
+    read: (tagYear?: number) =>
+      prisma.accountPayable.findMany({ where: tagYear ? { tagYear } : {} }),
     amounts: () => prisma.accountPayableAmount,
     parentKey: 'accountPayableId',
   } as any,
@@ -74,8 +90,11 @@ async function resolveAccounts(prisma: PrismaClient, labels: string[]) {
   return { byLabel, unknown };
 }
 
-export async function backfillAccountAmounts(prisma: PrismaClient) {
-  console.log('🔗 Linking finance columns to internal accounts...\n');
+export async function backfillAccountAmounts(prisma: PrismaClient, options: BackfillOptions = {}) {
+  const replace = options.replace ?? process.env.BACKFILL_REPLACE_EXISTING === '1';
+  const { tagYear } = options;
+  const scope = tagYear ? ` for ${tagYear}` : '';
+  console.log(`🔗 Linking finance columns to internal accounts${scope}...\n`);
 
   const TABLES = tablesFor(prisma);
   const labels = [...new Set(TABLES.flatMap((t) => Object.values(t.columns)))];
@@ -85,8 +104,12 @@ export async function backfillAccountAmounts(prisma: PrismaClient) {
 
   for (const table of TABLES) {
     const amounts = (table as any).amounts();
-    const existing = await amounts.count();
-    if (existing > 0 && !REPLACE) {
+    const parents = await table.read(tagYear);
+    const parentIds = parents.map((p: any) => p.id);
+    const scoped = tagYear ? { [table.parentKey]: { in: parentIds } } : {};
+
+    const existing = await amounts.count({ where: scoped });
+    if (existing > 0 && !replace) {
       console.log(
         `⏭️  ${table.label}: ${existing} linked row(s) already there, left alone.` +
           ' Use BACKFILL_REPLACE_EXISTING=1 to rebuild them.',
@@ -94,7 +117,7 @@ export async function backfillAccountAmounts(prisma: PrismaClient) {
       continue;
     }
 
-    const rows = await table.read();
+    const rows = parents;
     const lines: any[] = [];
     const missingWithData = new Set<string>();
 
@@ -123,18 +146,32 @@ export async function backfillAccountAmounts(prisma: PrismaClient) {
       continue;
     }
 
-    if (existing > 0) await amounts.deleteMany();
+    if (existing > 0) {
+      // Only the accounts this table has a column for. A row pointing at an
+      // account with no column - a bank a new workbook brought in - cannot be
+      // derived from the columns again, so rebuilding must not take it.
+      const derivable = [...new Set(Object.values(table.columns))]
+        .map((name) => byLabel.get(name))
+        .filter((id): id is bigint => id !== undefined);
+      const removed = await amounts.deleteMany({
+        where: { ...scoped, internalAccountId: { in: derivable } },
+      });
+      const kept = existing - removed.count;
+      if (kept > 0) {
+        console.log(`   ${kept} row(s) kept: their account has no column to rebuild from.`);
+      }
+    }
     for (let i = 0; i < lines.length; i += 1000) {
       await amounts.createMany({ data: lines.slice(i, i + 1000) });
     }
-    console.log(`✅ ${table.label}: ${lines.length} amount(s) linked from ${rows.length} row(s).`);
+    console.log(`✅ ${table.label}: ${lines.length} amount(s) linked from ${rows.length} row(s)${scope}.`);
   }
 
   if (unknown.length > 0) {
     console.log(`\nℹ️  No internal account for: ${unknown.join(', ')} — no figures use them.`);
   }
 
-  await verify(prisma);
+  await verify(prisma, tagYear);
   if (failed) throw new Error('Some columns name an account that does not exist.');
 }
 
@@ -142,13 +179,13 @@ export async function backfillAccountAmounts(prisma: PrismaClient) {
  * Adds the columns up one way and the linked rows up the other. The two totals
  * have to agree per account, or the copy lost something.
  */
-async function verify(prisma: PrismaClient) {
+async function verify(prisma: PrismaClient, tagYear?: number) {
   console.log('\n🔍 Checking the totals match, account by account:');
   let bad = 0;
 
   for (const table of tablesFor(prisma)) {
     const amounts = (table as any).amounts();
-    const rows = await table.read();
+    const rows = await table.read(tagYear);
     const fromColumns = new Map<string, Prisma.Decimal>();
 
     for (const row of rows) {
@@ -162,6 +199,7 @@ async function verify(prisma: PrismaClient) {
     const grouped = await amounts.groupBy({
       by: ['internalAccountId'],
       _sum: { amount: true },
+      where: tagYear ? { [table.parentKey]: { in: rows.map((r: any) => r.id) } } : {},
     });
     const accounts = await prisma.internalAccount.findMany();
     const nameById = new Map(accounts.map((a) => [a.id.toString(), a.holderName + (a.branch ? ` ${a.branch}` : '')]));

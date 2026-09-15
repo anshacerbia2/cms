@@ -17,7 +17,7 @@ export async function seedFinance(prisma: PrismaClient) {
   // 2025, because seedSales owns that year and later years have their own
   // seeders; an unscoped delete here would wipe them.
   await prisma.salesRecord.deleteMany({ where: { tagYear: 2025 } });
-  await prisma.accountReceivable.deleteMany();
+  await prisma.accountReceivable.deleteMany({ where: { tagYear: 2025 } });
   await prisma.financeRevenue.deleteMany();
   await prisma.financeExpense.deleteMany();
   await prisma.profitLossSummary.deleteMany();

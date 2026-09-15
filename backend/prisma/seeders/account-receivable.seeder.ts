@@ -7,8 +7,15 @@ import {
   isRowEmpty,
 } from './utils/excel';
 
+/**
+ * The year this seeder owns. Its clear-down is scoped to it, because later
+ * years are loaded by their own seeders and an unscoped delete here would take
+ * them with it.
+ */
+const TAG_YEAR = 2025;
+
 export async function seedAccountReceivable(prisma: PrismaClient) {
-  await prisma.accountReceivable.deleteMany();
+  await prisma.accountReceivable.deleteMany({ where: { tagYear: TAG_YEAR } });
   
   const filePath = path.join(process.cwd(), 'prisma', 'seed-data', 'account-receiveable.xlsx');
   const workbook = XLSX.readFile(filePath);
@@ -43,7 +50,7 @@ export async function seedAccountReceivable(prisma: PrismaClient) {
       colQ: cleanString(row[16]),   
       colR: cleanCurrency(row[17]), // OUTSTANDING IDR
       colS: cleanCurrency(row[18]), // OUTSTANDING USD
-      tagYear: 2025,
+      tagYear: TAG_YEAR,
     });
   }
 

@@ -8,8 +8,18 @@ import {
   excelDateToJSDate,
 } from './utils/excel';
 
+/**
+ * The year this seeder owns. Its clear-down is scoped to it, because later
+ * years are loaded by their own seeders and an unscoped delete here would take
+ * them with it.
+ */
+const TAG_YEAR = 2025;
+
 export async function seedAccountPayable(prisma: PrismaClient) {
-  await prisma.accountPayable.deleteMany();
+  await prisma.accountPayable.deleteMany({ where: { tagYear: TAG_YEAR } });
+  // No fiscal year on this one to scope by. It is empty in every database and
+  // the only code that filled it is commented out below, so there is nothing
+  // here for an unscoped delete to take.
   await prisma.taxLedger.deleteMany();
   
   const filePath = path.join(process.cwd(), 'prisma', 'seed-data', 'account-payable.xlsx');
@@ -48,7 +58,7 @@ export async function seedAccountPayable(prisma: PrismaClient) {
         colT: cleanString(row[19]),          // col T (Blank, string)
         colU: cleanCurrency(row[20]),        // Outstanding IDR
         colV: cleanCurrency(row[21]),        // Outstanding USD
-        tagYear: 2025,
+        tagYear: TAG_YEAR,
       });
     }
     await prisma.accountPayable.createMany({ data: ap });
