@@ -54,6 +54,24 @@ export default function DepreciationPage() {
   const [depYearFilter, setDepYearFilter] = useState(new Date().getFullYear().toString());
   const yearNum = useMemo(() => Number(depYearFilter), [depYearFilter]);
 
+  /**
+   * The three accumulation columns are named after the year on screen. They had
+   * 2024 and 2025 written into them, which stopped being true the moment 2026
+   * was loaded - and the same column would then claim two different years
+   * depending on which page you read.
+   */
+  const yearLabels = useMemo(() => {
+    if (depYearFilter === "all") {
+      return { prev: "S/D Tahun Lalu", current: "Total Tahun Ini", accumulated: "S/D Tahun Ini" };
+    }
+    return {
+      prev: `S/D ${yearNum - 1}`,
+      current: `Total ${yearNum}`,
+      accumulated: `S/D ${yearNum}`,
+    };
+  }, [depYearFilter, yearNum]);
+
+
   const availableYears = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const years = [];
@@ -72,7 +90,7 @@ export default function DepreciationPage() {
     'assetName',
     'purchasePrice',
     'usefulLife',
-    'accumulated2020'
+    'accumulatedPrev'
   ], []);
 
   const COLUMN_WIDTHS = useMemo<Record<string, number>>(() => ({
@@ -82,7 +100,7 @@ export default function DepreciationPage() {
     assetName: 320,
     purchasePrice: 200,
     usefulLife: 120,
-    accumulated2020: 200,
+    accumulatedPrev: 200,
   }), []);
 
   const getStickyStyle = (colKey: string, isHeader = false) => {
@@ -178,7 +196,7 @@ export default function DepreciationPage() {
       assetName: row.colC || "-",
       purchasePrice: formatCurrency(row.colD),
       usefulLife: row.colE || 0,
-      accumulated2020: formatCurrency(row.colF),
+      accumulatedPrev: formatCurrency(row.colF),
       jan: formatCurrency(row.colG),
       feb: formatCurrency(row.colH),
       mar: formatCurrency(row.colI),
@@ -191,8 +209,8 @@ export default function DepreciationPage() {
       oct: formatCurrency(row.colP),
       nov: formatCurrency(row.colQ),
       dec: formatCurrency(row.colR),
-      total2021: formatCurrency(row.colS),
-      accumulated2021: formatCurrency(row.colT),
+      totalCurrent: formatCurrency(row.colS),
+      accumulatedCurrent: formatCurrency(row.colT),
       bookValue: formatCurrency(row.colU),
     }));
   }, [allAssetsRaw]);
@@ -258,9 +276,9 @@ export default function DepreciationPage() {
     return filteredAndSortedData.reduce((acc: any, curr: any) => {
       const nextAcc: any = {
         purchasePrice: acc.purchasePrice.plus(new Decimal(cleanAmount(curr.purchasePrice))),
-        accumulated2020: acc.accumulated2020.plus(new Decimal(cleanAmount(curr.accumulated2020))),
-        total2021: acc.total2021.plus(new Decimal(cleanAmount(curr.total2021))),
-        accumulated2021: acc.accumulated2021.plus(new Decimal(cleanAmount(curr.accumulated2021))),
+        accumulatedPrev: acc.accumulatedPrev.plus(new Decimal(cleanAmount(curr.accumulatedPrev))),
+        totalCurrent: acc.totalCurrent.plus(new Decimal(cleanAmount(curr.totalCurrent))),
+        accumulatedCurrent: acc.accumulatedCurrent.plus(new Decimal(cleanAmount(curr.accumulatedCurrent))),
         bookValue: acc.bookValue.plus(new Decimal(cleanAmount(curr.bookValue))),
       };
       months.forEach(m => {
@@ -268,8 +286,8 @@ export default function DepreciationPage() {
       });
       return nextAcc;
     }, { 
-      purchasePrice: new Decimal(0), accumulated2020: new Decimal(0), 
-      total2021: new Decimal(0), accumulated2021: new Decimal(0), bookValue: new Decimal(0) 
+      purchasePrice: new Decimal(0), accumulatedPrev: new Decimal(0), 
+      totalCurrent: new Decimal(0), accumulatedCurrent: new Decimal(0), bookValue: new Decimal(0) 
     });
   }, [filteredAndSortedData]);
 
@@ -278,9 +296,9 @@ export default function DepreciationPage() {
     return paginatedAssets.reduce((acc: any, curr: any) => {
       const nextAcc: any = {
         purchasePrice: acc.purchasePrice.plus(new Decimal(cleanAmount(curr.purchasePrice))),
-        accumulated2020: acc.accumulated2020.plus(new Decimal(cleanAmount(curr.accumulated2020))),
-        total2021: acc.total2021.plus(new Decimal(cleanAmount(curr.total2021))),
-        accumulated2021: acc.accumulated2021.plus(new Decimal(cleanAmount(curr.accumulated2021))),
+        accumulatedPrev: acc.accumulatedPrev.plus(new Decimal(cleanAmount(curr.accumulatedPrev))),
+        totalCurrent: acc.totalCurrent.plus(new Decimal(cleanAmount(curr.totalCurrent))),
+        accumulatedCurrent: acc.accumulatedCurrent.plus(new Decimal(cleanAmount(curr.accumulatedCurrent))),
         bookValue: acc.bookValue.plus(new Decimal(cleanAmount(curr.bookValue))),
       };
       months.forEach(m => {
@@ -288,8 +306,8 @@ export default function DepreciationPage() {
       });
       return nextAcc;
     }, { 
-      purchasePrice: new Decimal(0), accumulated2020: new Decimal(0), 
-      total2021: new Decimal(0), accumulated2021: new Decimal(0), bookValue: new Decimal(0) 
+      purchasePrice: new Decimal(0), accumulatedPrev: new Decimal(0), 
+      totalCurrent: new Decimal(0), accumulatedCurrent: new Decimal(0), bookValue: new Decimal(0) 
     });
   }, [paginatedAssets]);
 
@@ -437,12 +455,12 @@ export default function DepreciationPage() {
                     </div>
                   </div>
                 </TableHead>
-                <TableHead className={cn("w-44 px-4 text-right group select-none", getStickyClass("accumulated2020", "header"))} style={getStickyStyle("accumulated2020", true)}>
+                <TableHead className={cn("w-44 px-4 text-right group select-none", getStickyClass("accumulatedPrev", "header"))} style={getStickyStyle("accumulatedPrev", true)}>
                   <div className="flex items-center justify-between gap-1 w-full">
-                    <span className="text-right w-full">S/D 2024</span>
+                    <span className="text-right w-full">{yearLabels.prev}</span>
                     <div className="flex items-center gap-0.5 shrink-0">
-                      <ExcelColumnFilter columnKey="accumulated2020" label="S/D 2024" data={getCascadingData("accumulated2020")} activeFilters={filters["accumulated2020"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, accumulated2020: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "accumulated2020", direction: d}); setPage(1); }} />
-                      {renderPinButton("accumulated2020")}
+                      <ExcelColumnFilter columnKey="accumulatedPrev" label={yearLabels.prev} data={getCascadingData("accumulatedPrev")} activeFilters={filters["accumulatedPrev"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, accumulatedPrev: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "accumulatedPrev", direction: d}); setPage(1); }} />
+                      {renderPinButton("accumulatedPrev")}
                     </div>
                   </div>
                 </TableHead>
@@ -454,10 +472,10 @@ export default function DepreciationPage() {
                 ))}
 
                 <TableHead className="w-44 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">Total 2025 <ExcelColumnFilter columnKey="total2021" label="Total 2025" data={getCascadingData("total2021")} activeFilters={filters["total2021"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, total2021: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "total2021", direction: d}); setPage(1); }} /></div>
+                  <div className="flex items-center justify-end gap-1">{yearLabels.current} <ExcelColumnFilter columnKey="totalCurrent" label={yearLabels.current} data={getCascadingData("totalCurrent")} activeFilters={filters["totalCurrent"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, totalCurrent: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "totalCurrent", direction: d}); setPage(1); }} /></div>
                 </TableHead>
                 <TableHead className="w-44 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1">S/D 2025 <ExcelColumnFilter columnKey="accumulated2021" label="S/D 2025" data={getCascadingData("accumulated2021")} activeFilters={filters["accumulated2021"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, accumulated2021: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "accumulated2021", direction: d}); setPage(1); }} /></div>
+                  <div className="flex items-center justify-end gap-1">{yearLabels.accumulated} <ExcelColumnFilter columnKey="accumulatedCurrent" label={yearLabels.accumulated} data={getCascadingData("accumulatedCurrent")} activeFilters={filters["accumulatedCurrent"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, accumulatedCurrent: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "accumulatedCurrent", direction: d}); setPage(1); }} /></div>
                 </TableHead>
                 <TableHead className="w-44 px-4 text-right">
                   <div className="flex items-center justify-end gap-1">Book Value <ExcelColumnFilter columnKey="bookValue" label="Book Value" data={getCascadingData("bookValue")} activeFilters={filters["bookValue"]} onFilterChange={(v: Set<string> | null) => { setFilters(p => ({...p, bookValue: v})); setPage(1); }} currentSort={sort} onSort={(d: 'asc' | 'desc') => { setSort({key: "bookValue", direction: d}); setPage(1); }} /></div>
@@ -496,14 +514,14 @@ export default function DepreciationPage() {
                       <TableCell className={cn("px-4 w-80 font-bold text-primary whitespace-normal break-words", getStickyClass("assetName", "body"))} style={getStickyStyle("assetName")}>{row.assetName}</TableCell>
                       <TableCell className={cn("px-4 w-44 text-right", getStickyClass("purchasePrice", "body"))} style={getStickyStyle("purchasePrice")}>{row.purchasePrice}</TableCell>
                       <TableCell className={cn("px-4 w-24 text-center font-medium", getStickyClass("usefulLife", "body"))} style={getStickyStyle("usefulLife")}><span className="opacity-60">{row.usefulLife}</span></TableCell>
-                      <TableCell className={cn("px-4 w-44 text-right", getStickyClass("accumulated2020", "body"))} style={getStickyStyle("accumulated2020")}>{row.accumulated2020}</TableCell>
+                      <TableCell className={cn("px-4 w-44 text-right", getStickyClass("accumulatedPrev", "body"))} style={getStickyStyle("accumulatedPrev")}>{row.accumulatedPrev}</TableCell>
                       
                       {months.map(m => (
                         <TableCell key={m} className="px-4 w-32 text-right">{row[m]}</TableCell>
                       ))}
 
-                      <TableCell className="px-4 w-44 text-right font-bold">{row.total2021}</TableCell>
-                      <TableCell className="px-4 w-44 text-right font-bold">{row.accumulated2021}</TableCell>
+                      <TableCell className="px-4 w-44 text-right font-bold">{row.totalCurrent}</TableCell>
+                      <TableCell className="px-4 w-44 text-right font-bold">{row.accumulatedCurrent}</TableCell>
                       <TableCell className="px-4 w-44 text-right font-black text-primary">{row.bookValue}</TableCell>
                       <TableCell className="px-4 text-center pr-8">
                         <div className="flex items-center justify-center gap-1 transition-opacity">
@@ -536,14 +554,14 @@ export default function DepreciationPage() {
                     <TableCell className={cn("py-3 w-80", getStickyClass("assetName", "subtotal"))} style={getStickyStyle("assetName")} />
                     <TableCell className={cn(`py-3 text-right pr-4 whitespace-nowrap w-44 ${getAmountColor(assetPageSubtotals.purchasePrice.toString())}`, getStickyClass("purchasePrice", "subtotal"))} style={getStickyStyle("purchasePrice")}>{formatCurrency(assetPageSubtotals.purchasePrice.toString())}</TableCell>
                     <TableCell className={cn("py-3 w-24", getStickyClass("usefulLife", "subtotal"))} style={getStickyStyle("usefulLife")} />
-                    <TableCell className={cn(`py-3 text-right pr-4 whitespace-nowrap w-44 ${getAmountColor(assetPageSubtotals.accumulated2020.toString())}`, getStickyClass("accumulated2020", "subtotal"))} style={getStickyStyle("accumulated2020")}>{formatCurrency(assetPageSubtotals.accumulated2020.toString())}</TableCell>
+                    <TableCell className={cn(`py-3 text-right pr-4 whitespace-nowrap w-44 ${getAmountColor(assetPageSubtotals.accumulatedPrev.toString())}`, getStickyClass("accumulatedPrev", "subtotal"))} style={getStickyStyle("accumulatedPrev")}>{formatCurrency(assetPageSubtotals.accumulatedPrev.toString())}</TableCell>
                     
                     {months.map(m => (
                       <TableCell key={m} className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetPageSubtotals[m].toString())}`}>{formatCurrency(assetPageSubtotals[m].toString())}</TableCell>
                     ))}
 
-                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetPageSubtotals.total2021.toString())}`}>{formatCurrency(assetPageSubtotals.total2021.toString())}</TableCell>
-                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetPageSubtotals.accumulated2021.toString())}`}>{formatCurrency(assetPageSubtotals.accumulated2021.toString())}</TableCell>
+                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetPageSubtotals.totalCurrent.toString())}`}>{formatCurrency(assetPageSubtotals.totalCurrent.toString())}</TableCell>
+                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetPageSubtotals.accumulatedCurrent.toString())}`}>{formatCurrency(assetPageSubtotals.accumulatedCurrent.toString())}</TableCell>
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetPageSubtotals.bookValue.toString())}`}>{formatCurrency(assetPageSubtotals.bookValue.toString())}</TableCell>
                     <TableCell className="py-3 bg-secondary/[0.02] pr-8" />
                   </TableRow>
@@ -558,14 +576,14 @@ export default function DepreciationPage() {
                     <TableCell className={cn("py-3 w-80", getStickyClass("assetName", "grandtotal"))} style={getStickyStyle("assetName")} />
                     <TableCell className={cn(`py-3 text-right pr-4 whitespace-nowrap w-44 ${getAmountColor(assetGrandTotals.purchasePrice.toString())}`, getStickyClass("purchasePrice", "grandtotal"))} style={getStickyStyle("purchasePrice")}>{formatCurrency(assetGrandTotals.purchasePrice.toString())}</TableCell>
                     <TableCell className={cn("py-3 w-24", getStickyClass("usefulLife", "grandtotal"))} style={getStickyStyle("usefulLife")} />
-                    <TableCell className={cn(`py-3 text-right pr-4 whitespace-nowrap w-44 ${getAmountColor(assetGrandTotals.accumulated2020.toString())}`, getStickyClass("accumulated2020", "grandtotal"))} style={getStickyStyle("accumulated2020")}>{formatCurrency(assetGrandTotals.accumulated2020.toString())}</TableCell>
+                    <TableCell className={cn(`py-3 text-right pr-4 whitespace-nowrap w-44 ${getAmountColor(assetGrandTotals.accumulatedPrev.toString())}`, getStickyClass("accumulatedPrev", "grandtotal"))} style={getStickyStyle("accumulatedPrev")}>{formatCurrency(assetGrandTotals.accumulatedPrev.toString())}</TableCell>
                     
                     {months.map(m => (
                       <TableCell key={m} className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetGrandTotals[m].toString())}`}>{formatCurrency(assetGrandTotals[m].toString())}</TableCell>
                     ))}
 
-                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetGrandTotals.total2021.toString())}`}>{formatCurrency(assetGrandTotals.total2021.toString())}</TableCell>
-                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetGrandTotals.accumulated2021.toString())}`}>{formatCurrency(assetGrandTotals.accumulated2021.toString())}</TableCell>
+                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetGrandTotals.totalCurrent.toString())}`}>{formatCurrency(assetGrandTotals.totalCurrent.toString())}</TableCell>
+                    <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetGrandTotals.accumulatedCurrent.toString())}`}>{formatCurrency(assetGrandTotals.accumulatedCurrent.toString())}</TableCell>
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(assetGrandTotals.bookValue.toString())}`}>{formatCurrency(assetGrandTotals.bookValue.toString())}</TableCell>
                     <TableCell className="py-3 bg-secondary/[0.02] pr-8" />
                   </TableRow>
@@ -625,10 +643,10 @@ export default function DepreciationPage() {
           { label: "Description", value: selectedViewRecord?.assetName },
           { label: "Purchase Price", value: selectedViewRecord?.purchasePrice },
           { label: "Month", value: selectedViewRecord?.usefulLife },
-          { label: "S/D 2024", value: selectedViewRecord?.accumulated2020 },
+          { label: yearLabels.prev, value: selectedViewRecord?.accumulatedPrev },
           ...months.map((m) => ({ label: m.toUpperCase(), value: selectedViewRecord?.[m] })),
-          { label: "Total 2025", value: selectedViewRecord?.total2021 },
-          { label: "S/D 2025", value: selectedViewRecord?.accumulated2021 },
+          { label: yearLabels.current, value: selectedViewRecord?.totalCurrent },
+          { label: yearLabels.accumulated, value: selectedViewRecord?.accumulatedCurrent },
           { label: "Book Value", value: selectedViewRecord?.bookValue },
         ]}
       />
