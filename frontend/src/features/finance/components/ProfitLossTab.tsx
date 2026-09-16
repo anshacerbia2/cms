@@ -168,8 +168,8 @@ export function ProfitLossTab() {
     const iconMap: Record<string, any> = {
       "NET SALES": DollarSign,
       "GROSS PROFIT": TrendingUp,
-      "OPERATING PROFIT": PieChart,
       "PROFIT AFTER TAX": TrendingUp,
+      "AR DEPOSIT TO VENDOR": PieChart,
     };
 
     return plData.summaryCards.map((card: any) => {
@@ -178,10 +178,10 @@ export function ProfitLossTab() {
         subValue = `${formatCurrency(card.grossValue)} gross`;
       } else if (card.title === "GROSS PROFIT") {
         subValue = `${card.margin}% margin`;
-      } else if (card.title === "OPERATING PROFIT") {
-        subValue = `${formatCurrency(card.opexValue)} opex`;
       } else if (card.title === "PROFIT AFTER TAX") {
         subValue = `${card.netMargin}% net margin`;
+      } else if (card.title === "AR DEPOSIT TO VENDOR") {
+        subValue = `${card.tx} ${card.tx === 1 ? "entry" : "entries"}`;
       }
 
       return {

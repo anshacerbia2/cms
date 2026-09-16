@@ -344,6 +344,20 @@ export class FinanceReportService {
       }
     }
 
+    // The money sitting with vendors, read the way the balance sheet reads it:
+    // the receivable rows of that type, at their outstanding balance.
+    const depositRows = await this.prisma.accountReceivable.findMany({
+      where: {
+        ...(yearNum ? { tagYear: yearNum } : {}),
+        colB: { contains: 'ar deposit to vendor', mode: 'insensitive' },
+      },
+      select: { colR: true },
+    });
+    const depositToVendor = depositRows.reduce(
+      (total, row) => total.plus(new Prisma.Decimal(row.colR || 0)),
+      new Prisma.Decimal(0),
+    );
+
     return {
       summaryCards: [
         {
@@ -359,16 +373,16 @@ export class FinanceReportService {
           color: "text-emerald-500"
         },
         {
-          title: "OPERATING PROFIT",
-          value: formatDecimal(operatingProfit),
-          opexValue: formatDecimal(operatingExpenses),
-          color: "text-blue-500"
-        },
-        {
           title: "PROFIT AFTER TAX",
           value: formatDecimal(netProfit),
           netMargin: netSales.isZero() ? "0.0000" : netProfit.div(netSales).times(100).toFixed(4),
           color: "text-indigo-500"
+        },
+        {
+          title: "AR DEPOSIT TO VENDOR",
+          value: formatDecimal(depositToVendor),
+          tx: depositRows.length,
+          color: "text-amber-600"
         }
       ],
       tableData,
