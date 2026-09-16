@@ -1490,14 +1490,26 @@ export class FinanceReportService {
     }
 
 
-    // Depreciation & Amortization (Hardcoded)
-    const deprAmortVal = new Prisma.Decimal('-1183894353.6667');
+    // Accumulated depreciation, as a contra-asset: what has been written off
+    // these assets to the end of this year. It was a constant in the code -
+    // 2025's figure, copied from a report and left there, so every later year
+    // understated the write-off by exactly its own year's depreciation.
+    //
+    // colF carries the accumulation to the end of last year and colS this
+    // year's charge, which is the same column the P&L reads for its
+    // Depreciation line. The two reports therefore cannot disagree.
+    const deprAmortVal = depreciationRaw
+      .reduce(
+        (acc, r) => acc.plus(new Prisma.Decimal(r.colF || 0)).plus(new Prisma.Decimal(r.colS || 0)),
+        new Prisma.Decimal(0),
+      )
+      .negated();
     totalBookValue = totalBookValue.plus(deprAmortVal);
     fixedAssetItems.push({
       accountName: 'Depreciation & Amortization',
       idr: formatDecimal(deprAmortVal),
       code: '1604',
-      tx: 0
+      tx: depreciationRaw.length
     });
 
 
