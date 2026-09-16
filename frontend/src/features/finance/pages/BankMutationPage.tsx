@@ -74,6 +74,23 @@ import { toast } from "sonner";
 import { useBankMutation } from "../hooks/useBankMutation";
 import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
+/**
+ * What to call an account in the picker.
+ *
+ * The brand alone is ambiguous: three of them have two accounts each, and two
+ * of those carry no account number to tell them apart. The branch is what
+ * separates them, so it is part of the name - taken from the account's own
+ * display name where one is set, and composed from brand and branch otherwise.
+ */
+function accountLabel(acc: any): string {
+  if (!acc) return "Select Account";
+  if (acc.displayName?.trim()) return acc.displayName.trim();
+  if (acc.type === "CASH") return acc.branch?.trim() ? `CASH ${acc.branch.trim()}` : "CASH";
+  const brand = acc.bank?.bankBrand ?? acc.holderName ?? "";
+  const branch = acc.branch?.trim();
+  return [brand, branch].filter(Boolean).join(" ") || "Select Account";
+}
+
 export default function BankMutationPage() {
   const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
   const [ledgerYearFilter, setLedgerYearFilter] = useState(new Date().getFullYear().toString());
@@ -539,9 +556,7 @@ export default function BankMutationPage() {
                        {selectedAccount?.type || "TYPE"}
                          </span>
                      <span className="text-[12px] font-extrabold text-muted-foreground truncate text-left">
-                       {selectedAccount?.type === 'CASH' 
-                         ? "CASH" 
-                         : (selectedAccount?.bank?.bankBrand || selectedAccount?.holderName || "Select Account")}
+                       {accountLabel(selectedAccount)}
                      </span>
                    </div>
                    {selectedAccount?.accountNo && (
@@ -565,7 +580,7 @@ export default function BankMutationPage() {
                         {acc.type}
                       </span>
                       <span className="font-bold text-[12px] tracking-tight">
-                        {acc.type === 'CASH' ? "CASH" : (acc.bank?.bankBrand || acc.holderName)}
+                        {accountLabel(acc)}
                       </span>
                     </div>
                     {acc.accountNo && (
@@ -686,14 +701,14 @@ export default function BankMutationPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden w-40">
               <DropdownMenuItem 
-                onClick={() => downloadExcelFile(`/bank-mutation/export/excel?accountId=${selectedAccount?.id}&year=${ledgerYearFilter}${ledgerStartDate ? `&startDate=${format(ledgerStartDate, 'yyyy-MM-dd')}` : ''}${ledgerEndDate ? `&endDate=${format(ledgerEndDate, 'yyyy-MM-dd')}` : ''}`, `Bank_Statement_${selectedAccount?.bank?.bankBrand || selectedAccount?.holderName || 'Account'}_${ledgerYearFilter !== 'all' ? ledgerYearFilter : 'All'}.xlsx`)}
+                onClick={() => downloadExcelFile(`/bank-mutation/export/excel?accountId=${selectedAccount?.id}&year=${ledgerYearFilter}${ledgerStartDate ? `&startDate=${format(ledgerStartDate, 'yyyy-MM-dd')}` : ''}${ledgerEndDate ? `&endDate=${format(ledgerEndDate, 'yyyy-MM-dd')}` : ''}`, `Bank_Statement_${accountLabel(selectedAccount).replace(/\s+/g, '_')}_${ledgerYearFilter !== 'all' ? ledgerYearFilter : 'All'}.xlsx`)}
                 className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-emerald-600 transition-colors flex items-center gap-2"
               >
                 <FileSpreadsheet size={16} strokeWidth={2.5} />
                 Export Excel
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => downloadPdfFile(`/bank-mutation/export/pdf?accountId=${selectedAccount?.id}&year=${ledgerYearFilter}${ledgerStartDate ? `&startDate=${format(ledgerStartDate, 'yyyy-MM-dd')}` : ''}${ledgerEndDate ? `&endDate=${format(ledgerEndDate, 'yyyy-MM-dd')}` : ''}`, `Bank_Statement_${selectedAccount?.bank?.bankBrand || selectedAccount?.holderName || 'Account'}_${ledgerYearFilter !== 'all' ? ledgerYearFilter : 'All'}.pdf`)}
+                onClick={() => downloadPdfFile(`/bank-mutation/export/pdf?accountId=${selectedAccount?.id}&year=${ledgerYearFilter}${ledgerStartDate ? `&startDate=${format(ledgerStartDate, 'yyyy-MM-dd')}` : ''}${ledgerEndDate ? `&endDate=${format(ledgerEndDate, 'yyyy-MM-dd')}` : ''}`, `Bank_Statement_${accountLabel(selectedAccount).replace(/\s+/g, '_')}_${ledgerYearFilter !== 'all' ? ledgerYearFilter : 'All'}.pdf`)}
                 className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-rose-600 transition-colors flex items-center gap-2"
               >
                 <FileText size={16} strokeWidth={2.5} />
