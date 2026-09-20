@@ -896,7 +896,7 @@ export default function BankMutationPage() {
                               <Edit2 size={12} strokeWidth={2.5} />
                             </Button>
                           )}
-                          {can('bank-mutation.create') && !isPeriodClosed && (
+                          {can('bank-mutation.create') && (
                             <Button
                               variant="ghost"
                               size="icon"
