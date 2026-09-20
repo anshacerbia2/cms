@@ -12,6 +12,7 @@ import { seedSales } from './sales.seeder';
 import { seedAccountReceivable } from './account-receivable.seeder';
 import { seedAccountPayable } from './account-payable.seeder';
 import { seedPpnInOut } from './ppn-in-out.seeder';
+import { applyAdjustments } from './adjustments';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -113,6 +114,9 @@ async function main() {
     for (const seeder of chosen) {
       await seeder.run(prisma);
     }
+
+    // Terakhir, karena ia menyunting baris yang baru saja dimuat ulang.
+    await applyAdjustments(prisma, tables);
 
     console.log(`🚀 ${FISCAL_YEAR} seeding completed successfully.`);
   } catch (error) {

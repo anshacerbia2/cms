@@ -1,0 +1,34 @@
+{
+  "year": 2025,
+  "note": "Suntingan yang dibuat lewat aplikasi pada baris yang berasal dari workbook. Baris yang DITAMBAH lewat aplikasi tidak perlu ada di sini - kolom `source` yang menjaganya. Berkas ini hanya untuk nilai yang diubah pada baris milik seeder, karena baris itu dimuat ulang setiap seed.",
+  "edits": [
+    {
+      "table": "account_receivables",
+      "position": 879,
+      "why": "Selisih BuPot Prepaid Tax PPh-23: Lap Keu Internal 661.753.441 vs CoreTax 660.377.899, selisih 1.375.542. Sepasang dengan jurnal di financial_transactions id 7934-7935.",
+      "match": { "colB": "AR Prepaid Tax", "colR": "661753441" },
+      "set": { "colO": "-660377899", "colR": "660377899" }
+    },
+    {
+      "table": "account_receivables",
+      "position": 905,
+      "why": "Temporary Notes Intrareps dinolkan.",
+      "match": { "colB": "AR Temporary Notes", "colR": "32854000" },
+      "set": { "colC": null, "colD": null, "colO": "0", "colR": "0" }
+    },
+    {
+      "table": "account_receivables",
+      "position": 989,
+      "why": "PLN IP Energy Business Forum 2025 - nilai tagihan dinaikkan.",
+      "match": { "colB": "AR Trade", "colF": "250000000" },
+      "set": { "colF": "277500000" }
+    },
+    {
+      "table": "account_payables",
+      "position": 35,
+      "why": "Sisa hutang disesuaikan.",
+      "match": { "colM": "1718342", "colU": "1846030" },
+      "set": { "colM": "0", "colU": "127688" }
+    }
+  ]
+}
