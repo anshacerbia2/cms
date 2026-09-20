@@ -2,30 +2,28 @@ import { PrismaClient } from '@prisma/client';
 import { FISCAL_YEAR } from './layout';
 
 /**
- * Merapikan baris lama supaya seeder bisa bekerja, tanpa perintah terpisah.
+ * Menandai asal baris lama supaya seeder tahu mana miliknya.
  *
- * Dua kolom ditambahkan setelah data ini terlanjur ada, jadi baris lama tidak
- * punya isinya: `row_no` (urutan tampilan) dan `source` (siapa yang menaruh
- * baris itu). Dulu keduanya diisi lewat skrip backfill sendiri-sendiri, yang
- * artinya seed ulang bergantung pada seseorang ingat menjalankan dua perintah
- * lebih dulu. Sekarang dikerjakan di sini, sekali, saat pertama kali dibutuhkan.
+ * Kolom `source` ditambahkan setelah data ini terlanjur ada, jadi baris lama
+ * berlabel APP semua - dan dalam keadaan itu seed ulang tidak menghapus apa pun
+ * lalu memuat workbook di atasnya, menggandakan tahun itu. Dulu ini dikerjakan
+ * lewat perintah backfill terpisah, yang artinya seed ulang bergantung pada
+ * seseorang ingat menjalankannya dulu. Sekarang dikerjakan di sini, sekali.
  *
- * Keduanya hanya menyentuh yang masih kosong, jadi aman dipanggil setiap kali.
+ * `row_no` tidak perlu diurus di sini: baris workbook mendapat nomornya saat
+ * dimuat, dan baris aplikasi yang selamat dinomori ulang di ujung barisan.
  */
 
-/** Tabel yang ditulis seeder, dipetakan ke nama tabel di database. */
-const TABLES: Record<string, string> = {
-  financial_transactions: 'financial_transactions',
-  sales_records: 'sales_records',
-  depreciation: 'depreciation',
-  inter_account: 'inter_account',
-  account_receivables: 'account_receivables',
-  account_payables: 'account_payables',
-  ppn_in_out: 'ppn_in_out',
-};
-
-/** Jarak antar nomor baris, sama dengan yang dipakai seeder dan aplikasi. */
-const ROW_NO_GAP = 1000;
+/** Tabel yang punya kolom `source`. `fiscal_periods` tidak, dan tidak perlu. */
+const MARKED = new Set([
+  'financial_transactions',
+  'sales_records',
+  'depreciation',
+  'inter_account',
+  'account_receivables',
+  'account_payables',
+  'ppn_in_out',
+]);
 
 /**
  * Menandai baris lama sebagai SEED, supaya seeder tahu mana miliknya.
@@ -71,42 +69,13 @@ async function markExistingRows(prisma: PrismaClient, table: string): Promise<st
   return `${table}: ${total - app} baris dari workbook, ${app} diketik lewat aplikasi`;
 }
 
-/** Memberi nomor urut pada baris yang belum punya, mengikuti urutan `id`. */
-async function numberExistingRows(prisma: PrismaClient): Promise<string | null> {
-  const missing = await prisma.financialTransaction.count({
-    where: { tagYear: FISCAL_YEAR, rowNo: null },
-  });
-  if (missing === 0) return null;
-
-  await prisma.$executeRawUnsafe(`
-    UPDATE financial_transactions f
-       SET row_no = x.n * ${ROW_NO_GAP}
-      FROM (
-             SELECT id,
-                    row_number() OVER (
-                      PARTITION BY internal_account_id, "tagYear" ORDER BY id
-                    ) AS n
-               FROM financial_transactions
-              WHERE "tagYear" = ${FISCAL_YEAR}
-           ) x
-     WHERE f.id = x.id
-       AND f.row_no IS NULL
-  `);
-  return `financial_transactions: ${missing} baris diberi nomor urut`;
-}
-
 /** Dipanggil seeder sebelum menulis apa pun. Diam kalau tidak ada yang perlu dirapikan. */
 export async function prepareExistingRows(prisma: PrismaClient, tables: string[]) {
   const notes: string[] = [];
 
-  if (tables.includes('financial_transactions')) {
-    const note = await numberExistingRows(prisma);
-    if (note) notes.push(note);
-  }
-
   for (const table of tables) {
-    if (!TABLES[table]) continue;
-    const note = await markExistingRows(prisma, TABLES[table]);
+    if (!MARKED.has(table)) continue;
+    const note = await markExistingRows(prisma, table);
     if (note) notes.push(note);
   }
 

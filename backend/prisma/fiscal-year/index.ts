@@ -101,8 +101,8 @@ async function main() {
   try {
     const tables = chosen.flatMap((s) => s.tables);
 
-    // Baris yang dimuat sebelum kolom `row_no` dan `source` ada dirapikan di
-    // sini, bukan lewat perintah terpisah yang harus diingat orang.
+    // Baris yang dimuat sebelum kolom `source` ada ditandai di sini, bukan
+    // lewat perintah terpisah yang harus diingat orang.
     await prepareExistingRows(prisma, tables);
 
     // Checked before anything is written, so a refusal changes nothing.
