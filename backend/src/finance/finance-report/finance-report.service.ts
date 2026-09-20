@@ -1277,7 +1277,47 @@ export class FinanceReportService {
       _sum: { colC: true, colD: true },
     });
 
-    return new Prisma.Decimal(period?.openingBalance ?? 0)
+    const opening = period
+      ? new Prisma.Decimal(period.openingBalance)
+      : await this.openingBalanceFor(accountId, yearNum);
+
+    return opening
+      .plus(movement._sum.colD ?? 0)
+      .minus(movement._sum.colC ?? 0);
+  }
+
+  /**
+   * Saldo awal sebuah tahun ketika baris `fiscal_periods` tahun itu tidak ada.
+   *
+   * Jatuh ke penutup tahun terakhir yang punya catatan: saldo penutupnya kalau
+   * sudah tersimpan, kalau belum dijumlah dari mutasinya. Sengaja tidak melihat
+   * status CLOSED - tahun yang belum ditutup tetap punya penutup yang benar,
+   * dan memakai 0 di situ memberi angka kekecilan tanpa ada yang menyadarinya.
+   *
+   * Rantainya utuh di seluruh data sekarang: saldo awal tiap tahun sama dengan
+   * penutup tahun sebelumnya di sembilan dari sembilan rekening, jadi jalur ini
+   * belum pernah terpakai. Ia ada untuk rekening yang periodenya belum dibuat.
+   */
+  private async openingBalanceFor(
+    accountId: bigint,
+    yearNum: number | null,
+  ): Promise<Prisma.Decimal> {
+    if (!yearNum) return new Prisma.Decimal(0);
+
+    const earlier = await this.prisma.fiscalPeriod.findFirst({
+      where: { internalAccountId: accountId, year: { lt: yearNum } },
+      orderBy: { year: 'desc' },
+    });
+    if (!earlier) return new Prisma.Decimal(0);
+
+    if (earlier.closingBalance !== null) return new Prisma.Decimal(earlier.closingBalance);
+
+    const movement = await this.prisma.financialTransaction.aggregate({
+      where: { internalAccountId: accountId, tagYear: earlier.year },
+      _sum: { colC: true, colD: true },
+    });
+
+    return new Prisma.Decimal(earlier.openingBalance)
       .plus(movement._sum.colD ?? 0)
       .minus(movement._sum.colC ?? 0);
   }
