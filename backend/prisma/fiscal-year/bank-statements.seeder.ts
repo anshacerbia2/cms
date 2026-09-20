@@ -253,10 +253,12 @@ export async function seedBankStatements(prisma: PrismaClient, workbook?: XLSX.W
       continue;
     }
 
-    // Balances follow date order, ties broken by the order the sheet lists them.
-    const ordered = [...parsed].sort((a, b) =>
-      a.date.getTime() - b.date.getTime() || a.seq - b.seq,
-    );
+    // Kept in the order the sheet lists them, which is the order its own balance
+    // column is computed in: E5 = E4 - C5 + D5, row after row. Sorting by date
+    // first looked tidier and reproduced that column on 34 of Non CB's 2759
+    // rows, against 2507 for the sheet's own order - and it moved every one of
+    // that sheet's rows away from where the accountant put them.
+    const ordered = parsed;
 
     let running = opening;
     for (const row of ordered) {
