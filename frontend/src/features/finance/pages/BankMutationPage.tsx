@@ -697,7 +697,7 @@ export default function BankMutationPage() {
           {can('bank-mutation.create') && (
             <Button onClick={(e) => { e.stopPropagation(); setIsAddModalOpen(true); }} className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold transition-all active:scale-95">
               <Plus size={20} strokeWidth={3} />
-              <span className="text-[13px]">Add Mutation</span>
+              <span className="text-[13px]">Add Transaction</span>
             </Button>
           )}
 
