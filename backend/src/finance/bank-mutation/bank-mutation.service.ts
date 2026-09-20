@@ -240,6 +240,34 @@ export class BankMutationService {
     return { success: true };
   }
 
+  /**
+   * Saldo akhir satu rekening-tahun: saldo awal ditambah seluruh mutasinya.
+   *
+   * Dipakai menggantikan cara lama, yang memungut `colE` baris terakhir menurut
+   * tanggal. `colE` itu saldo berjalan menuruti urutan baris ledger, dan baris
+   * paling akhir menurut tanggal belum tentu baris paling bawah - di BNI 2026
+   * baris bertanggal 31 Des justru baris pertama sheet-nya. Dijumlah begini
+   * hasilnya tidak bergantung urutan, dan tetap benar meski perantaian `colE`
+   * belum sempat dijalankan ulang.
+   */
+  private async closingBalanceOf(accountId: bigint, year: number): Promise<Prisma.Decimal | null> {
+    const [period, movement] = await Promise.all([
+      this.prisma.fiscalPeriod.findUnique({
+        where: { internalAccountId_year: { internalAccountId: accountId, year } },
+      }),
+      this.prisma.financialTransaction.aggregate({
+        where: { internalAccountId: accountId, tagYear: year },
+        _sum: { colC: true, colD: true },
+      }),
+    ]);
+
+    if (!period && movement._sum.colC === null && movement._sum.colD === null) return null;
+
+    return new Prisma.Decimal(period?.openingBalance ?? 0)
+      .plus(movement._sum.colD ?? 0)
+      .minus(movement._sum.colC ?? 0);
+  }
+
   // --- Menyisip baris di tengah ledger ---
 
   /** Nomor urut terakhir yang terpakai di satu rekening-tahun, 0 kalau belum ada. */
@@ -404,13 +432,9 @@ export class BankMutationService {
         };
       }
       
-      // ONGOING: Find latest transaction of CURRENT year
-      const lastTrans = await this.prisma.financialTransaction.findFirst({
-        where: { internalAccountId: accountIdBig, tagYear: year },
-        orderBy: [{ colA: 'desc' }, { id: 'desc' }],
-      });
-
-      const balance = lastTrans ? formatDecimal(lastTrans.colE) : null;
+      // ONGOING: saldo tahun berjalan, dijumlah dari mutasinya.
+      const running = await this.closingBalanceOf(accountIdBig, year);
+      const balance = running !== null ? formatDecimal(running) : null;
 
       return { 
         status: currentFiscal.status, 
@@ -418,7 +442,7 @@ export class BankMutationService {
         canEdit: false,
         referredYear: year,
         isStale: currentFiscal.isStale,
-        message: lastTrans 
+        message: running !== null
           ? `Using current running balance of ${year} (${currentFiscal.status.toLowerCase()}).`
           : `Warning: Period is ongoing but no transactions found for ${year}.`
       };
@@ -446,23 +470,18 @@ export class BankMutationService {
         where: { internalAccountId_year: { internalAccountId: accountIdBig, year: searchYear } }
       });
 
-      const lastTransInYear = lastTransaction?.tagYear === searchYear 
-        ? lastTransaction 
-        : await this.prisma.financialTransaction.findFirst({
-            where: { internalAccountId: accountIdBig, tagYear: searchYear },
-            orderBy: [{ colA: 'desc' }, { id: 'desc' }],
-          });
+      const summedBalance = await this.closingBalanceOf(accountIdBig, searchYear);
 
       if (prevFiscal) {
         const openingBalance = prevFiscal.closingBalance !== null
           ? formatDecimal(prevFiscal.closingBalance)
-          : (lastTransInYear ? formatDecimal(lastTransInYear.colE) : formatDecimal(prevFiscal.openingBalance));
+          : (summedBalance !== null ? formatDecimal(summedBalance) : formatDecimal(prevFiscal.openingBalance));
 
         let source = "opening balance";
         if (prevFiscal.closingBalance !== null) {
           source = "closing balance";
-        } else if (lastTransInYear) {
-          source = "latest transaction balance";
+        } else if (summedBalance !== null) {
+          source = "summed movements";
         }
 
         return {
@@ -475,13 +494,13 @@ export class BankMutationService {
       } 
       
       // If no fiscal record, but we found transactions (Lazy Year)
-      if (lastTransInYear) {
+      if (summedBalance !== null) {
         return {
           status: 'ONGOING',
-          balance: formatDecimal(lastTransInYear.colE),
+          balance: formatDecimal(summedBalance),
           canEdit: false,
           referredYear: searchYear,
-          message: `Auto-referred to latest transaction balance of year ${searchYear} (Lazy Registration)`
+          message: `Auto-referred to summed movements of year ${searchYear} (Lazy Registration)`
         };
       }
     }
