@@ -24,6 +24,8 @@ type Edit = {
   why?: string;
   /** Nilai yang harus dipunyai baris itu. Harus menunjuk tepat satu baris. */
   match: Record<string, string | null>;
+  /** Barisnya memang kembar dan semuanya disunting sama. */
+  all?: boolean;
   set: Record<string, string | null>;
 };
 
@@ -38,6 +40,7 @@ type Overlay = { year: number; note?: string; inserts?: Insert[]; edits?: Edit[]
 
 /** Tabel yang boleh disentuh, dipetakan ke model Prisma-nya. */
 const MODELS: Record<string, (p: PrismaClient) => any> = {
+  financial_transactions: (p) => p.financialTransaction,
   account_receivables: (p) => p.accountReceivable,
   account_payables: (p) => p.accountPayable,
   sales_records: (p) => p.salesRecord,
@@ -171,14 +174,17 @@ export async function applyAdjustments(prisma: PrismaClient, tables: string[]) {
       skipped.push(`${edit.table}: tidak ada baris yang cocok dengan ${shown}`);
       continue;
     }
-    if (candidates.length > 1) {
+    if (candidates.length > 1 && !edit.all) {
       skipped.push(`${edit.table}: ${candidates.length} baris cocok dengan ${shown}, terlalu samar`);
       continue;
     }
 
-    await model.update({ where: { id: candidates[0].id }, data: edit.set });
+    for (const row of edit.all ? candidates : [candidates[0]]) {
+      await model.update({ where: { id: row.id }, data: edit.set });
+    }
     applied++;
-    console.log(`   ✅ ${edit.table}${edit.why ? ` — ${edit.why}` : ''}`);
+    const many = candidates.length > 1 ? ` (${candidates.length} baris kembar)` : '';
+    console.log(`   ✅ ${edit.table}${many}${edit.why ? ` — ${edit.why}` : ''}`);
   }
 
   for (const s of skipped) console.warn(`   ⚠️  dilewati: ${s}`);

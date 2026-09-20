@@ -9,6 +9,7 @@ import {
   FISCAL_YEAR,
   buildColumnMap,
   isBlankRow,
+  isPaddingRow,
   isNumeric,
   normalizeLabel,
   type SlotSpec,
@@ -176,7 +177,9 @@ export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) 
   const perRow: RowAmounts[] = [];
   for (let i = layout.firstDataRow; i < rows.length; i++) {
     const row = rows[i];
-    if (isBlankRow(row)) break;
+    // Termasuk baris yang sudah diberi nomor urut dan nol - template kosong
+    // di bawah invoice terakhir, yang di sheet 2025 ada 37 buah.
+    if (isPaddingRow(row)) break;
 
     const record: any = { tagYear: FISCAL_YEAR };
     for (const spec of SLOTS) {

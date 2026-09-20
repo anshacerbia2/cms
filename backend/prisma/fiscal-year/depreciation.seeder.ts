@@ -83,6 +83,11 @@ export async function seedDepreciation(prisma: PrismaClient, workbook?: XLSX.Wor
     const life = (row || [])[USEFUL_LIFE_COL];
     if (name === '' || !isNumeric(life) || Number(life) <= 0) continue;
 
+    // Harga beli nol berarti barisnya template yang belum diisi, bukan aset.
+    // Di Deprec 2025 ada tujuh baris seperti itu: bernama, tapi tanpa nilai.
+    const price = cleanCurrency(row[3]);
+    if (price === null || price.isZero()) continue;
+
     assets.push({
       colA: excelDateToJSDate(row[0]),
       colB: cleanString(row[1]),
