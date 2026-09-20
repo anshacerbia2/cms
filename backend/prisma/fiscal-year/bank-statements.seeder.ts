@@ -132,6 +132,11 @@ function parseSheet(rows: any[][], layout: SheetLayout): { parsed: ParsedRow[]; 
         colH: cleanString(row[7]),
         colI: cleanString(row[8]),
         tagYear: FISCAL_YEAR,
+        // Berjarak 1000 supaya ada ruang menyisip di antara dua baris workbook
+        // tanpa menyentuh baris mana pun. Sheet dibaca turun satu per satu dan
+        // urutannya tidak diapa-apakan lagi di bawah, jadi ini otomatis sama
+        // dengan urutan baris di file.
+        rowNo: (parsed.length + 1) * 1000,
       },
     });
   }

@@ -379,11 +379,19 @@ model FinancialTransaction {
   colH              String?   @map("col_h") @db.Text // Sub Ledger 2
   colI              String?   @map("col_i") @db.Text // Sub Ledger 3
   tagYear           Int
+  /// Posisi baris di dalam ledger satu rekening-tahun, diisi berjarak 1000 supaya
+  /// ada ruang menyisip di antaranya. Urutan ledger memang bermakna: ia mengikuti
+  /// urutan baris workbook, dan kolom saldo dirantai menuruti urutan itu. Dulu
+  /// urutan ini cuma menumpang pada `id`, jadi baris baru selalu mendarat paling
+  /// bawah. Dibaca selalu sebagai [{ rowNo: 'asc' }, { id: 'asc' }] - `id` jadi
+  /// pemecah seri kalau dua orang menyisip di titik yang sama.
+  rowNo             Int?      @map("row_no")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   internalAccount InternalAccount? @relation(fields: [internalAccountId], references: [id])
 
+  @@index([internalAccountId, tagYear, rowNo])
   @@map("financial_transactions")
 }
 

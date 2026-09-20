@@ -11,6 +11,17 @@ export const bankMutationService = {
     return data;
   },
 
+  /** Menyisip satu baris tepat di bawah `afterId`; afterId null = paling atas. */
+  insertTransaction: async (payload: {
+    data: any;
+    accountId: string;
+    tagYear: number;
+    afterId: number | null;
+  }): Promise<any> => {
+    const { data } = await api.post("/bank-mutation/transactions/insert", payload);
+    return data;
+  },
+
   getAnchorBalance: async (accountId: string, year: number): Promise<any> => {
     const { data } = await api.get(`/bank-mutation/anchor-balance/${accountId}/${year}`);
     return data;

@@ -59,6 +59,14 @@ export function useBankMutation() {
     };
   };
 
+  const insertTransaction = () => {
+    return async (payload: { data: any; accountId: string; tagYear: number; afterId: number | null }) => {
+      const data = await bankMutationService.insertTransaction(payload);
+      queryClient.invalidateQueries({ queryKey: ["finance", "bank-mutation"] });
+      return data;
+    };
+  };
+
   const updateTransaction = () => {
     return async (payload: { id: number; data: any }) => {
       const data = await bankMutationService.updateTransaction(payload.id, payload.data);
@@ -82,6 +90,7 @@ export function useBankMutation() {
     getFiscalPeriods,
     recalculateLedger,
     closeYear,
+    insertTransaction,
     updateTransaction,
     deleteTransaction,
     getTransaction,

@@ -86,6 +86,26 @@ export class BankMutationController {
     return this.bankMutationService.createBulkTransactions(body.data, body.accountId, body.tagYear, body.startingBalance);
   }
 
+  /**
+   * Menyisip satu baris tepat di bawah `afterId`; `afterId` null berarti paling atas.
+   *
+   * Beda dengan transactions/bulk yang selalu menambah di ujung. Baris di bawahnya
+   * turun satu posisi tanpa disentuh - tidak ada id yang berubah dan tidak ada
+   * nilai yang ditulis ulang.
+   */
+  @Post('transactions/insert')
+  @Permissions('bank-mutation.create')
+  async insertTransaction(
+    @Body() body: { data: any; accountId: string; tagYear: number; afterId?: number | null },
+  ) {
+    return this.bankMutationService.insertTransaction(
+      body.data,
+      body.accountId,
+      body.tagYear,
+      body.afterId,
+    );
+  }
+
   @Get('anchor-balance/:accountId/:year')
   @Permissions('finance.anchor')
   async getAnchorBalance(
