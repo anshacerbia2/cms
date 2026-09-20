@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import { seedBanks } from '../seeders/banks.seeder';
 import { FISCAL_YEAR, useFiscalYear } from './utils/layout';
 import { assertSafeToReplace } from './utils/guard';
+import { prepareExistingRows } from './utils/prepare';
 import { seedBankStatements } from './bank-statements.seeder';
 import { seedInterAccount } from './inter-account.seeder';
 import { seedDepreciation } from './depreciation.seeder';
@@ -98,8 +99,13 @@ async function main() {
   );
 
   try {
-    // Checked before anything is written, so a refusal changes nothing.
     const tables = chosen.flatMap((s) => s.tables);
+
+    // Baris yang dimuat sebelum kolom `row_no` dan `source` ada dirapikan di
+    // sini, bukan lewat perintah terpisah yang harus diingat orang.
+    await prepareExistingRows(prisma, tables);
+
+    // Checked before anything is written, so a refusal changes nothing.
     const replace = option('replace', 'SEED_REPLACE_EXISTING') === '1';
     if (!(await assertSafeToReplace(prisma, tables, replace))) {
       await prisma.$disconnect();

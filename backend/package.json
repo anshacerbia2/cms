@@ -24,8 +24,6 @@
     "revoke:finance-create": "tsx run-revoke-create-permissions.ts",
     "seed:accounts": "tsx prisma/scripts/internal-accounts.ts",
     "backfill:account-amounts": "tsx prisma/scripts/backfill-finance-account-amounts.ts",
-    "backfill:row-no": "tsx prisma/scripts/backfill-row-no.ts",
-    "backfill:row-source": "tsx prisma/scripts/backfill-row-source.ts",
     "seed:year": "tsx prisma/fiscal-year/index.ts"
   },
   "dependencies": {
