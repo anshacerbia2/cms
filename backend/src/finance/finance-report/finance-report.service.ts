@@ -1231,6 +1231,57 @@ export class FinanceReportService {
     return { headers, rows };
   }
   
+  /**
+   * Saldo satu rekening bank/kas: saldo awal ditambah seluruh mutasinya.
+   *
+   * Dulu ini diambil dari `colE` baris terakhir menurut tanggal, dan itu salah
+   * dalam dua cara. `colE` adalah saldo berjalan sepanjang urutan baris ledger,
+   * bukan saldo per tanggal - jadi memfilter baris lalu memungut `colE` salah
+   * satunya tidak menghasilkan saldo per tanggal itu. Dan "terakhir menurut
+   * tanggal" belum tentu baris terakhir: di BNI 2026 baris bertanggal 31 Des
+   * justru baris PERTAMA sheet-nya, sehingga neraca menampilkan 1.256.227
+   * padahal ledgernya menutup di 1.000.000.
+   *
+   * Dijumlah begini hasilnya tidak bergantung urutan sama sekali, cocok dengan
+   * `fiscal_periods.closing_balance` saat tanpa batas tanggal, dan tetap benar
+   * saat ada batas tanggal - termasuk di Non CB, yang 1.383 barisnya bertanggal
+   * sebelum pertengahan tahun tapi duduk di bawah baris yang bertanggal sesudahnya.
+   *
+   * Tidak bergantung pada `colE` juga berarti angka neraca tetap benar kalau
+   * perantaian saldo belum sempat dijalankan ulang.
+   */
+  private async bankBalanceAsOf(
+    accountId: bigint,
+    yearNum: number | null,
+    endOfDate?: Date | null,
+  ): Promise<Prisma.Decimal> {
+    // Tanpa tahun, mutasinya dijumlah lintas tahun, jadi titik berangkatnya
+    // saldo awal periode paling awal yang dipunyai rekening itu.
+    const period = yearNum
+      ? await this.prisma.fiscalPeriod.findUnique({
+          where: { internalAccountId_year: { internalAccountId: accountId, year: yearNum } },
+        })
+      : await this.prisma.fiscalPeriod.findFirst({
+          where: { internalAccountId: accountId },
+          orderBy: { year: 'asc' },
+        });
+
+    const movement = await this.prisma.financialTransaction.aggregate({
+      where: {
+        internalAccountId: accountId,
+        ...(yearNum ? { tagYear: yearNum } : {}),
+        ...(endOfDate
+          ? { OR: [{ colA: { lte: endOfDate } }, { colA: null }] }
+          : {}),
+      },
+      _sum: { colC: true, colD: true },
+    });
+
+    return new Prisma.Decimal(period?.openingBalance ?? 0)
+      .plus(movement._sum.colD ?? 0)
+      .minus(movement._sum.colC ?? 0);
+  }
+
   async getBalanceSheet(year?: string | number, date?: string) {
     const yearNum = year ? Number(year) : (date ? new Date(`${date}T00:00:00.000Z`).getUTCFullYear() : null);
     const endOfDate = date ? new Date(`${date}T23:59:59.999Z`) : null;
@@ -1275,28 +1326,7 @@ export class FinanceReportService {
     let cashTotal = new Prisma.Decimal(0);
     
     for (const acc of accounts) {
-      const latestTx = await this.prisma.financialTransaction.findFirst({
-        where: { 
-          internalAccountId: acc.id,
-          ...(yearNum ? { tagYear: yearNum } : {}),
-          ...(endOfDate ? {
-            OR: [
-              { colA: { lte: endOfDate } },
-              { colA: null }
-            ]
-          } : {}) 
-        },
-        orderBy: [
-          { colA: 'desc' },
-          { id: 'desc' }
-        ]
-      });
-
-      let balanceDecimal = new Prisma.Decimal(0);
-      
-      if (latestTx) {
-        balanceDecimal = new Prisma.Decimal(latestTx.colE || 0);
-      }
+      const balanceDecimal = await this.bankBalanceAsOf(acc.id, yearNum, endOfDate);
 
       const balance = formatDecimal(balanceDecimal);
 
