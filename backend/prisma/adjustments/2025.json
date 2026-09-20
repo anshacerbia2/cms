@@ -1,34 +1,145 @@
 {
   "year": 2025,
-  "note": "Suntingan yang dibuat lewat aplikasi pada baris yang berasal dari workbook. Baris yang DITAMBAH lewat aplikasi tidak perlu ada di sini - kolom `source` yang menjaganya. Berkas ini hanya untuk nilai yang diubah pada baris milik seeder, karena baris itu dimuat ulang setiap seed.",
-  "edits": [
+  "note": "Dua hal yang tidak ada di workbook manapun. : baris yang diketik lewat aplikasi - dipakai saat membangun database dari nol, dilewati kalau barisnya sudah ada. : nilai yang diubah pada baris milik workbook, yang selalu kembali ke angka workbook setiap seed ulang.",
+  "inserts": [
     {
-      "table": "account_receivables",
-      "position": 879,
-      "why": "Selisih BuPot Prepaid Tax PPh-23: Lap Keu Internal 661.753.441 vs CoreTax 660.377.899, selisih 1.375.542. Sepasang dengan jurnal di financial_transactions id 7934-7935.",
-      "match": { "colB": "AR Prepaid Tax", "colR": "661753441" },
-      "set": { "colO": "-660377899", "colR": "660377899" }
+      "table": "financial_transactions",
+      "data": {
+        "col_a": "2025-12-31T00:00:00",
+        "col_b": "PPh Badan 2025 sesuai Perhitungan dalam Laporan CoreTax PCMI SPT 2025",
+        "col_c": 0.0,
+        "col_d": 662078230.0,
+        "col_e": 662078230.0,
+        "col_f": "Account Payable",
+        "col_g": "AP Tax",
+        "col_h": "PPh Badan PCMI 2025",
+        "col_i": ""
+      },
+      "account": "Non CB"
     },
     {
-      "table": "account_receivables",
-      "position": 905,
-      "why": "Temporary Notes Intrareps dinolkan.",
-      "match": { "colB": "AR Temporary Notes", "colR": "32854000" },
-      "set": { "colC": null, "colD": null, "colO": "0", "colR": "0" }
+      "table": "financial_transactions",
+      "data": {
+        "col_a": "2025-12-31T00:00:00",
+        "col_b": "PPh Badan 2025 sesuai Perhitungan dalam Laporan CoreTax PCMI SPT 2025",
+        "col_c": 662078230.0,
+        "col_d": 0.0,
+        "col_e": 0.0,
+        "col_f": "Income Tax",
+        "col_g": "Income Tax",
+        "col_h": "PPh Badan PCMI 2025",
+        "col_i": ""
+      },
+      "account": "Non CB"
     },
     {
-      "table": "account_receivables",
-      "position": 989,
-      "why": "PLN IP Energy Business Forum 2025 - nilai tagihan dinaikkan.",
-      "match": { "colB": "AR Trade", "colF": "250000000" },
-      "set": { "colF": "277500000" }
+      "table": "financial_transactions",
+      "data": {
+        "col_a": "2025-12-31T00:00:00",
+        "col_b": "Selisih BuPot Prepaid Tax PPh-23 Lap Keu Internal oleh Tika : Rp. 661.753.441 - Rp. 660.377.899",
+        "col_c": 0.0,
+        "col_d": 1375542.0,
+        "col_e": 1375542.0,
+        "col_f": "Account Receivable",
+        "col_g": "AR Prepaid Tax",
+        "col_h": "PPh-23 Bukti Potong 2025",
+        "col_i": ""
+      },
+      "account": "Non CB"
+    },
+    {
+      "table": "financial_transactions",
+      "data": {
+        "col_a": "2025-12-31T00:00:00",
+        "col_b": "Selisih BuPot Prepaid Tax PPh-23 Lap Keu Internal oleh Tika : Rp. 661.753.441 - Rp. 660.377.899",
+        "col_c": 1375542.0,
+        "col_d": 0.0,
+        "col_e": 0.0,
+        "col_f": "Other Income/Expense",
+        "col_g": "Other Expense",
+        "col_h": "",
+        "col_i": ""
+      },
+      "account": "Non CB"
     },
     {
       "table": "account_payables",
-      "position": 35,
+      "data": {
+        "colA": "AP Tax",
+        "colB": 2025,
+        "colC": "PPh Badan",
+        "colD": "PPh Badan 2025 sesuai Perhitungan dalam Laporan CoreTax PCMI SPT 2025",
+        "colE": 0.0,
+        "colF": null,
+        "colG": null,
+        "colH": null,
+        "colI": null,
+        "colJ": null,
+        "colK": 0.0,
+        "colL": 0.0,
+        "colM": 0.0,
+        "colN": 0.0,
+        "colO": 0.0,
+        "colP": 0.0,
+        "colQ": 0.0,
+        "colR": 662078230.0,
+        "colS": 0.0,
+        "colT": null,
+        "colU": 662078230.0,
+        "colV": null
+      }
+    }
+  ],
+  "edits": [
+    {
+      "table": "account_receivables",
+      "why": "Selisih BuPot Prepaid Tax PPh-23: Lap Keu Internal 661.753.441 vs CoreTax 660.377.899, selisih 1.375.542. Sepasang dengan jurnal di financial_transactions id 7934-7935.",
+      "match": {
+        "colB": "AR Prepaid Tax",
+        "colR": "661753441"
+      },
+      "set": {
+        "colO": "-660377899",
+        "colR": "660377899"
+      }
+    },
+    {
+      "table": "account_receivables",
+      "why": "Temporary Notes Intrareps dinolkan.",
+      "match": {
+        "colB": "AR Temporary Notes",
+        "colR": "32854000"
+      },
+      "set": {
+        "colC": null,
+        "colD": null,
+        "colO": "0",
+        "colR": "0"
+      }
+    },
+    {
+      "table": "account_receivables",
+      "why": "PLN IP Energy Business Forum 2025 - nilai tagihan dinaikkan.",
+      "match": {
+        "colB": "AR Trade",
+        "colF": "250000000",
+        "colR": "250000000"
+      },
+      "set": {
+        "colF": "277500000"
+      }
+    },
+    {
+      "table": "account_payables",
       "why": "Sisa hutang disesuaikan.",
-      "match": { "colM": "1718342", "colU": "1846030" },
-      "set": { "colM": "0", "colU": "127688" }
+      "match": {
+        "colM": "1718342",
+        "colU": "1846030"
+      },
+      "set": {
+        "colM": "0",
+        "colU": "127688"
+      }
     }
   ]
 }

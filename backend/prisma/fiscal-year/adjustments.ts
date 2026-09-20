@@ -21,13 +21,20 @@ import { FISCAL_YEAR } from './utils/layout';
 
 type Edit = {
   table: string;
-  position: number;
   why?: string;
-  match?: Record<string, string | null>;
+  /** Nilai yang harus dipunyai baris itu. Harus menunjuk tepat satu baris. */
+  match: Record<string, string | null>;
   set: Record<string, string | null>;
 };
 
-type Overlay = { year: number; note?: string; edits: Edit[] };
+type Insert = {
+  table: string;
+  /** Hanya untuk financial_transactions: nama rekening, karena id-nya bisa berbeda. */
+  account?: string;
+  data: Record<string, unknown>;
+};
+
+type Overlay = { year: number; note?: string; inserts?: Insert[]; edits?: Edit[] };
 
 /** Tabel yang boleh disentuh, dipetakan ke model Prisma-nya. */
 const MODELS: Record<string, (p: PrismaClient) => any> = {
@@ -49,6 +56,84 @@ function same(actual: unknown, expected: string | null): boolean {
   return String(actual).trim() === expected.trim();
 }
 
+/**
+ * Mengutip nilai untuk SQL.
+ *
+ * Hanya angka sungguhan yang ditulis telanjang. String yang kebetulan berisi
+ * angka tetap dikutip: kolomnya mungkin bertipe teks, dan `kolom_teks = 243000`
+ * ditolak Postgres. Literal berkutip aman untuk keduanya - Postgres mengecornya
+ * ke tipe kolom itu sendiri.
+ */
+function literal(v: unknown): string {
+  if (v === null || v === undefined) return 'NULL';
+  if (typeof v === 'number') return String(v);
+  return `'${String(v).replace(/'/g, "''")}'`;
+}
+
+/**
+ * Menaruh kembali baris yang diketik lewat aplikasi ke database yang baru dibangun.
+ *
+ * Di database yang sudah berisi, baris ini tidak perlu diapa-apakan - kolom
+ * `source` sudah menjaganya dari penghapusan. Yang membutuhkan ini adalah
+ * database yang dibangun dari nol: baris itu tidak ada di workbook manapun,
+ * jadi tanpa dicatat di sini ia tidak akan pernah ada di sana.
+ *
+ * Dilewati kalau barisnya sudah ada, jadi aman dipanggil setiap seed.
+ */
+async function applyInserts(prisma: PrismaClient, inserts: Insert[]) {
+  let added = 0;
+  let present = 0;
+
+  for (const ins of inserts) {
+    const cols: Record<string, unknown> = { ...ins.data, tagYear: FISCAL_YEAR };
+
+    if (ins.account) {
+      const account = await prisma.internalAccount.findFirst({
+        where: { displayName: ins.account },
+        select: { id: true },
+      });
+      if (!account) {
+        console.warn(`   ⚠️  dilewati: rekening "${ins.account}" tidak ada`);
+        continue;
+      }
+      cols.internal_account_id = Number(account.id);
+    }
+
+    // Sudah ada? Dicocokkan dari isinya, karena id berubah tiap seed ulang.
+    const where = Object.entries(cols)
+      .filter(([, v]) => v !== null && v !== undefined && v !== '')
+      .map(([k, v]) => `${/[A-Z]/.test(k) ? `"${k}"` : k} = ${literal(v)}`)
+      .join(' AND ');
+    const [{ n }] = await prisma.$queryRawUnsafe<{ n: number }[]>(
+      `SELECT count(*)::int AS n FROM ${ins.table} WHERE ${where}`,
+    );
+    if (n > 0) {
+      present++;
+      continue;
+    }
+
+    if (ins.table === 'financial_transactions') {
+      // Ditaruh di ujung rekeningnya, meneruskan nomor baris terakhir.
+      const [{ tail }] = await prisma.$queryRawUnsafe<{ tail: number }[]>(
+        `SELECT coalesce(max(row_no), 0)::int AS tail FROM financial_transactions
+          WHERE internal_account_id = ${cols.internal_account_id} AND "tagYear" = ${FISCAL_YEAR}`,
+      );
+      cols.row_no = tail + 1000;
+    }
+
+    const names = Object.keys(cols).map((k) => (/[A-Z]/.test(k) ? `"${k}"` : k));
+    const values = Object.values(cols).map(literal);
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO ${ins.table} (${names.join(', ')}, source, created_at, updated_at)
+       VALUES (${values.join(', ')}, 'APP', now(), now())`,
+    );
+    added++;
+  }
+
+  if (added > 0) console.log(`   ✅ ${added} baris aplikasi ditaruh kembali`);
+  if (present > 0) console.log(`   ℹ️  ${present} baris aplikasi sudah ada, dilewati`);
+}
+
 export async function applyAdjustments(prisma: PrismaClient, tables: string[]) {
   const file = path.join(__dirname, '..', 'adjustments', `${FISCAL_YEAR}.json`);
   if (!fs.existsSync(file)) return;
@@ -56,10 +141,13 @@ export async function applyAdjustments(prisma: PrismaClient, tables: string[]) {
   const overlay: Overlay = JSON.parse(fs.readFileSync(file, 'utf8'));
   // Hanya untuk tabel yang barusan ditulis ulang. Menjalankan seeder untuk satu
   // workbook tidak boleh menyentuh suntingan pada tabel yang tidak ikut dimuat.
-  const edits = overlay.edits.filter((e) => tables.includes(e.table));
-  if (edits.length === 0) return;
+  const inserts = (overlay.inserts ?? []).filter((i) => tables.includes(i.table));
+  const edits = (overlay.edits ?? []).filter((e) => tables.includes(e.table));
+  if (inserts.length === 0 && edits.length === 0) return;
 
-  console.log(`🩹 Menerapkan ${edits.length} suntingan ${FISCAL_YEAR} dari adjustments/${FISCAL_YEAR}.json...`);
+  console.log(`🩹 adjustments/${FISCAL_YEAR}.json — ${inserts.length} baris aplikasi, ${edits.length} suntingan...`);
+
+  await applyInserts(prisma, inserts);
 
   let applied = 0;
   const skipped: string[] = [];
@@ -71,31 +159,26 @@ export async function applyAdjustments(prisma: PrismaClient, tables: string[]) {
       continue;
     }
 
-    const rows = await model.findMany({
-      where: { tagYear: FISCAL_YEAR },
-      orderBy: { id: 'asc' },
-      skip: edit.position - 1,
-      take: 1,
-    });
-    const row = rows[0];
+    // Dicari dari isinya, bukan dari posisi. Posisi bergeser begitu satu baris
+    // ditambahkan di atasnya, dan suntingan yang meleset satu baris menulis ke
+    // baris yang salah tanpa ada yang tahu.
+    const candidates = (
+      await model.findMany({ where: { tagYear: FISCAL_YEAR }, orderBy: { id: 'asc' } })
+    ).filter((row: any) => Object.entries(edit.match).every(([k, v]) => same(row[k], v)));
 
-    if (!row) {
-      skipped.push(`${edit.table} posisi ${edit.position}: baris tidak ada`);
+    const shown = JSON.stringify(edit.match);
+    if (candidates.length === 0) {
+      skipped.push(`${edit.table}: tidak ada baris yang cocok dengan ${shown}`);
+      continue;
+    }
+    if (candidates.length > 1) {
+      skipped.push(`${edit.table}: ${candidates.length} baris cocok dengan ${shown}, terlalu samar`);
       continue;
     }
 
-    const mismatch = Object.entries(edit.match ?? {}).find(([k, v]) => !same(row[k], v));
-    if (mismatch) {
-      skipped.push(
-        `${edit.table} posisi ${edit.position}: ${mismatch[0]} berisi ${JSON.stringify(row[mismatch[0]])}, ` +
-          `diharapkan ${JSON.stringify(mismatch[1])} — workbook-nya mungkin sudah bergeser`,
-      );
-      continue;
-    }
-
-    await model.update({ where: { id: row.id }, data: edit.set });
+    await model.update({ where: { id: candidates[0].id }, data: edit.set });
     applied++;
-    console.log(`   ✅ ${edit.table} posisi ${edit.position}${edit.why ? ` — ${edit.why}` : ''}`);
+    console.log(`   ✅ ${edit.table}${edit.why ? ` — ${edit.why}` : ''}`);
   }
 
   for (const s of skipped) console.warn(`   ⚠️  dilewati: ${s}`);
