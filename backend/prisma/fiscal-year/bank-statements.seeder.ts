@@ -80,9 +80,8 @@ function readLayout(rows: any[][]): SheetLayout | null {
 }
 
 type ParsedRow = {
-  /** Position in the sheet, used to break date ties the way the file does. */
+  /** Posisi di dalam sheet. */
   seq: number;
-  date: Date;
   debit: Prisma.Decimal | null;
   credit: Prisma.Decimal | null;
   /** Running balance as the workbook itself computed it, for cross-checking. */
@@ -99,8 +98,6 @@ type ParsedRow = {
 function parseSheet(rows: any[][], layout: SheetLayout): { parsed: ParsedRow[]; endRow: number } {
   const parsed: ParsedRow[] = [];
   let endRow = rows.length;
-  // Carried forward because "Non CB" leaves the date blank on continuation rows.
-  let lastDate = new Date(Date.UTC(FISCAL_YEAR, 0, 1));
 
   for (let i = layout.firstDataRow; i < rows.length; i++) {
     const row = rows[i];
@@ -109,20 +106,24 @@ function parseSheet(rows: any[][], layout: SheetLayout): { parsed: ParsedRow[]; 
       break;
     }
 
+    // Sel tanggal yang kosong disimpan kosong. Dulu di sini tanggal baris
+    // sebelumnya diwariskan turun, dan baris paling awal yang belum kebagian
+    // tanggal apa pun diberi 1 Januari - dua-duanya mengarang tanggal yang
+    // tidak ditulis siapa pun. Di Non CB itu 2.866 baris pada 2025 dan 1.662
+    // pada 2026: transaksi yang berdiri sendiri, memang tidak diberi tanggal
+    // di buku non-kas, bukan sambungan dari baris di atasnya.
     const rowDate = excelDateToJSDate(row[0]);
-    if (rowDate) lastDate = rowDate;
 
     const debit = cleanCurrency(row[2]);
     const credit = cleanCurrency(row[3]);
 
     parsed.push({
       seq: parsed.length,
-      date: new Date(lastDate),
       debit,
       credit,
       sheetBalance: cleanCurrency(row[4]),
       data: {
-        colA: new Date(lastDate),
+        colA: rowDate,
         colB: cleanString(row[1]),
         colC: debit,
         colD: credit,

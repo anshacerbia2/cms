@@ -456,6 +456,9 @@ export function BalanceSheetTab() {
                     <CollapsibleContent>
                       <div className="bg-white px-0 pb-4 space-y-1">
                           {group.items.map((item: any) => {
+                            // Penyusutan memang selalu negatif - itu bentuk normalnya,
+                            // bukan tanda ada yang salah. Diwarnai merah seperti angka
+                            // minus lain justru bikin baris ini kelihatan seperti masalah.
                             const isNonClickable = item.accountName.toLowerCase().includes('depreciation');
                             return (
                               <div 
@@ -495,7 +498,7 @@ export function BalanceSheetTab() {
                               <span className="text-[11px] font-medium text-slate-300 tabular-nums whitespace-nowrap">
                                 {item.tx || 0}tx
                               </span>
-                              <span className={cn("text-[12px] font-normal tabular-nums w-48 text-right whitespace-nowrap", getAmountColor(item.idr, false))}>
+                              <span className={cn("text-[12px] font-normal tabular-nums w-48 text-right whitespace-nowrap", isNonClickable ? "" : getAmountColor(item.idr, false))}>
                                 {formatCurrency(item.idr)}
                               </span>
                             </div>
