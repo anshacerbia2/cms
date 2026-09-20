@@ -386,6 +386,12 @@ model FinancialTransaction {
   /// bawah. Dibaca selalu sebagai [{ rowNo: 'asc' }, { id: 'asc' }] - `id` jadi
   /// pemecah seri kalau dua orang menyisip di titik yang sama.
   rowNo             Int?      @map("row_no")
+  /// Siapa yang menaruh baris ini: 'SEED' kalau dimuat dari workbook, 'APP'
+  /// kalau diinput lewat aplikasi. Seeder hanya menghapus barisnya sendiri,
+  /// jadi baris yang diketik orang selamat saat seed ulang tanpa perlu dicatat
+  /// di mana pun. Defaultnya 'APP' dengan sengaja: kalau suatu seeder lupa
+  /// menandai, akibatnya baris tertinggal - bukan baris user ikut terhapus.
+  source            String    @default("APP")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -430,6 +436,12 @@ model SalesRecord {
   colAC     Decimal?  @db.Decimal(19, 4) // Non WAPU
   colAD     String?   @db.Text // Remarks
   tagYear   Int // Tag Year
+  /// Siapa yang menaruh baris ini: 'SEED' kalau dimuat dari workbook, 'APP'
+  /// kalau diinput lewat aplikasi. Seeder hanya menghapus barisnya sendiri,
+  /// jadi baris yang diketik orang selamat saat seed ulang tanpa perlu dicatat
+  /// di mana pun. Defaultnya 'APP' dengan sengaja: kalau suatu seeder lupa
+  /// menandai, akibatnya baris tertinggal - bukan baris user ikut terhapus.
+  source            String    @default("APP")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
@@ -460,6 +472,12 @@ model AccountReceivable {
   colR      Decimal? @db.Decimal(19, 4) // Outstanding IDR
   colS      Decimal? @db.Decimal(19, 4) // Outstanding USD
   tagYear   Int
+  /// Siapa yang menaruh baris ini: 'SEED' kalau dimuat dari workbook, 'APP'
+  /// kalau diinput lewat aplikasi. Seeder hanya menghapus barisnya sendiri,
+  /// jadi baris yang diketik orang selamat saat seed ulang tanpa perlu dicatat
+  /// di mana pun. Defaultnya 'APP' dengan sengaja: kalau suatu seeder lupa
+  /// menandai, akibatnya baris tertinggal - bukan baris user ikut terhapus.
+  source            String    @default("APP")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -493,6 +511,12 @@ model AccountPayable {
   colU      Decimal? @db.Decimal(19, 4) // OUTSTANDING IDR
   colV      Decimal? @db.Decimal(19, 4) // OUTSTANDING USD
   tagYear   Int
+  /// Siapa yang menaruh baris ini: 'SEED' kalau dimuat dari workbook, 'APP'
+  /// kalau diinput lewat aplikasi. Seeder hanya menghapus barisnya sendiri,
+  /// jadi baris yang diketik orang selamat saat seed ulang tanpa perlu dicatat
+  /// di mana pun. Defaultnya 'APP' dengan sengaja: kalau suatu seeder lupa
+  /// menandai, akibatnya baris tertinggal - bukan baris user ikut terhapus.
+  source            String    @default("APP")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -563,6 +587,12 @@ model Depreciation {
   colU      Decimal?         @default(0) @map("col_u") @db.Decimal(19, 4) // Book Value 
   type      DepreciationType @default(OFFICE_EQUIPMENT)
   tagYear   Int
+  /// Siapa yang menaruh baris ini: 'SEED' kalau dimuat dari workbook, 'APP'
+  /// kalau diinput lewat aplikasi. Seeder hanya menghapus barisnya sendiri,
+  /// jadi baris yang diketik orang selamat saat seed ulang tanpa perlu dicatat
+  /// di mana pun. Defaultnya 'APP' dengan sengaja: kalau suatu seeder lupa
+  /// menandai, akibatnya baris tertinggal - bukan baris user ikut terhapus.
+  source            String    @default("APP")
   createdAt DateTime         @default(now()) @map("created_at")
   updatedAt DateTime         @updatedAt @map("updated_at")
 
@@ -649,6 +679,12 @@ model PpnInOut {
   colR      String?   @db.Text // Sub Ledger-2
   colS      String?   @db.Text // Sub Ledger-3
   tagYear   Int
+  /// Siapa yang menaruh baris ini: 'SEED' kalau dimuat dari workbook, 'APP'
+  /// kalau diinput lewat aplikasi. Seeder hanya menghapus barisnya sendiri,
+  /// jadi baris yang diketik orang selamat saat seed ulang tanpa perlu dicatat
+  /// di mana pun. Defaultnya 'APP' dengan sengaja: kalau suatu seeder lupa
+  /// menandai, akibatnya baris tertinggal - bukan baris user ikut terhapus.
+  source            String    @default("APP")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
@@ -674,6 +710,12 @@ model InterAccount {
   colO      Decimal? @db.Decimal(19, 4) // PPn In and Out
   colP      Decimal? @db.Decimal(19, 4) // Blank
   tagYear   Int
+  /// Siapa yang menaruh baris ini: 'SEED' kalau dimuat dari workbook, 'APP'
+  /// kalau diinput lewat aplikasi. Seeder hanya menghapus barisnya sendiri,
+  /// jadi baris yang diketik orang selamat saat seed ulang tanpa perlu dicatat
+  /// di mana pun. Defaultnya 'APP' dengan sengaja: kalau suatu seeder lupa
+  /// menandai, akibatnya baris tertinggal - bukan baris user ikut terhapus.
+  source            String    @default("APP")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

@@ -15,6 +15,12 @@ import {
  */
 import { DATA_DIR, FISCAL_YEAR, findWorkbook } from './utils/layout';
 
+/** Penanda asal baris: yang ditulis seeder boleh dihapus seeder, yang lain tidak. */
+const SEEDED = { source: 'SEED' as const };
+
+/** Jarak antar nomor baris, menyisakan ruang untuk menyisip. */
+const ROW_NO_GAP = 1000;
+
 const WORKBOOK = 'PCMI-Bank Statements-14Sept26.xlsx';
 
 /**
@@ -137,7 +143,7 @@ function parseSheet(rows: any[][], layout: SheetLayout): { parsed: ParsedRow[]; 
         // tanpa menyentuh baris mana pun. Sheet dibaca turun satu per satu dan
         // urutannya tidak diapa-apakan lagi di bawah, jadi ini otomatis sama
         // dengan urutan baris di file.
-        rowNo: (parsed.length + 1) * 1000,
+        rowNo: (parsed.length + 1) * ROW_NO_GAP,
       },
     });
   }
@@ -216,7 +222,7 @@ export async function seedBankStatements(prisma: PrismaClient, workbook?: XLSX.W
   }
 
   // Scoped to this fiscal year so a re-run replaces 2026 and leaves 2025 intact.
-  const removed = await prisma.financialTransaction.deleteMany({ where: { tagYear: FISCAL_YEAR } });
+  const removed = await prisma.financialTransaction.deleteMany({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } });
   if (removed.count > 0) {
     console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} transactions.`);
   }
@@ -280,8 +286,29 @@ export async function seedBankStatements(prisma: PrismaClient, workbook?: XLSX.W
       ordered.map((r) => ({ ...r.data, internalAccountId: internalAccount.id })),
     );
 
+    // Baris yang diketik lewat aplikasi selamat dari penghapusan di atas, jadi
+    // sekarang ia harus ditaruh kembali di belakang barisan workbook yang baru.
+    // Nomor lamanya tidak bisa dipakai: kalau workbook bertambah panjang, nomor
+    // itu sekarang jatuh di tengah-tengah baris yang baru dimuat.
+    const appended = await prisma.financialTransaction.findMany({
+      where: { internalAccountId: internalAccount.id, tagYear: FISCAL_YEAR, source: 'APP' },
+      orderBy: [{ rowNo: 'asc' }, { id: 'asc' }],
+    });
+
+    let tail = ordered.length * ROW_NO_GAP;
+    for (const row of appended) {
+      tail += ROW_NO_GAP;
+      running = running.plus(row.colD ?? 0).minus(row.colC ?? 0);
+      await prisma.financialTransaction.update({
+        where: { id: row.id },
+        data: { rowNo: tail, colE: running },
+      });
+    }
+
     await prisma.fiscalPeriod.upsert({
       where: { internalAccountId_year: { internalAccountId: internalAccount.id, year: FISCAL_YEAR } },
+      // `running` sudah mencakup baris aplikasi, jadi saldo penutup di sini
+      // menghitung seluruh isi rekening - bukan cuma yang ada di workbook.
       update: { openingBalance: opening, closingBalance: running, status: 'CLOSED' },
       create: {
         internalAccountId: internalAccount.id,
@@ -294,6 +321,7 @@ export async function seedBankStatements(prisma: PrismaClient, workbook?: XLSX.W
 
     console.log(
       `✅ ${sheetName.padEnd(12)} ${String(ordered.length).padStart(5)} rows` +
+        (appended.length > 0 ? ` +${appended.length} app` : '') +
         ` | opening ${opening.toFixed(2)} → closing ${running.toFixed(2)}` +
         ` | "${layout.openingLabel}"`,
     );
@@ -314,6 +342,6 @@ async function createInChunks(
   size = 1000,
 ) {
   for (let i = 0; i < data.length; i += size) {
-    await prisma.financialTransaction.createMany({ data: data.slice(i, i + size) });
+    await prisma.financialTransaction.createMany({ data: data.slice(i, i + size).map((r) => ({ ...r, ...SEEDED })) });
   }
 }

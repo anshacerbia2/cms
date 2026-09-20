@@ -22,6 +22,9 @@ import {
   type RowAmounts,
 } from './utils/accounts';
 
+/** Penanda asal baris: yang ditulis seeder boleh dihapus seeder, yang lain tidak. */
+const SEEDED = { source: 'SEED' as const };
+
 const ANCHOR = 'bcasahardjo';
 
 const OPENING: SlotSpec[] = [
@@ -173,10 +176,10 @@ export async function seedAccountPayable(prisma: PrismaClient) {
     return;
   }
 
-  const removed = await prisma.accountPayable.deleteMany({ where: { tagYear: FISCAL_YEAR } });
+  const removed = await prisma.accountPayable.deleteMany({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } });
   if (removed.count > 0) console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} rows.`);
 
-  await prisma.accountPayable.createMany({ data: records });
+  await prisma.accountPayable.createMany({ data: records.map((r) => ({ ...r, ...SEEDED })) });
   console.log(`✅ Seeded ${records.length} account payable rows for ${FISCAL_YEAR}.`);
 
   await linkAccountAmounts({

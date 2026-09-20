@@ -20,6 +20,9 @@ import {
   type RowAmounts,
 } from './utils/accounts';
 
+/** Penanda asal baris: yang ditulis seeder boleh dihapus seeder, yang lain tidak. */
+const SEEDED = { source: 'SEED' as const };
+
 const WORKBOOK = 'PCMI-Sales-14Sept26.xlsx';
 
 /**
@@ -164,7 +167,7 @@ export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) 
     return;
   }
 
-  const removed = await prisma.salesRecord.deleteMany({ where: { tagYear: FISCAL_YEAR } });
+  const removed = await prisma.salesRecord.deleteMany({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } });
   if (removed.count > 0) console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} rows.`);
 
   // Reads to the first fully blank row, which separates the invoices from the
@@ -189,7 +192,7 @@ export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) 
     return;
   }
 
-  await prisma.salesRecord.createMany({ data: records });
+  await prisma.salesRecord.createMany({ data: records.map((r) => ({ ...r, ...SEEDED })) });
   console.log(`✅ Seeded ${records.length} sales invoices for ${FISCAL_YEAR}.`);
 
   await linkAccountAmounts({

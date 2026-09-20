@@ -19,6 +19,9 @@ import {
   type RowAmounts,
 } from './utils/accounts';
 
+/** Penanda asal baris: yang ditulis seeder boleh dihapus seeder, yang lain tidak. */
+const SEEDED = { source: 'SEED' as const };
+
 const WORKBOOK = 'PCMI-InterAccount-14Sept26.xlsx';
 
 /**
@@ -88,7 +91,7 @@ export async function seedInterAccount(prisma: PrismaClient, workbook?: XLSX.Wor
     return;
   }
 
-  const removed = await prisma.interAccount.deleteMany({ where: { tagYear: FISCAL_YEAR } });
+  const removed = await prisma.interAccount.deleteMany({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } });
   if (removed.count > 0) console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} rows.`);
 
   // A transfer row is one that names the pair, e.g. "BCA Sahardjo to BTN".
@@ -116,7 +119,7 @@ export async function seedInterAccount(prisma: PrismaClient, workbook?: XLSX.Wor
     return;
   }
 
-  await prisma.interAccount.createMany({ data: records });
+  await prisma.interAccount.createMany({ data: records.map((r) => ({ ...r, ...SEEDED })) });
   console.log(`✅ Seeded ${records.length} inter-account rows for ${FISCAL_YEAR}.`);
 
   await linkAccountAmounts({

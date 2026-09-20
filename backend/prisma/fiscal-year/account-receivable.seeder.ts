@@ -22,6 +22,9 @@ import {
   type RowAmounts,
 } from './utils/accounts';
 
+/** Penanda asal baris: yang ditulis seeder boleh dihapus seeder, yang lain tidak. */
+const SEEDED = { source: 'SEED' as const };
+
 /** The first account column. Everything else is placed relative to it. */
 const ANCHOR = 'bcasahardjo';
 
@@ -184,10 +187,10 @@ export async function seedAccountReceivable(prisma: PrismaClient) {
     return;
   }
 
-  const removed = await prisma.accountReceivable.deleteMany({ where: { tagYear: FISCAL_YEAR } });
+  const removed = await prisma.accountReceivable.deleteMany({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } });
   if (removed.count > 0) console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} rows.`);
 
-  await prisma.accountReceivable.createMany({ data: records });
+  await prisma.accountReceivable.createMany({ data: records.map((r) => ({ ...r, ...SEEDED })) });
   console.log(`✅ Seeded ${records.length} account receivable rows for ${FISCAL_YEAR}.`);
 
   await linkAccountAmounts({
