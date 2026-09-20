@@ -128,8 +128,11 @@ export async function linkAccountAmounts(opts: {
     );
   }
 
+  // Hanya baris yang baru saja dimuat seeder. Baris yang diketik lewat aplikasi
+  // selamat dari seed ulang, jadi menghitung seluruh isi tahun ini akan melebihi
+  // jumlah baris workbook dan menggagalkan seed yang sebenarnya benar.
   const parents = await parentModel.findMany({
-    where: { tagYear },
+    where: { tagYear, source: 'SEED' },
     select: { id: true },
     orderBy: { id: 'asc' },
   });

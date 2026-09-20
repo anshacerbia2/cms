@@ -4,6 +4,20 @@ import { FISCAL_YEAR } from './layout';
 /** Set this to 1 to allow the seeders to replace data that is already there. */
 const OVERRIDE = 'SEED_REPLACE_EXISTING';
 
+/** Berapa baris tahun ini yang memang ditulis seeder. */
+const SEED_COUNTERS: Record<string, (p: PrismaClient) => Promise<number>> = {
+  financial_transactions: (p) =>
+    p.financialTransaction.count({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } }),
+  sales_records: (p) => p.salesRecord.count({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } }),
+  depreciation: (p) => p.depreciation.count({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } }),
+  inter_account: (p) => p.interAccount.count({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } }),
+  account_receivables: (p) =>
+    p.accountReceivable.count({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } }),
+  account_payables: (p) =>
+    p.accountPayable.count({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } }),
+  ppn_in_out: (p) => p.ppnInOut.count({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } }),
+};
+
 /** How to count a year's rows in each table a seeder writes. */
 const COUNTERS: Record<string, (p: PrismaClient) => Promise<number>> = {
   financial_transactions: (p) => p.financialTransaction.count({ where: { tagYear: FISCAL_YEAR } }),
@@ -41,6 +55,27 @@ export async function assertSafeToReplace(
 
   const existing = counts.filter(([, n]) => n > 0);
   if (existing.length === 0) return true;
+
+  // Kolom `source` defaultnya 'APP', jadi sebelum backfill dijalankan SEMUA
+  // baris lama berlabel APP. Kalau seeder jalan dalam keadaan itu, ia tidak
+  // menghapus apa pun lalu memuat ulang workbook di atasnya - tahun itu jadi
+  // ganda. Ditolak di sini, sebelum ada yang ditulis.
+  const unmarked: string[] = [];
+  for (const [table] of existing) {
+    const count = SEED_COUNTERS[table];
+    if (count && (await count(prisma)) === 0) unmarked.push(table);
+  }
+  if (unmarked.length > 0) {
+    console.error(`\n🛑 Asal baris belum ditandai. Nothing has been changed.\n`);
+    console.error(`   Tabel ini punya baris ${FISCAL_YEAR} tapi tidak satu pun berlabel SEED:`);
+    for (const t of unmarked) console.error(`     ${t}`);
+    console.error(
+      `\n   Tanpa penandaan itu, seed ulang tidak menghapus apa pun dan akan` +
+        `\n   menggandakan tahun ini. Jalankan dulu:\n` +
+        `\n     pnpm backfill:row-source --apply\n`,
+    );
+    return false;
+  }
 
   if (replace) {
     console.log(`♻️  Replacing existing ${FISCAL_YEAR} data:`);

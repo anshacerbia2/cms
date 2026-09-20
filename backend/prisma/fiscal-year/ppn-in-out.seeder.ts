@@ -14,6 +14,9 @@ import {
   type SlotSpec,
 } from './utils/layout';
 
+/** Penanda asal baris: yang ditulis seeder boleh dihapus seeder, yang lain tidak. */
+const SEEDED = { source: 'SEED' as const };
+
 const ANCHOR = 'nofaktur';
 
 /**
@@ -122,10 +125,10 @@ export async function seedPpnInOut(prisma: PrismaClient) {
     return;
   }
 
-  const removed = await prisma.ppnInOut.deleteMany({ where: { tagYear: FISCAL_YEAR } });
+  const removed = await prisma.ppnInOut.deleteMany({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } });
   if (removed.count > 0) console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} rows.`);
 
-  await prisma.ppnInOut.createMany({ data: records });
+  await prisma.ppnInOut.createMany({ data: records.map((r) => ({ ...r, ...SEEDED })) });
   console.log(`✅ Seeded ${records.length} PPN in/out rows for ${FISCAL_YEAR}.`);
 
   if (header.some((cell) => normalizeLabel(cell) === 'status')) {

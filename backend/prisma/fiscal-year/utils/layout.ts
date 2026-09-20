@@ -32,6 +32,31 @@ export function isBlankRow(row: any[] | undefined): boolean {
   return row.every((cell) => cell === null || cell === undefined || String(cell).trim() === '');
 }
 
+/**
+ * Baris kosong yang sudah "disiapkan": ada nomor urutnya, sisanya nol.
+ *
+ * Di bawah data yang sebenarnya, beberapa workbook menyimpan puluhan baris
+ * seperti ini - template yang tinggal diisi. `isBlankRow` tidak menangkapnya
+ * karena selnya memang berisi sesuatu, jadi seeder membacanya terus dan
+ * menyimpan baris hampa: 37 di sales 2025, 7 di depreciation 2025.
+ *
+ * Angka nol saja tidak cukup untuk menyebut baris itu nyata. Yang dicari adalah
+ * teks - nama, nomor invoice, keterangan - di luar kolom nomor urut.
+ */
+export function isPaddingRow(row: any[] | undefined, counterColumns = 1): boolean {
+  if (isBlankRow(row)) return true;
+
+  for (let i = counterColumns; i < (row as any[]).length; i++) {
+    const cell = (row as any[])[i];
+    if (cell === null || cell === undefined) continue;
+    const text = String(cell).trim();
+    if (text === '') continue;
+    if (isNumeric(text) && Number(text) === 0) continue;
+    return false;
+  }
+  return true;
+}
+
 export function isNumeric(value: any): boolean {
   if (typeof value === 'number') return Number.isFinite(value);
   const text = String(value ?? '').trim();

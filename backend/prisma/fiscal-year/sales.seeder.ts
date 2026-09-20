@@ -9,6 +9,7 @@ import {
   FISCAL_YEAR,
   buildColumnMap,
   isBlankRow,
+  isPaddingRow,
   isNumeric,
   normalizeLabel,
   type SlotSpec,
@@ -19,6 +20,9 @@ import {
   readRowAmounts,
   type RowAmounts,
 } from './utils/accounts';
+
+/** Penanda asal baris: yang ditulis seeder boleh dihapus seeder, yang lain tidak. */
+const SEEDED = { source: 'SEED' as const };
 
 const WORKBOOK = 'PCMI-Sales-14Sept26.xlsx';
 
@@ -164,7 +168,7 @@ export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) 
     return;
   }
 
-  const removed = await prisma.salesRecord.deleteMany({ where: { tagYear: FISCAL_YEAR } });
+  const removed = await prisma.salesRecord.deleteMany({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } });
   if (removed.count > 0) console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} rows.`);
 
   // Reads to the first fully blank row, which separates the invoices from the
@@ -173,7 +177,9 @@ export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) 
   const perRow: RowAmounts[] = [];
   for (let i = layout.firstDataRow; i < rows.length; i++) {
     const row = rows[i];
-    if (isBlankRow(row)) break;
+    // Termasuk baris yang sudah diberi nomor urut dan nol - template kosong
+    // di bawah invoice terakhir, yang di sheet 2025 ada 37 buah.
+    if (isPaddingRow(row)) break;
 
     const record: any = { tagYear: FISCAL_YEAR };
     for (const spec of SLOTS) {
@@ -189,7 +195,7 @@ export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) 
     return;
   }
 
-  await prisma.salesRecord.createMany({ data: records });
+  await prisma.salesRecord.createMany({ data: records.map((r) => ({ ...r, ...SEEDED })) });
   console.log(`✅ Seeded ${records.length} sales invoices for ${FISCAL_YEAR}.`);
 
   await linkAccountAmounts({

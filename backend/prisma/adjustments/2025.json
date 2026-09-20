@@ -1,0 +1,302 @@
+{
+  "year": 2025,
+  "note": "Dua hal yang tidak ada di workbook manapun. : baris yang diketik lewat aplikasi - dipakai saat membangun database dari nol, dilewati kalau barisnya sudah ada. : nilai yang diubah pada baris milik workbook, yang selalu kembali ke angka workbook setiap seed ulang.",
+  "inserts": [
+    {
+      "table": "financial_transactions",
+      "data": {
+        "col_a": "2025-12-31T00:00:00",
+        "col_b": "PPh Badan 2025 sesuai Perhitungan dalam Laporan CoreTax PCMI SPT 2025",
+        "col_c": 0.0,
+        "col_d": 662078230.0,
+        "col_e": 662078230.0,
+        "col_f": "Account Payable",
+        "col_g": "AP Tax",
+        "col_h": "PPh Badan PCMI 2025",
+        "col_i": ""
+      },
+      "account": "Non CB"
+    },
+    {
+      "table": "financial_transactions",
+      "data": {
+        "col_a": "2025-12-31T00:00:00",
+        "col_b": "PPh Badan 2025 sesuai Perhitungan dalam Laporan CoreTax PCMI SPT 2025",
+        "col_c": 662078230.0,
+        "col_d": 0.0,
+        "col_e": 0.0,
+        "col_f": "Income Tax",
+        "col_g": "Income Tax",
+        "col_h": "PPh Badan PCMI 2025",
+        "col_i": ""
+      },
+      "account": "Non CB"
+    },
+    {
+      "table": "financial_transactions",
+      "data": {
+        "col_a": "2025-12-31T00:00:00",
+        "col_b": "Selisih BuPot Prepaid Tax PPh-23 Lap Keu Internal oleh Tika : Rp. 661.753.441 - Rp. 660.377.899",
+        "col_c": 0.0,
+        "col_d": 1375542.0,
+        "col_e": 1375542.0,
+        "col_f": "Account Receivable",
+        "col_g": "AR Prepaid Tax",
+        "col_h": "PPh-23 Bukti Potong 2025",
+        "col_i": ""
+      },
+      "account": "Non CB"
+    },
+    {
+      "table": "financial_transactions",
+      "data": {
+        "col_a": "2025-12-31T00:00:00",
+        "col_b": "Selisih BuPot Prepaid Tax PPh-23 Lap Keu Internal oleh Tika : Rp. 661.753.441 - Rp. 660.377.899",
+        "col_c": 1375542.0,
+        "col_d": 0.0,
+        "col_e": 0.0,
+        "col_f": "Other Income/Expense",
+        "col_g": "Other Expense",
+        "col_h": "",
+        "col_i": ""
+      },
+      "account": "Non CB"
+    },
+    {
+      "table": "account_payables",
+      "data": {
+        "colA": "AP Tax",
+        "colB": 2025,
+        "colC": "PPh Badan",
+        "colD": "PPh Badan 2025 sesuai Perhitungan dalam Laporan CoreTax PCMI SPT 2025",
+        "colE": 0.0,
+        "colF": null,
+        "colG": null,
+        "colH": null,
+        "colI": null,
+        "colJ": null,
+        "colK": 0.0,
+        "colL": 0.0,
+        "colM": 0.0,
+        "colN": 0.0,
+        "colO": 0.0,
+        "colP": 0.0,
+        "colQ": 0.0,
+        "colR": 662078230.0,
+        "colS": 0.0,
+        "colT": null,
+        "colU": 662078230.0,
+        "colV": null
+      }
+    },
+    {
+      "table": "sales_records",
+      "why": "Invoice PLN IP Energy Business Forum 2025, diketik lewat aplikasi ke baris template kosong di bawah invoice terakhir. Sejak seeder berhenti di template itu, barisnya tidak lagi ikut termuat.",
+      "data": {
+        "colA": "271",
+        "colB": "072/271/PCMI/AR/V/2026",
+        "colD": 2025,
+        "colE": "Perusahaan Listrik Negara (Persero), PT",
+        "colF": "PLN IP Energy Business Forum 2025",
+        "colG": "Souvenirs Eksklusif Korporat",
+        "colH": 250000000.0,
+        "colI": 0.0,
+        "colJ": 0.0,
+        "colK": 250000000.0,
+        "colM": 0.0,
+        "colN": 0.0,
+        "colO": 0.0,
+        "colP": 0.0,
+        "colQ": 0.0,
+        "colR": 0.0,
+        "colS": 0.0,
+        "colT": 0.0,
+        "colU": 0.0,
+        "colV": 0.0,
+        "colW": 0.0,
+        "colX": 250000000.0,
+        "colZ": 0.0,
+        "colAA": -5000000.0,
+        "colAB": 245000000.0,
+        "colAC": 0.0,
+        "colAD": "Faktur PPN WAPU masuk dalam laporan tahun 2026"
+      }
+    }
+  ],
+  "edits": [
+    {
+      "table": "account_receivables",
+      "why": "Selisih BuPot Prepaid Tax PPh-23: Lap Keu Internal 661.753.441 vs CoreTax 660.377.899, selisih 1.375.542. Sepasang dengan jurnal di financial_transactions id 7934-7935.",
+      "match": {
+        "colB": "AR Prepaid Tax",
+        "colR": "661753441"
+      },
+      "set": {
+        "colO": "-660377899",
+        "colR": "660377899"
+      }
+    },
+    {
+      "table": "account_receivables",
+      "why": "Temporary Notes Intrareps dinolkan.",
+      "match": {
+        "colB": "AR Temporary Notes",
+        "colR": "32854000"
+      },
+      "set": {
+        "colC": null,
+        "colD": null,
+        "colO": "0",
+        "colR": "0"
+      }
+    },
+    {
+      "table": "account_receivables",
+      "why": "PLN IP Energy Business Forum 2025 - nilai tagihan dinaikkan.",
+      "match": {
+        "colB": "AR Trade",
+        "colF": "250000000",
+        "colR": "250000000"
+      },
+      "set": {
+        "colF": "277500000"
+      }
+    },
+    {
+      "table": "account_payables",
+      "why": "Sisa hutang disesuaikan.",
+      "match": {
+        "colM": "1718342",
+        "colU": "1846030"
+      },
+      "set": {
+        "colM": "0",
+        "colU": "127688"
+      }
+    },
+    {
+      "table": "financial_transactions",
+      "why": "Non CB: Snapy Tebet 1 - Print Compro PCMI 5 pcs Utk Keperluan Sa",
+      "match": {
+        "colB": "SNAPY TIBET 1 - Print Compro PCMI 5 pcs Utk Keperluan Sales, 4 Nov 2025",
+        "colC": "1442924.0",
+        "colD": "0.0"
+      },
+      "set": {
+        "colB": "Snapy Tebet 1 - Print Compro PCMI 5 pcs Utk Keperluan Sales, 4 Nov 2025"
+      }
+    },
+    {
+      "table": "financial_transactions",
+      "why": "Non CB: Phoa 24 City walk-HO - Makan Siang Ibu AH dan FA, 07 Nov",
+      "match": {
+        "colB": "PHO24 CITY WALK-HO - Makan Siang Ibu AH dan FA, 07 Nov 2025",
+        "colC": "306020.0",
+        "colD": "0.0"
+      },
+      "set": {
+        "colB": "Phoa 24 City walk-HO - Makan Siang Ibu AH dan FA, 07 Nov 2025"
+      }
+    },
+    {
+      "table": "financial_transactions",
+      "why": "Non CB: Pusaka Prima transport",
+      "match": {
+        "colB": "PUSAKA PRIMA TRANSPORT",
+        "colC": "620000.0",
+        "colD": "0.0"
+      },
+      "set": {
+        "colB": "Pusaka Prima transport",
+        "colF": "Cost of Goods",
+        "colG": "COGS",
+        "colH": "KBUMN Natal 2024"
+      },
+      "all": true
+    },
+    {
+      "table": "financial_transactions",
+      "why": "Non CB: Pusaka Prima transport",
+      "match": {
+        "colB": "PARK HYATT ONLINE -MAG Welcome Dinner on 13 November 2025",
+        "colC": "31614000.0",
+        "colD": "0.0"
+      },
+      "set": {
+        "colB": "Pusaka Prima transport",
+        "colF": "Cost of Goods",
+        "colG": "COGS",
+        "colH": "KBUMN Natal 2024"
+      }
+    },
+    {
+      "table": "financial_transactions",
+      "why": "Non CB: Second floor coffee DW - Dharmawangsa - Meeting dengan P",
+      "match": {
+        "colB": "SECOND FLOOR COFFEE DW - DHARMAWANGSA - Meeting dengan Pak Arie Mandiri dan byr in Kopi nya untuk dibawa pulang",
+        "colC": "702725.0",
+        "colD": "0.0"
+      },
+      "set": {
+        "colB": "Second floor coffee DW - Dharmawangsa - Meeting dengan Pak Arie Mandiri dan byr in Kopi nya untuk dibawa pulang"
+      }
+    },
+    {
+      "table": "financial_transactions",
+      "why": "Non CB: Pullman Ciawi Vimala H Bogor - Pembayaran 2 kamar hotel ",
+      "match": {
+        "colB": "PULLMAN CIAWI VIMALA H BOGOR - Pembayaran 2 kamar hotel atas nama Atuy dan Adnan",
+        "colC": "3824000.0",
+        "colD": "0.0"
+      },
+      "set": {
+        "colB": "Pullman Ciawi Vimala H Bogor - Pembayaran 2 kamar hotel atas nama Atuy dan Adnan"
+      }
+    },
+    {
+      "table": "financial_transactions",
+      "why": "Mandiri Mid Plaza: KBUMN Natal 24       04792  Trf  KE JASA TIRTA LUH",
+      "match": {
+        "colB": "KBUMN Natal 24       04792  Trf  KE JASA TIRTA LUHUR",
+        "colC": "218342.0",
+        "colD": "0.0"
+      },
+      "set": {
+        "colB": "KBUMN Natal 24       04792  Trf  KE JASA TIRTA LUHUR : PPh-23 Sudah dipungut tidak jadi disetor",
+        "colF": "Ayat Silang",
+        "colG": "Ayat Silang",
+        "colH": "Retur"
+      }
+    },
+    {
+      "table": "financial_transactions",
+      "why": "Mandiri Mid Plaza: KBUMN Natal 25  04047  MCM InhouseTrf  KE JASA TIR",
+      "match": {
+        "colB": "KBUMN Natal 25  04047  MCM InhouseTrf  KE JASA TIRTA LUHUR : Rp. 11.889.658",
+        "colC": "0.0",
+        "colD": "218342.0"
+      },
+      "set": {
+        "colB": "KBUMN Natal 25  04047  MCM InhouseTrf  KE JASA TIRTA LUHUR : Rp. 11.889.658 - PPh-23 Tidak jadi dipungut",
+        "colF": "Ayat Silang",
+        "colG": "Ayat Silang",
+        "colH": "PPh-23 yang Dipungut tapi Tidak Jadi Disetor",
+        "colI": ""
+      }
+    },
+    {
+      "table": "financial_transactions",
+      "why": "Mandiri Mid Plaza: PYC IEC, 400 Pebble 05655   SYCAIDJ1/CV DOMPET GLO",
+      "match": {
+        "colB": "PYC IEC, 400 Pebble 05655   SYCAIDJ1/CV DOMPET GLOBAL INDONESIA : Rp. 43.344.000",
+        "colC": "0.0",
+        "colD": "1500000.0"
+      },
+      "set": {
+        "colB": "PYC IEC, 400 Pebble 05655   SYCAIDJ1/CV DOMPET GLOBAL INDONESIA : Rp. 43.344.000 - PPh-23 Tidak Disetor",
+        "colF": "Other Income / Expense",
+        "colG": "Other Income"
+      }
+    }
+  ]
+}

@@ -5,6 +5,9 @@ import * as XLSX from 'xlsx';
 import { cleanCurrency, cleanString, excelDateToJSDate } from '../utils/excel';
 import { DATA_DIR, FISCAL_YEAR, isNumeric, normalizeLabel, findWorkbook } from './utils/layout';
 
+/** Penanda asal baris: yang ditulis seeder boleh dihapus seeder, yang lain tidak. */
+const SEEDED = { source: 'SEED' as const };
+
 const WORKBOOK = 'PCMI-Depreciation-14Sept26.xlsx';
 
 /**
@@ -57,7 +60,7 @@ export async function seedDepreciation(prisma: PrismaClient, workbook?: XLSX.Wor
     return;
   }
 
-  const removed = await prisma.depreciation.deleteMany({ where: { tagYear: FISCAL_YEAR } });
+  const removed = await prisma.depreciation.deleteMany({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } });
   if (removed.count > 0) console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} rows.`);
 
   const assets: Prisma.DepreciationCreateManyInput[] = [];
@@ -79,6 +82,11 @@ export async function seedDepreciation(prisma: PrismaClient, workbook?: XLSX.Wor
     const name = cleanString((row || [])[2]);
     const life = (row || [])[USEFUL_LIFE_COL];
     if (name === '' || !isNumeric(life) || Number(life) <= 0) continue;
+
+    // Harga beli nol berarti barisnya template yang belum diisi, bukan aset.
+    // Di Deprec 2025 ada tujuh baris seperti itu: bernama, tapi tanpa nilai.
+    const price = cleanCurrency(row[3]);
+    if (price === null || price.isZero()) continue;
 
     assets.push({
       colA: excelDateToJSDate(row[0]),
@@ -113,7 +121,7 @@ export async function seedDepreciation(prisma: PrismaClient, workbook?: XLSX.Wor
     return;
   }
 
-  await prisma.depreciation.createMany({ data: assets });
+  await prisma.depreciation.createMany({ data: assets.map((r) => ({ ...r, ...SEEDED })) });
 
   const breakdown = Object.entries(counts)
     .map(([type, n]) => `${type} ${n}`)

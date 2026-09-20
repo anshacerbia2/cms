@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import { seedBanks } from '../seeders/banks.seeder';
 import { FISCAL_YEAR, useFiscalYear } from './utils/layout';
 import { assertSafeToReplace } from './utils/guard';
+import { prepareExistingRows } from './utils/prepare';
 import { seedBankStatements } from './bank-statements.seeder';
 import { seedInterAccount } from './inter-account.seeder';
 import { seedDepreciation } from './depreciation.seeder';
@@ -12,6 +13,7 @@ import { seedSales } from './sales.seeder';
 import { seedAccountReceivable } from './account-receivable.seeder';
 import { seedAccountPayable } from './account-payable.seeder';
 import { seedPpnInOut } from './ppn-in-out.seeder';
+import { applyAdjustments } from './adjustments';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -97,8 +99,13 @@ async function main() {
   );
 
   try {
-    // Checked before anything is written, so a refusal changes nothing.
     const tables = chosen.flatMap((s) => s.tables);
+
+    // Baris yang dimuat sebelum kolom `source` ada ditandai di sini, bukan
+    // lewat perintah terpisah yang harus diingat orang.
+    await prepareExistingRows(prisma, tables);
+
+    // Checked before anything is written, so a refusal changes nothing.
     const replace = option('replace', 'SEED_REPLACE_EXISTING') === '1';
     if (!(await assertSafeToReplace(prisma, tables, replace))) {
       await prisma.$disconnect();
@@ -113,6 +120,9 @@ async function main() {
     for (const seeder of chosen) {
       await seeder.run(prisma);
     }
+
+    // Terakhir, karena ia menyunting baris yang baru saja dimuat ulang.
+    await applyAdjustments(prisma, tables);
 
     console.log(`🚀 ${FISCAL_YEAR} seeding completed successfully.`);
   } catch (error) {
