@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Edit2,
   Trash2,
+  CornerDownRight,
   FileSpreadsheet,
   FileText,
   Eye,
@@ -40,6 +41,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import AddLedgerModal from "../components/AddLedgerModal";
 import EditTransactionModal from "../components/EditTransactionModal";
+import InsertTransactionModal from "../components/InsertTransactionModal";
 import { DetailModal } from "@/components/common/DetailModal";
 import {
   Table,
@@ -111,6 +113,8 @@ export default function BankMutationPage() {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [insertAfterRow, setInsertAfterRow] = useState<any | null>(null);
+  const [isInsertModalOpen, setIsInsertModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<number | null>(null);
   const [selectedViewTransaction, setSelectedViewTransaction] = useState<any>(null);
@@ -138,6 +142,12 @@ export default function BankMutationPage() {
   const handleEditTransaction = (row: any) => {
     setSelectedTransactionId(row.id);
     setIsEditModalOpen(true);
+  };
+
+  /** Baris baru mendarat tepat di bawah `row`, bukan di ujung daftar. */
+  const handleInsertAfter = (row: any) => {
+    setInsertAfterRow(row);
+    setIsInsertModalOpen(true);
   };
 
   const handleViewTransaction = (row: any) => {
@@ -886,6 +896,17 @@ export default function BankMutationPage() {
                               <Edit2 size={12} strokeWidth={2.5} />
                             </Button>
                           )}
+                          {can('bank-mutation.create') && !isPeriodClosed && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Insert a row below this one"
+                              className="h-7 w-7 text-primary/40 hover:text-secondary hover:bg-secondary/5 rounded-sm"
+                              onClick={(e) => { e.stopPropagation(); handleInsertAfter(row); }}
+                            >
+                              <CornerDownRight size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                           {can('bank-mutation.delete') && (
                             <Button 
                               variant="ghost" 
@@ -948,6 +969,18 @@ export default function BankMutationPage() {
         open={isAddModalOpen} 
         onOpenChange={setIsAddModalOpen} 
         selectedAccount={selectedAccount}
+        year={yearNum}
+        onSuccess={() => {
+          refetchFiscal();
+          refetchTransactions();
+        }}
+      />
+
+      <InsertTransactionModal
+        open={isInsertModalOpen}
+        onOpenChange={setIsInsertModalOpen}
+        afterRow={insertAfterRow}
+        accountId={selectedAccount?.id}
         year={yearNum}
         onSuccess={() => {
           refetchFiscal();

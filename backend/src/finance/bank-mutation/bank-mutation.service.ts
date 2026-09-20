@@ -4,6 +4,23 @@ import { Prisma } from '@prisma/client';
 import { formatDecimal } from '../../common/utils/format.utils';
 
 
+/**
+ * Urutan ledger, dipakai di mana pun baris dibaca berderet: daftar di layar,
+ * export Excel dan PDF, dan perantaian ulang kolom saldo.
+ *
+ * `rowNo` yang menentukan; `id` cuma pemecah seri, untuk baris yang belum
+ * sempat di-backfill dan untuk dua orang yang menyisip di titik yang sama.
+ * Postgres menaruh NULL di belakang pada ASC, jadi baris tanpa `rowNo` jatuh
+ * di ujung - persis perilaku "ditambahkan paling bawah" yang lama.
+ */
+const LEDGER_ORDER: Prisma.FinancialTransactionOrderByWithRelationInput[] = [
+  { rowNo: 'asc' },
+  { id: 'asc' },
+];
+
+/** Jarak antar baris, menyisakan ruang untuk menyisip tanpa menyentuh tetangganya. */
+const ROW_NO_GAP = 1000;
+
 @Injectable()
 export class BankMutationService {
   constructor(private prisma: PrismaService) {}
@@ -38,7 +55,7 @@ export class BankMutationService {
     
     const data = await this.prisma.financialTransaction.findMany({
       where,
-      orderBy: [{ id: 'asc' }],
+      orderBy: LEDGER_ORDER,
     });
 
     return data.map(t => ({
@@ -80,9 +97,12 @@ export class BankMutationService {
       where: { internalAccountId_year: { internalAccountId: accountIdBig, year: tagYear } }
     });
 
-    // 4. Insert transactions with LINKING to internalAccountId
+    // 4. Insert transactions with LINKING to internalAccountId.
+    // Ditambahkan di ujung, meneruskan nomor urut terakhir - sama seperti sebelum
+    // ada row_no, waktu urutan masih menumpang pada id yang menaik.
+    const tail = await this.lastRowNo(accountIdBig, tagYear);
     await this.prisma.financialTransaction.createMany({
-      data: data.map(item => ({
+      data: data.map((item, index) => ({
         internalAccountId: account.id,
         colA: item.colA ? new Date(item.colA) : null,
         colB: item.colB || "",
@@ -94,6 +114,7 @@ export class BankMutationService {
         colH: item.colH || "",
         colI: item.colI || "",
         tagYear: tagYear,
+        rowNo: tail + (index + 1) * ROW_NO_GAP,
       })),
     });
 
@@ -217,6 +238,137 @@ export class BankMutationService {
     await this.recalculateLedger(accountIdBig.toString(), tagYear, true);
 
     return { success: true };
+  }
+
+  // --- Menyisip baris di tengah ledger ---
+
+  /** Nomor urut terakhir yang terpakai di satu rekening-tahun, 0 kalau belum ada. */
+  private async lastRowNo(accountId: bigint, year: number): Promise<number> {
+    const last = await this.prisma.financialTransaction.findFirst({
+      // Baris yang row_no-nya masih kosong sengaja dilewati: pada ASC ia jatuh di
+      // ujung daftar, tapi pada DESC Postgres menaruhnya paling depan, dan
+      // membacanya di sini akan membuat baris berikutnya menumpuk di nomor kecil.
+      where: { internalAccountId: accountId, tagYear: year, rowNo: { not: null } },
+      orderBy: [{ rowNo: 'desc' }],
+      select: { rowNo: true },
+    });
+    return last?.rowNo ?? 0;
+  }
+
+  /**
+   * Nomor urut untuk baris baru tepat di bawah `afterId`; `null` untuk paling atas.
+   *
+   * Diambil titik tengah antara baris itu dan baris sesudahnya, jadi menyisip cuma
+   * satu INSERT - tidak ada tetangga yang digeser, `id` dan nilainya tetap.
+   * Mengembalikan `null` kalau celahnya sudah habis, artinya perlu dirapatkan dulu.
+   */
+  private async rowNoAfter(
+    accountId: bigint,
+    year: number,
+    afterId: bigint | null,
+  ): Promise<number | null> {
+    let floor = 0;
+
+    if (afterId !== null) {
+      const anchorRow = await this.prisma.financialTransaction.findUnique({
+        where: { id: afterId },
+        select: { internalAccountId: true, tagYear: true, rowNo: true },
+      });
+      if (!anchorRow) throw new NotFoundException(`Transaction ${afterId} not found`);
+      if (anchorRow.internalAccountId !== accountId || anchorRow.tagYear !== year) {
+        throw new BadRequestException(
+          `Transaction ${afterId} belongs to another account or year`,
+        );
+      }
+      if (anchorRow.rowNo === null) return null;
+      floor = anchorRow.rowNo;
+    }
+
+    const next = await this.prisma.financialTransaction.findFirst({
+      where: { internalAccountId: accountId, tagYear: year, rowNo: { gt: floor } },
+      orderBy: [{ rowNo: 'asc' }],
+      select: { rowNo: true },
+    });
+
+    // Tanpa baris sesudahnya, berarti menyisip di ujung: langsung satu langkah penuh.
+    const ceiling = next?.rowNo ?? floor + 2 * ROW_NO_GAP;
+    const mid = Math.floor((floor + ceiling) / 2);
+    return mid > floor ? mid : null;
+  }
+
+  /**
+   * Menulis ulang nomor urut satu rekening-tahun jadi kelipatan ROW_NO_GAP lagi.
+   *
+   * Dipanggil saat celah antara dua baris habis. Urutannya tidak berubah sama
+   * sekali - cuma direnggangkan kembali, dan baris yang row_no-nya masih kosong
+   * ikut mendapat nomor di ujung, sesuai posisi tampilnya sekarang.
+   */
+  private async repackRowNo(accountId: bigint, year: number): Promise<void> {
+    await this.prisma.$executeRaw`
+      UPDATE financial_transactions f
+         SET row_no = x.n * ${ROW_NO_GAP}
+        FROM (
+               SELECT id,
+                      row_number() OVER (ORDER BY row_no ASC NULLS LAST, id ASC) AS n
+                 FROM financial_transactions
+                WHERE internal_account_id = ${accountId}
+                  AND "tagYear" = ${year}
+             ) x
+       WHERE f.id = x.id
+    `;
+  }
+
+  /**
+   * Menambah satu baris tepat di bawah `afterId` (atau paling atas kalau null).
+   *
+   * Baris di bawahnya turun satu posisi tanpa disentuh: yang menentukan posisi
+   * adalah row_no, bukan banyaknya baris di atasnya. Sesudahnya kolom saldo
+   * dirantai ulang seperti pada tambah/ubah/hapus biasa.
+   */
+  async insertTransaction(data: any, accountId: string, tagYear: number, afterId?: number | null) {
+    const accountIdBig = BigInt(accountId);
+    const after = afterId === undefined || afterId === null ? null : BigInt(afterId);
+
+    const account = await this.prisma.internalAccount.findUnique({ where: { id: accountIdBig } });
+    if (!account) throw new NotFoundException(`Account ${accountId} not found`);
+
+    let rowNo = await this.rowNoAfter(accountIdBig, tagYear, after);
+    if (rowNo === null) {
+      await this.repackRowNo(accountIdBig, tagYear);
+      rowNo = await this.rowNoAfter(accountIdBig, tagYear, after);
+    }
+    if (rowNo === null) {
+      // Sesudah dirapatkan celahnya pasti ROW_NO_GAP, jadi ini tidak bisa terjadi
+      // kecuali ada yang menyisip di detik yang sama. Ditolak dengan jelas, bukan
+      // diam-diam mendarat di tempat lain.
+      throw new BadRequestException('Gagal menentukan posisi baris, coba lagi.');
+    }
+
+    const created = await this.prisma.financialTransaction.create({
+      data: {
+        internalAccountId: accountIdBig,
+        colA: data.colA ? new Date(data.colA) : null,
+        colB: data.colB || '',
+        colC: data.colC !== undefined ? data.colC.toString() : '0',
+        colD: data.colD !== undefined ? data.colD.toString() : '0',
+        colE: 0,
+        colF: data.colF || '',
+        colG: data.colG || '',
+        colH: data.colH || '',
+        colI: data.colI || '',
+        tagYear,
+        rowNo,
+      },
+    });
+
+    await this.prisma.fiscalPeriod.updateMany({
+      where: { internalAccountId: accountIdBig, year: { gte: tagYear } },
+      data: { isStale: true },
+    });
+
+    await this.recalculateLedger(accountId, tagYear, true);
+
+    return { success: true, id: Number(created.id), rowNo };
   }
 
   // --- Opening Balance & Anchor Logic ---
@@ -454,16 +606,16 @@ export class BankMutationService {
     
     let runningBalance = new Prisma.Decimal(startingBalance);
 
-    // 2. Fetch all transactions for this bank in this year, ordered by Date then ID
+    // 2. Ambil seluruh transaksi rekening-tahun ini MENURUT URUTAN YANG DITAMPILKAN.
+    // Dulu di sini diurutkan tanggal, padahal daftarnya tampil urut baris workbook,
+    // jadi saldo di satu baris bukan hasil penjumlahan baris-baris di atasnya. Paling
+    // jauh melesetnya di Non CB: 382 barisnya bertanggal di luar tahun bukunya.
     const transactions = await this.prisma.financialTransaction.findMany({
       where: {
         internalAccountId: accountIdBig,
         tagYear: year
       },
-      orderBy: [
-        { colA: 'asc' },
-        { id: 'asc' }
-      ]
+      orderBy: LEDGER_ORDER
     });
 
     // 3. Update each transaction's Saldo (colE) sequentially (STRICT: colE = Saldo AFTER transaction)
