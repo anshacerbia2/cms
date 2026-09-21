@@ -25,6 +25,17 @@ const PL_LABEL_CODES: Record<string, string> = {
   'income tax': LEDGER_CODE.INCOME_TAX,
 };
 
+/**
+ * Dividen bersih: yang dibayar (debit) dikurangi yang kembali (kredit).
+ * Dulu hanya debit yang dijumlah, jadi dividen yang diretur tetap terhitung -
+ * 2026 keluar 840 juta padahal yang benar 600 juta (240 juta diretur).
+ */
+const netDividend = (rows: { colC: Prisma.Decimal | null; colD: Prisma.Decimal | null }[]) =>
+  rows.reduce(
+    (acc, r) => acc.plus(new Prisma.Decimal(r.colC || 0)).minus(new Prisma.Decimal(r.colD || 0)),
+    new Prisma.Decimal(0),
+  );
+
 /** Code Ledger sebuah transaksi, untuk memilah beban tanpa membandingkan nama. */
 const withLedgerCode = { ledger: { select: { code: true } } } as const;
 
@@ -601,7 +612,7 @@ export class FinanceReportService {
         const dividendTrxLegacy = await this.prisma.financialTransaction.findMany({
           where: legacyWhere
         });
-        prevDividend = dividendTrxLegacy.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colC || 0)), new Prisma.Decimal(0));
+        prevDividend = netDividend(dividendTrxLegacy);
       }
 
       prevYearsVal = prevProfit.minus(prevDividend);
@@ -627,7 +638,7 @@ export class FinanceReportService {
       const dividendTrxCurrent = await this.prisma.financialTransaction.findMany({
         where: currentWhere
       });
-      dividendVal = dividendTrxCurrent.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colC || 0)), new Prisma.Decimal(0)).mul(-1);
+      dividendVal = netDividend(dividendTrxCurrent).mul(-1);
     }
 
     // 5. Shared Capital
