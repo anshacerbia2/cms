@@ -31,7 +31,9 @@ export class LedgersService {
   async tree() {
     const [ledgers, byLedger, bySub] = await Promise.all([
       this.prisma.ledger.findMany({
-        orderBy: [{ orderIndex: 'asc' }, { name: 'asc' }],
+        // A-Z, sama dengan daftar di filter kolom Ledger. Urutan lama (order_index,
+        // menurut seberapa sering dipakai) membuat isi yang sama terlihat berbeda.
+        orderBy: { name: 'asc' },
         include: { subLedgers: { orderBy: { name: 'asc' } } },
       }),
       this.prisma.financialTransaction.groupBy({ by: ['ledgerId'], _count: { _all: true } }),
