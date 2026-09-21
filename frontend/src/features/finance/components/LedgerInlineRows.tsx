@@ -160,8 +160,10 @@ type InsertProps = {
   /** Saldo baris tempat menyisip; saldo tiap draf berjalan dari sini. */
   anchorSaldo: number;
   master: LedgerMaster | null;
-  /** Kolom "No" ditampilkan (Non CB). Nomornya baru ada setelah disimpan. */
+  /** Kolom "No" ditampilkan (Non CB). */
   showRowNo?: boolean;
+  /** row_no baris tempat menyisip; draf diberi nomor lanjutannya. */
+  anchorRowNo?: number | null;
   saving: boolean;
   /** Menerima draf yang sudah diisi dan lolos pemeriksaan, siap dikirim. */
   onSave: (drafts: LedgerDraft[]) => void;
@@ -178,7 +180,7 @@ const focusCell = (rowKey: string, field: DraftField) =>
   }, 30);
 
 /** Draf yang disisipkan di bawah satu baris, sebanyak apa pun, plus baris tombolnya. */
-export function InlineInsertRows({ anchorSaldo, master, showRowNo, saving, onSave, onCancel }: InsertProps) {
+export function InlineInsertRows({ anchorSaldo, master, showRowNo, anchorRowNo, saving, onSave, onCancel }: InsertProps) {
   const [drafts, setDrafts] = useState<LedgerDraft[]>(() => [emptyDraft()]);
   const latest = useRef(drafts);
   latest.current = drafts;
@@ -248,7 +250,12 @@ export function InlineInsertRows({ anchorSaldo, master, showRowNo, saving, onSav
     <>
       {drafts.map((draft, i) => (
         <TableRow key={`ins-${i}`} className="whitespace-nowrap">
-          {showRowNo && <TableCell className={`${rowNoCell} bg-amber-50/60 text-[11px]`}>baru</TableCell>}
+          {showRowNo && (
+            // Nomor yang akan didapat setelah disimpan: lanjutan baris di atasnya.
+            <TableCell className={`${rowNoCell} bg-amber-50/60`}>
+              {anchorRowNo ? formatRowNo(anchorRowNo + (i + 1) * 1000) : '-'}
+            </TableCell>
+          )}
           <LedgerRowEditor
             index={i}
             draft={draft}

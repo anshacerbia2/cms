@@ -271,6 +271,8 @@ export class BankMutationService {
     await this.prisma.financialTransaction.delete({
       where: { id: trxId }
     });
+    // Tanpa ini nomor baris yang dihapus bolong di kolom "No".
+    await this.repackRowNo(accountIdBig, tagYear);
 
     await this.prisma.fiscalPeriod.updateMany({
       where: {
@@ -380,9 +382,11 @@ export class BankMutationService {
   /**
    * Menulis ulang nomor urut satu rekening-tahun jadi kelipatan ROW_NO_GAP lagi.
    *
-   * Dipanggil saat celah antara dua baris habis. Urutannya tidak berubah sama
-   * sekali - cuma direnggangkan kembali, dan baris yang row_no-nya masih kosong
-   * ikut mendapat nomor di ujung, sesuai posisi tampilnya sekarang.
+   * Dipanggil saat celah antara dua baris habis, dan sesudah setiap sisip atau
+   * hapus supaya row_no / ROW_NO_GAP selalu 1, 2, 3 tanpa pecahan atau lubang -
+   * itu yang tampil di kolom "No". Urutannya tidak berubah sama sekali, dan
+   * baris yang row_no-nya masih kosong ikut mendapat nomor di ujung.
+   * Satu UPDATE, tanpa menyentuh updated_at: nomor bergeser bukan suntingan.
    */
   private async repackRowNo(accountId: bigint, year: number): Promise<void> {
     await this.prisma.$executeRaw`
@@ -481,6 +485,11 @@ export class BankMutationService {
         rowNo: rowNos![i],
       })),
     });
+
+    // Nomor urut dirapatkan lagi: baris sisipan jadi nomor lanjutan dari baris
+    // di atasnya dan baris sesudahnya bergeser, jadi kolom "No" tetap 1, 2, 3
+    // tanpa pecahan. Urutannya sendiri tidak berubah.
+    await this.repackRowNo(accountIdBig, tagYear);
 
     await this.prisma.fiscalPeriod.updateMany({
       where: { internalAccountId: accountIdBig, year: { gte: tagYear } },

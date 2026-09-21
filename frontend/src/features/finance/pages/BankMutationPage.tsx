@@ -987,6 +987,7 @@ export default function BankMutationPage() {
                         anchorSaldo={Number(rawById.get(row.id)?.colE || 0)}
                         master={ledgerMaster}
                         showRowNo={showRowNo}
+                        anchorRowNo={rawById.get(row.id)?.rowNo}
                         saving={savingInline}
                         onSave={saveInsert}
                         onCancel={cancelInline}

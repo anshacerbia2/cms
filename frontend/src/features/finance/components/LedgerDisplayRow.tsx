@@ -5,9 +5,8 @@ import { Button } from '@/components/ui/button';
 
 /**
  * Nomor urut baris untuk kolom "No". `row_no` diberi jarak 1000 supaya bisa
- * menyisip di tengah, jadi dibagi 1000: baris dari workbook tampil 1, 2, 3 -
- * sama dengan urutannya di Excel - dan baris sisipan tampil di antaranya
- * (mis. 12.5 di antara 12 dan 13).
+ * menyisip di tengah, dan backend merapatkannya lagi sesudah setiap sisip atau
+ * hapus - jadi dibagi 1000 hasilnya selalu 1, 2, 3 berurutan.
  */
 export const formatRowNo = (rowNo: number | null | undefined) =>
   rowNo === null || rowNo === undefined
