@@ -828,7 +828,19 @@ export default function BankMutationPage() {
           <Table className="min-w-[1600px]">
             <TableHeader className="bg-slate-50/50">
               <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
-                {showRowNo && <TableHead className="py-3 pl-4 w-20">No</TableHead>}
+                {showRowNo && (
+                  <TableHead className="py-3 pl-4 w-20">
+                    <div className="flex items-center gap-1">
+                      No
+                      <ExcelColumnFilter
+                        columnKey="rowNo" label="No" data={[]} activeFilters={null} sortOnly sortLabels={['1 → 9', '9 → 1']}
+                        onFilterChange={() => {}}
+                        onSort={(d) => setLedgerSort({ key: "rowNo", direction: d })}
+                        currentSort={ledgerSort}
+                      />
+                    </div>
+                  </TableHead>
+                )}
                 <TableHead className="w-44 min-w-44">
                   <div className="flex items-center justify-start gap-1">
                     Date

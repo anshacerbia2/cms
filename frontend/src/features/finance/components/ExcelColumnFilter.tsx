@@ -21,6 +21,10 @@ interface ExcelColumnFilterProps {
   valueFormatter?: (val: any) => string;
   type?: 'text' | 'date';
   dateKey?: string;
+  /** Hanya tombol urut - tanpa pencarian dan daftar nilai. Untuk kolom seperti "No". */
+  sortOnly?: boolean;
+  /** Label tombol urut naik/turun; default "A to Z" / "Z to A". */
+  sortLabels?: [string, string];
 }
 
 interface DateTree {
@@ -39,7 +43,9 @@ export function ExcelColumnFilter({
   currentSort,
   valueFormatter,
   type = 'text',
-  dateKey
+  dateKey,
+  sortOnly = false,
+  sortLabels = ['A to Z', 'Z to A'],
 }: ExcelColumnFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -214,7 +220,7 @@ export function ExcelColumnFilter({
       <DropdownMenuTrigger asChild>
         <button className={cn(
           "ml-1.5 p-1 rounded-md hover:bg-primary/5 transition-all inline-flex items-center cursor-pointer opacity-40 hover:opacity-100 group",
-          activeFilters && "opacity-100 bg-secondary/10 text-secondary"
+          (activeFilters || (sortOnly && currentSort?.key === columnKey && currentSort?.direction)) && "opacity-100 bg-secondary/10 text-secondary"
         )}>
           <Filter 
             className={cn("h-3 w-3 transition-transform", activeFilters && "fill-secondary/20")} 
@@ -224,7 +230,7 @@ export function ExcelColumnFilter({
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-64 p-3 bg-white/95 backdrop-blur-xl border-primary/10 shadow-2xl rounded-2xl z-[150]" align="start">
         <div className="space-y-3">
-          <div className="text-[11px] font-black uppercase text-primary tracking-widest pl-1">Filter: {label}</div>
+          <div className="text-[11px] font-black uppercase text-primary tracking-widest pl-1">{sortOnly ? 'Sort' : 'Filter'}: {label}</div>
           
           {/* Sorting */}
           {onSort && (
@@ -242,7 +248,7 @@ export function ExcelColumnFilter({
                   "mr-1.5 h-3.5 w-3.5 opacity-60",
                   currentSort?.key === columnKey && currentSort?.direction === 'asc' && "opacity-100 text-secondary"
                 )} />
-                A to Z
+                {sortLabels[0]}
               </Button>
               <Button 
                 variant="ghost" 
@@ -257,11 +263,13 @@ export function ExcelColumnFilter({
                   "mr-1.5 h-3.5 w-3.5 opacity-60",
                   currentSort?.key === columnKey && currentSort?.direction === 'desc' && "opacity-100 text-secondary"
                 )} />
-                Z to A
+                {sortLabels[1]}
               </Button>
             </div>
           )}
 
+          {!sortOnly && (
+          <>
           <DropdownMenuSeparator className="bg-primary/5" />
 
           {/* Search */}
@@ -410,6 +418,8 @@ export function ExcelColumnFilter({
               </Button>
             </div>
           </div>
+          </>
+          )}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
