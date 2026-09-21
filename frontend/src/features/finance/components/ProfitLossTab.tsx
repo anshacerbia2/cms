@@ -273,13 +273,13 @@ export function ProfitLossTab() {
   }, [cogsGroupDetails]);
 
   const { 
-    search: plSearch, 
     filters: plFilters, 
     setFilters: setPlFilters, 
     sort: plSort, 
     setSort: setPlSort, 
     getCascadingData: getPlCascadingData, 
     filteredAndSortedData: filteredPlDetails,
+    isAnyFilterActive: isPlFilterActive,
     clearFilters: clearPlFilters
   } = useExcelFilter({
     data: displayPlDetails,
@@ -303,13 +303,13 @@ export function ProfitLossTab() {
   });
 
   const { 
-    search: salesCodeSearch, 
     filters: salesCodeFilters, 
     setFilters: setSalesCodeFilters, 
     sort: salesCodeSort, 
     setSort: setSalesCodeSort, 
     getCascadingData: getSalesCodeCascadingData, 
     filteredAndSortedData: filteredSalesCodeDetails,
+    isAnyFilterActive: isSalesCodeFilterActive,
     clearFilters: clearSalesCodeFilters
   } = useExcelFilter({
     data: displaySalesCodeDetails,
@@ -328,13 +328,13 @@ export function ProfitLossTab() {
   });
 
   const { 
-    search: cogsGroupSearch, 
     filters: cogsGroupFilters, 
     setFilters: setCogsGroupFilters, 
     sort: cogsGroupSort, 
     setSort: setCogsGroupSort, 
     getCascadingData: getCogsGroupCascadingData, 
     filteredAndSortedData: filteredCogsGroupDetails,
+    isAnyFilterActive: isCogsGroupFilterActive,
     clearFilters: clearCogsGroupFilters
   } = useExcelFilter({
     data: displayCogsGroupDetails,
@@ -389,6 +389,7 @@ export function ProfitLossTab() {
     setSort: setCogsSort,
     getCascadingData: getCogsCascadingData,
     filteredAndSortedData: filteredCogs,
+    isAnyFilterActive: isCogsFilterActive,
     clearFilters: clearCogsFilters,
   } = useExcelFilter({
     data: normalizedCogs,
@@ -426,11 +427,11 @@ export function ProfitLossTab() {
   }, [deprDetails]);
 
   const { 
-    search: deprSearch, 
     filters: deprFilters, setFilters: setDeprFilters, 
     sort: deprSort, setSort: setDeprSort, 
     getCascadingData: getDeprCascadingData, 
     filteredAndSortedData: filteredDepr,
+    isAnyFilterActive: isDeprFilterActive,
     clearFilters: clearDeprFilters
   } = useExcelFilter({
     data: normalizedDepr,
@@ -553,9 +554,7 @@ export function ProfitLossTab() {
               </div>
               <div className="flex items-center gap-4">
                 {(
-                  (plSearch !== "" || Object.values(plFilters).some(s => s && s.size > 0)) ||
-                  (deprSearch !== "" || Object.values(deprFilters).some(s => s && s.size > 0)) ||
-                  (Object.values(cogsFilters).some(s => s && s.size > 0))
+                  isPlFilterActive || isDeprFilterActive || isCogsFilterActive
                 ) && (
                    <button 
                      onClick={() => {
@@ -1092,7 +1091,7 @@ export function ProfitLossTab() {
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                {(salesCodeSearch !== "" || Object.values(salesCodeFilters).some(s => s && s.size > 0)) && (
+                {isSalesCodeFilterActive && (
                    <button 
                      onClick={clearSalesCodeFilters}
                      className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 transition-colors"
@@ -1237,7 +1236,7 @@ export function ProfitLossTab() {
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                {(cogsGroupSearch !== "" || Object.values(cogsGroupFilters).some(s => s && s.size > 0)) && (
+                {isCogsGroupFilterActive && (
                    <button 
                      onClick={clearCogsGroupFilters}
                      className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 transition-colors"
