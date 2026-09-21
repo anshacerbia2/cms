@@ -18,6 +18,22 @@ import { DATA_DIR, FISCAL_YEAR, findWorkbook } from './utils/layout';
 /** Penanda asal baris: yang ditulis seeder boleh dihapus seeder, yang lain tidak. */
 const SEEDED = { source: 'SEED' as const };
 
+/**
+ * Status periode yang ditulis seeder.
+ *
+ * Dulu selalu CLOSED, termasuk untuk tahun yang sedang berjalan - di produksi
+ * 2026 tercatat tutup buku padahal masih dipakai. Tidak satu pun periode di sana
+ * yang ditutup orang: `closed_at` dan `closed_by` kosong di kedua puluhnya.
+ *
+ * Sekarang: tahun yang sudah lewat CLOSED, tahun berjalan ONGOING. Kecuali
+ * periodenya memang pernah ditutup lewat tombol Close Year (`closedAt` terisi) -
+ * itu keputusan orang, dan seed ulang tidak boleh membukanya kembali.
+ */
+function periodStatus(closedAt: Date | null): 'CLOSED' | 'ONGOING' {
+  if (closedAt) return 'CLOSED';
+  return FISCAL_YEAR < new Date().getFullYear() ? 'CLOSED' : 'ONGOING';
+}
+
 /** Jarak antar nomor baris, menyisakan ruang untuk menyisip. */
 const ROW_NO_GAP = 1000;
 
@@ -305,18 +321,19 @@ export async function seedBankStatements(prisma: PrismaClient, workbook?: XLSX.W
       });
     }
 
+    const periodKey = { internalAccountId: internalAccount.id, year: FISCAL_YEAR };
+    const existingPeriod = await prisma.fiscalPeriod.findUnique({
+      where: { internalAccountId_year: periodKey },
+      select: { closedAt: true },
+    });
+    const status = periodStatus(existingPeriod?.closedAt ?? null);
+
     await prisma.fiscalPeriod.upsert({
-      where: { internalAccountId_year: { internalAccountId: internalAccount.id, year: FISCAL_YEAR } },
+      where: { internalAccountId_year: periodKey },
       // `running` sudah mencakup baris aplikasi, jadi saldo penutup di sini
       // menghitung seluruh isi rekening - bukan cuma yang ada di workbook.
-      update: { openingBalance: opening, closingBalance: running, status: 'CLOSED' },
-      create: {
-        internalAccountId: internalAccount.id,
-        year: FISCAL_YEAR,
-        openingBalance: opening,
-        closingBalance: running,
-        status: 'CLOSED',
-      },
+      update: { openingBalance: opening, closingBalance: running, status },
+      create: { ...periodKey, openingBalance: opening, closingBalance: running, status },
     });
 
     console.log(
