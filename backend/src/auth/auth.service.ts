@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
@@ -18,6 +18,20 @@ export class AuthService {
       return result;
     }
     return null;
+  }
+
+  /** Password lama wajib benar: token yang tertinggal di browser orang lain tidak cukup untuk mengambil alih akun. */
+  async changeOwnPassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.usersService.findByEmail(
+      (await this.usersService.findOne(Number(userId))).email,
+    );
+    if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+      throw new BadRequestException('Password lama salah.');
+    }
+    if (await bcrypt.compare(newPassword, user.password)) {
+      throw new BadRequestException('Password baru harus berbeda dari password lama.');
+    }
+    return this.usersService.changePassword(Number(userId), newPassword);
   }
 
   async login(user: any) {

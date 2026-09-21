@@ -1,15 +1,28 @@
-import { Outlet } from "react-router-dom";
+import { useState } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { SidebarProvider, useSidebar } from "@/context/SidebarContext";
 import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils";
-import { Bell, Search, Menu } from "lucide-react";
+import { Bell, Search, Menu, KeyRound, LogOut } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChangeOwnPasswordDialog } from "@/features/auth/components/ChangeOwnPasswordDialog";
 
 function Header() {
   const { isCollapsed, toggleSidebar } = useSidebar();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   return (
+    <>
     <header
       style={{
         left: undefined, // controlled by className below
@@ -64,13 +77,40 @@ function Header() {
           </div>
 
           <div className="flex items-center gap-3 pl-4 border-l border-primary/5">
-            <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-extrabold text-sm shadow-sm ring-2 ring-transparent hover:ring-primary/10 transition-all duration-200 cursor-pointer">
-              {user?.name?.charAt(0) || "U"}
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-extrabold text-sm shadow-sm ring-2 ring-transparent hover:ring-primary/10 transition-all duration-200 cursor-pointer">
+                  {user?.name?.charAt(0) || "U"}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-premium border-primary/10 p-1 bg-white">
+                <DropdownMenuLabel className="px-3 py-2">
+                  <div className="text-[13px] font-bold text-primary truncate">{user?.name}</div>
+                  <div className="text-[11px] font-medium text-muted-foreground truncate">{user?.email}</div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setPasswordOpen(true)}
+                  className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground focus:text-primary"
+                >
+                  <KeyRound size={14} />
+                  Ubah Password
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => { logout(); navigate("/login"); }}
+                  className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground focus:text-primary"
+                >
+                  <LogOut size={14} />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
     </header>
+    <ChangeOwnPasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
+    </>
   );
 }
 

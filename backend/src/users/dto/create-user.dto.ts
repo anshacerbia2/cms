@@ -1,5 +1,6 @@
-import { IsString, IsEmail, IsOptional, IsInt, MinLength, MaxLength, IsEnum } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsInt, MaxLength, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
+import { StrongPassword } from '../../common/validators/strong-password';
 
 export enum UserStatusDto {
   ACTIVE = 'ACTIVE',
@@ -17,7 +18,7 @@ export class CreateUserDto {
   email: string;
 
   @IsString()
-  @MinLength(8, { message: 'password must be at least 8 characters' })
+  @StrongPassword()
   password: string;
 
   @IsOptional()

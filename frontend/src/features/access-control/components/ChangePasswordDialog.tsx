@@ -21,13 +21,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { User } from "../types";
+import { strongPassword, PASSWORD_RULE_MESSAGE } from "@/lib/password";
 
 const LABEL = "text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2";
 const FIELD = "h-12 rounded-xl bg-muted/30 border-primary/5 focus-visible:ring-primary/10 font-bold tracking-tight";
 
 const formSchema = z
   .object({
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: strongPassword,
     confirm: z.string(),
   })
   .refine((values) => values.password === values.confirm, {
@@ -88,7 +89,7 @@ export function ChangePasswordDialog({
                 <FormItem>
                   <FormLabel className={LABEL}>New Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="At least 8 characters" {...field} className={FIELD} />
+                    <Input type="password" placeholder={PASSWORD_RULE_MESSAGE} {...field} className={FIELD} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
