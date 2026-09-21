@@ -171,20 +171,34 @@ export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) 
   const removed = await prisma.salesRecord.deleteMany({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } });
   if (removed.count > 0) console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} rows.`);
 
-  // Reads to the first fully blank row, which separates the invoices from the
-  // totals block, exactly as the 2025 seeder does.
+  // Dibaca sampai habis, melewati yang bukan invoice - TIDAK berhenti di baris
+  // kosong pertama. Sheet 2026 menyisakan nomor 19 dst. kosong di tengah (nomor
+  // invoice yang dipesan belum diisi) lalu datanya berlanjut; berhenti di sana
+  // hanya memuat 18 dari 157 invoice, dan neraca 2026 di dev rugi 29,5 M.
+  //   - Tanpa angka di kolom No: blok total di bawah dan sub-judul - dilewati.
+  //   - Tanpa nomor invoice DAN semua nominal nol: template kosong - dilewati.
+  // Invoice bernomor dengan nominal nol tetap dimuat, seperti di workbook.
+  const noIndex = map.indexes['colA'];
   const records: Prisma.SalesRecordCreateManyInput[] = [];
   const perRow: RowAmounts[] = [];
+  let skipped = 0;
   for (let i = layout.firstDataRow; i < rows.length; i++) {
     const row = rows[i];
-    // Termasuk baris yang sudah diberi nomor urut dan nol - template kosong
-    // di bawah invoice terakhir, yang di sheet 2025 ada 37 buah.
-    if (isPaddingRow(row)) break;
+    if (isPaddingRow(row) || noIndex === undefined || !isNumeric(row[noIndex])) {
+      if (!isBlankRow(row)) skipped++;
+      continue;
+    }
 
     const record: any = { tagYear: FISCAL_YEAR };
     for (const spec of SLOTS) {
       const index = map.indexes[spec.slot];
       record[spec.slot] = index === undefined ? null : convert(row[index], spec.kind);
+    }
+    const hasInvoice = String(record.colB ?? '').trim() !== '';
+    const hasAmount = ['colH', 'colI', 'colJ', 'colK'].some((slot) => Number(record[slot] ?? 0) !== 0);
+    if (!hasInvoice && !hasAmount) {
+      skipped++;
+      continue;
     }
     records.push(record);
     perRow.push(readRowAmounts(row, accounts.columns));
@@ -196,7 +210,7 @@ export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) 
   }
 
   await prisma.salesRecord.createMany({ data: records.map((r) => ({ ...r, ...SEEDED })) });
-  console.log(`✅ Seeded ${records.length} sales invoices for ${FISCAL_YEAR}.`);
+  console.log(`✅ Seeded ${records.length} sales invoices for ${FISCAL_YEAR} (${skipped} template/total row(s) skipped).`);
 
   await linkAccountAmounts({
     prisma,

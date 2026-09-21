@@ -88,39 +88,6 @@
         "colU": 662078230.0,
         "colV": null
       }
-    },
-    {
-      "table": "sales_records",
-      "why": "Invoice PLN IP Energy Business Forum 2025, diketik lewat aplikasi ke baris template kosong di bawah invoice terakhir. Sejak seeder berhenti di template itu, barisnya tidak lagi ikut termuat.",
-      "data": {
-        "colA": "271",
-        "colB": "072/271/PCMI/AR/V/2026",
-        "colD": 2025,
-        "colE": "Perusahaan Listrik Negara (Persero), PT",
-        "colF": "PLN IP Energy Business Forum 2025",
-        "colG": "Souvenirs Eksklusif Korporat",
-        "colH": 250000000.0,
-        "colI": 0.0,
-        "colJ": 0.0,
-        "colK": 250000000.0,
-        "colM": 0.0,
-        "colN": 0.0,
-        "colO": 0.0,
-        "colP": 0.0,
-        "colQ": 0.0,
-        "colR": 0.0,
-        "colS": 0.0,
-        "colT": 0.0,
-        "colU": 0.0,
-        "colV": 0.0,
-        "colW": 0.0,
-        "colX": 250000000.0,
-        "colZ": 0.0,
-        "colAA": -5000000.0,
-        "colAB": 245000000.0,
-        "colAC": 0.0,
-        "colAD": "Faktur PPN WAPU masuk dalam laporan tahun 2026"
-      }
     }
   ],
   "edits": [
