@@ -1,6 +1,11 @@
 import React from 'react';
+import { format, isValid, parseISO } from 'date-fns';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { TableCell } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { formatInputAmount, cleanInputAmount, formatCurrency, parseSmartDate } from '@/lib/utils';
 
 /**
@@ -95,6 +100,10 @@ type Props = {
  * ujung sengaja tidak termasuk - isinya beda antara menyunting dan menyisip.
  */
 export function LedgerRowEditor({ draft, saldo, rowKey, onChange, onKeyDown, onPaste, autoFocus }: Props) {
+  // Tanggal yang sedang diketik setengah jadi tidak boleh membuat kalender error.
+  const parsed = draft.colA ? parseISO(draft.colA) : undefined;
+  const picked = parsed && isValid(parsed) ? parsed : undefined;
+
   const text = (field: DraftField, placeholder: string, extra = '') => (
     <Input
       value={draft[field]}
@@ -124,20 +133,46 @@ export function LedgerRowEditor({ draft, saldo, rowKey, onChange, onKeyDown, onP
   return (
     <>
       <TableCell className={cell}>
-        <Input
-          value={draft.colA}
-          placeholder="YYYY-MM-DD"
-          autoFocus={autoFocus}
-          onChange={(e) => onChange('colA', e.target.value)}
-          // Dirapikan waktu keluar dari sel, supaya 12/3/26 atau "12 Mar 2026"
-          // tetap bisa diketik seperti di form create.
-          onBlur={(e) => onChange('colA', e.target.value.trim() === '' ? '' : parseSmartDate(e.target.value))}
-          onKeyDown={(e) => onKeyDown?.(e, 'colA')}
-          onPaste={(e) => onPaste?.(e, 'colA')}
-          data-draft-row={rowKey}
-          data-draft-col="colA"
-          className={input}
-        />
+        {/* Sama dengan form create: kalender di kiri, dan tetap bisa diketik. */}
+        <div className="flex items-center w-full h-full">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                tabIndex={-1}
+                className="h-9 w-8 shrink-0 bg-transparent hover:bg-transparent text-primary/30 hover:text-primary transition-colors rounded-none cursor-pointer"
+              >
+                <CalendarIcon size={14} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 overflow-hidden" align="start">
+              <Calendar
+                mode="single"
+                selected={picked}
+                defaultMonth={picked}
+                onSelect={(date) => {
+                  if (date) onChange('colA', format(date, 'yyyy-MM-dd'));
+                }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          <Input
+            value={draft.colA}
+            placeholder="YYYY-MM-DD"
+            autoFocus={autoFocus}
+            onChange={(e) => onChange('colA', e.target.value)}
+            // Dirapikan waktu keluar dari sel, supaya 12/3/26 atau "12 Mar 2026"
+            // tetap bisa diketik seperti di form create.
+            onBlur={(e) => onChange('colA', e.target.value.trim() === '' ? '' : parseSmartDate(e.target.value))}
+            onKeyDown={(e) => onKeyDown?.(e, 'colA')}
+            onPaste={(e) => onPaste?.(e, 'colA')}
+            data-draft-row={rowKey}
+            data-draft-col="colA"
+            className={`${input} pl-0`}
+          />
+        </div>
       </TableCell>
       <TableCell className={cell}>{text('colB', 'Deskripsi...', 'font-medium')}</TableCell>
       <TableCell className={cell}>{amount('colC', 'text-rose-600')}</TableCell>
