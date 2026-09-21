@@ -14,6 +14,7 @@ import {
   pastedLines,
   isGridPaste,
 } from './LedgerRowEditor';
+import { formatRowNo, rowNoCell } from './LedgerDisplayRow';
 import { type LedgerMaster, canonicalLedger, ledgerProblem, withLedger } from '../hooks/useLedgers';
 
 /** Draf setelah satu sel berubah. Mengganti Ledger mengosongkan SL1 yang bukan miliknya. */
@@ -51,13 +52,15 @@ type EditProps = {
   /** Baris mentah dari API, sebelum diformat untuk tampilan. */
   raw: any;
   master: LedgerMaster | null;
+  /** Kolom "No" ditampilkan (Non CB) - baris ini ikut mengisi selnya. */
+  showRowNo?: boolean;
   saving: boolean;
   onSave: (draft: LedgerDraft) => void;
   onCancel: () => void;
 };
 
 /** Baris yang sedang disunting, di tempatnya sendiri. Enter simpan, Esc batal. */
-export function InlineEditRow({ raw, master, saving, onSave, onCancel }: EditProps) {
+export function InlineEditRow({ raw, master, showRowNo, saving, onSave, onCancel }: EditProps) {
   const [draft, setDraft] = useState<LedgerDraft>(() => draftFrom(raw));
   // Nilai terbaru untuk handler keyboard. Menyimpan dari dalam updater setState
   // akan menyimpan dua kali, karena React boleh memanggil updater lebih dari sekali.
@@ -113,6 +116,7 @@ export function InlineEditRow({ raw, master, saving, onSave, onCancel }: EditPro
 
   return (
     <TableRow className="whitespace-nowrap">
+      {showRowNo && <TableCell className={`${rowNoCell} bg-amber-50/60`}>{formatRowNo(raw?.rowNo)}</TableCell>}
       <LedgerRowEditor
         index={0}
         draft={draft}
@@ -156,6 +160,8 @@ type InsertProps = {
   /** Saldo baris tempat menyisip; saldo tiap draf berjalan dari sini. */
   anchorSaldo: number;
   master: LedgerMaster | null;
+  /** Kolom "No" ditampilkan (Non CB). Nomornya baru ada setelah disimpan. */
+  showRowNo?: boolean;
   saving: boolean;
   /** Menerima draf yang sudah diisi dan lolos pemeriksaan, siap dikirim. */
   onSave: (drafts: LedgerDraft[]) => void;
@@ -172,7 +178,7 @@ const focusCell = (rowKey: string, field: DraftField) =>
   }, 30);
 
 /** Draf yang disisipkan di bawah satu baris, sebanyak apa pun, plus baris tombolnya. */
-export function InlineInsertRows({ anchorSaldo, master, saving, onSave, onCancel }: InsertProps) {
+export function InlineInsertRows({ anchorSaldo, master, showRowNo, saving, onSave, onCancel }: InsertProps) {
   const [drafts, setDrafts] = useState<LedgerDraft[]>(() => [emptyDraft()]);
   const latest = useRef(drafts);
   latest.current = drafts;
@@ -242,6 +248,7 @@ export function InlineInsertRows({ anchorSaldo, master, saving, onSave, onCancel
     <>
       {drafts.map((draft, i) => (
         <TableRow key={`ins-${i}`} className="whitespace-nowrap">
+          {showRowNo && <TableCell className={`${rowNoCell} bg-amber-50/60 text-[11px]`}>baru</TableCell>}
           <LedgerRowEditor
             index={i}
             draft={draft}
@@ -271,7 +278,7 @@ export function InlineInsertRows({ anchorSaldo, master, saving, onSave, onCancel
         </TableRow>
       ))}
       <TableRow className="bg-amber-50/40 hover:bg-amber-50/40">
-        <TableCell colSpan={10} className="py-2 px-4">
+        <TableCell colSpan={showRowNo ? 11 : 10} className="py-2 px-4">
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="outline"
