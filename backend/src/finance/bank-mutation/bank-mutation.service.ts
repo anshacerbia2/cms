@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { LedgerDirectory, type LedgerInput, type LedgerRef } from '../common/ledger-refs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { formatDecimal } from '../../common/utils/format.utils';
@@ -61,10 +62,30 @@ export class BankMutationService {
     return data.map(t => ({
       ...t,
       id: Number(t.id),
+      ledgerId: t.ledgerId === null ? null : Number(t.ledgerId),
+      subLedgerId: t.subLedgerId === null ? null : Number(t.subLedgerId),
       colC: formatDecimal(t.colC),
       colD: formatDecimal(t.colD),
       colE: formatDecimal(t.colE),
     }));
+  }
+
+  /**
+   * Ledger dan Sub Ledger 1 tiap baris dari master: FK plus cermin teksnya.
+   * Semua baris di-resolve dulu sebelum ada yang ditulis, jadi satu nama yang
+   * tidak dikenal menolak seluruh kiriman, bukan menyimpan separuhnya.
+   */
+  private async resolveLedgers(rows: LedgerInput[]): Promise<LedgerRef[]> {
+    const dir = await LedgerDirectory.load(this.prisma);
+    const refs: LedgerRef[] = [];
+    for (const [i, row] of rows.entries()) {
+      try {
+        refs.push(await dir.resolve(row));
+      } catch (e: any) {
+        throw new BadRequestException(rows.length > 1 ? `Baris ${i + 1}: ${e.message}` : e.message);
+      }
+    }
+    return refs;
   }
 
   async createBulkTransactions(data: any[], accountId: string, tagYear: number, startingBalance?: string) {
@@ -100,6 +121,7 @@ export class BankMutationService {
     // 4. Insert transactions with LINKING to internalAccountId.
     // Ditambahkan di ujung, meneruskan nomor urut terakhir - sama seperti sebelum
     // ada row_no, waktu urutan masih menumpang pada id yang menaik.
+    const refs = await this.resolveLedgers(data);
     const tail = await this.lastRowNo(accountIdBig, tagYear);
     await this.prisma.financialTransaction.createMany({
       data: data.map((item, index) => ({
@@ -109,8 +131,10 @@ export class BankMutationService {
         colC: item.colC?.toString() || "0",
         colD: item.colD?.toString() || "0",
         colE: 0,
-        colF: item.colF || "",
-        colG: item.colG || "",
+        ledgerId: refs[index].ledgerId,
+        subLedgerId: refs[index].subLedgerId,
+        colF: refs[index].colF ?? "",
+        colG: refs[index].colG ?? "",
         colH: item.colH || "",
         colI: item.colI || "",
         tagYear: tagYear,
@@ -181,6 +205,26 @@ export class BankMutationService {
       where: { internalAccountId_year: { internalAccountId: accountIdBig, year: tagYear } }
     });
 
+    // Ledger hanya di-resolve ulang kalau dikirim. Yang dikirim menang; yang
+    // tidak dikirim tetap dari baris lama - misalnya klien lama yang mengirim
+    // nama Ledger saja tanpa Sub Ledger 1.
+    const touchesLedger = ['ledgerId', 'subLedgerId', 'colF', 'colG'].some((k) => k in data);
+    let ledgerData = {};
+    if (touchesLedger) {
+      const [ref] = await this.resolveLedgers([{
+        ledgerId: 'ledgerId' in data ? data.ledgerId : 'colF' in data ? undefined : existing.ledgerId,
+        colF: data.colF,
+        subLedgerId: 'subLedgerId' in data ? data.subLedgerId : 'colG' in data ? undefined : existing.subLedgerId,
+        colG: data.colG,
+      }]);
+      ledgerData = {
+        ledgerId: ref.ledgerId,
+        subLedgerId: ref.subLedgerId,
+        colF: ref.colF ?? '',
+        colG: ref.colG ?? '',
+      };
+    }
+
     await this.prisma.financialTransaction.update({
       where: { id: trxId },
       data: {
@@ -188,8 +232,7 @@ export class BankMutationService {
         colB: data.colB ?? existing.colB,
         colC: data.colC !== undefined ? data.colC.toString() : existing.colC,
         colD: data.colD !== undefined ? data.colD.toString() : existing.colD,
-        colF: data.colF ?? existing.colF,
-        colG: data.colG ?? existing.colG,
+        ...ledgerData,
         colH: data.colH ?? existing.colH,
         colI: data.colI ?? existing.colI,
       }
@@ -228,6 +271,8 @@ export class BankMutationService {
     await this.prisma.financialTransaction.delete({
       where: { id: trxId }
     });
+    // Tanpa ini nomor baris yang dihapus bolong di kolom "No".
+    await this.repackRowNo(accountIdBig, tagYear);
 
     await this.prisma.fiscalPeriod.updateMany({
       where: {
@@ -337,9 +382,11 @@ export class BankMutationService {
   /**
    * Menulis ulang nomor urut satu rekening-tahun jadi kelipatan ROW_NO_GAP lagi.
    *
-   * Dipanggil saat celah antara dua baris habis. Urutannya tidak berubah sama
-   * sekali - cuma direnggangkan kembali, dan baris yang row_no-nya masih kosong
-   * ikut mendapat nomor di ujung, sesuai posisi tampilnya sekarang.
+   * Dipanggil saat celah antara dua baris habis, dan sesudah setiap sisip atau
+   * hapus supaya row_no / ROW_NO_GAP selalu 1, 2, 3 tanpa pecahan atau lubang -
+   * itu yang tampil di kolom "No". Urutannya tidak berubah sama sekali, dan
+   * baris yang row_no-nya masih kosong ikut mendapat nomor di ujung.
+   * Satu UPDATE, tanpa menyentuh updated_at: nomor bergeser bukan suntingan.
    */
   private async repackRowNo(accountId: bigint, year: number): Promise<void> {
     await this.prisma.$executeRaw`
@@ -416,6 +463,8 @@ export class BankMutationService {
       throw new BadRequestException('Gagal menentukan posisi baris, coba lagi.');
     }
 
+    const refs = await this.resolveLedgers(rows);
+
     await this.prisma.financialTransaction.createMany({
       data: rows.map((data, i) => ({
         internalAccountId: accountIdBig,
@@ -426,14 +475,21 @@ export class BankMutationService {
         colC: data.colC !== undefined && data.colC !== '' ? data.colC.toString() : '0',
         colD: data.colD !== undefined && data.colD !== '' ? data.colD.toString() : '0',
         colE: 0,
-        colF: data.colF || '',
-        colG: data.colG || '',
+        ledgerId: refs[i].ledgerId,
+        subLedgerId: refs[i].subLedgerId,
+        colF: refs[i].colF ?? '',
+        colG: refs[i].colG ?? '',
         colH: data.colH || '',
         colI: data.colI || '',
         tagYear,
         rowNo: rowNos![i],
       })),
     });
+
+    // Nomor urut dirapatkan lagi: baris sisipan jadi nomor lanjutan dari baris
+    // di atasnya dan baris sesudahnya bergeser, jadi kolom "No" tetap 1, 2, 3
+    // tanpa pecahan. Urutannya sendiri tidak berubah.
+    await this.repackRowNo(accountIdBig, tagYear);
 
     await this.prisma.fiscalPeriod.updateMany({
       where: { internalAccountId: accountIdBig, year: { gte: tagYear } },

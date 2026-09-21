@@ -27,6 +27,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useBankMutation } from '../hooks/useBankMutation';
+import { useLedgerMaster, canonicalLedger, ledgerIds, ledgerProblem, withLedger } from '../hooks/useLedgers';
+import { LedgerCombo } from './LedgerCombo';
 import { parseSmartDate, cleanNumber } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import Decimal from 'decimal.js';
@@ -57,6 +59,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
   const [startingBalance, setStartingBalance] = useState<string>('0');
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const ledgerMaster = useLedgerMaster();
   
   // Fetch the smart anchor balance (Last Transaction OR Opening Balance)
   const { data: anchorData, isLoading: isBalanceLoading } = getAnchorBalance(selectedAccount?.id, year, {
@@ -118,7 +121,10 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
 
   const updateRow = (index: number, field: keyof LedgerRow, value: any) => {
     const newRows = [...rows];
-    newRows[index] = { ...newRows[index], [field]: value };
+    // Mengganti Ledger mengosongkan SL1 yang bukan miliknya.
+    newRows[index] = field === 'colF'
+      ? withLedger(newRows[index], value, ledgerMaster)
+      : { ...newRows[index], [field]: value };
     setRows(newRows);
   };
 
@@ -228,8 +234,16 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
       });
     });
 
+    // Ledger/SL1 tempelan ditulis ke ejaan master. Yang tidak dikenali tetap
+    // tampil (merah) dan disebutkan, bukan dibuang diam-diam.
+    const pasted = newRows.slice(rowIndex, rowIndex + pasteRows.length).map((r) => canonicalLedger(r, ledgerMaster));
+    newRows.splice(rowIndex, pasted.length, ...pasted);
     setRows(newRows);
     toast.success(`Pasted ${pasteRows.length} rows from Excel`);
+    const unknown = pasted.map((r) => ledgerProblem(r, ledgerMaster)).filter(Boolean);
+    if (unknown.length > 0) {
+      toast.warning(`${unknown.length} baris: Ledger/SL1 tidak ada di master (ditandai merah). ${unknown[0]}`);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, rowIndex: number, colKey: keyof LedgerRow) => {
@@ -324,6 +338,14 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
       return;
     }
 
+    const ledgerIssue = validRows
+      .map((r, i) => ({ i, problem: ledgerProblem(r, ledgerMaster) }))
+      .find((x) => x.problem);
+    if (ledgerIssue) {
+      toast.error(`Baris ${rows.indexOf(validRows[ledgerIssue.i]) + 1}: ${ledgerIssue.problem}`);
+      return;
+    }
+
     const targetYear = Number(year);
     const invalidYearRow = validRows.find(r => {
       const d = parseISO(r.colA);
@@ -341,7 +363,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
       // 2. Save bulk transactions with optional startingBalance for INITIAL state
       // 2. Save bulk transactions with startingBalance to ensure FiscalPeriod is established
       await createBulkTransactions()({
-        data: validRows,
+        data: validRows.map((r) => ({ ...r, ...ledgerIds(r, ledgerMaster) })),
         accountId: selectedAccount.id,
         tagYear: Number(year),
         // CRITICAL: Only send startingBalance if the user is allowed to edit it (Initial Migration/Setup).
@@ -584,6 +606,20 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
                           />
                         </TableCell>
                         <TableCell className="p-0 border-r border-primary/5">
+                          {ledgerMaster ? (
+                            <LedgerCombo
+                              placeholder="Ledger..."
+                              value={row.colF}
+                              options={ledgerMaster.ledgerOptions}
+                              invalid={row.colF.trim() !== '' && !ledgerMaster.findLedger(row.colF)}
+                              onChange={(v) => updateRow(index, 'colF', v)}
+                              onKeyDown={(e) => handleKeyDown(e, index, 'colF')}
+                              onPaste={(e) => handlePaste(e, index, 'colF')}
+                              data-row={index}
+                              data-col="colF"
+                              className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
+                            />
+                          ) : (
                           <Input 
                             placeholder="Ledger..." 
                             value={row.colF} 
@@ -594,8 +630,24 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
                             data-col="colF"
                             className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
                           />
+                          )}
                         </TableCell>
                         <TableCell className="p-0 border-r border-primary/5">
+                          {ledgerMaster ? (
+                            <LedgerCombo
+                              placeholder="SL 1"
+                              value={row.colG}
+                              options={ledgerMaster.subOptions(row.colF)}
+                              invalid={row.colG.trim() !== '' && !ledgerMaster.findSub(ledgerMaster.findLedger(row.colF), row.colG)}
+                              emptyHint="Pilih Ledger dulu"
+                              onChange={(v) => updateRow(index, 'colG', v)}
+                              onKeyDown={(e) => handleKeyDown(e, index, 'colG')}
+                              onPaste={(e) => handlePaste(e, index, 'colG')}
+                              data-row={index}
+                              data-col="colG"
+                              className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
+                            />
+                          ) : (
                           <Input 
                             placeholder="SL 1" 
                             value={row.colG} 
@@ -606,6 +658,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
                             data-col="colG"
                             className="w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-4 placeholder:text-primary/20 leading-none"
                           />
+                          )}
                         </TableCell>
                         <TableCell className="p-0 border-r border-primary/5">
                           <Input 

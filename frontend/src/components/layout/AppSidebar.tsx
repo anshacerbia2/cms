@@ -33,6 +33,7 @@ import {
   ListTree,
   Settings,
   Printer,
+  BookOpen,
 } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
 import { useAuthStore } from "@/store/authStore";
@@ -72,6 +73,7 @@ const iconMap: Record<string, LucideIcon> = {
   ListTree,
   Settings,
   Printer,
+  BookOpen,
 };
 
 function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIcon; label: string; to: string; end?: boolean }) {

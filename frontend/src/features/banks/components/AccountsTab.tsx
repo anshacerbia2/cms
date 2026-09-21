@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, MoreVertical, Edit2, Trash2, Search, Building2, Banknote, CreditCard, QrCode, Eye } from "lucide-react";
+import { Plus, MoreVertical, Edit2, Trash2, Search, Building2, Banknote, CreditCard, Eye } from "lucide-react";
 import { useBanks } from "../hooks/useBanks";
 import { useAuthStore } from "@/store/authStore";
-import { QRDialog } from "./QRDialog";
 import { DetailModal } from "@/components/common/DetailModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,11 +37,9 @@ export function AccountsTab() {
   }, [selectedType, debouncedSearch]);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<InternalAccount | null>(null);
   const [selectedViewAccount, setSelectedViewAccount] = useState<InternalAccount | null>(null);
-  const [qrData, setQrData] = useState<{ title: string, subtitle: string, data: string }>({ title: "", subtitle: "", data: "" });
 
   const { can } = useAuthStore();
   const { 
@@ -92,21 +89,6 @@ export function AccountsTab() {
     if (confirm("Are you sure you want to delete this account?")) {
       await deleteInternalAccount.mutateAsync(id);
     }
-  };
-
-  const handleShowQR = (account: InternalAccount) => {
-    setQrData({
-      title: account.holderName,
-      subtitle: `${account.type}: ${account.accountNo || "-"}`,
-      data: JSON.stringify({
-        holder: account.holderName,
-        accountNo: account.accountNo,
-        bank: account.bank?.bankName,
-        type: account.type,
-        branch: account.branch
-      })
-    });
-    setIsQRDialogOpen(true);
   };
 
   const handleView = (account: InternalAccount) => {
@@ -276,9 +258,6 @@ export function AccountsTab() {
                             <Edit2 size={14} className="mr-2" /> Edit
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onClick={() => handleShowQR(account)} className="text-[10px] font-bold uppercase cursor-pointer">
-                          <QrCode size={14} className="mr-2" /> View QR Code
-                        </DropdownMenuItem>
                         {can('internal-accounts.delete') && (
                           <DropdownMenuItem onClick={() => handleDelete(account.id)} className="text-[10px] font-bold uppercase text-destructive cursor-pointer">
                             <Trash2 size={14} className="mr-2" /> Delete
@@ -331,12 +310,6 @@ export function AccountsTab() {
         account={selectedAccount}
         isSubmitting={createInternalAccount.isPending || updateInternalAccount.isPending}
         isLoadingBanks={banksQuery.isPending}
-      />
-
-      <QRDialog 
-        open={isQRDialogOpen}
-        onOpenChange={setIsQRDialogOpen}
-        {...qrData}
       />
 
       <DetailModal

@@ -6,6 +6,38 @@ import { formatDecimal } from '../../common/utils/format.utils';
 import { Prisma } from '@prisma/client';
 import { BankMutationService } from '../bank-mutation/bank-mutation.service';
 import { EquityPropertyService } from '../equity-property/equity-property.service';
+import { LEDGER_CODE, SUB_LEDGER_CODE } from '../common/ledger-refs';
+
+/**
+ * Label kategori P&L yang dikirim UI ke drill-down, ke code Ledger-nya.
+ * Laporan menyaring lewat code, bukan nama - nama bisa diganti di halaman master,
+ * dan menyaring lewat nama berarti mengganti "Cost of Goods" jadi "HPP" akan
+ * menghilangkan seluruh COGS dari P&L tanpa ada yang sadar.
+ */
+const PL_LABEL_CODES: Record<string, string> = {
+  'cost of goods': LEDGER_CODE.COGS,
+  'personnel expense': LEDGER_CODE.PERSONNEL_EXPENSE,
+  'office expense': LEDGER_CODE.OFFICE_EXPENSE,
+  'marketing expense': LEDGER_CODE.MARKETING_EXPENSE,
+  'financial expense': LEDGER_CODE.FINANCIAL_EXPENSE,
+  'other income': LEDGER_CODE.OTHER_INCOME_EXPENSE,
+  'other income (expense)': LEDGER_CODE.OTHER_INCOME_EXPENSE,
+  'income tax': LEDGER_CODE.INCOME_TAX,
+};
+
+/**
+ * Dividen bersih: yang dibayar (debit) dikurangi yang kembali (kredit).
+ * Dulu hanya debit yang dijumlah, jadi dividen yang diretur tetap terhitung -
+ * 2026 keluar 840 juta padahal yang benar 600 juta (240 juta diretur).
+ */
+const netDividend = (rows: { colC: Prisma.Decimal | null; colD: Prisma.Decimal | null }[]) =>
+  rows.reduce(
+    (acc, r) => acc.plus(new Prisma.Decimal(r.colC || 0)).minus(new Prisma.Decimal(r.colD || 0)),
+    new Prisma.Decimal(0),
+  );
+
+/** Code Ledger sebuah transaksi, untuk memilah beban tanpa membandingkan nama. */
+const withLedgerCode = { ledger: { select: { code: true } } } as const;
 
 
 @Injectable()
@@ -115,13 +147,13 @@ export class FinanceReportService {
     }
 
     // 1. Calculate Dynamic COGS (Cost of Goods Sold)
-    // Sourced from FinancialTransaction where label (colF) indicates COGS.
+    // Sourced from FinancialTransaction whose Ledger is COGS.
     // We sum Credit minus Debit to get the net impact on profitability.
     const cogsTransactions = await this.prisma.financialTransaction.findMany({
       where: {
         AND: [
           where,
-          { colF: { contains: 'cost of goods', mode: 'insensitive' } }
+          { ledger: { code: LEDGER_CODE.COGS } }
         ]
       },
     });
@@ -156,13 +188,20 @@ export class FinanceReportService {
     // 3. Calculate Operating Expenses from Bank Mutations (FinancialTransaction)
     // Filtered by specific ledger categories in colF.
     const expenseTransactions = await this.prisma.financialTransaction.findMany({
+      include: withLedgerCode,
       where: {
         AND: [
           where,
           {
-            colF: {
-              in: ['Personnel Expense', 'Office Expense', 'Marketing Expense', 'Financial Expense'],
-              mode: 'insensitive'
+            ledger: {
+              code: {
+                in: [
+                  LEDGER_CODE.PERSONNEL_EXPENSE,
+                  LEDGER_CODE.OFFICE_EXPENSE,
+                  LEDGER_CODE.MARKETING_EXPENSE,
+                  LEDGER_CODE.FINANCIAL_EXPENSE,
+                ],
+              },
             }
           }
         ]
@@ -178,12 +217,12 @@ export class FinanceReportService {
       const debit = new Prisma.Decimal(trx.colC || 0);
       const credit = new Prisma.Decimal(trx.colD || 0);
       const net = credit.minus(debit);
-      const ledger = (trx.colF || '').toLowerCase();
+      const code = trx.ledger?.code;
 
-      if (ledger.includes('personnel')) personnelExpense = personnelExpense.plus(net);
-      else if (ledger.includes('office')) officeExpense = officeExpense.plus(net);
-      else if (ledger.includes('marketing')) marketingExpense = marketingExpense.plus(net);
-      else if (ledger.includes('financial')) financialExpense = financialExpense.plus(net);
+      if (code === LEDGER_CODE.PERSONNEL_EXPENSE) personnelExpense = personnelExpense.plus(net);
+      else if (code === LEDGER_CODE.OFFICE_EXPENSE) officeExpense = officeExpense.plus(net);
+      else if (code === LEDGER_CODE.MARKETING_EXPENSE) marketingExpense = marketingExpense.plus(net);
+      else if (code === LEDGER_CODE.FINANCIAL_EXPENSE) financialExpense = financialExpense.plus(net);
     }
 
     // Expense overrides removed for pure calculation
@@ -192,7 +231,7 @@ export class FinanceReportService {
       where: {
         AND: [
           where,
-          { colF: { contains: 'other income', mode: 'insensitive' } }
+          { ledger: { code: LEDGER_CODE.OTHER_INCOME_EXPENSE } }
         ]
       }
     });
@@ -228,7 +267,7 @@ export class FinanceReportService {
       where: {
         AND: [
           where,
-          { colF: { equals: 'Income Tax', mode: 'insensitive' } },
+          { ledger: { code: LEDGER_CODE.INCOME_TAX } },
           {
             internalAccount: {
               type: 'OTHER',
@@ -284,13 +323,13 @@ export class FinanceReportService {
       { account: "GROSS PROFIT", total: formatDecimal(grossProfit), isTotal: true, level: 1 },
       
       { account: "EXPENSES", total: 0, isHeader: true, level: 0 },
-      { account: "Personnel Expense", total: formatDecimal(personnelExpense), hasInfo: true, isSubItem: true, level: 2, ledgerFilter: { equals: 'Personnel Expense', mode: 'insensitive' } },
-      { account: "Office Expense", total: formatDecimal(officeExpense), isSubItem: true, level: 2, ledgerFilter: { equals: 'Office Expense', mode: 'insensitive' } },
-      { account: "Marketing Expense", total: formatDecimal(marketingExpense), isSubItem: true, level: 2, ledgerFilter: { equals: 'Marketing Expense', mode: 'insensitive' } },
-      { account: "Financial Expense", total: formatDecimal(financialExpense), isSubItem: true, level: 2, ledgerFilter: { equals: 'Financial Expense', mode: 'insensitive' } },
+      { account: "Personnel Expense", total: formatDecimal(personnelExpense), hasInfo: true, isSubItem: true, level: 2, ledgerCode: LEDGER_CODE.PERSONNEL_EXPENSE },
+      { account: "Office Expense", total: formatDecimal(officeExpense), isSubItem: true, level: 2, ledgerCode: LEDGER_CODE.OFFICE_EXPENSE },
+      { account: "Marketing Expense", total: formatDecimal(marketingExpense), isSubItem: true, level: 2, ledgerCode: LEDGER_CODE.MARKETING_EXPENSE },
+      { account: "Financial Expense", total: formatDecimal(financialExpense), isSubItem: true, level: 2, ledgerCode: LEDGER_CODE.FINANCIAL_EXPENSE },
       // Breaks down by sub-ledger like the expenses it sits with. The filter is
       // the same one its total is computed from, so the parts add up to it.
-      { account: "Other Income", total: formatDecimal(otherIncomeTotal), isSubItem: true, level: 2, ledgerFilter: { contains: 'other income', mode: 'insensitive' } },
+      { account: "Other Income", total: formatDecimal(otherIncomeTotal), isSubItem: true, level: 2, ledgerCode: LEDGER_CODE.OTHER_INCOME_EXPENSE },
       { account: "Total Expense", total: formatDecimal(operatingExpenses), isTotal: true, level: 1 },
       
       { account: "PROFITABILITY", total: 0, isHeader: true, level: 0 },
@@ -305,12 +344,12 @@ export class FinanceReportService {
     for (const row of initialTableData) {
       tableData.push(row);
       
-      if ((row as any).ledgerFilter) {
+      if ((row as any).ledgerCode) {
         const subTrxs = await this.prisma.financialTransaction.findMany({
           where: {
-            AND: [subWhere, { colF: (row as any).ledgerFilter }]
+            AND: [subWhere, { ledger: { code: (row as any).ledgerCode } }]
           },
-          select: { colG: true, colC: true, colD: true }
+          select: { subLedger: { select: { name: true } }, colC: true, colD: true }
         });
 
         // Grouped on the trimmed, lower-cased name, so "Other expense" and
@@ -319,7 +358,7 @@ export class FinanceReportService {
         const groups = new Map<string, Prisma.Decimal>();
         const labels = new Map<string, string>();
         subTrxs.forEach(t => {
-          const name = (t.colG || 'Other').trim();
+          const name = (t.subLedger?.name || 'Other').trim();
           const key = name.toLowerCase();
           if (!labels.has(key)) labels.set(key, name);
 
@@ -436,10 +475,10 @@ export class FinanceReportService {
       { key: "NET SALES", label: "NET SALES" },
       { key: "COGS", label: "COGS" /*, ledgerFilter: { contains: 'cost of goods', mode: 'insensitive' }*/ },
       { key: "GROSS PROFIT", label: "GROSS PROFIT" },
-      { key: "Personnel Expense", label: "Personnel Expense", ledgerFilter: { equals: 'Personnel Expense', mode: 'insensitive' } },
-      { key: "Office Expense", label: "Office Expense", ledgerFilter: { equals: 'Office Expense', mode: 'insensitive' } },
-      { key: "Marketing Expense", label: "Marketing Expense", ledgerFilter: { equals: 'Marketing Expense', mode: 'insensitive' } },
-      { key: "Financial Expense", label: "Financial Expense", ledgerFilter: { equals: 'Financial Expense', mode: 'insensitive' } },
+      { key: "Personnel Expense", label: "Personnel Expense", ledgerCode: LEDGER_CODE.PERSONNEL_EXPENSE },
+      { key: "Office Expense", label: "Office Expense", ledgerCode: LEDGER_CODE.OFFICE_EXPENSE },
+      { key: "Marketing Expense", label: "Marketing Expense", ledgerCode: LEDGER_CODE.MARKETING_EXPENSE },
+      { key: "Financial Expense", label: "Financial Expense", ledgerCode: LEDGER_CODE.FINANCIAL_EXPENSE },
       { key: "Other Income", label: "Other Income (Expense)" },
       { key: "OPERATING PROFIT", label: "OPERATING PROFIT" },
       { key: "PROFIT BEFORE TAX", label: "PROFIT BEFORE TAX" },
@@ -456,12 +495,12 @@ export class FinanceReportService {
       const val = row ? row.total : 0;
       
       let subItems: { label: string; total: string }[] = [];
-      if (cat.ledgerFilter) {
+      if (cat.ledgerCode) {
         const subTrxs = await this.prisma.financialTransaction.findMany({
           where: {
-            AND: [where, { colF: cat.ledgerFilter }]
+            AND: [where, { ledger: { code: cat.ledgerCode } }]
           },
-          select: { colG: true, colC: true, colD: true }
+          select: { subLedger: { select: { name: true } }, colC: true, colD: true }
         });
 
         // Grouped on the trimmed, lower-cased name, so "Other expense" and
@@ -470,7 +509,7 @@ export class FinanceReportService {
         const groups = new Map<string, Prisma.Decimal>();
         const labels = new Map<string, string>();
         subTrxs.forEach(t => {
-          const name = (t.colG || 'Other').trim();
+          const name = (t.subLedger?.name || 'Other').trim();
           const key = name.toLowerCase();
           if (!labels.has(key)) labels.set(key, name);
 
@@ -561,8 +600,8 @@ export class FinanceReportService {
         prevDividend = new Prisma.Decimal(prevProps['DIVIDENDS']);
       } else {
         const legacyWhere: any = {
-          colF: { contains: 'Retained Earning', mode: 'insensitive' },
-          colG: { contains: 'Dividend', mode: 'insensitive' },
+          ledger: { code: LEDGER_CODE.RETAINED_EARNINGS },
+          subLedger: { code: SUB_LEDGER_CODE.DIVIDEND },
           tagYear: yearNum - 1
         };
   
@@ -573,7 +612,7 @@ export class FinanceReportService {
         const dividendTrxLegacy = await this.prisma.financialTransaction.findMany({
           where: legacyWhere
         });
-        prevDividend = dividendTrxLegacy.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colC || 0)), new Prisma.Decimal(0));
+        prevDividend = netDividend(dividendTrxLegacy);
       }
 
       prevYearsVal = prevProfit.minus(prevDividend);
@@ -585,7 +624,7 @@ export class FinanceReportService {
       dividendVal = new Prisma.Decimal(props['DIVIDENDS']);
     } else {
       const currentWhere: any = {
-        colG: { contains: 'Dividend', mode: 'insensitive' }
+        subLedger: { code: SUB_LEDGER_CODE.DIVIDEND }
       };
       
       if (yearNum !== null && yearNum > 0) {
@@ -599,7 +638,7 @@ export class FinanceReportService {
       const dividendTrxCurrent = await this.prisma.financialTransaction.findMany({
         where: currentWhere
       });
-      dividendVal = dividendTrxCurrent.reduce((acc, r) => acc.plus(new Prisma.Decimal(r.colC || 0)), new Prisma.Decimal(0)).mul(-1);
+      dividendVal = netDividend(dividendTrxCurrent).mul(-1);
     }
 
     // 5. Shared Capital
@@ -769,9 +808,12 @@ export class FinanceReportService {
     // Use contains instead of equals to capture sub-categories and generic matches (e.g., 'Other Income - Interest')
     if (ledger) {
       if (isCogsLedger) {
-        where.colF = { contains: 'cost of goods', mode: 'insensitive' };
+        where.ledger = { code: LEDGER_CODE.COGS };
       } else {
-        where.colF = { contains: ledger, mode: 'insensitive' };
+        // Label kategori dari UI dipetakan ke code. Label yang tidak dikenal
+        // jatuh ke pencocokan nama, supaya drill-down lain tetap jalan seperti dulu.
+        const code = PL_LABEL_CODES[ledger.toLowerCase().trim()];
+        where.ledger = code ? { code } : { name: { contains: ledger, mode: 'insensitive' } };
       }
     }
 
@@ -779,7 +821,7 @@ export class FinanceReportService {
       if (isCogsLedger) {
         where.colH = { equals: subItem, mode: 'insensitive' };
       } else {
-        where.colG = { equals: subItem, mode: 'insensitive' };
+        where.subLedger = { name: { equals: subItem, mode: 'insensitive' } };
       }
     }
 
@@ -1166,7 +1208,7 @@ export class FinanceReportService {
       where.OR = [{ colA: { lte: end } }, { colA: null }];
     }
 
-    where.colF = { contains: 'cost of goods', mode: 'insensitive' };
+    where.ledger = { code: LEDGER_CODE.COGS };
 
     const trxs = await this.prisma.financialTransaction.findMany({
       where,

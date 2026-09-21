@@ -3,9 +3,24 @@ import { CornerDownRight, Edit2, Eye, Trash2 } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 
+/**
+ * Nomor urut baris untuk kolom "No". `row_no` diberi jarak 1000 supaya bisa
+ * menyisip di tengah, dan backend merapatkannya lagi sesudah setiap sisip atau
+ * hapus - jadi dibagi 1000 hasilnya selalu 1, 2, 3 berurutan.
+ */
+export const formatRowNo = (rowNo: number | null | undefined) =>
+  rowNo === null || rowNo === undefined
+    ? '-'
+    : (rowNo / 1000).toLocaleString('en-US', { maximumFractionDigits: 3, useGrouping: false });
+
+/** Sel "No" - hanya di rekening Non CB. */
+export const rowNoCell = 'pl-4 w-20 text-primary/50 tabular-nums';
+
 type Props = {
   /** Baris yang sudah diformat untuk tampilan. */
   row: any;
+  /** Tampilkan kolom "No" (row_no) di paling kiri - hanya untuk Non CB. */
+  showRowNo?: boolean;
   /** Ada baris lain yang sedang diketik - tombol edit/sisip dikunci. */
   busy: boolean;
   canEdit: boolean;
@@ -27,10 +42,11 @@ type Props = {
  * (useCallback); kalau tidak, memo tidak berguna.
  */
 export const LedgerDisplayRow = memo(function LedgerDisplayRow({
-  row, busy, canEdit, canCreate, canDelete, onView, onEdit, onInsert, onDelete,
+  row, showRowNo, busy, canEdit, canCreate, canDelete, onView, onEdit, onInsert, onDelete,
 }: Props) {
   return (
     <TableRow className="hover:bg-slate-50 transition-colors whitespace-nowrap group">
+      {showRowNo && <TableCell className={rowNoCell}>{formatRowNo(row.rowNo)}</TableCell>}
       <TableCell className="text-primary/60">{row.colA}</TableCell>
       <TableCell className="font-medium text-primary transition-colors max-w-md truncate" title={row.colB}>
         {row.colB}

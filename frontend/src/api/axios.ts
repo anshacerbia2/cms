@@ -25,7 +25,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    if (error.response?.status === 401) {
+    // 401 dari login berarti password salah, bukan sesi habis. Redirect di sini
+    // me-reload halaman login dan pesan error-nya hilang sebelum sempat tampil.
+    const isLogin = String(error.config?.url ?? '').includes('/auth/login');
+    if (error.response?.status === 401 && !isLogin) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }

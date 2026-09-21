@@ -6,7 +6,7 @@
  *
  * Upsert-only, like [ensurePermissions]; safe to run against production via
  *
- *   npx tsx prisma/scripts/rbac-permissions.ts
+ *   pnpm seed:access
  */
 import { PrismaClient } from '@prisma/client';
 import { ensureMenuGroup, ensureMenus, ensurePermissions, MenuSpec, ModuleSpec } from './utils/access-control';

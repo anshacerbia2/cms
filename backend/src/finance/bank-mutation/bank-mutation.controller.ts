@@ -4,8 +4,6 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
 import { generateExcelBuffer } from '../../common/utils/excel.util';
 import { generatePdfBuffer } from '../../common/utils/pdf.util';
 import type { Response } from 'express';
@@ -23,9 +21,15 @@ const BANK_MUTATION_COLUMN_MAPPING = {
   colI: 'Sub Ledger 3',
 };
 
+/*
+ * Akses diatur per endpoint lewat permission saja. Dulu seluruh controller juga
+ * dikunci ke role admin/president_director, jadi role viewer - yang punya
+ * `bank-mutation.index` - tetap ditolak 403 dan Bank Statement tidak termuat
+ * sama sekali. Endpoint tulis tetap tertutup: viewer tidak punya
+ * permission create/edit/delete/bulk/recalculate/close.
+ */
 @Controller('bank-mutation')
-@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-@Roles('admin', 'president_director')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class BankMutationController {
   constructor(private readonly bankMutationService: BankMutationService) {}
 

@@ -11,8 +11,9 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 export class EquityPropertyController {
   constructor(private readonly equityPropertyService: EquityPropertyService) {}
 
+  // Dibaca oleh laporan neraca, jadi siapa pun yang boleh melihat laporan boleh membacanya.
+  // Menyimpan tetap dikunci ke role: `finance.reports` juga dipegang viewer.
   @Get()
-  @Roles('admin', 'president_director')
   @Permissions('finance.reports')
   async getProperties(@Query('year', ParseIntPipe) year: number) {
     return this.equityPropertyService.getProperties(year);

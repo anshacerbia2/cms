@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 import { FISCAL_YEAR } from './utils/layout';
+import { LedgerDirectory } from '../../src/finance/common/ledger-refs';
 
 /**
  * Menerapkan kembali suntingan yang dibuat lewat aplikasi pada baris milik seeder.
@@ -83,7 +84,7 @@ function literal(v: unknown): string {
  *
  * Dilewati kalau barisnya sudah ada, jadi aman dipanggil setiap seed.
  */
-async function applyInserts(prisma: PrismaClient, inserts: Insert[]) {
+async function applyInserts(prisma: PrismaClient, inserts: Insert[], ledgers: LedgerDirectory) {
   let added = 0;
   let present = 0;
 
@@ -100,6 +101,18 @@ async function applyInserts(prisma: PrismaClient, inserts: Insert[]) {
         continue;
       }
       cols.internal_account_id = Number(account.id);
+    }
+
+    if (ins.table === 'financial_transactions') {
+      // Ledger ke master: nama dikanonkan dan FK ikut terisi.
+      const ref = await ledgers.resolve(
+        { colF: cols.col_f as string, colG: cols.col_g as string },
+        { create: true },
+      );
+      cols.col_f = ref.colF ?? '';
+      cols.col_g = ref.colG ?? '';
+      cols.ledger_id = ref.ledgerId === null ? null : Number(ref.ledgerId);
+      cols.sub_ledger_id = ref.subLedgerId === null ? null : Number(ref.subLedgerId);
     }
 
     // Sudah ada? Dicocokkan dari isinya, karena id berubah tiap seed ulang.
@@ -150,7 +163,8 @@ export async function applyAdjustments(prisma: PrismaClient, tables: string[]) {
 
   console.log(`🩹 adjustments/${FISCAL_YEAR}.json — ${inserts.length} baris aplikasi, ${edits.length} suntingan...`);
 
-  await applyInserts(prisma, inserts);
+  const ledgers = await LedgerDirectory.load(prisma);
+  await applyInserts(prisma, inserts, ledgers);
 
   let applied = 0;
   const skipped: string[] = [];
@@ -180,7 +194,19 @@ export async function applyAdjustments(prisma: PrismaClient, tables: string[]) {
     }
 
     for (const row of edit.all ? candidates : [candidates[0]]) {
-      await model.update({ where: { id: row.id }, data: edit.set });
+      let data: Record<string, unknown> = edit.set;
+      if (edit.table === 'financial_transactions' && ('colF' in edit.set || 'colG' in edit.set)) {
+        // Suntingan Ledger lewat master, supaya FK-nya ikut pindah, bukan cuma teksnya.
+        const ref = await ledgers.resolve(
+          {
+            colF: 'colF' in edit.set ? edit.set.colF : row.colF,
+            colG: 'colG' in edit.set ? edit.set.colG : row.colG,
+          },
+          { create: true },
+        );
+        data = { ...edit.set, ...ref, colF: ref.colF ?? '', colG: ref.colG ?? '' };
+      }
+      await model.update({ where: { id: row.id }, data });
     }
     applied++;
     const many = candidates.length > 1 ? ` (${candidates.length} baris kembar)` : '';

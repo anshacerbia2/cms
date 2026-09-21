@@ -7,6 +7,8 @@ import { seedSalesPipelinePermissions } from './sales-pipeline.seeder';
 import { seedRbacPermissions } from './rbac.seeder';
 import { seedPdfTemplates } from './pdf-templates.seeder';
 import { seedMasterDataPermissions } from './master-data.seeder';
+import { seedLedgerPermissions } from './ledgers.seeder';
+import { enforceViewerScope } from './utils/access-control';
 import { seedCustomers } from './customers.seeder';
 import { seedSuppliers } from './suppliers.seeder';
 import { seedProducts } from './products.seeder';
@@ -29,6 +31,8 @@ async function main() {
     await seedRbacPermissions(prisma);
     await seedPdfTemplates(prisma);
     await seedMasterDataPermissions(prisma);
+    await seedLedgerPermissions(prisma);
+    await enforceViewerScope(prisma);
     
     // Independent entities
     await seedCustomers(prisma);

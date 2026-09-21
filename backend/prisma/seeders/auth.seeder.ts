@@ -1,3 +1,4 @@
+import { VIEWER_MENU_GROUPS, VIEWER_MODULES, moduleOf } from './utils/access-control';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -118,7 +119,9 @@ export async function seedAuth(prisma: PrismaClient) {
       route.includes('.reports') || 
       route.includes('.anchor') ||
       route === 'dashboard.view'
-    );
+    )
+    // Viewer hanya melihat Overview dan Finance - lihat VIEWER_MODULES.
+    .filter(route => VIEWER_MODULES.has(moduleOf(route)));
 
   // List of permissions for president director
   const presidentDirectorPermissions = [
@@ -261,10 +264,13 @@ export async function seedAuth(prisma: PrismaClient) {
       });
     }
 
-    // Assign parent to Viewer
-    await prisma.roleMenu.create({
-      data: { roleId: viewerRole.id, menuId: parentMenu.id }
-    });
+    // Assign parent to Viewer - only Overview and Finance, see VIEWER_MENU_GROUPS.
+    const forViewer = VIEWER_MENU_GROUPS.has(group.id);
+    if (forViewer) {
+      await prisma.roleMenu.create({
+        data: { roleId: viewerRole.id, menuId: parentMenu.id }
+      });
+    }
 
     for (const item of group.items) {
       const permission = await prisma.permission.findUnique({ where: { route: item.route } });
@@ -294,9 +300,11 @@ export async function seedAuth(prisma: PrismaClient) {
       }
 
       // Assign child to Viewer
-      await prisma.roleMenu.create({
-        data: { roleId: viewerRole.id, menuId: childMenu.id }
-      });
+      if (forViewer) {
+        await prisma.roleMenu.create({
+          data: { roleId: viewerRole.id, menuId: childMenu.id }
+        });
+      }
     }
   }
 

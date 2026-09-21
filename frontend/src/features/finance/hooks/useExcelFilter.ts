@@ -137,13 +137,22 @@ export function useExcelFilter<T extends Record<string, any>>({
     return result;
   }, [data, search, filters, sort, searchFields]);
 
+  // Clear juga mengembalikan urutan ke bawaan tabel. Sort yang diubah dihitung
+  // sebagai filter aktif - tanpa itu, tombol Clear tidak muncul sesudah sort,
+  // dan tabel tertinggal dalam urutan yang tidak terlihat bedanya dari filter.
   const clearFilters = () => {
     setFilters({});
     setSearch("");
+    setSort(initialSort);
     setPage(1);
   };
 
-  const isAnyFilterActive = search !== "" || Object.values(filters).some(s => s && s.size > 0);
+  const isSortChanged =
+    sort.direction !== null &&
+    (sort.key !== initialSort.key || sort.direction !== initialSort.direction);
+
+  const isAnyFilterActive =
+    search !== "" || Object.values(filters).some(s => s && s.size > 0) || isSortChanged;
 
   return {
     page,

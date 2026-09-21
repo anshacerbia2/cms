@@ -3,7 +3,7 @@
  *
  * Upsert-only and safe against production:
  *
- *   npx tsx prisma/scripts/pdf-template-permissions.ts
+ *   pnpm seed:access
  */
 import { readFileSync } from 'fs';
 import { join } from 'path';

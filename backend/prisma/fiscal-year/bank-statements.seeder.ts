@@ -14,6 +14,7 @@ import {
  * how the 2025 seeder treats its own workbook.
  */
 import { DATA_DIR, FISCAL_YEAR, findWorkbook } from './utils/layout';
+import { LedgerDirectory } from '../../src/finance/common/ledger-refs';
 
 /** Penanda asal baris: yang ditulis seeder boleh dihapus seeder, yang lain tidak. */
 const SEEDED = { source: 'SEED' as const };
@@ -244,6 +245,9 @@ export async function seedBankStatements(prisma: PrismaClient, workbook?: XLSX.W
   }
 
   const warnings: string[] = [];
+  // Ledger/Sub Ledger 1 dari workbook dipetakan ke master. Ejaan yang belum ada
+  // dibuat - seed tidak boleh membuang data - dan disebutkan di akhir.
+  const ledgers = await LedgerDirectory.load(prisma);
 
   for (const sheetName of wb.SheetNames) {
     const mapping = SHEET_TO_ACCOUNT[sheetName];
@@ -292,6 +296,13 @@ export async function seedBankStatements(prisma: PrismaClient, workbook?: XLSX.W
     for (const row of ordered) {
       running = running.plus(row.credit ?? 0).minus(row.debit ?? 0);
       row.data.colE = running;
+      const ref = await ledgers.resolve({ colF: row.data.colF, colG: row.data.colG }, { create: true });
+      Object.assign(row.data, {
+        ledgerId: ref.ledgerId,
+        subLedgerId: ref.subLedgerId,
+        colF: ref.colF ?? '',
+        colG: ref.colG ?? '',
+      });
     }
 
     const mismatch = verify(rows, endRow, parsed, running);
@@ -349,6 +360,9 @@ export async function seedBankStatements(prisma: PrismaClient, workbook?: XLSX.W
     warnings.push(`Not present in this workbook, so unchanged for ${FISCAL_YEAR}: ${unseeded.join(', ')}.`);
   }
 
+  if (ledgers.created.length > 0) {
+    console.log(`📒 Ditambahkan ke master Ledger dari workbook: ${ledgers.created.join(', ')}.`);
+  }
   for (const warning of warnings) console.warn(`⚠️  ${warning}`);
 }
 

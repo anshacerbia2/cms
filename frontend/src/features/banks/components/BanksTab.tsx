@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, MoreVertical, Edit2, Trash2, Search, MapPin, Landmark, QrCode, Eye } from "lucide-react";
+import { Plus, MoreVertical, Edit2, Trash2, Search, MapPin, Landmark, Eye } from "lucide-react";
 import { useBanks } from "../hooks/useBanks";
 import { useAuthStore } from "@/store/authStore";
-import { QRDialog } from "./QRDialog";
 import { DetailModal } from "@/components/common/DetailModal";
 import { 
   Table, 
@@ -33,11 +32,9 @@ export function BanksTab() {
   const [debouncedSearch] = useDebounce(search, 500);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
   const [selectedViewBank, setSelectedViewBank] = useState<Bank | null>(null);
-  const [qrData, setQrData] = useState<{ title: string, subtitle: string, data: string }>({ title: "", subtitle: "", data: "" });
 
   const { can } = useAuthStore();
   const { 
@@ -67,20 +64,6 @@ export function BanksTab() {
   const handleEdit = (bank: Bank) => {
     setSelectedBank(bank);
     setIsDialogOpen(true);
-  };
-
-  const handleShowQR = (bank: Bank) => {
-    setQrData({
-      title: bank.bankName,
-      subtitle: `Bank Reference: ${bank.bankCode}`,
-      data: JSON.stringify({
-        name: bank.bankName,
-        code: bank.bankCode,
-        brand: bank.bankBrand,
-        address: bank.bankAddress
-      })
-    });
-    setIsQRDialogOpen(true);
   };
 
   const handleView = (bank: Bank) => {
@@ -208,9 +191,6 @@ export function BanksTab() {
                             <Edit2 size={14} className="mr-2" /> Edit Reference
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onClick={() => handleShowQR(bank)} className="text-[10px] font-bold uppercase cursor-pointer">
-                          <QrCode size={14} className="mr-2" /> View QR Code
-                        </DropdownMenuItem>
                         {can('banks.delete') && (
                           <DropdownMenuItem
                             onClick={() => handleDelete(bank)}
@@ -239,12 +219,6 @@ export function BanksTab() {
         open={isDialogOpen} 
         onOpenChange={setIsDialogOpen} 
         bank={selectedBank}
-      />
-
-      <QRDialog 
-        open={isQRDialogOpen}
-        onOpenChange={setIsQRDialogOpen}
-        {...qrData}
       />
 
       <DetailModal

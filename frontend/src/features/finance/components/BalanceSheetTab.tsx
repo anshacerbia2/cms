@@ -142,13 +142,13 @@ export function BalanceSheetTab() {
   }, [displayDetails.body, isARorTax, isFixedAsset, isCashOrBank, drillDown.isLiability]);
 
   const { 
-    search: bsSearch, 
     filters: bsFilters, 
     setFilters: setBsFilters, 
     sort: bsSort, 
     setSort: setBsSort, 
     getCascadingData: getBsCascadingData, 
     filteredAndSortedData: filteredBsDetails,
+    isAnyFilterActive: isBsFilterActive,
     clearFilters: clearBsFilters
   } = useExcelFilter({
     data: normalizedDetails,
@@ -767,7 +767,7 @@ export function BalanceSheetTab() {
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                {(bsSearch !== "" || Object.values(bsFilters).some(s => s && s.size > 0)) && (
+                {isBsFilterActive && (
                    <button 
                      onClick={clearBsFilters}
                      className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 transition-colors"

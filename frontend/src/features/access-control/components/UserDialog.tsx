@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { isStrongPassword, PASSWORD_RULE_MESSAGE } from "@/lib/password";
 import { UserCog } from "lucide-react";
 import {
   Dialog,
@@ -69,9 +70,9 @@ export function UserDialog({
 
   const form = useForm<FormValues>({
     resolver: zodResolver(
-      formSchema.refine((values) => isEdit || (values.password ?? "").length >= 8, {
+      formSchema.refine((values) => isEdit || isStrongPassword(values.password ?? ""), {
         path: ["password"],
-        message: "Password must be at least 8 characters",
+        message: PASSWORD_RULE_MESSAGE,
       }),
     ),
     defaultValues: {
@@ -157,7 +158,7 @@ export function UserDialog({
                   <FormItem>
                     <FormLabel className={LABEL}>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="At least 8 characters" {...field} className={FIELD} />
+                      <Input type="password" placeholder={PASSWORD_RULE_MESSAGE} {...field} className={FIELD} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

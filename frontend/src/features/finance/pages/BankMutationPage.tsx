@@ -40,6 +40,7 @@ import { type LedgerDraft, draftPayload } from "../components/LedgerRowEditor";
 import { InlineEditRow, InlineInsertRows } from "../components/LedgerInlineRows";
 import { LedgerDisplayRow } from "../components/LedgerDisplayRow";
 import { LedgerErrorBoundary } from "../components/LedgerErrorBoundary";
+import { useLedgerMaster } from "../hooks/useLedgers";
 import { DetailModal } from "@/components/common/DetailModal";
 import {
   Table,
@@ -138,6 +139,8 @@ export default function BankMutationPage() {
   const { getAllTransactions, getFiscalPeriods, recalculateLedger, closeYear, getAnchorBalance, deleteTransaction, updateTransaction, insertTransaction } = useBankMutation();
   
   const yearNum = useMemo(() => Number(ledgerYearFilter), [ledgerYearFilter]);
+  /** Master Ledger/SL1 untuk dropdown di baris yang disunting atau disisipkan. */
+  const ledgerMaster = useLedgerMaster();
 
   /** Sedang ada baris yang diketik - tombol edit/sisip di baris lain dikunci supaya ketikan tidak hilang. */
   const inlineBusy = editingId !== null || insertAfterId !== null;
@@ -164,7 +167,7 @@ export default function BankMutationPage() {
       if (editingId === null || savingInline) return;
       setSavingInline(true);
       try {
-        await updateTransaction()({ id: editingId, data: draftPayload(draft) });
+        await updateTransaction()({ id: editingId, data: draftPayload(draft, ledgerMaster) });
         toast.success("Baris disimpan.");
         setEditingId(null);
         refetchTransactions();
@@ -176,7 +179,7 @@ export default function BankMutationPage() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [editingId, savingInline],
+    [editingId, savingInline, ledgerMaster],
   );
 
   const saveInsert = useCallback(
@@ -185,7 +188,7 @@ export default function BankMutationPage() {
       setSavingInline(true);
       try {
         await insertTransaction()({
-          rows: drafts.map(draftPayload),
+          rows: drafts.map((d) => draftPayload(d, ledgerMaster)),
           accountId: selectedAccount?.id,
           tagYear: yearNum,
           afterId: insertAfterId,
@@ -201,7 +204,7 @@ export default function BankMutationPage() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [insertAfterId, savingInline, selectedAccount?.id, yearNum],
+    [insertAfterId, savingInline, selectedAccount?.id, yearNum, ledgerMaster],
   );
 
   const handleViewTransaction = useCallback((row: any) => {
@@ -349,6 +352,10 @@ export default function BankMutationPage() {
   const isNoPaginationAccount = useMemo(() => {
     return selectedAccount?.accountNo?.replace(/\s/g, '') === '5750489666';
   }, [selectedAccount]);
+
+  /** Kolom "No" (row_no) hanya untuk Non CB: bukunya tanpa tanggal, jadi nomor urut jadi pegangan ke Excel. */
+  const showRowNo = selectedAccount?.type === 'OTHER';
+  const extraCols = showRowNo ? 1 : 0;
 
   const paginatedLedger = useMemo(() => {
     if (isNoPaginationAccount) return filteredAndSortedLedger;
@@ -821,6 +828,19 @@ export default function BankMutationPage() {
           <Table className="min-w-[1600px]">
             <TableHeader className="bg-slate-50/50">
               <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
+                {showRowNo && (
+                  <TableHead className="py-3 pl-4 w-20">
+                    <div className="flex items-center gap-1">
+                      No
+                      <ExcelColumnFilter
+                        columnKey="rowNo" label="No" data={[]} activeFilters={null} sortOnly sortLabels={['1 → 9', '9 → 1']}
+                        onFilterChange={() => {}}
+                        onSort={(d) => setLedgerSort({ key: "rowNo", direction: d })}
+                        currentSort={ledgerSort}
+                      />
+                    </div>
+                  </TableHead>
+                )}
                 <TableHead className="w-44 min-w-44">
                   <div className="flex items-center justify-start gap-1">
                     Date
@@ -933,7 +953,7 @@ export default function BankMutationPage() {
             <TableBody>
               {transLoading ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="h-96 text-center">
+                  <TableCell colSpan={11 + extraCols} className="h-96 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin"></div>
                       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 animate-pulse">Synchronizing Global Ledger Data...</p>
@@ -942,7 +962,7 @@ export default function BankMutationPage() {
                 </TableRow>
               ) : paginatedLedger.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="h-64 text-center opacity-20">
+                  <TableCell colSpan={11 + extraCols} className="h-64 text-center opacity-20">
                     <Search size={48} className="mx-auto" />
                     <p className="mt-4 font-black uppercase tracking-widest">No mutation records found</p>
                   </TableCell>
@@ -954,6 +974,8 @@ export default function BankMutationPage() {
                     {editingId === row.id ? (
                       <InlineEditRow
                         raw={rawById.get(row.id)}
+                        master={ledgerMaster}
+                        showRowNo={showRowNo}
                         saving={savingInline}
                         onSave={saveEdit}
                         onCancel={cancelInline}
@@ -961,6 +983,7 @@ export default function BankMutationPage() {
                     ) : (
                     <LedgerDisplayRow
                       row={row}
+                      showRowNo={showRowNo}
                       busy={inlineBusy}
                       canEdit={canEdit}
                       canCreate={canCreate}
@@ -974,6 +997,9 @@ export default function BankMutationPage() {
                     {insertAfterId === row.id && (
                       <InlineInsertRows
                         anchorSaldo={Number(rawById.get(row.id)?.colE || 0)}
+                        master={ledgerMaster}
+                        showRowNo={showRowNo}
+                        anchorRowNo={rawById.get(row.id)?.rowNo}
                         saving={savingInline}
                         onSave={saveInsert}
                         onCancel={cancelInline}
@@ -984,7 +1010,7 @@ export default function BankMutationPage() {
                   
                   {/* Subtotal Row */}
                   <TableRow className="bg-secondary/5 border-t-2 border-secondary/30 hover:bg-secondary/5 transition-none font-bold whitespace-nowrap">
-                    <TableCell colSpan={2} className="text-[11px] text-secondary/80 uppercase tracking-[0.2em] pl-4">
+                    <TableCell colSpan={2 + extraCols} className="text-[11px] text-secondary/80 uppercase tracking-[0.2em] pl-4">
                       {isNoPaginationAccount ? "Total Statement" : `Subtotal (Page ${ledgerPage})`}
                     </TableCell>
                     <TableCell className="text-right text-rose-600 pr-4">
@@ -998,7 +1024,7 @@ export default function BankMutationPage() {
 
                   {/* Grand Total Row (Optional, but good for consistency) */}
                   <TableRow className="bg-secondary/10 border-t border-secondary/30 hover:bg-secondary/10 transition-none font-bold whitespace-nowrap">
-                    <TableCell colSpan={2} className="text-[11px] text-secondary uppercase tracking-[0.2em] pl-4">
+                    <TableCell colSpan={2 + extraCols} className="text-[11px] text-secondary uppercase tracking-[0.2em] pl-4">
                       Grand Total ({filteredAndSortedLedger.length} Records)
                     </TableCell>
                     <TableCell className="text-right text-rose-600 pr-4">
