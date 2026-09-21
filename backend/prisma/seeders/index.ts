@@ -7,7 +7,7 @@ import { seedSalesPipelinePermissions } from './sales-pipeline.seeder';
 import { seedRbacPermissions } from './rbac.seeder';
 import { seedPdfTemplates } from './pdf-templates.seeder';
 import { seedMasterDataPermissions } from './master-data.seeder';
-import { seedLedgerPermissions } from './ledgers.seeder';
+import { seedLedgers } from './ledgers.seeder';
 import { enforceViewerScope } from './utils/access-control';
 import { seedCustomers } from './customers.seeder';
 import { seedSuppliers } from './suppliers.seeder';
@@ -31,7 +31,8 @@ async function main() {
     await seedRbacPermissions(prisma);
     await seedPdfTemplates(prisma);
     await seedMasterDataPermissions(prisma);
-    await seedLedgerPermissions(prisma);
+    // Master Ledger, penghubungan transaksi, dan permission + menu-nya.
+    await seedLedgers(prisma);
     await enforceViewerScope(prisma);
     
     // Independent entities
