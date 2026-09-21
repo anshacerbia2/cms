@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { formatInputAmount, cleanInputAmount, formatCurrency, parseSmartDate } from '@/lib/utils';
+import { formatInputAmount, cleanInputAmount, formatCurrency, parseSmartDate, cleanNumber } from '@/lib/utils';
 
 /**
  * Satu baris ledger yang sedang diketik, langsung di tabelnya.
@@ -41,6 +41,29 @@ export const DRAFT_COLUMNS: DraftField[] = ['colA', 'colB', 'colC', 'colD', 'col
 export const PASTE_COLUMNS: (DraftField | null)[] = [
   'colA', 'colB', 'colC', 'colD', null, 'colF', 'colG', 'colH', 'colI',
 ];
+
+/**
+ * Mengisi satu draf dari satu baris yang ditempel dari Excel (dipisah tab),
+ * mulai dari kolom tempat kursor berada. Kolom saldo dilewati tapi tetap
+ * memakan posisinya; kolom berlebih di kanan dibuang. Tidak ada yang digeser.
+ */
+export function fillFromPastedLine(draft: LedgerDraft, line: string, startField: DraftField): LedgerDraft {
+  const start = PASTE_COLUMNS.indexOf(startField);
+  const next = { ...draft };
+  line.split('\t').forEach((raw, ci) => {
+    const key = PASTE_COLUMNS[start + ci];
+    if (!key) return;
+    const v = raw.trim();
+    next[key] = key === 'colA' ? parseSmartDate(v) : key === 'colC' || key === 'colD' ? cleanNumber(v) : v;
+  });
+  return next;
+}
+
+/** Teks tempelan dipecah jadi baris; kosong di ujung (dari Excel) dibuang. */
+export const pastedLines = (text: string) => text.split(/\r?\n/).filter((l) => l.trim() !== '');
+
+/** Tempelan satu nilai biasa dibiarkan ke browser; yang berisi tab atau baris baru ditangani sendiri. */
+export const isGridPaste = (text: string) => text.includes('\t') || /\r?\n./.test(text);
 
 export const emptyDraft = (): LedgerDraft => ({
   colA: '', colB: '', colC: '', colD: '', colF: '', colG: '', colH: '', colI: '',

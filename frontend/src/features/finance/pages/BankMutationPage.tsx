@@ -33,7 +33,7 @@ import {
 import { Decimal } from "decimal.js";
 import { useBanks } from "@/features/banks/hooks/useBanks";
 import { useAuthStore } from "@/store/authStore";
-import { formatCurrency, formatDate, cleanAmount, cn, parseSmartDate, cleanNumber } from "@/lib/utils";
+import { formatCurrency, formatDate, cleanAmount, cn } from "@/lib/utils";
 import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
 import { 
   DropdownMenu,
@@ -46,7 +46,9 @@ import {
   LedgerRowEditor,
   type LedgerDraft,
   type DraftField,
-  PASTE_COLUMNS,
+  fillFromPastedLine,
+  pastedLines,
+  isGridPaste,
   emptyDraft,
   draftFrom,
   isBlankDraft,
@@ -251,31 +253,34 @@ export default function BankMutationPage() {
 
   /** Menempel blok dari Excel: tiap baris jadi satu draf, mulai dari sel yang sedang aktif. */
   const onDraftPaste = (e: React.ClipboardEvent<HTMLInputElement>, index: number, field: DraftField) => {
-    const text = e.clipboardData.getData("text");
-    if (!text.includes("\t") && !text.includes("\n")) return; // satu nilai: biarkan tempel biasa
+    const text = e.clipboardData.getData("text/plain");
+    if (!isGridPaste(text)) return; // satu nilai: biarkan tempel biasa
     e.preventDefault();
-    const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
-    const startCol = PASTE_COLUMNS.indexOf(field);
+    const lines = pastedLines(text);
     setInserting((cur) => {
       if (!cur) return cur;
       const drafts = [...cur.drafts];
       lines.forEach((line, li) => {
         const at = index + li;
         while (drafts.length <= at) drafts.push(emptyDraft());
-        const next = { ...drafts[at] };
-        line.split("\t").forEach((raw, ci) => {
-          const key = PASTE_COLUMNS[startCol + ci];
-          // null = kolom saldo, dilewati tapi tetap memakan posisinya; undefined =
-          // kolom berlebih di kanan. Dua-duanya dibuang, tidak ada yang digeser.
-          if (!key) return;
-          const v = raw.trim();
-          next[key] = key === "colA" ? parseSmartDate(v) : key === "colC" || key === "colD" ? cleanNumber(v) : v;
-        });
-        drafts[at] = next;
+        drafts[at] = fillFromPastedLine(drafts[at], line, field);
       });
       return { ...cur, drafts };
     });
     toast.success(`${lines.length} baris ditempel dari Excel.`);
+  };
+
+  /** Menempel ke baris yang sedang disunting: satu baris saja, sisanya disebutkan, tidak diam-diam dibuang. */
+  const onEditPaste = (e: React.ClipboardEvent<HTMLInputElement>, field: DraftField) => {
+    const text = e.clipboardData.getData("text/plain");
+    if (!isGridPaste(text)) return;
+    e.preventDefault();
+    const lines = pastedLines(text);
+    if (lines.length === 0) return;
+    setEditing((cur) => (cur ? { ...cur, draft: fillFromPastedLine(cur.draft, lines[0], field) } : cur));
+    if (lines.length > 1) {
+      toast.info(`Baris pertama dipakai. ${lines.length - 1} baris lainnya: pakai tombol sisip untuk menempel banyak baris.`);
+    }
   };
 
   const onEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -1029,6 +1034,7 @@ export default function BankMutationPage() {
                             setEditing((cur) => (cur ? { ...cur, draft: { ...cur.draft, [field]: value } } : cur))
                           }
                           onKeyDown={(e) => onEditKeyDown(e)}
+                          onPaste={(e, field) => onEditPaste(e, field)}
                         />
                         <TableCell className="pr-4 bg-amber-50/60">
                           <div className="flex items-center justify-end gap-1">
