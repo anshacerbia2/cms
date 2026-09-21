@@ -40,6 +40,7 @@ import { type LedgerDraft, draftPayload } from "../components/LedgerRowEditor";
 import { InlineEditRow, InlineInsertRows } from "../components/LedgerInlineRows";
 import { LedgerDisplayRow } from "../components/LedgerDisplayRow";
 import { LedgerErrorBoundary } from "../components/LedgerErrorBoundary";
+import { useLedgerMaster } from "../hooks/useLedgers";
 import { DetailModal } from "@/components/common/DetailModal";
 import {
   Table,
@@ -138,6 +139,8 @@ export default function BankMutationPage() {
   const { getAllTransactions, getFiscalPeriods, recalculateLedger, closeYear, getAnchorBalance, deleteTransaction, updateTransaction, insertTransaction } = useBankMutation();
   
   const yearNum = useMemo(() => Number(ledgerYearFilter), [ledgerYearFilter]);
+  /** Master Ledger/SL1 untuk dropdown di baris yang disunting atau disisipkan. */
+  const ledgerMaster = useLedgerMaster();
 
   /** Sedang ada baris yang diketik - tombol edit/sisip di baris lain dikunci supaya ketikan tidak hilang. */
   const inlineBusy = editingId !== null || insertAfterId !== null;
@@ -164,7 +167,7 @@ export default function BankMutationPage() {
       if (editingId === null || savingInline) return;
       setSavingInline(true);
       try {
-        await updateTransaction()({ id: editingId, data: draftPayload(draft) });
+        await updateTransaction()({ id: editingId, data: draftPayload(draft, ledgerMaster) });
         toast.success("Baris disimpan.");
         setEditingId(null);
         refetchTransactions();
@@ -176,7 +179,7 @@ export default function BankMutationPage() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [editingId, savingInline],
+    [editingId, savingInline, ledgerMaster],
   );
 
   const saveInsert = useCallback(
@@ -185,7 +188,7 @@ export default function BankMutationPage() {
       setSavingInline(true);
       try {
         await insertTransaction()({
-          rows: drafts.map(draftPayload),
+          rows: drafts.map((d) => draftPayload(d, ledgerMaster)),
           accountId: selectedAccount?.id,
           tagYear: yearNum,
           afterId: insertAfterId,
@@ -201,7 +204,7 @@ export default function BankMutationPage() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [insertAfterId, savingInline, selectedAccount?.id, yearNum],
+    [insertAfterId, savingInline, selectedAccount?.id, yearNum, ledgerMaster],
   );
 
   const handleViewTransaction = useCallback((row: any) => {
@@ -954,6 +957,7 @@ export default function BankMutationPage() {
                     {editingId === row.id ? (
                       <InlineEditRow
                         raw={rawById.get(row.id)}
+                        master={ledgerMaster}
                         saving={savingInline}
                         onSave={saveEdit}
                         onCancel={cancelInline}
@@ -974,6 +978,7 @@ export default function BankMutationPage() {
                     {insertAfterId === row.id && (
                       <InlineInsertRows
                         anchorSaldo={Number(rawById.get(row.id)?.colE || 0)}
+                        master={ledgerMaster}
                         saving={savingInline}
                         onSave={saveInsert}
                         onCancel={cancelInline}

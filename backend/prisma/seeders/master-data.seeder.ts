@@ -8,7 +8,7 @@
  *
  * Upsert-only, safe against production:
  *
- *   npx tsx prisma/scripts/master-data-permissions.ts
+ *   pnpm seed:access
  */
 import { PrismaClient } from '@prisma/client';
 import { ensurePermissions, ModuleSpec } from './utils/access-control';

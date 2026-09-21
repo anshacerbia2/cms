@@ -5,7 +5,7 @@
  * them, which is unsafe against a live database. This one only ever upserts, so it is
  * also the piece that can be run on its own against production:
  *
- *   npx tsx prisma/scripts/sales-pipeline-permissions.ts
+ *   pnpm seed:access
  */
 import { PrismaClient } from '@prisma/client';
 import { ensureMenus, ensurePermissions, MenuSpec, ModuleSpec } from './utils/access-control';

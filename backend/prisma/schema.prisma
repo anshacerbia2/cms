@@ -395,9 +395,20 @@ model FinancialTransaction {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
+  /// Ledger dan Sub Ledger 1 dari master. Ini sumber kebenarannya; `colF` dan
+  /// `colG` tetap ada sebagai cermin nama (migrasi prod hanya boleh menambah, jadi
+  /// kolomnya belum bisa dihapus) dan selalu ditulis ulang dari master lewat
+  /// `finance/common/ledger-refs.ts`. Laporan menyaring lewat `ledger.code`.
+  ledgerId          BigInt?   @map("ledger_id")
+  subLedgerId       BigInt?   @map("sub_ledger_id")
+
   internalAccount InternalAccount? @relation(fields: [internalAccountId], references: [id])
+  ledger          Ledger?          @relation(fields: [ledgerId], references: [id], onDelete: Restrict)
+  subLedger       SubLedger?       @relation(fields: [subLedgerId], references: [id], onDelete: Restrict)
 
   @@index([internalAccountId, tagYear, rowNo])
+  @@index([ledgerId])
+  @@index([subLedgerId])
   @@map("financial_transactions")
 }
 
@@ -1201,4 +1212,42 @@ model AccountPayableAmount {
   @@unique([accountPayableId, internalAccountId])
   @@index([internalAccountId])
   @@map("account_payable_amounts")
+}
+
+/// Master Ledger untuk Bank Statement.
+///
+/// `code` tetap dan dipakai laporan untuk menyaring (P&L menyaring `COGS`,
+/// `INCOME_TAX`, dst.), sedangkan `name` bebas diganti. Tanpa pemisahan ini,
+/// mengganti nama "Cost of Goods" di halaman master akan diam-diam
+/// menghilangkan seluruh COGS dari P&L.
+model Ledger {
+  id         BigInt   @id @default(autoincrement())
+  code       String?  @unique
+  name       String   @unique
+  orderIndex Int      @default(0) @map("order_index")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  subLedgers   SubLedger[]
+  transactions FinancialTransaction[]
+
+  @@map("ledgers")
+}
+
+/// Sub Ledger 1, selalu milik tepat satu Ledger.
+model SubLedger {
+  id        BigInt   @id @default(autoincrement())
+  ledgerId  BigInt   @map("ledger_id")
+  code      String?  @unique
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  ledger       Ledger                 @relation(fields: [ledgerId], references: [id], onDelete: Restrict)
+  transactions FinancialTransaction[]
+
+  @@unique([ledgerId, name])
+  @@map("sub_ledgers")
 }

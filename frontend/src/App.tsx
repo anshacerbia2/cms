@@ -18,6 +18,7 @@ import PpnInOutPage from './features/finance/pages/PpnInOutPage';
 import DepreciationPage from './features/finance/pages/DepreciationPage';
 import SalesPage from './features/sales/pages/SalesPage';
 import InterAccountPage from './features/finance/pages/InterAccountPage';
+import LedgersPage from './features/finance/pages/LedgersPage';
 import ProjectsPage from './features/projects/pages/ProjectsPage';
 import ProposalsPage from './features/proposals/pages/ProposalsPage';
 import InvoicesPage from './features/invoices/pages/InvoicesPage';
@@ -64,6 +65,7 @@ function App() {
             <Route path="depreciation" element={<DepreciationPage />} />
             <Route path="ppn-in-out" element={<PpnInOutPage />} />
             <Route path="inter-account" element={<InterAccountPage />} />
+            <Route path="ledgers" element={<LedgersPage />} />
             <Route path="sales" element={<SalesPage />} />
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="proposals" element={<ProposalsPage />} />

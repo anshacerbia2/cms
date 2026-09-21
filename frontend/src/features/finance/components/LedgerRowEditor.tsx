@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { formatInputAmount, cleanInputAmount, formatCurrency, parseSmartDate, cleanNumber } from '@/lib/utils';
+import { LedgerCombo } from './LedgerCombo';
+import { type LedgerMaster, ledgerIds } from '../hooks/useLedgers';
 
 /**
  * Satu baris ledger yang sedang diketik, langsung di tabelnya.
@@ -87,9 +89,13 @@ export function draftFrom(raw: any): LedgerDraft {
 /** Draf yang tidak diisi sama sekali - dilewati waktu menyimpan, bukan dianggap salah. */
 export const isBlankDraft = (d: LedgerDraft) => DRAFT_COLUMNS.every((k) => d[k].trim() === '');
 
-/** Siap dikirim ke API: angka kosong jadi 0, tanggal kosong tetap kosong. */
-export function draftPayload(d: LedgerDraft) {
+/**
+ * Siap dikirim ke API: angka kosong jadi 0, tanggal kosong tetap kosong.
+ * Ledger/SL1 dikirim sebagai id master kalau dikenali, plus namanya.
+ */
+export function draftPayload(d: LedgerDraft, master: LedgerMaster | null = null) {
   return {
+    ...ledgerIds(d, master),
     colA: d.colA || '',
     colB: d.colB,
     colC: d.colC === '' || d.colC === '-' ? '0' : d.colC,
@@ -117,6 +123,8 @@ type Props = {
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>, index: number, field: DraftField) => void;
   onPaste?: (e: React.ClipboardEvent<HTMLInputElement>, index: number, field: DraftField) => void;
   autoFocus?: boolean;
+  /** Master Ledger untuk dropdown. Null selama belum termuat: kolomnya jadi teks biasa. */
+  master?: LedgerMaster | null;
 };
 
 /**
@@ -129,7 +137,7 @@ type Props = {
  * merender draf itu (dan yang saldonya ikut berubah), bukan semuanya.
  */
 export const LedgerRowEditor = memo(function LedgerRowEditor({
-  index, draft, saldo, rowKey, onChange, onKeyDown, onPaste, autoFocus,
+  index, draft, saldo, rowKey, onChange, onKeyDown, onPaste, autoFocus, master = null,
 }: Props) {
   // Tanggal yang sedang diketik setengah jadi tidak boleh membuat kalender error.
   const parsed = draft.colA ? parseISO(draft.colA) : undefined;
@@ -160,6 +168,31 @@ export const LedgerRowEditor = memo(function LedgerRowEditor({
       className={`${input} text-right font-bold ${tone}`}
     />
   );
+
+  // Ledger dan SL1 dipilih dari master; SL1 hanya yang milik Ledger baris ini.
+  const ledger = master?.findLedger(draft.colF);
+  const combo = (field: 'colF' | 'colG', placeholder: string) => {
+    if (!master) return text(field, placeholder);
+    const options = field === 'colF' ? master.ledgerOptions : master.subOptions(draft.colF);
+    const value = draft[field].trim();
+    const invalid =
+      value !== '' && (field === 'colF' ? !ledger : !master.findSub(ledger, value));
+    return (
+      <LedgerCombo
+        value={draft[field]}
+        options={options}
+        invalid={invalid}
+        emptyHint={field === 'colG' ? 'Pilih Ledger dulu' : undefined}
+        placeholder={placeholder}
+        onChange={(v) => onChange(index, field, v)}
+        onKeyDown={(e) => onKeyDown?.(e, index, field)}
+        onPaste={(e) => onPaste?.(e, index, field)}
+        data-draft-row={rowKey}
+        data-draft-col={field}
+        className={input}
+      />
+    );
+  };
 
   return (
     <>
@@ -211,8 +244,8 @@ export const LedgerRowEditor = memo(function LedgerRowEditor({
       <TableCell className={`${cell} text-right pr-4 text-sm font-bold text-primary/40 whitespace-nowrap`}>
         {saldo ? formatCurrency(saldo) : '—'}
       </TableCell>
-      <TableCell className={cell}>{text('colF', 'Ledger')}</TableCell>
-      <TableCell className={cell}>{text('colG', 'SL 1')}</TableCell>
+      <TableCell className={cell}>{combo('colF', 'Ledger')}</TableCell>
+      <TableCell className={cell}>{combo('colG', 'SL 1')}</TableCell>
       <TableCell className={cell}>{text('colH', 'SL 2')}</TableCell>
       <TableCell className={cell}>{text('colI', 'SL 3')}</TableCell>
     </>

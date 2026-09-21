@@ -14,6 +14,28 @@ import {
   pastedLines,
   isGridPaste,
 } from './LedgerRowEditor';
+import { type LedgerMaster, canonicalLedger, ledgerProblem, withLedger } from '../hooks/useLedgers';
+
+/** Draf setelah satu sel berubah. Mengganti Ledger mengosongkan SL1 yang bukan miliknya. */
+const changed = (d: LedgerDraft, field: DraftField, value: string, master: LedgerMaster | null) =>
+  field === 'colF' ? withLedger(d, value, master) : { ...d, [field]: value };
+
+/** Ledger yang ditempel dari Excel tapi tidak ada di master, untuk disebutkan - tidak dibuang diam-diam. */
+function warnUnknownLedgers(drafts: LedgerDraft[], master: LedgerMaster | null) {
+  const problems = drafts.map((d) => ledgerProblem(d, master)).filter(Boolean);
+  if (problems.length > 0) {
+    toast.warning(`${problems.length} baris: Ledger/SL1 tidak ada di master (ditandai merah). ${problems[0]}`);
+  }
+}
+
+/** Nomor baris pertama yang Ledger/SL1-nya tidak ada di master, beserta alasannya. */
+function firstLedgerProblem(drafts: LedgerDraft[], master: LedgerMaster | null) {
+  for (const [i, d] of drafts.entries()) {
+    const problem = ledgerProblem(d, master);
+    if (problem) return `Baris ${i + 1}: ${problem}`;
+  }
+  return null;
+}
 
 /*
  * Draf yang sedang diketik hidup di komponen ini, bukan di halaman.
@@ -28,13 +50,14 @@ const actionCell = 'pr-4 bg-amber-50/60';
 type EditProps = {
   /** Baris mentah dari API, sebelum diformat untuk tampilan. */
   raw: any;
+  master: LedgerMaster | null;
   saving: boolean;
   onSave: (draft: LedgerDraft) => void;
   onCancel: () => void;
 };
 
 /** Baris yang sedang disunting, di tempatnya sendiri. Enter simpan, Esc batal. */
-export function InlineEditRow({ raw, saving, onSave, onCancel }: EditProps) {
+export function InlineEditRow({ raw, master, saving, onSave, onCancel }: EditProps) {
   const [draft, setDraft] = useState<LedgerDraft>(() => draftFrom(raw));
   // Nilai terbaru untuk handler keyboard. Menyimpan dari dalam updater setState
   // akan menyimpan dua kali, karena React boleh memanggil updater lebih dari sekali.
@@ -42,8 +65,17 @@ export function InlineEditRow({ raw, saving, onSave, onCancel }: EditProps) {
   latest.current = draft;
 
   const onChange = useCallback(
-    (_: number, field: DraftField, value: string) => setDraft((d) => ({ ...d, [field]: value })),
-    [],
+    (_: number, field: DraftField, value: string) => setDraft((d) => changed(d, field, value, master)),
+    [master],
+  );
+
+  const save = useCallback(
+    (d: LedgerDraft) => {
+      const problem = ledgerProblem(d, master);
+      if (problem) toast.error(problem);
+      else onSave(d);
+    },
+    [master, onSave],
   );
 
   // Saldo sesudah baris ini, dihitung ulang dari nilai barunya.
@@ -58,10 +90,10 @@ export function InlineEditRow({ raw, saving, onSave, onCancel }: EditProps) {
       if (e.key === 'Escape') return onCancel();
       if (e.key === 'Enter') {
         e.preventDefault();
-        onSave(latest.current);
+        save(latest.current);
       }
     },
-    [onCancel, onSave],
+    [onCancel, save],
   );
 
   // Satu baris saja; sisanya disebutkan, tidak diam-diam dibuang.
@@ -71,11 +103,13 @@ export function InlineEditRow({ raw, saving, onSave, onCancel }: EditProps) {
     e.preventDefault();
     const lines = pastedLines(text);
     if (lines.length === 0) return;
-    setDraft((d) => fillFromPastedLine(d, lines[0], field));
+    const next = canonicalLedger(fillFromPastedLine(latest.current, lines[0], field), master);
+    setDraft(next);
+    warnUnknownLedgers([next], master);
     if (lines.length > 1) {
       toast.info(`Baris pertama dipakai. ${lines.length - 1} baris lainnya: pakai tombol sisip untuk menempel banyak baris.`);
     }
-  }, []);
+  }, [master]);
 
   return (
     <TableRow className="whitespace-nowrap">
@@ -84,6 +118,7 @@ export function InlineEditRow({ raw, saving, onSave, onCancel }: EditProps) {
         draft={draft}
         saldo={saldo}
         rowKey="edit"
+        master={master}
         autoFocus
         onChange={onChange}
         onKeyDown={onKeyDown}
@@ -97,7 +132,7 @@ export function InlineEditRow({ raw, saving, onSave, onCancel }: EditProps) {
             title="Simpan (Enter)"
             disabled={saving}
             className="h-7 w-7 text-emerald-600 hover:bg-emerald-50 rounded-sm"
-            onClick={() => onSave(draft)}
+            onClick={() => save(draft)}
           >
             <Check size={14} strokeWidth={2.5} />
           </Button>
@@ -120,6 +155,7 @@ export function InlineEditRow({ raw, saving, onSave, onCancel }: EditProps) {
 type InsertProps = {
   /** Saldo baris tempat menyisip; saldo tiap draf berjalan dari sini. */
   anchorSaldo: number;
+  master: LedgerMaster | null;
   saving: boolean;
   /** Menerima draf yang sudah diisi dan lolos pemeriksaan, siap dikirim. */
   onSave: (drafts: LedgerDraft[]) => void;
@@ -136,7 +172,7 @@ const focusCell = (rowKey: string, field: DraftField) =>
   }, 30);
 
 /** Draf yang disisipkan di bawah satu baris, sebanyak apa pun, plus baris tombolnya. */
-export function InlineInsertRows({ anchorSaldo, saving, onSave, onCancel }: InsertProps) {
+export function InlineInsertRows({ anchorSaldo, master, saving, onSave, onCancel }: InsertProps) {
   const [drafts, setDrafts] = useState<LedgerDraft[]>(() => [emptyDraft()]);
   const latest = useRef(drafts);
   latest.current = drafts;
@@ -159,15 +195,17 @@ export function InlineInsertRows({ anchorSaldo, saving, onSave, onCancel }: Inse
     const incomplete = filled.findIndex(
       (d) => d.colB.trim() === '' || (Number(d.colC || 0) === 0 && Number(d.colD || 0) === 0),
     );
+    const ledgerIssue = firstLedgerProblem(filled, master);
     if (filled.length === 0) toast.error('Belum ada baris yang diisi.');
     else if (incomplete >= 0) toast.error(`Baris ${incomplete + 1}: deskripsi dan nominal (debit atau kredit) wajib diisi.`);
+    else if (ledgerIssue) toast.error(ledgerIssue);
     else onSave(filled);
-  }, [onSave]);
+  }, [master, onSave]);
 
   const onChange = useCallback(
     (index: number, field: DraftField, value: string) =>
-      setDrafts((all) => all.map((d, i) => (i === index ? { ...d, [field]: value } : d))),
-    [],
+      setDrafts((all) => all.map((d, i) => (i === index ? changed(d, field, value, master) : d))),
+    [master],
   );
 
   /** Enter turun ke baris berikutnya, dan menambah baris kalau sudah di paling bawah - seperti form create. */
@@ -189,17 +227,16 @@ export function InlineInsertRows({ anchorSaldo, saving, onSave, onCancel }: Inse
     if (!isGridPaste(text)) return; // satu nilai: biarkan tempel biasa
     e.preventDefault();
     const lines = pastedLines(text);
-    setDrafts((all) => {
-      const next = [...all];
-      lines.forEach((line, li) => {
-        const at = index + li;
-        while (next.length <= at) next.push(emptyDraft());
-        next[at] = fillFromPastedLine(next[at], line, field);
-      });
-      return next;
+    const next = [...latest.current];
+    lines.forEach((line, li) => {
+      const at = index + li;
+      while (next.length <= at) next.push(emptyDraft());
+      next[at] = canonicalLedger(fillFromPastedLine(next[at], line, field), master);
     });
+    setDrafts(next);
     toast.success(`${lines.length} baris ditempel dari Excel.`);
-  }, []);
+    warnUnknownLedgers(next.slice(index, index + lines.length), master);
+  }, [master]);
 
   return (
     <>
@@ -210,6 +247,7 @@ export function InlineInsertRows({ anchorSaldo, saving, onSave, onCancel }: Inse
             draft={draft}
             saldo={saldos[i]}
             rowKey={`ins-${i}`}
+            master={master}
             autoFocus={i === 0 && drafts.length === 1}
             onChange={onChange}
             onKeyDown={onKeyDown}
