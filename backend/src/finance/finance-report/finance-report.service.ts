@@ -186,7 +186,7 @@ export class FinanceReportService {
     const netSales = grossSales.plus(vatAdj);
 
     // 3. Calculate Operating Expenses from Bank Mutations (FinancialTransaction)
-    // Filtered by specific ledger categories in colF.
+    // Filtered by the ledger code - see LEDGER_CODE.
     const expenseTransactions = await this.prisma.financialTransaction.findMany({
       include: withLedgerCode,
       where: {
