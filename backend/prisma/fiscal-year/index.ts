@@ -14,6 +14,7 @@ import { seedAccountReceivable } from './account-receivable.seeder';
 import { seedAccountPayable } from './account-payable.seeder';
 import { seedPpnInOut } from './ppn-in-out.seeder';
 import { applyAdjustments } from './adjustments';
+import { seedLedgerMaster } from '../seeders/ledgers.seeder';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -116,6 +117,9 @@ async function main() {
     // Bank master and internal accounts are not year-specific, and the 2026
     // ledger needs them to resolve each sheet. Upserts, so re-running is safe.
     await seedBanks(prisma);
+    // Bank statement memetakan kolom Ledger/SL1 ke master, dan laporan
+    // menyaring lewat code-nya - jadi master harus ada lebih dulu.
+    await seedLedgerMaster(prisma);
 
     for (const seeder of chosen) {
       await seeder.run(prisma);

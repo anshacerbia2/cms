@@ -12,7 +12,8 @@ import { BadRequestException } from '@nestjs/common';
 
 /**
  * Kunci pembanding: huruf kecil, `( ) /` jadi spasi, spasi dirapatkan.
- * HARUS sama dengan `pg_temp.ledger_key` di migrasi `add_ledger_master`.
+ * Dipakai seeder (`prisma/seeders/ledgers.seeder.ts`), aplikasi, dan frontend
+ * (`hooks/useLedgers.ts`) - ketiganya harus sama.
  */
 export function ledgerKey(name: string | null | undefined): string {
   return String(name ?? '')
@@ -22,12 +23,12 @@ export function ledgerKey(name: string | null | undefined): string {
     .trim();
 }
 
-/** Ejaan Ledger yang sudah disatukan, dari kunci ke kunci. Sama dengan migrasinya. */
+/** Ejaan Ledger yang sudah disatukan, dari kunci ke kunci. */
 export const LEDGER_ALIASES: Record<string, string> = {
   'retained earning': 'retained earnings',
 };
 
-/** Ejaan Sub Ledger 1 yang sudah disatukan. Sama dengan migrasinya. */
+/** Ejaan Sub Ledger 1 yang sudah disatukan. */
 export const SUB_LEDGER_ALIASES: Record<string, string> = {
   'bank charges': 'bank charge',
   'meal allowance': 'meals allowance',
@@ -183,4 +184,31 @@ export class LedgerDirectory {
       colG: sub?.name ?? null,
     };
   }
+}
+
+/**
+ * Include untuk membaca nama Ledger / Sub Ledger 1 lewat relasi. Dipakai setiap
+ * query yang menampilkan transaksi - tabel, filter kolom, pencarian, export,
+ * drill-down laporan - supaya yang tampil selalu nama di master.
+ */
+export const LEDGER_NAMES_INCLUDE = {
+  ledger: { select: { name: true } },
+  subLedger: { select: { name: true } },
+} as const;
+
+type WithLedgerRelations = {
+  colF: string | null;
+  colG: string | null;
+  ledger?: { name: string } | null;
+  subLedger?: { name: string } | null;
+};
+
+/**
+ * `colF` / `colG` diisi dari master lewat FK; teks yang tersimpan hanya dipakai
+ * untuk baris yang belum punya FK. Objek relasinya dibuang supaya bentuk
+ * respons API tidak berubah.
+ */
+export function withLedgerNames<T extends WithLedgerRelations>(row: T) {
+  const { ledger, subLedger, ...rest } = row;
+  return { ...rest, colF: ledger?.name ?? row.colF, colG: subLedger?.name ?? row.colG };
 }
