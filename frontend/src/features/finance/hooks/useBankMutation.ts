@@ -60,7 +60,7 @@ export function useBankMutation() {
   };
 
   const insertTransaction = () => {
-    return async (payload: { data: any; accountId: string; tagYear: number; afterId: number | null }) => {
+    return async (payload: { rows: any[]; accountId: string; tagYear: number; afterId: number | null }) => {
       const data = await bankMutationService.insertTransaction(payload);
       queryClient.invalidateQueries({ queryKey: ["finance", "bank-mutation"] });
       return data;

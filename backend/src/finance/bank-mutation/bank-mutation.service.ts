@@ -168,10 +168,12 @@ export class BankMutationService {
     if (!accountIdBig) throw new BadRequestException(`Transaction ${id} has no associated account`);
     const tagYear = existing.tagYear;
 
+    // Tanggal boleh dikosongkan. Dulu string kosong berarti "biarkan", karena form
+    // edit selalu mewajibkan tanggal; sekarang baris bisa disunting langsung di
+    // tabelnya, dan baris Non CB yang memang tak bertanggal harus bisa tetap begitu.
     let newDate = existing.colA;
-
-    if (data.colA) {
-      newDate = new Date(data.colA);
+    if ('colA' in data) {
+      newDate = data.colA ? new Date(data.colA) : null;
     }
 
     // Check if year is CLOSED
@@ -284,17 +286,19 @@ export class BankMutationService {
   }
 
   /**
-   * Nomor urut untuk baris baru tepat di bawah `afterId`; `null` untuk paling atas.
+   * Nomor urut untuk `count` baris baru tepat di bawah `afterId`; `null` = paling atas.
    *
-   * Diambil titik tengah antara baris itu dan baris sesudahnya, jadi menyisip cuma
-   * satu INSERT - tidak ada tetangga yang digeser, `id` dan nilainya tetap.
-   * Mengembalikan `null` kalau celahnya sudah habis, artinya perlu dirapatkan dulu.
+   * Dibagi rata di celah antara baris itu dan baris sesudahnya, jadi menyisip
+   * berapa pun baris tetap satu INSERT - tidak ada tetangga yang digeser, `id`
+   * dan nilainya tetap. Mengembalikan `null` kalau celahnya tidak cukup untuk
+   * semuanya, artinya perlu dirapatkan dulu.
    */
-  private async rowNoAfter(
+  private async rowNosAfter(
     accountId: bigint,
     year: number,
     afterId: bigint | null,
-  ): Promise<number | null> {
+    count: number,
+  ): Promise<number[] | null> {
     let floor = 0;
 
     if (afterId !== null) {
@@ -318,10 +322,16 @@ export class BankMutationService {
       select: { rowNo: true },
     });
 
-    // Tanpa baris sesudahnya, berarti menyisip di ujung: langsung satu langkah penuh.
-    const ceiling = next?.rowNo ?? floor + 2 * ROW_NO_GAP;
-    const mid = Math.floor((floor + ceiling) / 2);
-    return mid > floor ? mid : null;
+    // Tanpa baris sesudahnya, berarti menyisip di ujung: satu langkah penuh per baris.
+    const ceiling = next?.rowNo ?? floor + (count + 1) * ROW_NO_GAP;
+    const step = (ceiling - floor) / (count + 1);
+    if (step < 1) return null;
+
+    const numbers = Array.from({ length: count }, (_, i) => Math.floor(floor + step * (i + 1)));
+    // Pembulatan ke bawah bisa membuat dua nomor kembar kalau celahnya sempit;
+    // kalau begitu, rapatkan dulu daripada menaruh dua baris di nomor yang sama.
+    const distinct = new Set(numbers).size === count && numbers[0] > floor;
+    return distinct ? numbers : null;
   }
 
   /**
@@ -347,46 +357,82 @@ export class BankMutationService {
   }
 
   /**
-   * Menambah satu baris tepat di bawah `afterId` (atau paling atas kalau null).
-   *
-   * Baris di bawahnya turun satu posisi tanpa disentuh: yang menentukan posisi
-   * adalah row_no, bukan banyaknya baris di atasnya. Sesudahnya kolom saldo
-   * dirantai ulang seperti pada tambah/ubah/hapus biasa.
+   * Menggeser semua baris sesudah `afterId` sejauh `count` langkah, supaya ada
+   * ruang untuk menyisip sebanyak itu sekaligus. Dipanggil sesudah repack, jadi
+   * jaraknya sudah rata ROW_NO_GAP. Tanpa ini, menempel blok besar dari Excel
+   * gagal begitu barisnya lebih banyak dari satu celah.
    */
-  async insertTransaction(data: any, accountId: string, tagYear: number, afterId?: number | null) {
+  private async makeRoomAfter(
+    accountId: bigint,
+    year: number,
+    afterId: bigint | null,
+    count: number,
+  ): Promise<void> {
+    let floor = 0;
+    if (afterId !== null) {
+      const anchorRow = await this.prisma.financialTransaction.findUnique({
+        where: { id: afterId },
+        select: { rowNo: true },
+      });
+      floor = anchorRow?.rowNo ?? 0;
+    }
+    await this.prisma.$executeRaw`
+      UPDATE financial_transactions
+         SET row_no = row_no + ${count * ROW_NO_GAP}
+       WHERE internal_account_id = ${accountId}
+         AND "tagYear" = ${year}
+         AND row_no > ${floor}
+    `;
+  }
+
+  /**
+   * Menambah satu atau lebih baris tepat di bawah `afterId` (atau paling atas kalau null).
+   *
+   * Baris-baris baru masuk berurutan sesuai urutan kirimnya, dan baris di bawahnya
+   * turun tanpa disentuh: yang menentukan posisi adalah row_no, bukan banyaknya
+   * baris di atasnya. Sesudahnya kolom saldo dirantai ulang sekali untuk semuanya.
+   */
+  async insertTransactions(rows: any[], accountId: string, tagYear: number, afterId?: number | null) {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      throw new BadRequestException('Tidak ada baris untuk disimpan.');
+    }
+
     const accountIdBig = BigInt(accountId);
     const after = afterId === undefined || afterId === null ? null : BigInt(afterId);
 
     const account = await this.prisma.internalAccount.findUnique({ where: { id: accountIdBig } });
     if (!account) throw new NotFoundException(`Account ${accountId} not found`);
 
-    let rowNo = await this.rowNoAfter(accountIdBig, tagYear, after);
-    if (rowNo === null) {
+    let rowNos = await this.rowNosAfter(accountIdBig, tagYear, after, rows.length);
+    if (rowNos === null) {
       await this.repackRowNo(accountIdBig, tagYear);
-      rowNo = await this.rowNoAfter(accountIdBig, tagYear, after);
+      await this.makeRoomAfter(accountIdBig, tagYear, after, rows.length);
+      rowNos = await this.rowNosAfter(accountIdBig, tagYear, after, rows.length);
     }
-    if (rowNo === null) {
-      // Sesudah dirapatkan celahnya pasti ROW_NO_GAP, jadi ini tidak bisa terjadi
-      // kecuali ada yang menyisip di detik yang sama. Ditolak dengan jelas, bukan
-      // diam-diam mendarat di tempat lain.
+    if (rowNos === null) {
+      // Sesudah diberi ruang, ini hanya terjadi kalau ada yang menyisip di titik
+      // yang sama pada detik yang sama. Ditolak dengan jelas, bukan diam-diam
+      // mendarat di tempat lain.
       throw new BadRequestException('Gagal menentukan posisi baris, coba lagi.');
     }
 
-    const created = await this.prisma.financialTransaction.create({
-      data: {
+    await this.prisma.financialTransaction.createMany({
+      data: rows.map((data, i) => ({
         internalAccountId: accountIdBig,
+        // Tanggal boleh kosong: buku non-kas memang tidak memberi tanggal pada
+        // sebagian besar barisnya, dan seeder menyimpannya kosong juga.
         colA: data.colA ? new Date(data.colA) : null,
         colB: data.colB || '',
-        colC: data.colC !== undefined ? data.colC.toString() : '0',
-        colD: data.colD !== undefined ? data.colD.toString() : '0',
+        colC: data.colC !== undefined && data.colC !== '' ? data.colC.toString() : '0',
+        colD: data.colD !== undefined && data.colD !== '' ? data.colD.toString() : '0',
         colE: 0,
         colF: data.colF || '',
         colG: data.colG || '',
         colH: data.colH || '',
         colI: data.colI || '',
         tagYear,
-        rowNo,
-      },
+        rowNo: rowNos![i],
+      })),
     });
 
     await this.prisma.fiscalPeriod.updateMany({
@@ -396,7 +442,7 @@ export class BankMutationService {
 
     await this.recalculateLedger(accountId, tagYear, true);
 
-    return { success: true, id: Number(created.id), rowNo };
+    return { success: true, count: rows.length };
   }
 
   // --- Opening Balance & Anchor Logic ---

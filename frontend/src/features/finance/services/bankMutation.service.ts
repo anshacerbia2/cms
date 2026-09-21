@@ -11,9 +11,9 @@ export const bankMutationService = {
     return data;
   },
 
-  /** Menyisip satu baris tepat di bawah `afterId`; afterId null = paling atas. */
+  /** Menyisip satu atau lebih baris tepat di bawah `afterId`; afterId null = paling atas. */
   insertTransaction: async (payload: {
-    data: any;
+    rows: any[];
     accountId: string;
     tagYear: number;
     afterId: number | null;

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Fragment } from "react";
 import { 
   Search, 
   Landmark,
@@ -16,6 +16,8 @@ import {
   Edit2,
   Trash2,
   CornerDownRight,
+  Check,
+  X,
   FileSpreadsheet,
   FileText,
   Eye,
@@ -31,7 +33,7 @@ import {
 import { Decimal } from "decimal.js";
 import { useBanks } from "@/features/banks/hooks/useBanks";
 import { useAuthStore } from "@/store/authStore";
-import { formatCurrency, formatDate, cleanAmount, cn } from "@/lib/utils";
+import { formatCurrency, formatDate, cleanAmount, cn, parseSmartDate, cleanNumber } from "@/lib/utils";
 import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
 import { 
   DropdownMenu,
@@ -40,8 +42,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import AddLedgerModal from "../components/AddLedgerModal";
-import EditTransactionModal from "../components/EditTransactionModal";
-import InsertTransactionModal from "../components/InsertTransactionModal";
+import {
+  LedgerRowEditor,
+  type LedgerDraft,
+  type DraftField,
+  DRAFT_COLUMNS,
+  emptyDraft,
+  draftFrom,
+  isBlankDraft,
+  draftPayload,
+} from "../components/LedgerRowEditor";
 import { DetailModal } from "@/components/common/DetailModal";
 import {
   Table,
@@ -112,11 +122,11 @@ export default function BankMutationPage() {
   }, [ledgerYearFilter]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [insertAfterRow, setInsertAfterRow] = useState<any | null>(null);
-  const [isInsertModalOpen, setIsInsertModalOpen] = useState(false);
+  // Menyunting dan menyisip dikerjakan langsung di baris tabel, bukan di popup.
+  const [editing, setEditing] = useState<{ id: number; draft: LedgerDraft } | null>(null);
+  const [inserting, setInserting] = useState<{ afterId: number; drafts: LedgerDraft[] } | null>(null);
+  const [savingInline, setSavingInline] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedTransactionId, setSelectedTransactionId] = useState<number | null>(null);
   const [selectedViewTransaction, setSelectedViewTransaction] = useState<any>(null);
   const [transactionToDelete, setTransactionToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -135,19 +145,160 @@ export default function BankMutationPage() {
   }, [internalAccounts, selectedAccount]);
 
   const { user, can } = useAuthStore();
-  const { getAllTransactions, getFiscalPeriods, recalculateLedger, closeYear, getAnchorBalance, deleteTransaction } = useBankMutation();
+  const { getAllTransactions, getFiscalPeriods, recalculateLedger, closeYear, getAnchorBalance, deleteTransaction, updateTransaction, insertTransaction } = useBankMutation();
   
   const yearNum = useMemo(() => Number(ledgerYearFilter), [ledgerYearFilter]);
 
+  /** Baris mentah dari API, sebelum diformat untuk tampilan. */
+  const rawRow = (id: number) => (allTransactionsRaw || []).find((r: any) => r.id === id);
+
+  /** Sedang ada baris yang diketik - tombol edit/sisip di baris lain dikunci supaya ketikan tidak hilang. */
+  const inlineBusy = editing !== null || inserting !== null;
+
   const handleEditTransaction = (row: any) => {
-    setSelectedTransactionId(row.id);
-    setIsEditModalOpen(true);
+    if (inlineBusy) return;
+    setEditing({ id: row.id, draft: draftFrom(rawRow(row.id)) });
   };
 
   /** Baris baru mendarat tepat di bawah `row`, bukan di ujung daftar. */
   const handleInsertAfter = (row: any) => {
-    setInsertAfterRow(row);
-    setIsInsertModalOpen(true);
+    if (inlineBusy) return;
+    setInserting({ afterId: row.id, drafts: [emptyDraft()] });
+  };
+
+  const cancelInline = () => {
+    setEditing(null);
+    setInserting(null);
+  };
+
+  const saveEdit = async () => {
+    if (!editing || savingInline) return;
+    setSavingInline(true);
+    try {
+      await updateTransaction()({ id: editing.id, data: draftPayload(editing.draft) });
+      toast.success("Baris disimpan.");
+      setEditing(null);
+      refetchTransactions();
+      refetchFiscal();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Gagal menyimpan baris.");
+    } finally {
+      setSavingInline(false);
+    }
+  };
+
+  const saveInsert = async () => {
+    if (!inserting || savingInline) return;
+    const filled = inserting.drafts.filter((d) => !isBlankDraft(d));
+    // Sama dengan form create: butuh deskripsi dan nominal. Tanggal tidak wajib,
+    // dan tidak harus di tahun yang sama - buku non-kas punya ribuan baris tanpa
+    // tanggal dan ratusan yang bertanggal tahun berikutnya.
+    const incomplete = filled.findIndex(
+      (d) => d.colB.trim() === "" || (Number(d.colC || 0) === 0 && Number(d.colD || 0) === 0),
+    );
+    if (filled.length === 0) {
+      toast.error("Belum ada baris yang diisi.");
+      return;
+    }
+    if (incomplete >= 0) {
+      toast.error(`Baris ${incomplete + 1}: deskripsi dan nominal (debit atau kredit) wajib diisi.`);
+      return;
+    }
+    setSavingInline(true);
+    try {
+      await insertTransaction()({
+        rows: filled.map(draftPayload),
+        accountId: selectedAccount?.id,
+        tagYear: yearNum,
+        afterId: inserting.afterId,
+      });
+      toast.success(`${filled.length} baris disisipkan.`);
+      setInserting(null);
+      refetchTransactions();
+      refetchFiscal();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Gagal menyisipkan baris.");
+    } finally {
+      setSavingInline(false);
+    }
+  };
+
+  const setDraft = (index: number, field: DraftField, value: string) =>
+    setInserting((cur) =>
+      cur ? { ...cur, drafts: cur.drafts.map((d, i) => (i === index ? { ...d, [field]: value } : d)) } : cur,
+    );
+
+  const focusDraft = (rowKey: string, field: DraftField) =>
+    setTimeout(() => {
+      const el = document.querySelector<HTMLInputElement>(
+        `input[data-draft-row="${rowKey}"][data-draft-col="${field}"]`,
+      );
+      el?.focus();
+      el?.select();
+    }, 30);
+
+  /** Enter turun ke baris berikutnya, dan menambah baris kalau sudah di paling bawah - seperti form create. */
+  const onDraftKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number, field: DraftField) => {
+    if (e.key === "Escape") return cancelInline();
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) return void saveInsert();
+    if (inserting && index === inserting.drafts.length - 1) {
+      setInserting((cur) => (cur ? { ...cur, drafts: [...cur.drafts, emptyDraft()] } : cur));
+    }
+    focusDraft(`ins-${index + 1}`, field);
+  };
+
+  /** Menempel blok dari Excel: tiap baris jadi satu draf, mulai dari sel yang sedang aktif. */
+  const onDraftPaste = (e: React.ClipboardEvent<HTMLInputElement>, index: number, field: DraftField) => {
+    const text = e.clipboardData.getData("text");
+    if (!text.includes("\t") && !text.includes("\n")) return; // satu nilai: biarkan tempel biasa
+    e.preventDefault();
+    const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
+    const startCol = DRAFT_COLUMNS.indexOf(field);
+    setInserting((cur) => {
+      if (!cur) return cur;
+      const drafts = [...cur.drafts];
+      lines.forEach((line, li) => {
+        const at = index + li;
+        while (drafts.length <= at) drafts.push(emptyDraft());
+        const next = { ...drafts[at] };
+        line.split("\t").forEach((raw, ci) => {
+          const key = DRAFT_COLUMNS[startCol + ci];
+          if (!key) return; // kolom berlebih dari Excel dibuang, bukan digeser
+          const v = raw.trim();
+          next[key] = key === "colA" ? parseSmartDate(v) : key === "colC" || key === "colD" ? cleanNumber(v) : v;
+        });
+        drafts[at] = next;
+      });
+      return { ...cur, drafts };
+    });
+    toast.success(`${lines.length} baris ditempel dari Excel.`);
+  };
+
+  const onEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") return cancelInline();
+    if (e.key === "Enter") {
+      e.preventDefault();
+      saveEdit();
+    }
+  };
+
+  /** Saldo sesudah baris yang sedang disunting, dihitung ulang dari nilai barunya. */
+  const editSaldo = (id: number, draft: LedgerDraft) => {
+    const raw = rawRow(id);
+    if (!raw) return null;
+    const before = Number(raw.colE || 0) - Number(raw.colD || 0) + Number(raw.colC || 0);
+    return String(before - Number(draft.colC || 0) + Number(draft.colD || 0));
+  };
+
+  /** Saldo berjalan untuk tiap draf, meneruskan saldo baris tempat menyisip. */
+  const insertSaldos = (afterId: number, drafts: LedgerDraft[]) => {
+    let running = Number(rawRow(afterId)?.colE || 0);
+    return drafts.map((d) => {
+      running = running - Number(d.colC || 0) + Number(d.colD || 0);
+      return String(running);
+    });
   };
 
   const handleViewTransaction = (row: any) => {
@@ -864,7 +1015,46 @@ export default function BankMutationPage() {
               ) : (
                 <>
                   {paginatedLedger.map((row: any) => (
-                    <TableRow key={row.id} className="hover:bg-slate-50 transition-colors whitespace-nowrap group">
+                    <Fragment key={row.id}>
+                    {editing && editing.id === row.id ? (
+                      <TableRow className="whitespace-nowrap">
+                        <LedgerRowEditor
+                          draft={editing.draft}
+                          saldo={editSaldo(row.id, editing.draft)}
+                          rowKey="edit"
+                          autoFocus
+                          onChange={(field, value) =>
+                            setEditing((cur) => (cur ? { ...cur, draft: { ...cur.draft, [field]: value } } : cur))
+                          }
+                          onKeyDown={(e) => onEditKeyDown(e)}
+                        />
+                        <TableCell className="pr-4 bg-amber-50/60">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Simpan (Enter)"
+                              disabled={savingInline}
+                              className="h-7 w-7 text-emerald-600 hover:bg-emerald-50 rounded-sm"
+                              onClick={saveEdit}
+                            >
+                              <Check size={14} strokeWidth={2.5} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Batal (Esc)"
+                              disabled={savingInline}
+                              className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
+                              onClick={cancelInline}
+                            >
+                              <X size={14} strokeWidth={2.5} />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                    <TableRow className="hover:bg-slate-50 transition-colors whitespace-nowrap group">
                       <TableCell className="text-primary/60">{row.colA}</TableCell>
                       <TableCell className="font-medium text-primary transition-colors max-w-md truncate" title={row.colB}>
                         {row.colB}
@@ -891,6 +1081,7 @@ export default function BankMutationPage() {
                               variant="ghost" 
                               size="icon" 
                               className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
+                              disabled={inlineBusy}
                               onClick={(e) => { e.stopPropagation(); handleEditTransaction(row); }}
                             >
                               <Edit2 size={12} strokeWidth={2.5} />
@@ -902,6 +1093,7 @@ export default function BankMutationPage() {
                               size="icon"
                               title="Insert a row below this one"
                               className="h-7 w-7 text-primary/40 hover:text-secondary hover:bg-secondary/5 rounded-sm"
+                              disabled={inlineBusy}
                               onClick={(e) => { e.stopPropagation(); handleInsertAfter(row); }}
                             >
                               <CornerDownRight size={12} strokeWidth={2.5} />
@@ -920,6 +1112,86 @@ export default function BankMutationPage() {
                         </div>
                       </TableCell>
                     </TableRow>
+                    )}
+                    {inserting && inserting.afterId === row.id && ((ins) => {
+                      const saldos = insertSaldos(row.id, ins.drafts);
+                      return (
+                        <>
+                          {ins.drafts.map((draft, i) => (
+                            <TableRow key={`ins-${i}`} className="whitespace-nowrap">
+                              <LedgerRowEditor
+                                draft={draft}
+                                saldo={saldos[i]}
+                                rowKey={`ins-${i}`}
+                                autoFocus={i === 0 && ins.drafts.length === 1}
+                                onChange={(field, value) => setDraft(i, field, value)}
+                                onKeyDown={(e, field) => onDraftKeyDown(e, i, field)}
+                                onPaste={(e, field) => onDraftPaste(e, i, field)}
+                              />
+                              <TableCell className="pr-4 bg-amber-50/60">
+                                <div className="flex items-center justify-end">
+                                  {ins.drafts.length > 1 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      title="Buang baris ini"
+                                      className="h-7 w-7 text-rose-500/50 hover:text-rose-600 hover:bg-rose-50 rounded-sm"
+                                      onClick={() =>
+                                        setInserting((cur) =>
+                                          cur ? { ...cur, drafts: cur.drafts.filter((_, j) => j !== i) } : cur,
+                                        )
+                                      }
+                                    >
+                                      <X size={12} strokeWidth={2.5} />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow className="bg-amber-50/40 hover:bg-amber-50/40">
+                            <TableCell colSpan={10} className="py-2 px-4">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 rounded-lg text-[11px] font-bold gap-1"
+                                  onClick={() =>
+                                    setInserting((cur) => (cur ? { ...cur, drafts: [...cur.drafts, emptyDraft()] } : cur))
+                                  }
+                                >
+                                  <Plus size={12} /> Tambah baris
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  disabled={savingInline}
+                                  className="h-8 rounded-lg text-[11px] font-bold gap-1"
+                                  onClick={saveInsert}
+                                >
+                                  <Check size={12} />
+                                  {savingInline
+                                    ? "Menyimpan..."
+                                    : `Simpan ${ins.drafts.filter((d) => !isBlankDraft(d)).length} baris`}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={savingInline}
+                                  className="h-8 rounded-lg text-[11px] font-bold"
+                                  onClick={cancelInline}
+                                >
+                                  Batal
+                                </Button>
+                                <span className="text-[11px] text-muted-foreground ml-2">
+                                  Enter = baris baru · Ctrl+Enter = simpan · Esc = batal · bisa tempel dari Excel
+                                </span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        </>
+                      );
+                    })(inserting)}
+                    </Fragment>
                   ))}
                   
                   {/* Subtotal Row */}
@@ -970,28 +1242,6 @@ export default function BankMutationPage() {
         onOpenChange={setIsAddModalOpen} 
         selectedAccount={selectedAccount}
         year={yearNum}
-        onSuccess={() => {
-          refetchFiscal();
-          refetchTransactions();
-        }}
-      />
-
-      <InsertTransactionModal
-        open={isInsertModalOpen}
-        onOpenChange={setIsInsertModalOpen}
-        afterRow={insertAfterRow}
-        accountId={selectedAccount?.id}
-        year={yearNum}
-        onSuccess={() => {
-          refetchFiscal();
-          refetchTransactions();
-        }}
-      />
-
-      <EditTransactionModal
-        open={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
-        transactionId={selectedTransactionId}
         onSuccess={() => {
           refetchFiscal();
           refetchTransactions();
