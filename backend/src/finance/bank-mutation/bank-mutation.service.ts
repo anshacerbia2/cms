@@ -1,5 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { LedgerDirectory, type LedgerInput, type LedgerRef } from '../common/ledger-refs';
+import {
+  LEDGER_NAMES_INCLUDE,
+  LedgerDirectory,
+  type LedgerInput,
+  type LedgerRef,
+  withLedgerNames,
+} from '../common/ledger-refs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { formatDecimal } from '../../common/utils/format.utils';
@@ -57,9 +63,12 @@ export class BankMutationService {
     const data = await this.prisma.financialTransaction.findMany({
       where,
       orderBy: LEDGER_ORDER,
+      include: LEDGER_NAMES_INCLUDE,
     });
 
-    return data.map(t => ({
+    // Nama Ledger/SL1 dari master lewat FK - tabel, filter kolom, pencarian,
+    // dan export Excel/PDF semuanya membaca dari sini.
+    return data.map(withLedgerNames).map(t => ({
       ...t,
       id: Number(t.id),
       ledgerId: t.ledgerId === null ? null : Number(t.ledgerId),
@@ -167,10 +176,12 @@ export class BankMutationService {
 
   async getTransaction(id: number) {
     const trxId = BigInt(id);
-    const existing = await this.prisma.financialTransaction.findUnique({
-      where: { id: trxId }
+    const found = await this.prisma.financialTransaction.findUnique({
+      where: { id: trxId },
+      include: LEDGER_NAMES_INCLUDE,
     });
-    if (!existing) throw new NotFoundException(`Transaction ${id} not found`);
+    if (!found) throw new NotFoundException(`Transaction ${id} not found`);
+    const existing = withLedgerNames(found);
     return {
       ...existing,
       id: existing.id.toString(),

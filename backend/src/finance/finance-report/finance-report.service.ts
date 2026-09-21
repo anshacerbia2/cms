@@ -6,7 +6,7 @@ import { formatDecimal } from '../../common/utils/format.utils';
 import { Prisma } from '@prisma/client';
 import { BankMutationService } from '../bank-mutation/bank-mutation.service';
 import { EquityPropertyService } from '../equity-property/equity-property.service';
-import { LEDGER_CODE, SUB_LEDGER_CODE } from '../common/ledger-refs';
+import { LEDGER_CODE, LEDGER_NAMES_INCLUDE, SUB_LEDGER_CODE, withLedgerNames } from '../common/ledger-refs';
 
 /**
  * Label kategori P&L yang dikirim UI ke drill-down, ke code Ledger-nya.
@@ -828,6 +828,7 @@ export class FinanceReportService {
     const data = await this.prisma.financialTransaction.findMany({
       where,
       include: {
+        ...LEDGER_NAMES_INCLUDE,
         internalAccount: {
           include: { bank: true }
         }
@@ -835,7 +836,7 @@ export class FinanceReportService {
       orderBy: { colA: 'asc' }
     });
 
-    return data.map(trx => {
+    return data.map(withLedgerNames).map(trx => {
       const debit = new Prisma.Decimal(trx.colC || 0);
       const credit = new Prisma.Decimal(trx.colD || 0);
       const net = credit.minus(debit);
@@ -894,10 +895,11 @@ export class FinanceReportService {
             ]
           } : {})
         },
-        orderBy: [{ colA: 'asc' }, { id: 'asc' }]
+        orderBy: [{ colA: 'asc' }, { id: 'asc' }],
+        include: LEDGER_NAMES_INCLUDE,
       });
 
-      return transactions.map(t => ({
+      return transactions.map(withLedgerNames).map(t => ({
         ...t,
         id: t.id.toString(),
         colC: formatDecimal(t.colC),

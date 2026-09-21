@@ -185,3 +185,30 @@ export class LedgerDirectory {
     };
   }
 }
+
+/**
+ * Include untuk membaca nama Ledger / Sub Ledger 1 lewat relasi. Dipakai setiap
+ * query yang menampilkan transaksi - tabel, filter kolom, pencarian, export,
+ * drill-down laporan - supaya yang tampil selalu nama di master.
+ */
+export const LEDGER_NAMES_INCLUDE = {
+  ledger: { select: { name: true } },
+  subLedger: { select: { name: true } },
+} as const;
+
+type WithLedgerRelations = {
+  colF: string | null;
+  colG: string | null;
+  ledger?: { name: string } | null;
+  subLedger?: { name: string } | null;
+};
+
+/**
+ * `colF` / `colG` diisi dari master lewat FK; teks yang tersimpan hanya dipakai
+ * untuk baris yang belum punya FK. Objek relasinya dibuang supaya bentuk
+ * respons API tidak berubah.
+ */
+export function withLedgerNames<T extends WithLedgerRelations>(row: T) {
+  const { ledger, subLedger, ...rest } = row;
+  return { ...rest, colF: ledger?.name ?? row.colF, colG: subLedger?.name ?? row.colG };
+}
