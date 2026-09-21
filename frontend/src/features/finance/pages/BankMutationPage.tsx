@@ -39,6 +39,7 @@ import AddLedgerModal from "../components/AddLedgerModal";
 import { type LedgerDraft, draftPayload } from "../components/LedgerRowEditor";
 import { InlineEditRow, InlineInsertRows } from "../components/LedgerInlineRows";
 import { LedgerDisplayRow } from "../components/LedgerDisplayRow";
+import { LedgerErrorBoundary } from "../components/LedgerErrorBoundary";
 import { DetailModal } from "@/components/common/DetailModal";
 import {
   Table,
@@ -789,6 +790,7 @@ export default function BankMutationPage() {
       {/* Table */}
       <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-premium border border-primary/5 overflow-hidden">
         <div className="overflow-x-auto">
+          <LedgerErrorBoundary onReset={cancelInline}>
           <Table className="min-w-[1600px]">
             <TableHeader className="bg-slate-50/50">
               <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
@@ -984,6 +986,7 @@ export default function BankMutationPage() {
               )}
             </TableBody>
           </Table>
+          </LedgerErrorBoundary>
         </div>
         
       </div>
