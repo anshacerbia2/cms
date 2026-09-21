@@ -20,7 +20,7 @@ export function useBankMutation() {
   };
 
   const getAnchorBalance = (accountId: string, year: number, options?: any) =>
-    useQuery<{ balance: number | null, status: 'OPEN' | 'ONGOING' | 'CLOSED' | 'INITIAL', isStale?: boolean, message?: string, referredYear?: number, canEdit?: boolean } | null>({
+    useQuery<{ balance: number | null, tailBalance?: number | string | null, status: 'OPEN' | 'ONGOING' | 'CLOSED' | 'INITIAL', isStale?: boolean, message?: string, referredYear?: number, canEdit?: boolean } | null>({
       queryKey: ["finance", "bank-mutation", "anchor-balance", accountId, year],
       queryFn: () => bankMutationService.getAnchorBalance(accountId, year),
       enabled: !!accountId && !!year,
@@ -60,7 +60,7 @@ export function useBankMutation() {
   };
 
   const insertTransaction = () => {
-    return async (payload: { data: any; accountId: string; tagYear: number; afterId: number | null }) => {
+    return async (payload: { rows: any[]; accountId: string; tagYear: number; afterId: number | null }) => {
       const data = await bankMutationService.insertTransaction(payload);
       queryClient.invalidateQueries({ queryKey: ["finance", "bank-mutation"] });
       return data;

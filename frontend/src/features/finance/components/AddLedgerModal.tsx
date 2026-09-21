@@ -27,6 +27,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useBankMutation } from '../hooks/useBankMutation';
+import { parseSmartDate, cleanNumber } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import Decimal from 'decimal.js';
 
@@ -67,7 +68,10 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
       // Use "at least 2 decimals" logic: 
       // If it has fewer than 2 decimals, force 2 (e.g. 100 -> 100.00)
       // If it has 2 or more, keep all of them (don't truncate)
-      const val = new Decimal(anchorData.balance ?? 0);
+      // Baris dari form ini ditambahkan di ujung ledger, jadi saldonya meneruskan
+      // saldo sesudah baris terakhir - bukan saldo awal tahun. Di periode CLOSED
+      // dua angka itu berbeda sebesar seluruh mutasi tahun berjalan.
+      const val = new Decimal(anchorData.tailBalance ?? anchorData.balance ?? 0);
       const initialValue = val.decimalPlaces() < 2 ? val.toFixed(2) : val.toString();
       setStartingBalance(initialValue);
     }
@@ -116,78 +120,6 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
     const newRows = [...rows];
     newRows[index] = { ...newRows[index], [field]: value };
     setRows(newRows);
-  };
-
-  const parseSmartDate = (value: string) => {
-    if (!value) return '';
-    
-    const months: Record<string, string> = {
-      jan: '01', feb: '02', mar: '03', apr: '04', mei: '05', jun: '06',
-      jul: '07', agt: '08', ags: '08', sep: '09', okt: '10', nov: '11', des: '12',
-      januari: '01', februari: '02', maret: '03', april: '04', juni: '06',
-      juli: '07', agustus: '08', september: '09', oktober: '10', november: '11', desember: '12',
-      may: '05', aug: '08', oct: '10', dec: '12',
-      january: '01', february: '02', march: '03', june: '06',
-      july: '07', august: '08', october: '10', december: '12'
-    };
-
-    // Remove unwanted chars and split
-    const parts = value.toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean);
-    
-    if (parts.length === 3) {
-      let d = '', m = '', y = '';
-
-      if (parts[0].length === 4) {
-        y = parts[0];
-        m = parts[1];
-        d = parts[2];
-      } else {
-        d = parts[0];
-        m = parts[1];
-        y = parts[2];
-      }
-
-      if (months[m]) {
-        m = months[m];
-      } else {
-        m = m.padStart(2, '0');
-      }
-
-      d = d.padStart(2, '0');
-      
-      if (y.length === 2) {
-        const year = parseInt(y);
-        y = year > 50 ? `19${y}` : `20${y}`;
-      }
-
-      const finalDate = `${y}-${m}-${d}`;
-      return isValid(parseISO(finalDate)) ? finalDate : '';
-    }
-
-    // If it's already YYYY-MM-DD but invalid, clear it
-    if (value.match(/^\d{4}-\d{2}-\d{2}$/) && !isValid(parseISO(value))) {
-      return '';
-    }
-
-    return value.match(/^\d{4}-\d{2}-\d{2}$/) ? value : '';
-  };
-
-  const cleanNumber = (val: string) => {
-    if (!val || val.trim() === '') return '0';
-    let cleaned = val.replace(/\./g, ''); // Remove thousand dots
-    cleaned = cleaned.replace(/,/g, '.'); // Convert decimal comma to dot
-    const hasMinus = cleaned.startsWith('-');
-    cleaned = cleaned.replace(/[^0-9.]/g, ''); // Final safety strip
-
-    if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.') {
-      cleaned = cleaned.replace(/^0+/, '');
-      if (cleaned === '' || cleaned.startsWith('.')) {
-        cleaned = '0' + cleaned;
-      }
-    }
-    if (hasMinus) cleaned = '-' + cleaned;
-    if (cleaned === '-') return '0';
-    return cleaned || '0';
   };
 
   // FOR INPUTS: Clean thousands separator but NO forced decimals (so user can type easily)

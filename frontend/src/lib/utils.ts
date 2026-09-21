@@ -1,3 +1,4 @@
+import { isValid, parseISO } from "date-fns";
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { Decimal } from "decimal.js";
@@ -93,4 +94,82 @@ export function cleanInputAmount(val: string) {
   }
   
   return isNegative ? `-${cleaned}` : cleaned;
+}
+
+/**
+ * Mengubah tanggal yang diketik atau ditempel dari Excel jadi YYYY-MM-DD.
+ * Menerima 12/3/2026, 12 Mar 2026, 12-maret-26, 2026-03-12. Kosong kalau tak terbaca.
+ */
+export function parseSmartDate(value: string): string {
+  if (!value) return '';
+
+  const months: Record<string, string> = {
+    jan: '01', feb: '02', mar: '03', apr: '04', mei: '05', jun: '06',
+    jul: '07', agt: '08', ags: '08', sep: '09', okt: '10', nov: '11', des: '12',
+    januari: '01', februari: '02', maret: '03', april: '04', juni: '06',
+    juli: '07', agustus: '08', september: '09', oktober: '10', november: '11', desember: '12',
+    may: '05', aug: '08', oct: '10', dec: '12',
+    january: '01', february: '02', march: '03', june: '06',
+    july: '07', august: '08', october: '10', december: '12'
+  };
+
+  // Remove unwanted chars and split
+  const parts = value.toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean);
+
+  if (parts.length === 3) {
+    let d = '', m = '', y = '';
+
+    if (parts[0].length === 4) {
+      y = parts[0];
+      m = parts[1];
+      d = parts[2];
+    } else {
+      d = parts[0];
+      m = parts[1];
+      y = parts[2];
+    }
+
+    if (months[m]) {
+      m = months[m];
+    } else {
+      m = m.padStart(2, '0');
+    }
+
+    d = d.padStart(2, '0');
+
+    if (y.length === 2) {
+      const year = parseInt(y);
+      y = year > 50 ? `19${y}` : `20${y}`;
+    }
+
+    const finalDate = `${y}-${m}-${d}`;
+    return isValid(parseISO(finalDate)) ? finalDate : '';
+  }
+
+  // If it's already YYYY-MM-DD but invalid, clear it
+  if (value.match(/^\d{4}-\d{2}-\d{2}$/) && !isValid(parseISO(value))) {
+    return '';
+  }
+
+  return value.match(/^\d{4}-\d{2}-\d{2}$/) ? value : '';
+}
+/**
+ * Mengubah angka yang ditempel dari Excel (1.234.567,89) jadi bentuk mentah (1234567.89).
+ */
+export function cleanNumber(val: string): string {
+  if (!val || val.trim() === '') return '0';
+  let cleaned = val.replace(/\./g, ''); // Remove thousand dots
+  cleaned = cleaned.replace(/,/g, '.'); // Convert decimal comma to dot
+  const hasMinus = cleaned.startsWith('-');
+  cleaned = cleaned.replace(/[^0-9.]/g, ''); // Final safety strip
+
+  if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.') {
+    cleaned = cleaned.replace(/^0+/, '');
+    if (cleaned === '' || cleaned.startsWith('.')) {
+      cleaned = '0' + cleaned;
+    }
+  }
+  if (hasMinus) cleaned = '-' + cleaned;
+  if (cleaned === '-') return '0';
+  return cleaned || '0';
 }

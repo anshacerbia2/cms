@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, Fragment } from "react";
 import { 
   Search, 
   Landmark,
@@ -13,12 +13,8 @@ import {
   ArrowDown,
   History,
   ShieldCheck,
-  Edit2,
-  Trash2,
-  CornerDownRight,
   FileSpreadsheet,
   FileText,
-  Eye,
   Download,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -40,8 +36,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import AddLedgerModal from "../components/AddLedgerModal";
-import EditTransactionModal from "../components/EditTransactionModal";
-import InsertTransactionModal from "../components/InsertTransactionModal";
+import { type LedgerDraft, draftPayload } from "../components/LedgerRowEditor";
+import { InlineEditRow, InlineInsertRows } from "../components/LedgerInlineRows";
+import { LedgerDisplayRow } from "../components/LedgerDisplayRow";
+import { LedgerErrorBoundary } from "../components/LedgerErrorBoundary";
 import { DetailModal } from "@/components/common/DetailModal";
 import {
   Table,
@@ -112,11 +110,13 @@ export default function BankMutationPage() {
   }, [ledgerYearFilter]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [insertAfterRow, setInsertAfterRow] = useState<any | null>(null);
-  const [isInsertModalOpen, setIsInsertModalOpen] = useState(false);
+  // Menyunting dan menyisip dikerjakan langsung di baris tabel, bukan di popup.
+  // Halaman cuma tahu baris mana yang sedang disunting / disisipi. Drafnya sendiri
+  // hidup di komponen barisnya, supaya mengetik tidak merender ulang seluruh tabel.
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [insertAfterId, setInsertAfterId] = useState<number | null>(null);
+  const [savingInline, setSavingInline] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedTransactionId, setSelectedTransactionId] = useState<number | null>(null);
   const [selectedViewTransaction, setSelectedViewTransaction] = useState<any>(null);
   const [transactionToDelete, setTransactionToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -135,29 +135,81 @@ export default function BankMutationPage() {
   }, [internalAccounts, selectedAccount]);
 
   const { user, can } = useAuthStore();
-  const { getAllTransactions, getFiscalPeriods, recalculateLedger, closeYear, getAnchorBalance, deleteTransaction } = useBankMutation();
+  const { getAllTransactions, getFiscalPeriods, recalculateLedger, closeYear, getAnchorBalance, deleteTransaction, updateTransaction, insertTransaction } = useBankMutation();
   
   const yearNum = useMemo(() => Number(ledgerYearFilter), [ledgerYearFilter]);
 
-  const handleEditTransaction = (row: any) => {
-    setSelectedTransactionId(row.id);
-    setIsEditModalOpen(true);
-  };
+  /** Sedang ada baris yang diketik - tombol edit/sisip di baris lain dikunci supaya ketikan tidak hilang. */
+  const inlineBusy = editingId !== null || insertAfterId !== null;
+
+  // Semua callback ke baris tabel stabil (useCallback), supaya memo di
+  // LedgerDisplayRow benar-benar mencegah render ulang. Tombolnya sendiri sudah
+  // dikunci selama ada yang diketik, jadi di sini tidak perlu dicek lagi.
+  const handleEditTransaction = useCallback((row: any) => setEditingId(row.id), []);
 
   /** Baris baru mendarat tepat di bawah `row`, bukan di ujung daftar. */
-  const handleInsertAfter = (row: any) => {
-    setInsertAfterRow(row);
-    setIsInsertModalOpen(true);
-  };
+  const handleInsertAfter = useCallback((row: any) => setInsertAfterId(row.id), []);
 
-  const handleViewTransaction = (row: any) => {
+  const canEdit = can('bank-mutation.edit');
+  const canCreate = can('bank-mutation.create');
+  const canDelete = can('bank-mutation.delete');
+
+  const cancelInline = useCallback(() => {
+    setEditingId(null);
+    setInsertAfterId(null);
+  }, []);
+
+  const saveEdit = useCallback(
+    async (draft: LedgerDraft) => {
+      if (editingId === null || savingInline) return;
+      setSavingInline(true);
+      try {
+        await updateTransaction()({ id: editingId, data: draftPayload(draft) });
+        toast.success("Baris disimpan.");
+        setEditingId(null);
+        refetchTransactions();
+        refetchFiscal();
+      } catch (error: any) {
+        toast.error(error?.response?.data?.message || "Gagal menyimpan baris.");
+      } finally {
+        setSavingInline(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editingId, savingInline],
+  );
+
+  const saveInsert = useCallback(
+    async (drafts: LedgerDraft[]) => {
+      if (insertAfterId === null || savingInline) return;
+      setSavingInline(true);
+      try {
+        await insertTransaction()({
+          rows: drafts.map(draftPayload),
+          accountId: selectedAccount?.id,
+          tagYear: yearNum,
+          afterId: insertAfterId,
+        });
+        toast.success(`${drafts.length} baris disisipkan.`);
+        setInsertAfterId(null);
+        refetchTransactions();
+        refetchFiscal();
+      } catch (error: any) {
+        toast.error(error?.response?.data?.message || "Gagal menyisipkan baris.");
+      } finally {
+        setSavingInline(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [insertAfterId, savingInline, selectedAccount?.id, yearNum],
+  );
+
+  const handleViewTransaction = useCallback((row: any) => {
     setSelectedViewTransaction(row);
     setIsViewModalOpen(true);
-  };
+  }, []);
 
-  const handleDeleteTransaction = (id: number) => {
-    setTransactionToDelete(id);
-  };
+  const handleDeleteTransaction = useCallback((id: number) => setTransactionToDelete(id), []);
 
   const executeDelete = async () => {
     if (!transactionToDelete) return;
@@ -196,6 +248,12 @@ export default function BankMutationPage() {
     ledgerStartDate ? format(ledgerStartDate, "yyyy-MM-dd") : undefined,
     ledgerEndDate ? format(ledgerEndDate, "yyyy-MM-dd") : undefined,
     { enabled: !!selectedAccount?.id && (!!ledgerYearFilter || !!ledgerStartDate || !!ledgerEndDate) }
+  );
+
+  /** Baris mentah dari API per id - Map, bukan .find, karena dipanggil saat render. */
+  const rawById = useMemo(
+    () => new Map<number, any>((allTransactionsRaw || []).map((r: any) => [r.id, r])),
+    [allTransactionsRaw],
   );
 
   // --- PRE-FORMAT DATA FOR EXCEL FILTER ---
@@ -732,10 +790,11 @@ export default function BankMutationPage() {
       {/* Table */}
       <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-premium border border-primary/5 overflow-hidden">
         <div className="overflow-x-auto">
+          <LedgerErrorBoundary onReset={cancelInline}>
           <Table className="min-w-[1600px]">
             <TableHeader className="bg-slate-50/50">
               <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
-                <TableHead className="w-32">
+                <TableHead className="w-44 min-w-44">
                   <div className="flex items-center justify-start gap-1">
                     Date
                     <ExcelColumnFilter 
@@ -864,62 +923,36 @@ export default function BankMutationPage() {
               ) : (
                 <>
                   {paginatedLedger.map((row: any) => (
-                    <TableRow key={row.id} className="hover:bg-slate-50 transition-colors whitespace-nowrap group">
-                      <TableCell className="text-primary/60">{row.colA}</TableCell>
-                      <TableCell className="font-medium text-primary transition-colors max-w-md truncate" title={row.colB}>
-                        {row.colB}
-                      </TableCell>
-                      <TableCell className="text-right text-rose-600 pr-4 font-bold">{row.colC}</TableCell>
-                      <TableCell className="text-right text-emerald-600 pr-4 font-bold">{row.colD}</TableCell>
-                      <TableCell className="text-right pr-4 text-primary font-bold">{row.colE}</TableCell>
-                      <TableCell className="tracking-tighter" title={row.colF}>{row.colF}</TableCell>
-                      <TableCell className="text-primary truncate max-w-[150px]" title={row.colG}>{row.colG}</TableCell>
-                      <TableCell className="text-primary truncate max-w-[150px]" title={row.colH}>{row.colH}</TableCell>
-                      <TableCell className="text-primary truncate max-w-[150px]" title={row.colI}>{row.colI}</TableCell>
-                      <TableCell className="pr-4">
-                        <div className="flex items-center justify-end gap-1 transition-opacity">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
-                            onClick={(e) => { e.stopPropagation(); handleViewTransaction(row); }}
-                          >
-                            <Eye size={12} strokeWidth={2.5} />
-                          </Button>
-                          {can('bank-mutation.edit') && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
-                              onClick={(e) => { e.stopPropagation(); handleEditTransaction(row); }}
-                            >
-                              <Edit2 size={12} strokeWidth={2.5} />
-                            </Button>
-                          )}
-                          {can('bank-mutation.create') && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Insert a row below this one"
-                              className="h-7 w-7 text-primary/40 hover:text-secondary hover:bg-secondary/5 rounded-sm"
-                              onClick={(e) => { e.stopPropagation(); handleInsertAfter(row); }}
-                            >
-                              <CornerDownRight size={12} strokeWidth={2.5} />
-                            </Button>
-                          )}
-                          {can('bank-mutation.delete') && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm"
-                              onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(row.id); }}
-                            >
-                              <Trash2 size={12} strokeWidth={2.5} />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <Fragment key={row.id}>
+                    {editingId === row.id ? (
+                      <InlineEditRow
+                        raw={rawById.get(row.id)}
+                        saving={savingInline}
+                        onSave={saveEdit}
+                        onCancel={cancelInline}
+                      />
+                    ) : (
+                    <LedgerDisplayRow
+                      row={row}
+                      busy={inlineBusy}
+                      canEdit={canEdit}
+                      canCreate={canCreate}
+                      canDelete={canDelete}
+                      onView={handleViewTransaction}
+                      onEdit={handleEditTransaction}
+                      onInsert={handleInsertAfter}
+                      onDelete={handleDeleteTransaction}
+                    />
+                    )}
+                    {insertAfterId === row.id && (
+                      <InlineInsertRows
+                        anchorSaldo={Number(rawById.get(row.id)?.colE || 0)}
+                        saving={savingInline}
+                        onSave={saveInsert}
+                        onCancel={cancelInline}
+                      />
+                    )}
+                    </Fragment>
                   ))}
                   
                   {/* Subtotal Row */}
@@ -953,6 +986,7 @@ export default function BankMutationPage() {
               )}
             </TableBody>
           </Table>
+          </LedgerErrorBoundary>
         </div>
         
       </div>
@@ -970,28 +1004,6 @@ export default function BankMutationPage() {
         onOpenChange={setIsAddModalOpen} 
         selectedAccount={selectedAccount}
         year={yearNum}
-        onSuccess={() => {
-          refetchFiscal();
-          refetchTransactions();
-        }}
-      />
-
-      <InsertTransactionModal
-        open={isInsertModalOpen}
-        onOpenChange={setIsInsertModalOpen}
-        afterRow={insertAfterRow}
-        accountId={selectedAccount?.id}
-        year={yearNum}
-        onSuccess={() => {
-          refetchFiscal();
-          refetchTransactions();
-        }}
-      />
-
-      <EditTransactionModal
-        open={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
-        transactionId={selectedTransactionId}
         onSuccess={() => {
           refetchFiscal();
           refetchTransactions();
