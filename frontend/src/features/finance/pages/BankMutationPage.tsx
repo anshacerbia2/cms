@@ -356,6 +356,33 @@ export default function BankMutationPage() {
     return filteredAndSortedLedger.slice(start, start + ledgerLimit);
   }, [filteredAndSortedLedger, ledgerPage, ledgerLimit, isNoPaginationAccount]);
 
+  // Ganti rekening, tahun, rentang tanggal, pencarian, filter kolom, atau
+  // urutan: baris yang sedang diketik dibatalkan. Isi tabelnya sudah bukan yang
+  // tadi, dan menyisip "di bawah baris ini" di tampilan yang tersaring atau
+  // terurut lain membingungkan - posisinya tetap menurut urutan ledger.
+  useEffect(() => {
+    cancelInline();
+  }, [
+    selectedAccount?.id,
+    ledgerYearFilter,
+    ledgerStartDate,
+    ledgerEndDate,
+    ledgerSearch,
+    ledgerFilters,
+    ledgerSort,
+    cancelInline,
+  ]);
+
+  // Jaring pengaman untuk semua cara lain baris itu hilang dari layar - pindah
+  // halaman, filter kolom, pencarian. Tanpa ini editornya lenyap tapi statusnya
+  // masih "sedang mengetik", dan semua tombol edit/sisip terkunci tanpa ada
+  // tombol Batal yang bisa dipencet.
+  useEffect(() => {
+    const visible = (id: number) => paginatedLedger.some((r: any) => r.id === id);
+    if (editingId !== null && !visible(editingId)) setEditingId(null);
+    if (insertAfterId !== null && !visible(insertAfterId)) setInsertAfterId(null);
+  }, [paginatedLedger, editingId, insertAfterId]);
+
   const ledgerMeta = { 
     total: filteredAndSortedLedger.length, 
     page: ledgerPage, 
@@ -753,7 +780,7 @@ export default function BankMutationPage() {
           )}
 
           {can('bank-mutation.create') && (
-            <Button onClick={(e) => { e.stopPropagation(); setIsAddModalOpen(true); }} className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold transition-all active:scale-95">
+            <Button onClick={(e) => { e.stopPropagation(); cancelInline(); setIsAddModalOpen(true); }} className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold transition-all active:scale-95">
               <Plus size={20} strokeWidth={3} />
               <span className="text-[13px]">Add Transaction</span>
             </Button>
