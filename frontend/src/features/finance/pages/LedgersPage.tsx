@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from "react";
 import {
-  BookOpen, ChevronDown, ChevronRight, Edit2, EyeOff, Eye, Lock, MoreVertical, Plus, Search, Trash2,
+  BookOpen, ChevronDown, ChevronRight, CornerDownRight, Edit2, EyeOff, Eye, Lock, MoreVertical, Plus, Search, Trash2,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -197,7 +197,8 @@ export default function LedgersPage() {
                 rows.map(({ ledger: l, subs }) => (
                   <Fragment key={l.id}>
                     <TableRow className={`border-primary/5 ${l.isActive ? "" : "opacity-60"}`}>
-                      <TableCell className="pl-4 py-3">
+                      {/* `first:` perlu: sel bawaan memakai first:pl-8, yang menang atas pl-* biasa. */}
+                      <TableCell className="first:pl-6 py-3">
                         <button
                           type="button"
                           onClick={() => toggle(l.id)}
@@ -228,8 +229,9 @@ export default function LedgersPage() {
                     {isOpen(l.id) &&
                       subs.map((s) => (
                         <TableRow key={s.id} className={`border-primary/5 bg-primary/[0.015] ${s.isActive ? "" : "opacity-60"}`}>
-                          <TableCell className="pl-14 py-2 text-[13px] text-primary/80">
+                          <TableCell className="first:pl-12 py-2 text-[13px] text-primary/80">
                             <span className="inline-flex items-center gap-2">
+                              <CornerDownRight size={12} className="text-primary/30 shrink-0" />
                               {s.name}
                               {locked(s.code)}
                             </span>
@@ -253,7 +255,7 @@ export default function LedgersPage() {
                       ))}
                     {isOpen(l.id) && subs.length === 0 && (
                       <TableRow className="border-primary/5 bg-primary/[0.015]">
-                        <TableCell colSpan={5} className="pl-14 py-2 text-[12px] text-muted-foreground">
+                        <TableCell colSpan={5} className="first:pl-12 py-2 text-[12px] text-muted-foreground">
                           Belum ada Sub Ledger 1.
                         </TableCell>
                       </TableRow>
