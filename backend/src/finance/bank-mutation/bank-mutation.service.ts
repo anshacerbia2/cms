@@ -455,11 +455,19 @@ export class BankMutationService {
       where: { internalAccountId_year: { internalAccountId: accountIdBig, year } },
     });
 
+    // `balance` dan `tailBalance` sengaja dua angka berbeda. `balance` adalah
+    // saldo awal - halaman Bank Statement memakainya sebagai "Fiscal Opening".
+    // `tailBalance` adalah saldo sesudah baris terakhir, titik mulai baris yang
+    // ditambahkan di ujung. Form create dulu memakai `balance` untuk keduanya,
+    // jadi di periode CLOSED pratinjau saldonya mulai dari saldo awal tahun -
+    // meleset sebesar seluruh mutasi tahun itu, 3,47 miliar di Mandiri MP 2026.
     if (currentFiscal) {
       if (currentFiscal.status === 'CLOSED') {
+        const tail = await this.closingBalanceOf(accountIdBig, year);
         return { 
           status: currentFiscal.status, 
           balance: formatDecimal(currentFiscal.openingBalance), // Use openingBalance for the "Opening Balance" card
+          tailBalance: formatDecimal(tail ?? currentFiscal.openingBalance),
           canEdit: false,
           referredYear: year,
           isStale: currentFiscal.isStale,
@@ -471,6 +479,8 @@ export class BankMutationService {
         return {
           status: currentFiscal.status,
           balance: formatDecimal(currentFiscal.openingBalance),
+          // Belum ada transaksi, jadi saldo awal dan saldo sesudah baris terakhir sama.
+          tailBalance: formatDecimal(currentFiscal.openingBalance),
           canEdit: true,
           referredYear: year,
           isStale: currentFiscal.isStale,
@@ -485,6 +495,7 @@ export class BankMutationService {
       return { 
         status: currentFiscal.status, 
         balance, 
+        tailBalance: balance,
         canEdit: false,
         referredYear: year,
         isStale: currentFiscal.isStale,
@@ -533,6 +544,9 @@ export class BankMutationService {
         return {
           status: prevFiscal.status, 
           balance: openingBalance,
+          // Tahun ini belum punya periode maupun baris: baris pertamanya
+          // meneruskan penutup tahun sebelumnya.
+          tailBalance: openingBalance,
           canEdit: false,
           referredYear: searchYear,
           message: `Auto-referred to ${source} of year ${searchYear}`
@@ -544,6 +558,7 @@ export class BankMutationService {
         return {
           status: 'ONGOING',
           balance: formatDecimal(summedBalance),
+          tailBalance: formatDecimal(summedBalance),
           canEdit: false,
           referredYear: searchYear,
           message: `Auto-referred to summed movements of year ${searchYear} (Lazy Registration)`
@@ -555,6 +570,7 @@ export class BankMutationService {
     return { 
       status: 'INITIAL', 
       balance: "0", 
+      tailBalance: "0",
       canEdit: true,
       referredYear: year,
       message: "First Period Migration" 

@@ -68,7 +68,10 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
       // Use "at least 2 decimals" logic: 
       // If it has fewer than 2 decimals, force 2 (e.g. 100 -> 100.00)
       // If it has 2 or more, keep all of them (don't truncate)
-      const val = new Decimal(anchorData.balance ?? 0);
+      // Baris dari form ini ditambahkan di ujung ledger, jadi saldonya meneruskan
+      // saldo sesudah baris terakhir - bukan saldo awal tahun. Di periode CLOSED
+      // dua angka itu berbeda sebesar seluruh mutasi tahun berjalan.
+      const val = new Decimal(anchorData.tailBalance ?? anchorData.balance ?? 0);
       const initialValue = val.decimalPlaces() < 2 ? val.toFixed(2) : val.toString();
       setStartingBalance(initialValue);
     }

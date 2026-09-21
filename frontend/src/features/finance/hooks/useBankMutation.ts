@@ -20,7 +20,7 @@ export function useBankMutation() {
   };
 
   const getAnchorBalance = (accountId: string, year: number, options?: any) =>
-    useQuery<{ balance: number | null, status: 'OPEN' | 'ONGOING' | 'CLOSED' | 'INITIAL', isStale?: boolean, message?: string, referredYear?: number, canEdit?: boolean } | null>({
+    useQuery<{ balance: number | null, tailBalance?: number | string | null, status: 'OPEN' | 'ONGOING' | 'CLOSED' | 'INITIAL', isStale?: boolean, message?: string, referredYear?: number, canEdit?: boolean } | null>({
       queryKey: ["finance", "bank-mutation", "anchor-balance", accountId, year],
       queryFn: () => bankMutationService.getAnchorBalance(accountId, year),
       enabled: !!accountId && !!year,
