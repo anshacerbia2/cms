@@ -54,7 +54,12 @@ export default function LoginPage() {
       setAuth(user, access_token);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
+      // `err` di sini sudah body respons (lihat api/axios.ts), bukan error axios.
+      setError(
+        err?.statusCode === 401
+          ? 'Email atau password salah.'
+          : err?.message || 'Login gagal, coba lagi.',
+      );
     } finally {
       setLoading(false);
     }
