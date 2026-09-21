@@ -125,7 +125,20 @@ export const LedgerCombo = memo(function LedgerCombo({
           }}
           className="z-[60] min-w-[var(--radix-popover-trigger-width)] w-max max-w-[22rem] rounded-lg border border-primary/10 bg-white p-1 shadow-premium"
         >
-          <div ref={listRef} className="max-h-64 overflow-y-auto">
+          {/*
+            Di dalam dialog (form create), Radix Dialog mengunci scroll lewat
+            react-remove-scroll: listener wheel/touchmove di document membatalkan
+            scroll apa pun di luar isi dialog - dan daftar ini di-portal ke body.
+            Event-nya dihentikan di sini sebelum sampai ke document, jadi daftar
+            bisa di-scroll tanpa harus dipindah ke dalam dialog (yang overflow-nya
+            tersembunyi dan akan memotong daftar di baris bawah).
+          */}
+          <div
+            ref={listRef}
+            className="max-h-64 overflow-y-auto overscroll-contain"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
             {shown.length === 0 ? (
               <div className="px-3 py-2 text-[12px] text-muted-foreground">
                 {options.length === 0 ? emptyHint : 'Tidak ada yang cocok'}
