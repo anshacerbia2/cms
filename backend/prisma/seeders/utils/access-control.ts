@@ -20,6 +20,34 @@ export async function syncMenuIdSequence(prisma: PrismaClient) {
  */
 export type AdminOnly = { adminOnly?: boolean };
 
+/**
+ * Yang boleh dilihat role `viewer`: grup menu Overview (100) dan Finance (400)
+ * saja, dan permission baca dari modul-modul di dalamnya. Permintaan klien
+ * 2026-09-21 - user view-only (Anne, Frieda, Finance) hanya melihat keuangan.
+ *
+ * Seeder yang upsert-only juga MENCABUT grant viewer di luar daftar ini, supaya
+ * `pnpm seed:access` tidak diam-diam membukanya lagi.
+ */
+export const VIEWER_MENU_GROUPS = new Set<number>([100, 400]);
+export const VIEWER_MODULES = new Set<string>([
+  'dashboard',
+  'finance',
+  'bank-mutation',
+  'account-payable',
+  'account-receivable',
+  'ppn-in-out',
+  'inter-account',
+  'depreciation',
+  'sales',
+  // Dropdown rekening dan halaman Accounts & Banks di grup Finance.
+  'banks',
+  'internal-accounts',
+  'ledgers',
+]);
+
+/** Modul sebuah permission route: `bank-mutation.index` -> `bank-mutation`. */
+export const moduleOf = (route: string) => route.split('.')[0];
+
 export type ModuleSpec = { module: string; label: string } & AdminOnly;
 
 export type ActionSpec = {
@@ -88,7 +116,8 @@ export async function ensurePermissions(
       });
       if (!existing) created++;
 
-      const grantees = [admin, ...(viewer && readOnly && !adminOnly ? [viewer] : [])];
+      const forViewer = readOnly && !adminOnly && VIEWER_MODULES.has(module);
+      const grantees = [admin, ...(viewer && forViewer ? [viewer] : [])];
 
       for (const role of grantees) {
         await prisma.rolePermission.upsert({
@@ -99,8 +128,9 @@ export async function ensurePermissions(
         linked++;
       }
 
-      // Withdraw an over-grant a previous run made before `adminOnly` existed.
-      if (viewer && adminOnly) {
+      // Withdraw an over-grant a previous run made before `adminOnly` existed,
+      // or outside what the viewer is allowed to see.
+      if (viewer && !forViewer) {
         const { count } = await prisma.rolePermission.deleteMany({
           where: { roleId: viewer.id, permissionId: permission.id },
         });
@@ -120,10 +150,13 @@ async function grantMenu(
   roles: Roles,
   menuId: number,
   adminOnly?: boolean,
+  /** Grup menu tempat entri ini berada (atau id grup itu sendiri). */
+  groupId: number = menuId,
 ) {
   const { admin, viewer } = roles;
+  const forViewer = !adminOnly && VIEWER_MENU_GROUPS.has(groupId);
 
-  for (const role of [admin, ...(viewer && !adminOnly ? [viewer] : [])]) {
+  for (const role of [admin, ...(viewer && forViewer ? [viewer] : [])]) {
     await prisma.roleMenu.upsert({
       where: { roleId_menuId: { roleId: role.id, menuId: BigInt(menuId) } },
       update: {},
@@ -131,7 +164,7 @@ async function grantMenu(
     });
   }
 
-  if (viewer && adminOnly) {
+  if (viewer && !forViewer) {
     const { count } = await prisma.roleMenu.deleteMany({
       where: { roleId: viewer.id, menuId: BigInt(menuId) },
     });
@@ -178,7 +211,7 @@ export async function ensureMenus(prisma: PrismaClient, menus: MenuSpec[]) {
     });
     touched++;
 
-    revoked += await grantMenu(prisma, roles, menu.id, menu.adminOnly);
+    revoked += await grantMenu(prisma, roles, menu.id, menu.adminOnly, menu.parentId);
   }
 
   await syncMenuIdSequence(prisma);
@@ -212,4 +245,42 @@ export async function ensureMenuGroup(
   await syncMenuIdSequence(prisma);
 
   return { revoked };
+}
+
+/** Aksi yang hanya membaca - satu-satunya yang boleh dipegang viewer. */
+const READ_ACTIONS = new Set(['index', 'show', 'view', 'reports', 'anchor']);
+
+/**
+ * Menegakkan cakupan viewer pada data yang sudah ada, dari seeder mana pun
+ * grant-nya berasal (termasuk `auth.seeder.ts` dan versi lama seeder ini):
+ * menu di luar VIEWER_MENU_GROUPS dan permission di luar VIEWER_MODULES, atau
+ * yang bukan aksi baca, dicabut dari viewer. Tidak menyentuh role lain.
+ */
+export async function enforceViewerScope(prisma: PrismaClient) {
+  const viewer = await prisma.role.findUnique({ where: { slug: 'viewer' } });
+  if (!viewer) return { menus: 0, permissions: 0 };
+
+  const groups = [...VIEWER_MENU_GROUPS].map((id) => BigInt(id));
+  const menus = await prisma.roleMenu.deleteMany({
+    where: {
+      roleId: viewer.id,
+      menu: { AND: [{ id: { notIn: groups } }, { OR: [{ parentId: null }, { parentId: { notIn: groups } }] }] },
+    },
+  });
+
+  const granted = await prisma.rolePermission.findMany({
+    where: { roleId: viewer.id },
+    include: { permission: { select: { route: true } } },
+  });
+  const outside = granted
+    .filter(({ permission: { route } }) => {
+      const [module, action] = [moduleOf(route), route.split('.').slice(1).join('.')];
+      return !VIEWER_MODULES.has(module) || !READ_ACTIONS.has(action);
+    })
+    .map((rp) => rp.permissionId);
+  const permissions = await prisma.rolePermission.deleteMany({
+    where: { roleId: viewer.id, permissionId: { in: outside } },
+  });
+
+  return { menus: menus.count, permissions: permissions.count };
 }

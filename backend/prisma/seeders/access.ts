@@ -17,6 +17,7 @@ import { seedRbacPermissions } from './rbac.seeder';
 import { seedPdfTemplates } from './pdf-templates.seeder';
 import { seedMasterDataPermissions } from './master-data.seeder';
 import { seedLedgerPermissions } from './ledgers.seeder';
+import { enforceViewerScope } from './utils/access-control';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
@@ -27,6 +28,8 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
   await seedPdfTemplates(prisma);
   await seedMasterDataPermissions(prisma);
   await seedLedgerPermissions(prisma);
+  const viewer = await enforceViewerScope(prisma);
+  console.log(`👁️  Viewer limited to Overview + Finance: withdrew ${viewer.menus} menu(s), ${viewer.permissions} permission(s).`);
   console.log('🚀 Access seeding completed.');
 })()
   .catch((e) => {
