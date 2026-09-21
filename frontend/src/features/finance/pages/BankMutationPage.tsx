@@ -46,7 +46,7 @@ import {
   LedgerRowEditor,
   type LedgerDraft,
   type DraftField,
-  DRAFT_COLUMNS,
+  PASTE_COLUMNS,
   emptyDraft,
   draftFrom,
   isBlankDraft,
@@ -255,7 +255,7 @@ export default function BankMutationPage() {
     if (!text.includes("\t") && !text.includes("\n")) return; // satu nilai: biarkan tempel biasa
     e.preventDefault();
     const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
-    const startCol = DRAFT_COLUMNS.indexOf(field);
+    const startCol = PASTE_COLUMNS.indexOf(field);
     setInserting((cur) => {
       if (!cur) return cur;
       const drafts = [...cur.drafts];
@@ -264,8 +264,10 @@ export default function BankMutationPage() {
         while (drafts.length <= at) drafts.push(emptyDraft());
         const next = { ...drafts[at] };
         line.split("\t").forEach((raw, ci) => {
-          const key = DRAFT_COLUMNS[startCol + ci];
-          if (!key) return; // kolom berlebih dari Excel dibuang, bukan digeser
+          const key = PASTE_COLUMNS[startCol + ci];
+          // null = kolom saldo, dilewati tapi tetap memakan posisinya; undefined =
+          // kolom berlebih di kanan. Dua-duanya dibuang, tidak ada yang digeser.
+          if (!key) return;
           const v = raw.trim();
           next[key] = key === "colA" ? parseSmartDate(v) : key === "colC" || key === "colD" ? cleanNumber(v) : v;
         });

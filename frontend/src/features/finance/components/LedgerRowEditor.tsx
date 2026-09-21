@@ -23,8 +23,19 @@ export type LedgerDraft = {
 
 export type DraftField = keyof LedgerDraft;
 
-/** Urutan kolom di layar, dipakai untuk menempel dari Excel dan pindah dengan Enter. */
+/** Kolom yang bisa diisi, untuk mengecek draf kosong. */
 export const DRAFT_COLUMNS: DraftField[] = ['colA', 'colB', 'colC', 'colD', 'colF', 'colG', 'colH', 'colI'];
+
+/**
+ * Urutan kolom saat menempel dari Excel - sama persis dengan sheet-nya dan
+ * dengan form create: A tanggal, B deskripsi, C debit, D kredit, E saldo, F-I
+ * ledger. Saldo tetap memakan satu posisi walau nilainya dibuang (saldo
+ * dihitung, bukan diketik). Tanpa posisi itu, blok yang disalin dari sheet
+ * menaruh saldo di kolom Ledger dan menggeser semua kolom sesudahnya.
+ */
+export const PASTE_COLUMNS: (DraftField | null)[] = [
+  'colA', 'colB', 'colC', 'colD', null, 'colF', 'colG', 'colH', 'colI',
+];
 
 export const emptyDraft = (): LedgerDraft => ({
   colA: '', colB: '', colC: '', colD: '', colF: '', colG: '', colH: '', colI: '',
