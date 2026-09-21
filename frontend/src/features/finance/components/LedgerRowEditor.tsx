@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { format, isValid, parseISO } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { TableCell } from '@/components/ui/table';
@@ -106,14 +106,16 @@ const input =
   'w-full h-9 border-none shadow-none focus-visible:ring-0 bg-transparent text-sm rounded-none px-3 placeholder:text-primary/25 leading-none';
 
 type Props = {
+  /** Posisi draf di kelompoknya. Diteruskan ke tiap callback, supaya callback-nya bisa tetap sama antar render. */
+  index: number;
   draft: LedgerDraft;
   /** Saldo sesudah baris ini, kalau bisa dihitung; kosong berarti belum diketahui. */
   saldo?: string | null;
   /** Penanda baris untuk navigasi Enter, unik di dalam satu kelompok draf. */
   rowKey: string;
-  onChange: (field: DraftField, value: string) => void;
-  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>, field: DraftField) => void;
-  onPaste?: (e: React.ClipboardEvent<HTMLInputElement>, field: DraftField) => void;
+  onChange: (index: number, field: DraftField, value: string) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>, index: number, field: DraftField) => void;
+  onPaste?: (e: React.ClipboardEvent<HTMLInputElement>, index: number, field: DraftField) => void;
   autoFocus?: boolean;
 };
 
@@ -122,7 +124,13 @@ type Props = {
  * tanggal, deskripsi, debit, kredit, saldo, ledger, sub ledger 1-3. Sel aksi di
  * ujung sengaja tidak termasuk - isinya beda antara menyunting dan menyisip.
  */
-export function LedgerRowEditor({ draft, saldo, rowKey, onChange, onKeyDown, onPaste, autoFocus }: Props) {
+/**
+ * Dibungkus memo: saat menyisip banyak baris, mengetik di satu draf hanya
+ * merender draf itu (dan yang saldonya ikut berubah), bukan semuanya.
+ */
+export const LedgerRowEditor = memo(function LedgerRowEditor({
+  index, draft, saldo, rowKey, onChange, onKeyDown, onPaste, autoFocus,
+}: Props) {
   // Tanggal yang sedang diketik setengah jadi tidak boleh membuat kalender error.
   const parsed = draft.colA ? parseISO(draft.colA) : undefined;
   const picked = parsed && isValid(parsed) ? parsed : undefined;
@@ -131,9 +139,9 @@ export function LedgerRowEditor({ draft, saldo, rowKey, onChange, onKeyDown, onP
     <Input
       value={draft[field]}
       placeholder={placeholder}
-      onChange={(e) => onChange(field, e.target.value)}
-      onKeyDown={(e) => onKeyDown?.(e, field)}
-      onPaste={(e) => onPaste?.(e, field)}
+      onChange={(e) => onChange(index, field, e.target.value)}
+      onKeyDown={(e) => onKeyDown?.(e, index, field)}
+      onPaste={(e) => onPaste?.(e, index, field)}
       data-draft-row={rowKey}
       data-draft-col={field}
       className={`${input} ${extra}`}
@@ -144,9 +152,9 @@ export function LedgerRowEditor({ draft, saldo, rowKey, onChange, onKeyDown, onP
     <Input
       value={formatInputAmount(draft[field])}
       placeholder="0"
-      onChange={(e) => onChange(field, cleanInputAmount(e.target.value))}
-      onKeyDown={(e) => onKeyDown?.(e, field)}
-      onPaste={(e) => onPaste?.(e, field)}
+      onChange={(e) => onChange(index, field, cleanInputAmount(e.target.value))}
+      onKeyDown={(e) => onKeyDown?.(e, index, field)}
+      onPaste={(e) => onPaste?.(e, index, field)}
       data-draft-row={rowKey}
       data-draft-col={field}
       className={`${input} text-right font-bold ${tone}`}
@@ -175,7 +183,7 @@ export function LedgerRowEditor({ draft, saldo, rowKey, onChange, onKeyDown, onP
                 selected={picked}
                 defaultMonth={picked}
                 onSelect={(date) => {
-                  if (date) onChange('colA', format(date, 'yyyy-MM-dd'));
+                  if (date) onChange(index, 'colA', format(date, 'yyyy-MM-dd'));
                 }}
                 initialFocus
               />
@@ -185,12 +193,12 @@ export function LedgerRowEditor({ draft, saldo, rowKey, onChange, onKeyDown, onP
             value={draft.colA}
             placeholder="YYYY-MM-DD"
             autoFocus={autoFocus}
-            onChange={(e) => onChange('colA', e.target.value)}
+            onChange={(e) => onChange(index, 'colA', e.target.value)}
             // Dirapikan waktu keluar dari sel, supaya 12/3/26 atau "12 Mar 2026"
             // tetap bisa diketik seperti di form create.
-            onBlur={(e) => onChange('colA', e.target.value.trim() === '' ? '' : parseSmartDate(e.target.value))}
-            onKeyDown={(e) => onKeyDown?.(e, 'colA')}
-            onPaste={(e) => onPaste?.(e, 'colA')}
+            onBlur={(e) => onChange(index, 'colA', e.target.value.trim() === '' ? '' : parseSmartDate(e.target.value))}
+            onKeyDown={(e) => onKeyDown?.(e, index, 'colA')}
+            onPaste={(e) => onPaste?.(e, index, 'colA')}
             data-draft-row={rowKey}
             data-draft-col="colA"
             className={`${input} pl-0`}
@@ -209,4 +217,4 @@ export function LedgerRowEditor({ draft, saldo, rowKey, onChange, onKeyDown, onP
       <TableCell className={cell}>{text('colI', 'SL 3')}</TableCell>
     </>
   );
-}
+});
