@@ -35,7 +35,7 @@ export default function DashboardPage() {
   // Aggregation logic
   const totalAssets = Number(bsData?.summary?.totalAssets) || 0;
 
-  const netProfit = Number((plSummary as any[])?.find((s: any) => s.label === 'PROFIT AFTER TAX')?.total) || 0;
+  const netSales = Number((plSummary as any[])?.find((s: any) => s.label === 'NET SALES')?.total) || 0;
   const totalAR = Number(bsData?.assets?.categories?.find((c: any) => c.name === 'Account Receivable')?.total) || 0;
   const totalAP = Number(bsData?.liabilities?.categories?.find((c: any) => c.name === 'Account Payable')?.total) || 0;
 
@@ -76,16 +76,16 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Box 2: Net Profit */}
+        {/* Box 2: Net Sales */}
         <div className="bg-white/70 backdrop-blur-md rounded-[2.5rem] p-8 border border-primary/5 shadow-premium hover:scale-[1.02] transition-all duration-500">
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Net Profit</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Net Sales</span>
               <Badge className="bg-emerald-500/10 text-emerald-600 text-[8px] font-black border-none uppercase tracking-widest">YTD</Badge>
             </div>
             <div className="flex flex-col">
-              <span className="text-2xl font-black tracking-tighter text-primary leading-tight">{formatCurrency(netProfit)}</span>
-              <span className="text-muted-foreground/60 text-[10px] font-bold mt-1 uppercase tracking-wider">Profit After Tax</span>
+              <span className="text-2xl font-black tracking-tighter text-primary leading-tight">{formatCurrency(netSales)}</span>
+              <span className="text-muted-foreground/60 text-[10px] font-bold mt-1 uppercase tracking-wider">Sales net of VAT</span>
             </div>
           </div>
         </div>
