@@ -200,38 +200,48 @@ export function BalanceSheetTab() {
   
   
 
+  /** Total satu kategori aset, dan satu item di dalamnya - dibaca dari neraca yang sama dengan tabelnya. */
+  const assetCategory = (name: string) =>
+    Number(assetCategories.find((c: any) => c.name === name)?.total ?? 0);
+  const assetItem = (category: string, item: string) =>
+    Number(
+      assetCategories
+        .find((c: any) => c.name === category)
+        ?.items?.find((i: any) => i.accountName === item)?.idr ?? 0,
+    );
+
   const summaryCards = [
-    { 
-      title: "TOTAL ASSETS", 
-      value: formatCurrency(summary.totalAssets), 
-      subValue: "Cash, Bank, AR, Tax, & Fixed Assets", 
-      icon: TrendingUp, 
+    {
+      title: "CASH AND BANKS",
+      value: formatCurrency(assetCategory("Cash") + assetCategory("Bank Accounts")),
+      subValue: "Cash on hand & bank balances",
+      icon: TrendingUp,
       color: "text-indigo-500",
       bg: "bg-indigo-50/50"
     },
-    { 
-      title: "LIABILITIES", 
-      value: formatCurrency(summary.totalLiabilities), 
-      subValue: "Account Payable & Short-term Loans", 
-      icon: Activity, 
+    {
+      title: "DEPOSIT TO VENDOR",
+      value: formatCurrency(assetItem("Deposit", "Deposit to vendor")),
+      subValue: "Money held by vendors",
+      icon: Activity,
+      color: "text-amber-500",
+      bg: "bg-amber-50/50"
+    },
+    {
+      title: "OUTSTANDING INVOICES",
+      value: formatCurrency(assetItem("Account Receivable", "AR Trade")),
+      subValue: "AR Trade",
+      icon: Zap,
       color: "text-rose-500",
       bg: "bg-rose-50/50"
     },
-    { 
-      title: "TOTAL EQUITY", 
-      value: formatCurrency(summary.totalEquity), 
-      subValue: "Capital & Retained Earnings", 
-      icon: Scale, 
+    {
+      title: "TOTAL EQUITY",
+      value: formatCurrency(summary.totalEquity),
+      subValue: "Capital & Retained Earnings",
+      icon: Scale,
       color: "text-emerald-500",
       bg: "bg-emerald-50/50"
-    },
-    { 
-      title: "WORKING CAPITAL", 
-      value: formatCurrency(summary.workingCapital), 
-      subValue: "Current Assets minus Current Liabilities", 
-      icon: Zap, 
-      color: "text-amber-500",
-      bg: "bg-amber-50/50"
     }
   ];
 

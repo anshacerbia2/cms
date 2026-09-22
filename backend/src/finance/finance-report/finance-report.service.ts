@@ -386,20 +386,6 @@ export class FinanceReportService {
       }
     }
 
-    // The money sitting with vendors, read the way the balance sheet reads it:
-    // the receivable rows of that type, at their outstanding balance.
-    const depositRows = await this.prisma.accountReceivable.findMany({
-      where: {
-        ...(yearNum ? { tagYear: yearNum } : {}),
-        colB: { contains: 'ar deposit to vendor', mode: 'insensitive' },
-      },
-      select: { colR: true },
-    });
-    const depositToVendor = depositRows.reduce(
-      (total, row) => total.plus(new Prisma.Decimal(row.colR || 0)),
-      new Prisma.Decimal(0),
-    );
-
     return {
       summaryCards: [
         {
@@ -421,9 +407,11 @@ export class FinanceReportService {
           color: "text-indigo-500"
         },
         {
-          title: "AR DEPOSIT TO VENDOR",
-          value: formatDecimal(depositToVendor),
-          tx: depositRows.length,
+          // Kelima kelompok beban: personnel, office, marketing, financial,
+          // dan other income (expense) - sama dengan baris Total Expense.
+          title: "TOTAL EXPENSES",
+          value: formatDecimal(operatingExpenses),
+          netShare: netSales.isZero() ? "0.0000" : operatingExpenses.div(netSales).times(100).abs().toFixed(4),
           color: "text-amber-600"
         }
       ],
@@ -493,7 +481,9 @@ export class FinanceReportService {
     for (const cat of categories) {
       const row = plData.tableData.find(r => 
         r.account.toUpperCase() === cat.key.toUpperCase() || 
-        (cat.key === 'COGS' && r.account.toUpperCase() === 'COST OF GOODS')
+        (cat.key === 'COGS' && r.account.toUpperCase() === 'COST OF GOODS') ||
+        // Barisnya bernama "Sales"; tanpa ini NET SALES di ringkasan selalu 0.
+        (cat.key === 'NET SALES' && r.account.toUpperCase() === 'SALES')
       );
       const val = row ? row.total : 0;
       

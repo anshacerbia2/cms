@@ -172,7 +172,7 @@ export function ProfitLossTab() {
       "NET SALES": DollarSign,
       "GROSS PROFIT": TrendingUp,
       "PROFIT AFTER TAX": TrendingUp,
-      "AR DEPOSIT TO VENDOR": PieChart,
+      "TOTAL EXPENSES": PieChart,
     };
 
     return plData.summaryCards.map((card: any) => {
@@ -183,14 +183,18 @@ export function ProfitLossTab() {
         subValue = `${card.margin}% margin`;
       } else if (card.title === "PROFIT AFTER TAX") {
         subValue = `${card.netMargin}% net margin`;
-      } else if (card.title === "AR DEPOSIT TO VENDOR") {
-        subValue = `${card.tx} ${card.tx === 1 ? "entry" : "entries"}`;
+      } else if (card.title === "TOTAL EXPENSES") {
+        subValue = `${card.netShare}% of net sales`;
       }
 
       return {
         ...card,
         value: formatCurrency(card.value),
         subValue,
+        // Laba bersih: hijau saat untung, merah saat rugi.
+        color: card.title === "PROFIT AFTER TAX"
+          ? Number(card.value) < 0 ? "text-rose-500" : "text-emerald-500"
+          : card.color,
         icon: iconMap[card.title] || Info,
       };
     });
