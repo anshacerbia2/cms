@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNotEmpty, IsEnum, Length, IsBoolean, IsInt, Min, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, IsEnum, Length, IsBoolean, IsInt, Min, MaxLength, ValidateIf } from 'class-validator';
 import { InternalAccountType } from '@prisma/client';
 import { PartialType } from '@nestjs/mapped-types';
 
@@ -25,9 +25,15 @@ export class UpdateBankDto extends PartialType(CreateBankDto) {}
 
 
 export class CreateInternalAccountDto {
+  /**
+   * Hanya rekening bank yang punya bank induk. Kas dan Non Cash & Bank tidak,
+   * dan form mengirimnya kosong - dulu keduanya ditolak "bankId should not be
+   * empty" padahal kolomnya memang boleh kosong.
+   */
+  @ValidateIf((o) => o.type === InternalAccountType.BANK)
   @IsString()
   @IsNotEmpty()
-  bankId: string;
+  bankId?: string;
 
   @IsOptional()
   @IsString()
@@ -36,9 +42,10 @@ export class CreateInternalAccountDto {
   @IsEnum(InternalAccountType)
   type: InternalAccountType;
 
+  /** Boleh kosong: kas, Non CB, dan beberapa rekening bank memang tidak punya nomor. */
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  accountNo: string;
+  accountNo?: string;
 
   @IsOptional()
   @IsString()

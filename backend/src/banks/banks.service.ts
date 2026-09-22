@@ -112,7 +112,8 @@ export class BanksService {
     return this.prisma.internalAccount.create({
       data: {
         ...data,
-        bankId: BigInt(bankId),
+        // Kas dan Non Cash & Bank tidak punya bank induk.
+        bankId: bankId ? BigInt(bankId) : null,
         userId: userId ? BigInt(userId) : undefined,
       },
       include: {
@@ -178,8 +179,9 @@ export class BanksService {
   async updateInternalAccount(id: number, dto: UpdateInternalAccountDto) {
     const { bankId, userId, ...data } = dto;
     const updateData: any = { ...data };
-    if (bankId) updateData.bankId = BigInt(bankId);
-    if (userId) updateData.userId = BigInt(userId);
+    // Dikirim kosong berarti dilepas - misalnya rekening bank yang diubah jadi kas.
+    if ('bankId' in dto) updateData.bankId = bankId ? BigInt(bankId) : null;
+    if ('userId' in dto) updateData.userId = userId ? BigInt(userId) : null;
 
     return this.prisma.internalAccount.update({
       where: { id: BigInt(id) },

@@ -248,7 +248,13 @@ export function ExcelColumnFilter({
           />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64 p-3 bg-white/95 backdrop-blur-xl border-primary/10 shadow-2xl rounded-2xl z-[150]" align="start">
+      <DropdownMenuContent
+        align="start"
+        // Radix menggeser popup agar tetap di dalam layar; lebarnya juga dibatasi
+        // lebar layar supaya nilai yang panjang tidak membuatnya menjorok keluar.
+        collisionPadding={12}
+        className="w-[22rem] max-w-[calc(100vw-1.5rem)] p-3 bg-white/95 backdrop-blur-xl border-primary/10 shadow-2xl rounded-2xl z-[150]"
+      >
         <div className="space-y-3">
           <div className="text-[11px] font-black uppercase text-primary tracking-widest pl-1">{sortOnly ? 'Sort' : 'Filter'}: {label}</div>
           
@@ -344,7 +350,10 @@ export function ExcelColumnFilter({
           </div>
 
           {/* List */}
-          <div className="max-h-64 overflow-y-auto space-y-0.5 pr-1 custom-scrollbar">
+          {/* Nilai yang panjang digeser ke samping, bukan dipotong. Baris-barisnya
+              selebar isinya (min-w-max) supaya scroll mendatar benar-benar jalan. */}
+          <div className="max-h-64 overflow-y-auto overflow-x-auto pr-1 custom-scrollbar">
+            <div className="space-y-0.5 min-w-max">
             <label className="flex items-center space-x-2.5 p-1.5 rounded-lg hover:bg-primary/5 cursor-pointer transition-colors">
               <input 
                 type="checkbox" 
@@ -418,7 +427,7 @@ export function ExcelColumnFilter({
                             checked={tempFilters.has(val)}
                             onChange={() => toggleValue(val)}
                           />
-                          <span className="text-[11px] font-medium text-primary/50 truncate">
+                          <span className="text-[11px] font-medium text-primary/50 whitespace-nowrap">
                             {val}
                           </span>
                         </label>
@@ -437,12 +446,13 @@ export function ExcelColumnFilter({
                     checked={tempFilters.has(val)}
                     onChange={() => toggleValue(val)}
                   />
-                  <span className="text-[12px] font-bold text-primary truncate">
+                  <span className="text-[12px] font-bold text-primary whitespace-nowrap">
                     {valueFormatter ? valueFormatter(val) : (val || "(Blanks)")}
                   </span>
                 </label>
               ))
             )}
+            </div>
           </div>
 
           <DropdownMenuSeparator className="bg-primary/5" />

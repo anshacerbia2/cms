@@ -10,7 +10,7 @@ import {
 import { formatCurrency, getAmountColor, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, DollarSign, PieChart, Info, Loader2, History, Plus, Calendar as CalendarIcon, ChevronDown, ChevronRight, Pin, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, PieChart, Info, Loader2, History, Plus, Calendar as CalendarIcon, ChevronDown, ChevronRight, Pin, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { useFinance } from "../hooks/useFinance";
 import { useExcelFilter } from "../hooks/useExcelFilter";
 import { ExcelColumnFilter } from "./ExcelColumnFilter";
@@ -187,15 +187,18 @@ export function ProfitLossTab() {
         subValue = `${card.netShare}% of net sales`;
       }
 
+      // Laba bersih: hijau dengan panah naik saat untung, merah dengan panah
+      // turun saat rugi.
+      const isLoss = card.title === "PROFIT AFTER TAX" && Number(card.value) < 0;
+
       return {
         ...card,
         value: formatCurrency(card.value),
         subValue,
-        // Laba bersih: hijau saat untung, merah saat rugi.
         color: card.title === "PROFIT AFTER TAX"
-          ? Number(card.value) < 0 ? "text-rose-500" : "text-emerald-500"
+          ? isLoss ? "text-rose-500" : "text-emerald-500"
           : card.color,
-        icon: iconMap[card.title] || Info,
+        icon: isLoss ? TrendingDown : iconMap[card.title] || Info,
       };
     });
   }, [plData]);
