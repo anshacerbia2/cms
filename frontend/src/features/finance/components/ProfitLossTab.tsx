@@ -45,6 +45,9 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
+/** Baris P&L yang bisa di-breakdown per project: Net Sales (Sales) + COGS. */
+const GROSS_PROFIT = "GROSS PROFIT";
+
 export function ProfitLossTab() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear.toString());
@@ -212,6 +215,7 @@ export function ProfitLossTab() {
   const isDepr = selectedLedger === "Depreciation";
   const isSales = selectedLedger === "Sales";
   const isCogs = selectedLedger === "Cost of Goods";
+  const isGross = selectedLedger === GROSS_PROFIT;
 
   const { data: plDetails, isLoading: isLoadingPlDetails } = getPLDetails(
     year === "all" ? undefined : year, 
@@ -219,7 +223,20 @@ export function ProfitLossTab() {
     selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
     selectedSubItem || undefined,
     undefined,
-    { enabled: !!selectedLedger && !isDepr && !isCogs }
+    { enabled: !!selectedLedger && !isDepr && !isCogs && !isGross }
+  );
+
+  // Gross Profit per project dibangun dari DUA breakdown yang sudah ada - Sales per
+  // Sales Code dan COGS per project - dengan query dan filter tanggal yang sama,
+  // jadi angkanya pasti sama dengan kedua breakdown itu dan totalnya sama dengan
+  // baris GROSS PROFIT.
+  const { data: grossSalesGroups, isLoading: isLoadingGrossSales } = getPLDetails(
+    year === "all" ? undefined : year,
+    "Sales",
+    selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
+    undefined,
+    undefined,
+    { enabled: isGross }
   );
 
   const { data: salesCodeDetails, isLoading: isLoadingSalesCodeDetails } = getPLDetails(
@@ -359,7 +376,7 @@ export function ProfitLossTab() {
   const { data: cogsData, isLoading: isLoadingCogs } = getSalesCogsDetails(
     year === "all" ? undefined : year,
     selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
-    { enabled: isCogs }
+    { enabled: isCogs || isGross }
   );
 
   const cogsHeaders: { key: string; label: string }[] = useMemo(
@@ -450,6 +467,70 @@ export function ProfitLossTab() {
   ];
 
   const tableData = plData?.tableData || [];
+
+  // --- Gross Profit per project ---
+  // Dicocokkan lewat nama project tanpa beda huruf besar-kecil dan spasi di ujung,
+  // cara yang sama dengan kedua breakdown mengelompokkan barisnya. Project yang
+  // hanya ada di salah satu sisi tetap tampil (sisi lainnya 0) supaya total tetap
+  // sama dengan GROSS PROFIT - dan beda ejaan nama project kelihatan.
+  const grossRows = useMemo(() => {
+    if (!isGross) return [];
+    const key = (name: any) => String(name ?? "").trim().toLowerCase();
+    const map = new Map<string, any>();
+    const get = (name: string) => {
+      const k = key(name);
+      if (!map.has(k)) map.set(k, { id: `gp-${k}`, project: name, netSales: 0, cogs: 0, inSales: false, inCogs: false });
+      return map.get(k);
+    };
+    for (const s of (grossSalesGroups as any[]) || []) {
+      const row = get(s.salesCode || "-");
+      row.project = s.salesCode || "-";
+      row.netSales += parseFloat(s.amount || "0");
+      row.inSales = true;
+    }
+    for (const c of cogsData?.rows || []) {
+      const row = get(c.cogs || "Other");
+      row.cogs += parseFloat(c.rowTotal || "0");
+      row.inCogs = true;
+    }
+    return Array.from(map.values()).map((r) => {
+      const grossProfit = r.netSales + r.cogs;
+      const margin = r.netSales !== 0 ? (grossProfit / r.netSales) * 100 : null;
+      return {
+        ...r,
+        grossProfit,
+        margin,
+        source: r.inSales && r.inCogs ? "Sales & COGS" : r.inSales ? "Hanya Sales" : "Hanya COGS",
+        displayNetSales: formatCurrency(r.netSales),
+        displayCogs: formatCurrency(r.cogs),
+        displayGrossProfit: formatCurrency(grossProfit),
+      };
+    });
+  }, [isGross, grossSalesGroups, cogsData]);
+
+  const {
+    filters: grossFilters,
+    setFilters: setGrossFilters,
+    sort: grossSort,
+    setSort: setGrossSort,
+    getCascadingData: getGrossCascadingData,
+    filteredAndSortedData: filteredGross,
+    isAnyFilterActive: isGrossFilterActive,
+    clearFilters: clearGrossFilters,
+  } = useExcelFilter({
+    data: grossRows,
+    initialSort: { key: "grossProfit", direction: "desc" },
+    searchFields: ["project"],
+  });
+
+  // Dari baris yang tersaring, seperti total di breakdown lain.
+  const grossTotals = useMemo(() => {
+    if (!filteredGross.length) return null;
+    const netSales = filteredGross.reduce((a: number, r: any) => a + r.netSales, 0);
+    const cogs = filteredGross.reduce((a: number, r: any) => a + r.cogs, 0);
+    const grossProfit = netSales + cogs;
+    return { netSales, cogs, grossProfit, margin: netSales !== 0 ? (grossProfit / netSales) * 100 : null };
+  }, [filteredGross]);
   
     // Summed from the filtered rows, not the source: the table shows what the
     // column filters left, so a total over everything contradicts the rows above it.
@@ -548,19 +629,20 @@ export function ProfitLossTab() {
                     )}
                   </div>
                   <DialogDescription className="text-[10px] font-bold text-primary/30 uppercase tracking-[0.2em]">
-                    Bank Statement Records • Financial Audit Trail
+                    {isGross ? "Net Sales (Sales) + COGS per project" : "Bank Statement Records • Financial Audit Trail"}
                   </DialogDescription>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 {(
-                  isPlFilterActive || isDeprFilterActive || isCogsFilterActive
+                  isPlFilterActive || isDeprFilterActive || isCogsFilterActive || isGrossFilterActive
                 ) && (
                    <button 
                      onClick={() => {
                        clearPlFilters();
                        clearDeprFilters();
                        clearCogsFilters();
+                       clearGrossFilters();
                      }}
                      className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 transition-colors"
                    >
@@ -578,20 +660,116 @@ export function ProfitLossTab() {
           </div>
 
           <div className="p-0 flex-1 overflow-auto custom-scrollbar relative">
-            {(isCogs ? isLoadingCogs : isLoadingDetails) ? (
+            {(isGross ? isLoadingGrossSales || isLoadingCogs : isCogs ? isLoadingCogs : isLoadingDetails) ? (
               <div className="h-64 flex flex-col items-center justify-center gap-4 opacity-40">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 <p className="text-[10px] font-bold uppercase tracking-[0.3em]">Retrieving Records...</p>
               </div>
             ) : (isDepr && (!deprDetails || deprDetails.length === 0)) ||
                 (isCogs && filteredCogs.length === 0) ||
-                (!isDepr && !isCogs && filteredPlDetails.length === 0) ? (
+                (isGross && filteredGross.length === 0) ||
+                (!isDepr && !isCogs && !isGross && filteredPlDetails.length === 0) ? (
               <div className="h-64 flex items-center justify-center opacity-20 font-bold uppercase tracking-[0.2em]">
                 No Records Found
               </div>
             ) : (
               <table className={cn("w-full border-separate border-spacing-0", isDepr && "table-fixed min-w-[3000px]")}>
-                {isCogs ? (
+                {isGross ? (
+                  <>
+                    <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                      <tr className="border-b border-primary/5 whitespace-nowrap h-12">
+                        <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white min-w-[280px]">
+                          <div className="flex items-center gap-1">
+                            Project
+                            <ExcelColumnFilter
+                              columnKey="project" label="Project" data={getGrossCascadingData("project")}
+                              activeFilters={grossFilters["project"]}
+                              onFilterChange={(v) => setGrossFilters(p => ({ ...p, project: v }))}
+                              onSort={(d) => setGrossSort({ key: "project", direction: d })}
+                              currentSort={grossSort}
+                            />
+                          </div>
+                        </th>
+                        {([
+                          ["netSales", "Net Sales"],
+                          ["cogs", "COGS"],
+                          ["grossProfit", "Gross Profit"],
+                          ["margin", "%"],
+                        ] as const).map(([k, label]) => (
+                          <th key={k} className={cn("py-2.5 text-right text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white", k === "margin" ? "pr-8 w-28" : "px-4 w-48")}>
+                            <div className="flex items-center justify-end gap-1">
+                              {label}
+                              <ExcelColumnFilter
+                                columnKey={k} label={label} data={[]} activeFilters={null} sortOnly
+                                sortLabels={['Kecil → Besar', 'Besar → Kecil']}
+                                onFilterChange={() => {}}
+                                onSort={(d) => setGrossSort({ key: k, direction: d })}
+                                currentSort={grossSort}
+                              />
+                            </div>
+                          </th>
+                        ))}
+                        <th className="pr-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white w-40">
+                          <div className="flex items-center gap-1">
+                            Sumber
+                            <ExcelColumnFilter
+                              columnKey="source" label="Sumber" data={getGrossCascadingData("source")}
+                              activeFilters={grossFilters["source"]}
+                              onFilterChange={(v) => setGrossFilters(p => ({ ...p, source: v }))}
+                              onSort={(d) => setGrossSort({ key: "source", direction: d })}
+                              currentSort={grossSort}
+                            />
+                          </div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-primary/5">
+                      {filteredGross.map((item: any) => (
+                        <tr key={item.id} className="bg-white hover:bg-primary/[0.03] transition-colors">
+                          <td className="pl-8 py-3 whitespace-nowrap text-[12px] font-bold text-primary uppercase">{item.project}</td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums text-primary">{item.displayNetSales}</td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums text-rose-600">{item.displayCogs}</td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            <span className={cn("text-[12px] font-bold tabular-nums", getAmountColor(item.grossProfit))}>{item.displayGrossProfit}</span>
+                          </td>
+                          <td className={cn("pr-8 py-3 text-right whitespace-nowrap text-[12px] font-bold tabular-nums", getAmountColor(item.margin ?? 0))}>
+                            {item.margin === null ? "–" : `${item.margin.toFixed(2)}%`}
+                          </td>
+                          <td className="pr-8 py-3 whitespace-nowrap">
+                            {item.source === "Sales & COGS" ? (
+                              <span className="text-[11px] text-primary/40">Sales & COGS</span>
+                            ) : (
+                              <Badge
+                                title="Nama project ini hanya ada di salah satu breakdown - cek ejaannya di Sales (Sales Code) dan di COGS (Sub Ledger 2)."
+                                className="bg-amber-50 text-amber-700 border-none text-[10px] font-bold"
+                              >
+                                {item.source}
+                              </Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    {grossTotals && (
+                      <tfoot className="sticky bottom-0 z-50">
+                        <tr className="bg-[#fdf8ec] border-t-2 border-[#cc9929] font-bold">
+                          <td className="pl-8 py-4 text-left">
+                            <span className="text-[12px] uppercase tracking-[0.2em] text-[#cc9929] font-bold">TOTAL</span>
+                          </td>
+                          <td className="px-4 py-4 text-right whitespace-nowrap tabular-nums text-[12px] text-primary">{formatCurrency(grossTotals.netSales)}</td>
+                          <td className="px-4 py-4 text-right whitespace-nowrap tabular-nums text-[12px] text-rose-600">{formatCurrency(grossTotals.cogs)}</td>
+                          <td className={cn("px-4 py-4 text-right whitespace-nowrap", getAmountColor(grossTotals.grossProfit))}>
+                            <span className="text-[14px] tabular-nums">{formatCurrency(grossTotals.grossProfit)}</span>
+                          </td>
+                          <td className={cn("pr-8 py-4 text-right whitespace-nowrap tabular-nums text-[12px]", getAmountColor(grossTotals.margin ?? 0))}>
+                            {grossTotals.margin === null ? "–" : `${grossTotals.margin.toFixed(2)}%`}
+                          </td>
+                          <td />
+                        </tr>
+                      </tfoot>
+                    )}
+                  </>
+                ) : isCogs ? (
                   <>
                     <thead className="sticky top-0 z-30 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
                       <tr className="border-b border-primary/5 whitespace-nowrap h-12">
@@ -1566,7 +1744,8 @@ export function ProfitLossTab() {
                 const isExpense = expenseLedgers.includes(row.account);
                 const isSales = row.account === "Sales";
                 const isCogs = row.account === "Cost of Goods";
-                const isClickable = isExpense || isSales || isCogs || row.level === 3;
+                const isGrossRow = row.account === GROSS_PROFIT;
+                const isClickable = isExpense || isSales || isCogs || isGrossRow || row.level === 3;
                 const isSpecialBold = ["Operating Profit", "PROFIT BEFORE TAX"].includes(row.account);
                 // Other Income is one of the expenses now, so it takes their weight
                   // rather than the lighter one used under PROFITABILITY.
@@ -1605,7 +1784,7 @@ export function ProfitLossTab() {
                       if (row.level === 3) {
                         setSelectedLedger(row.parentLedger);
                         setSelectedSubItem(row.account);
-                      } else if (isExpense || isSales || isCogs) {
+                      } else if (isExpense || isSales || isCogs || isGrossRow) {
                         setSelectedLedger(row.account);
                         setSelectedSubItem(null);
                       }
