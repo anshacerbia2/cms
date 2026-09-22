@@ -493,7 +493,9 @@ export function ProfitLossTab() {
       row.cogs += parseFloat(c.rowTotal || "0");
       row.inCogs = true;
     }
-    return Array.from(map.values()).map((r) => {
+    // Urutan awal: Gross Profit terbesar dulu. Diurutkan di sini, bukan lewat
+    // sort filter, supaya tidak ada filter yang tampak aktif saat baru dibuka.
+    return Array.from(map.values()).sort((a, b) => (b.netSales + b.cogs) - (a.netSales + a.cogs)).map((r) => {
       const grossProfit = r.netSales + r.cogs;
       const margin = r.netSales !== 0 ? (grossProfit / r.netSales) * 100 : null;
       return {
@@ -519,7 +521,6 @@ export function ProfitLossTab() {
     clearFilters: clearGrossFilters,
   } = useExcelFilter({
     data: grossRows,
-    initialSort: { key: "grossProfit", direction: "desc" },
     searchFields: ["project"],
   });
 
