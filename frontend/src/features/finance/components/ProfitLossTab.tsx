@@ -493,9 +493,11 @@ export function ProfitLossTab() {
       row.cogs += parseFloat(c.rowTotal || "0");
       row.inCogs = true;
     }
-    // Urutan awal: Gross Profit terbesar dulu. Diurutkan di sini, bukan lewat
-    // sort filter, supaya tidak ada filter yang tampak aktif saat baru dibuka.
-    return Array.from(map.values()).sort((a, b) => (b.netSales + b.cogs) - (a.netSales + a.cogs)).map((r) => {
+    // Urutan awal: nama project A-Z. Diurutkan di sini, bukan lewat sort filter,
+    // supaya tidak ada filter yang tampak aktif saat baru dibuka.
+    return Array.from(map.values())
+      .sort((a, b) => String(a.project).localeCompare(String(b.project), undefined, { sensitivity: "base", numeric: true }))
+      .map((r) => {
       const grossProfit = r.netSales + r.cogs;
       const margin = r.netSales !== 0 ? (grossProfit / r.netSales) * 100 : null;
       return {
