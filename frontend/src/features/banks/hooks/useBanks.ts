@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import api from "@/api/axios";
 import { 
   Bank, 
@@ -56,6 +57,18 @@ const BanksService = {
   },
 };
 
+/**
+ * Kegagalan simpan ditampilkan apa adanya dari API - termasuk daftar pesan
+ * validasi. Tanpa ini form hanya diam saat submit ditolak, dan yang mengisi
+ * tidak tahu apa yang salah.
+ */
+const showError = (fallback: string) => (error: any) => {
+  // Interceptor di api/axios sudah membuang bungkus axios-nya.
+  const body = error?.response?.data ?? error;
+  const message = body?.message ?? body;
+  toast.error(Array.isArray(message) ? message.join(", ") : typeof message === "string" ? message : fallback);
+};
+
 export function useBanks(params: {
   banks?: PaginationParams & { enabled?: boolean };
   accounts?: PaginationParams & { enabled?: boolean };
@@ -95,6 +108,7 @@ export function useBanks(params: {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["banks"] });
     },
+    onError: showError("Failed to create bank."),
   });
 
   const createInternalAccount = useMutation({
@@ -102,6 +116,7 @@ export function useBanks(params: {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["internal-accounts"] });
     },
+    onError: showError("Failed to create account."),
   });
 
   const updateInternalAccount = useMutation({
@@ -109,6 +124,7 @@ export function useBanks(params: {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["internal-accounts"] });
     },
+    onError: showError("Failed to save account."),
   });
 
   const deleteInternalAccount = useMutation({
@@ -116,6 +132,7 @@ export function useBanks(params: {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["internal-accounts"] });
     },
+    onError: showError("Failed to delete account."),
   });
 
   const updateBank = useMutation({
@@ -123,6 +140,7 @@ export function useBanks(params: {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["banks"] });
     },
+    onError: showError("Failed to save bank."),
   });
 
   const deleteBank = useMutation({
@@ -130,6 +148,7 @@ export function useBanks(params: {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["banks"] });
     },
+    onError: showError("Failed to delete bank."),
   });
 
   return {
