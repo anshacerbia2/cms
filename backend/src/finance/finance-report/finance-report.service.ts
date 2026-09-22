@@ -1741,7 +1741,10 @@ export class FinanceReportService {
         categories: [
           { name: 'Cash', isOpen: true, total: formatDecimal(cashTotal), items: cashItems.map(i => ({ ...i, idr: i.idr, tx: i.tx })) },
           { name: 'Bank Accounts', isOpen: true, total: formatDecimal(bankTotal), items: bankItems.map(i => ({ ...i, idr: i.idr, tx: i.tx })) },
-          { name: 'Deposit', isOpen: true, total: formatDecimal(depositTotal), items: depositItems.map(i => ({ ...i, idr: i.idr })) },
+          // Subtotal = kedua item di bawahnya. Dulu hanya Deposit to vendor, jadi
+          // Time Deposit tampil sebagai item tapi tidak ikut di "Total Deposit" -
+          // padahal Total Assets menghitungnya.
+          { name: 'Deposit', isOpen: true, total: formatDecimal(depositTotal.plus(timeDepositTotal)), items: depositItems.map(i => ({ ...i, idr: i.idr })) },
           { name: 'Account Receivable', total: formatDecimal(arTotal), items: finalArItems.map(i => ({ ...i, idr: i.idr })) },
           { name: 'Prepaid Tax', total: formatDecimal(prepaidTaxTotal), items: prepaidTaxItems.map(i => ({ ...i, idr: i.idr })) },
           { name: 'Fixed Assets', total: formatDecimal(totalBookValue), items: fixedAssetItems.map(i => ({ ...i, idr: i.idr })) }
