@@ -22,9 +22,14 @@ export default function DashboardPage() {
     getDashboardActivities
   } = useFinance()
 
+  // Kartu berlabel FY / YTD tahun berjalan, jadi laporannya diminta untuk tahun
+  // itu. Tanpa tahun, backend menggabungkan semua tahun: AR, AP, dan aset tetap
+  // yang sudah membawa saldo tahun lalu terhitung dua kali.
+  const reportYear = String(new Date().getFullYear());
+
   // Data fetching for highlights
-  const { data: plSummary } = getPLSummary()
-  const { data: bsData } = getBalanceSheet()
+  const { data: plSummary } = getPLSummary(reportYear)
+  const { data: bsData } = getBalanceSheet(reportYear)
   const { data: recentActivitiesData } = getDashboardActivities()
 
   // Aggregation logic
