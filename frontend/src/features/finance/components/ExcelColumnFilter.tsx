@@ -25,6 +25,10 @@ interface ExcelColumnFilterProps {
   sortOnly?: boolean;
   /** Label tombol urut naik/turun; default "A to Z" / "Z to A". */
   sortLabels?: [string, string];
+  /** Rentang angka yang sedang aktif (inklusif). Dipakai bersama `onRangeChange`. */
+  range?: { min: number | null; max: number | null };
+  /** Kalau diisi, popup menampilkan input rentang angka Dari / Sampai. */
+  onRangeChange?: (range: { min: number | null; max: number | null }) => void;
 }
 
 interface DateTree {
@@ -46,8 +50,24 @@ export function ExcelColumnFilter({
   dateKey,
   sortOnly = false,
   sortLabels = ['A to Z', 'Z to A'],
+  range,
+  onRangeChange,
 }: ExcelColumnFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
+  // Isian rentang selama popup terbuka; baru berlaku saat Terapkan / Enter.
+  const [rangeDraft, setRangeDraft] = useState({ min: '', max: '' });
+  useEffect(() => {
+    if (isOpen) setRangeDraft({ min: range?.min?.toString() ?? '', max: range?.max?.toString() ?? '' });
+  }, [isOpen, range]);
+  const isRangeActive = !!range && (range.min !== null || range.max !== null);
+  const applyRange = () => {
+    const num = (v: string) => (v.trim() === '' || Number.isNaN(Number(v)) ? null : Number(v));
+    let min = num(rangeDraft.min);
+    let max = num(rangeDraft.max);
+    if (min !== null && max !== null && min > max) [min, max] = [max, min];
+    onRangeChange?.({ min, max });
+    setIsOpen(false);
+  };
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
@@ -220,7 +240,7 @@ export function ExcelColumnFilter({
       <DropdownMenuTrigger asChild>
         <button className={cn(
           "ml-1.5 p-1 rounded-md hover:bg-primary/5 transition-all inline-flex items-center cursor-pointer opacity-40 hover:opacity-100 group",
-          (activeFilters || (sortOnly && currentSort?.key === columnKey && currentSort?.direction)) && "opacity-100 bg-secondary/10 text-secondary"
+          (activeFilters || isRangeActive || (sortOnly && currentSort?.key === columnKey && currentSort?.direction)) && "opacity-100 bg-secondary/10 text-secondary"
         )}>
           <Filter 
             className={cn("h-3 w-3 transition-transform", activeFilters && "fill-secondary/20")} 
@@ -266,6 +286,46 @@ export function ExcelColumnFilter({
                 {sortLabels[1]}
               </Button>
             </div>
+          )}
+
+          {onRangeChange && (
+            <>
+              <DropdownMenuSeparator className="bg-primary/5" />
+              <div className="space-y-2">
+                <div className="text-[10px] font-black uppercase text-primary/50 tracking-widest pl-1">Rentang</div>
+                <div className="flex items-center gap-2">
+                  {(['min', 'max'] as const).map((k) => (
+                    <Input
+                      key={k}
+                      type="number"
+                      inputMode="numeric"
+                      placeholder={k === 'min' ? 'Dari' : 'Sampai'}
+                      value={rangeDraft[k]}
+                      onChange={(e) => setRangeDraft((d) => ({ ...d, [k]: e.target.value }))}
+                      // Menu Radix menangkap ketikan untuk pencarian item; di input ini tidak.
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter') applyRange();
+                      }}
+                      className="h-9 text-[12px] font-bold bg-white border-0 rounded-xl shadow-sm focus-visible:ring-0 text-primary"
+                    />
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-[10px] font-black uppercase bg-white shadow-sm rounded-xl"
+                    onClick={() => { onRangeChange({ min: null, max: null }); setIsOpen(false); }}
+                  >
+                    Hapus
+                  </Button>
+                  <Button size="sm" className="h-8 text-[10px] font-black uppercase rounded-xl" onClick={applyRange}>
+                    Terapkan
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
 
           {!sortOnly && (

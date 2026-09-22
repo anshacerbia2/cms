@@ -259,9 +259,24 @@ export default function BankMutationPage() {
     [allTransactionsRaw],
   );
 
+  /** Kolom "No" (row_no) hanya untuk Non CB: bukunya tanpa tanggal, jadi nomor urut jadi pegangan ke Excel. */
+  const showRowNo = selectedAccount?.type === 'OTHER';
+
+  /** Filter rentang kolom No (inklusif). Hanya berlaku di Non CB. */
+  const [rowNoRange, setRowNoRange] = useState<{ min: number | null; max: number | null }>({ min: null, max: null });
+  const isRowNoRangeActive = showRowNo && (rowNoRange.min !== null || rowNoRange.max !== null);
+
   // --- PRE-FORMAT DATA FOR EXCEL FILTER ---
+  // Rentang No disaring di sini, sebelum filter kolom lain, supaya daftar nilai
+  // di filter lain, subtotal, dan grand total ikut mengikuti rentangnya.
   const displayTransactions = useMemo(() => {
-    return (allTransactionsRaw || []).map((row: any) => ({
+    const inRange = (row: any) => {
+      if (!isRowNoRangeActive) return true;
+      const no = row.rowNo === null || row.rowNo === undefined ? null : row.rowNo / 1000;
+      if (no === null) return false;
+      return (rowNoRange.min === null || no >= rowNoRange.min) && (rowNoRange.max === null || no <= rowNoRange.max);
+    };
+    return (allTransactionsRaw || []).filter(inRange).map((row: any) => ({
       ...row,
       rawColA: row.colA,
       colA: formatDate(row.colA),
@@ -274,7 +289,7 @@ export default function BankMutationPage() {
       colH: row.colH || "-",
       colI: row.colI || "-",
     }));
-  }, [allTransactionsRaw]);
+  }, [allTransactionsRaw, isRowNoRangeActive, rowNoRange]);
 
   // --- CASCADING FILTER HOOK ---
   const { 
@@ -299,9 +314,11 @@ export default function BankMutationPage() {
     handleClearFiltersBase();
     setLedgerStartDate(undefined);
     setLedgerEndDate(undefined);
+    setRowNoRange({ min: null, max: null });
   };
 
-  const isAnyFilterActive = isExcelFilterActive || ledgerStartDate !== undefined || ledgerEndDate !== undefined;
+  const isAnyFilterActive =
+    isExcelFilterActive || ledgerStartDate !== undefined || ledgerEndDate !== undefined || isRowNoRangeActive;
 
   const handleRecalculate = async () => {
     if (isProcessing) return;
@@ -353,8 +370,6 @@ export default function BankMutationPage() {
     return selectedAccount?.accountNo?.replace(/\s/g, '') === '5750489666';
   }, [selectedAccount]);
 
-  /** Kolom "No" (row_no) hanya untuk Non CB: bukunya tanpa tanggal, jadi nomor urut jadi pegangan ke Excel. */
-  const showRowNo = selectedAccount?.type === 'OTHER';
   const extraCols = showRowNo ? 1 : 0;
 
   const paginatedLedger = useMemo(() => {
@@ -377,6 +392,7 @@ export default function BankMutationPage() {
     ledgerSearch,
     ledgerFilters,
     ledgerSort,
+    rowNoRange,
     cancelInline,
   ]);
 
@@ -763,7 +779,7 @@ export default function BankMutationPage() {
             </PopoverContent>
           </Popover>
 
-          <Select value={ledgerYearFilter} onValueChange={(v) => { setLedgerYearFilter(v); setLedgerPage(1); }}>
+          <Select value={ledgerYearFilter} onValueChange={(v) => { setLedgerYearFilter(v); setLedgerPage(1); setRowNoRange({ min: null, max: null }); }}>
             <SelectTrigger className="flex-1 xl:w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
               <CalendarIcon size={18} className="text-secondary" />
               <SelectValue placeholder="Year" />
@@ -834,6 +850,8 @@ export default function BankMutationPage() {
                       No
                       <ExcelColumnFilter
                         columnKey="rowNo" label="No" data={[]} activeFilters={null} sortOnly sortLabels={['1 → 9', '9 → 1']}
+                        range={rowNoRange}
+                        onRangeChange={(r) => { setRowNoRange(r); setLedgerPage(1); }}
                         onFilterChange={() => {}}
                         onSort={(d) => setLedgerSort({ key: "rowNo", direction: d })}
                         currentSort={ledgerSort}
