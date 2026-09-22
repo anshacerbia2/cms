@@ -6,7 +6,7 @@ import { IsStrongPassword } from 'class-validator';
  * di frontend (`lib/password.ts`).
  */
 export const PASSWORD_RULE_MESSAGE =
-  'Password minimal 8 karakter, dengan huruf besar, huruf kecil, angka, dan karakter spesial.';
+  'Password must be at least 8 characters, with an uppercase letter, a lowercase letter, a number and a special character.';
 
 export const StrongPassword = () =>
   IsStrongPassword(

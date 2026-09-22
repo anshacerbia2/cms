@@ -91,7 +91,7 @@ export class BankMutationService {
       try {
         refs.push(await dir.resolve(row));
       } catch (e: any) {
-        throw new BadRequestException(rows.length > 1 ? `Baris ${i + 1}: ${e.message}` : e.message);
+        throw new BadRequestException(rows.length > 1 ? `Row ${i + 1}: ${e.message}` : e.message);
       }
     }
     return refs;
@@ -452,7 +452,7 @@ export class BankMutationService {
    */
   async insertTransactions(rows: any[], accountId: string, tagYear: number, afterId?: number | null) {
     if (!Array.isArray(rows) || rows.length === 0) {
-      throw new BadRequestException('Tidak ada baris untuk disimpan.');
+      throw new BadRequestException('No rows to save.');
     }
 
     const accountIdBig = BigInt(accountId);
@@ -471,7 +471,7 @@ export class BankMutationService {
       // Sesudah diberi ruang, ini hanya terjadi kalau ada yang menyisip di titik
       // yang sama pada detik yang sama. Ditolak dengan jelas, bukan diam-diam
       // mendarat di tempat lain.
-      throw new BadRequestException('Gagal menentukan posisi baris, coba lagi.');
+      throw new BadRequestException('Could not determine the row position. Please try again.');
     }
 
     const refs = await this.resolveLedgers(rows);

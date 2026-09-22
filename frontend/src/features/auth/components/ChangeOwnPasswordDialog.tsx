@@ -17,14 +17,14 @@ const FIELD = "h-12 rounded-xl bg-muted/30 border-primary/5 focus-visible:ring-p
 
 const formSchema = z
   .object({
-    currentPassword: z.string().min(1, "Isi password lama"),
+    currentPassword: z.string().min(1, "Enter your current password"),
     newPassword: strongPassword,
     confirm: z.string(),
   })
-  .refine((v) => v.newPassword === v.confirm, { path: ["confirm"], message: "Konfirmasi tidak sama" })
+  .refine((v) => v.newPassword === v.confirm, { path: ["confirm"], message: "Passwords do not match" })
   .refine((v) => v.newPassword !== v.currentPassword, {
     path: ["newPassword"],
-    message: "Password baru harus berbeda dari password lama",
+    message: "New password must be different from the current one",
   });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -44,12 +44,12 @@ export function ChangeOwnPasswordDialog({ open, onOpenChange }: { open: boolean;
     mutationFn: (v: FormValues) =>
       api.patch("/auth/password", { currentPassword: v.currentPassword, newPassword: v.newPassword }),
     onSuccess: () => {
-      toast.success("Password berhasil diganti.");
+      toast.success("Password changed successfully.");
       onOpenChange(false);
     },
     onError: (error: any) => {
       const message = error?.response?.data?.message;
-      toast.error(Array.isArray(message) ? message[0] : message || "Gagal mengganti password.");
+      toast.error(Array.isArray(message) ? message[0] : message || "Failed to change password.");
     },
   });
 
@@ -75,15 +75,15 @@ export function ChangeOwnPasswordDialog({ open, onOpenChange }: { open: boolean;
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary font-extrabold uppercase tracking-tight">
             <KeyRound size={18} />
-            Ubah Password
+            Change Password
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit((v) => change.mutate(v))} className="space-y-4">
-            {field("currentPassword", "Password Lama")}
-            {field("newPassword", "Password Baru", PASSWORD_RULE_MESSAGE)}
-            {field("confirm", "Konfirmasi Password Baru")}
+            {field("currentPassword", "Current Password")}
+            {field("newPassword", "New Password", PASSWORD_RULE_MESSAGE)}
+            {field("confirm", "Confirm New Password")}
 
             <DialogFooter className="pt-5 border-t border-primary/5">
               <Button
@@ -92,14 +92,14 @@ export function ChangeOwnPasswordDialog({ open, onOpenChange }: { open: boolean;
                 onClick={() => onOpenChange(false)}
                 className="h-11 px-6 rounded-xl border-primary/10 font-bold text-xs uppercase tracking-widest"
               >
-                Batal
+                Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={change.isPending}
                 className="h-11 px-8 rounded-xl bg-primary hover:bg-primary/90 text-white font-extrabold text-xs uppercase tracking-widest shadow-premium"
               >
-                {change.isPending ? "Menyimpan..." : "Simpan"}
+                {change.isPending ? "Saving..." : "Save Password"}
               </Button>
             </DialogFooter>
           </form>

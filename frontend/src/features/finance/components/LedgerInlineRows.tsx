@@ -25,7 +25,7 @@ const changed = (d: LedgerDraft, field: DraftField, value: string, master: Ledge
 function warnUnknownLedgers(drafts: LedgerDraft[], master: LedgerMaster | null) {
   const problems = drafts.map((d) => ledgerProblem(d, master)).filter(Boolean);
   if (problems.length > 0) {
-    toast.warning(`${problems.length} baris: Ledger/SL1 tidak ada di master (ditandai merah). ${problems[0]}`);
+    toast.warning(`${problems.length} row(s): Ledger / Sub Ledger 1 not in the master list (marked red). ${problems[0]}`);
   }
 }
 
@@ -33,7 +33,7 @@ function warnUnknownLedgers(drafts: LedgerDraft[], master: LedgerMaster | null) 
 function firstLedgerProblem(drafts: LedgerDraft[], master: LedgerMaster | null) {
   for (const [i, d] of drafts.entries()) {
     const problem = ledgerProblem(d, master);
-    if (problem) return `Baris ${i + 1}: ${problem}`;
+    if (problem) return `Row ${i + 1}: ${problem}`;
   }
   return null;
 }
@@ -110,7 +110,7 @@ export function InlineEditRow({ raw, master, showRowNo, saving, onSave, onCancel
     setDraft(next);
     warnUnknownLedgers([next], master);
     if (lines.length > 1) {
-      toast.info(`Baris pertama dipakai. ${lines.length - 1} baris lainnya: pakai tombol sisip untuk menempel banyak baris.`);
+      toast.info(`Only the first row was used. To paste the other ${lines.length - 1} row(s), use the insert button.`);
     }
   }, [master]);
 
@@ -133,7 +133,7 @@ export function InlineEditRow({ raw, master, showRowNo, saving, onSave, onCancel
           <Button
             variant="ghost"
             size="icon"
-            title="Simpan (Enter)"
+            title="Save (Enter)"
             disabled={saving}
             className="h-7 w-7 text-emerald-600 hover:bg-emerald-50 rounded-sm"
             onClick={() => save(draft)}
@@ -143,7 +143,7 @@ export function InlineEditRow({ raw, master, showRowNo, saving, onSave, onCancel
           <Button
             variant="ghost"
             size="icon"
-            title="Batal (Esc)"
+            title="Cancel (Esc)"
             disabled={saving}
             className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
             onClick={onCancel}
@@ -204,8 +204,8 @@ export function InlineInsertRows({ anchorSaldo, master, showRowNo, anchorRowNo, 
       (d) => d.colB.trim() === '' || (Number(d.colC || 0) === 0 && Number(d.colD || 0) === 0),
     );
     const ledgerIssue = firstLedgerProblem(filled, master);
-    if (filled.length === 0) toast.error('Belum ada baris yang diisi.');
-    else if (incomplete >= 0) toast.error(`Baris ${incomplete + 1}: deskripsi dan nominal (debit atau kredit) wajib diisi.`);
+    if (filled.length === 0) toast.error('No rows filled in yet.');
+    else if (incomplete >= 0) toast.error(`Row ${incomplete + 1}: a description and an amount (debit or credit) are required.`);
     else if (ledgerIssue) toast.error(ledgerIssue);
     else onSave(filled);
   }, [master, onSave]);
@@ -242,7 +242,7 @@ export function InlineInsertRows({ anchorSaldo, master, showRowNo, anchorRowNo, 
       next[at] = canonicalLedger(fillFromPastedLine(next[at], line, field), master);
     });
     setDrafts(next);
-    toast.success(`${lines.length} baris ditempel dari Excel.`);
+    toast.success(`${lines.length} row(s) pasted from Excel.`);
     warnUnknownLedgers(next.slice(index, index + lines.length), master);
   }, [master]);
 
@@ -273,7 +273,7 @@ export function InlineInsertRows({ anchorSaldo, master, showRowNo, anchorRowNo, 
                 <Button
                   variant="ghost"
                   size="icon"
-                  title="Buang baris ini"
+                  title="Remove this row"
                   className="h-7 w-7 text-rose-500/50 hover:text-rose-600 hover:bg-rose-50 rounded-sm"
                   onClick={() => setDrafts((all) => all.filter((_, j) => j !== i))}
                 >
@@ -293,11 +293,11 @@ export function InlineInsertRows({ anchorSaldo, master, showRowNo, anchorRowNo, 
               className="h-8 rounded-lg text-[11px] font-bold gap-1"
               onClick={() => setDrafts((all) => [...all, emptyDraft()])}
             >
-              <Plus size={12} /> Tambah baris
+              <Plus size={12} /> Add Row
             </Button>
             <Button size="sm" disabled={saving} className="h-8 rounded-lg text-[11px] font-bold gap-1" onClick={submit}>
               <Check size={12} />
-              {saving ? 'Menyimpan...' : `Simpan ${filledCount} baris`}
+              {saving ? 'Saving...' : `Save ${filledCount} Row(s)`}
             </Button>
             <Button
               variant="ghost"
@@ -306,10 +306,10 @@ export function InlineInsertRows({ anchorSaldo, master, showRowNo, anchorRowNo, 
               className="h-8 rounded-lg text-[11px] font-bold"
               onClick={onCancel}
             >
-              Batal
+              Cancel
             </Button>
             <span className="text-[11px] text-muted-foreground ml-2">
-              Enter = baris baru · Ctrl+Enter = simpan · Esc = batal · bisa tempel dari Excel
+              Enter = new row · Ctrl+Enter = save · Esc = cancel · paste from Excel supported
             </span>
           </div>
         </TableCell>

@@ -87,12 +87,12 @@ export default function LedgersPage() {
   const saving = [m.createLedger, m.updateLedger, m.createSubLedger, m.updateSubLedger].some((x) => x.isPending);
 
   const removeLedger = (l: LedgerNode) => {
-    if (confirm(`Hapus Ledger "${l.name}"${l.subLedgers.length ? ` beserta ${l.subLedgers.length} Sub Ledger 1-nya` : ""}?`)) {
+    if (confirm(`Delete Ledger "${l.name}"${l.subLedgers.length ? ` and its ${l.subLedgers.length} Sub Ledger 1` : ""}?`)) {
       m.deleteLedger.mutate(l.id);
     }
   };
   const removeSub = (s: SubLedgerNode) => {
-    if (confirm(`Hapus Sub Ledger 1 "${s.name}"?`)) m.deleteSubLedger.mutate(s.id);
+    if (confirm(`Delete Sub Ledger 1 "${s.name}"?`)) m.deleteSubLedger.mutate(s.id);
   };
 
   const status = (active: boolean) => (
@@ -106,7 +106,7 @@ export default function LedgersPage() {
 
   const locked = (code: string | null) =>
     code ? (
-      <span title="Dipakai laporan keuangan: tidak bisa dihapus atau dinonaktifkan" className="inline-flex text-amber-600">
+      <span title="Used by the financial reports: cannot be deleted or deactivated" className="inline-flex text-amber-600">
         <Lock size={12} />
       </span>
     ) : null;
@@ -141,7 +141,7 @@ export default function LedgersPage() {
     <PageContainer>
       <PageHeader
         title="Ledgers"
-        description="Master Ledger dan Sub Ledger 1 untuk Bank Statement."
+        description="Master list of Ledgers and Sub Ledger 1 for the Bank Statement."
         icon={BookOpen}
         actions={
           can("ledgers.create") && (
@@ -160,7 +160,7 @@ export default function LedgersPage() {
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/60" size={18} />
           <Input
-            placeholder="Cari Ledger atau Sub Ledger 1..."
+            placeholder="Search Ledger or Sub Ledger 1..."
             className="pl-11 h-12 bg-white border-0 rounded-xl shadow-sm focus-visible:ring-primary/10 font-medium"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -175,7 +175,7 @@ export default function LedgersPage() {
               <TableRow className="hover:bg-transparent border-primary/5">
                 <TableHead className={`${head} pl-6`}>Ledger / Sub Ledger 1</TableHead>
                 <TableHead className={`${head} text-right`}>Sub Ledger 1</TableHead>
-                <TableHead className={`${head} text-right`}>Transaksi</TableHead>
+                <TableHead className={`${head} text-right`}>Transactions</TableHead>
                 <TableHead className={head}>Status</TableHead>
                 <TableHead className={`${head} text-right pr-6`}>Aksi</TableHead>
               </TableRow>
@@ -190,7 +190,7 @@ export default function LedgersPage() {
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-40 text-center text-muted-foreground text-xs uppercase tracking-widest">
-                    Tidak ada yang cocok
+                    No matches
                   </TableCell>
                 </TableRow>
               ) : (
@@ -214,15 +214,15 @@ export default function LedgersPage() {
                       <TableCell>{status(l.isActive)}</TableCell>
                       <TableCell className="text-right pr-6">
                         {actions([
-                          { show: can("ledgers.create"), label: "Tambah Sub Ledger 1", icon: Plus, onClick: () => openName({ kind: "sub", ledger: l }) },
-                          { show: can("ledgers.update"), label: "Ganti nama", icon: Edit2, onClick: () => openName({ kind: "ledger", ledger: l }) },
+                          { show: can("ledgers.create"), label: "Add Sub Ledger 1", icon: Plus, onClick: () => openName({ kind: "sub", ledger: l }) },
+                          { show: can("ledgers.update"), label: "Rename", icon: Edit2, onClick: () => openName({ kind: "ledger", ledger: l }) },
                           {
                             show: can("ledgers.update") && !l.code,
-                            label: l.isActive ? "Nonaktifkan" : "Aktifkan",
+                            label: l.isActive ? "Deactivate" : "Activate",
                             icon: l.isActive ? EyeOff : Eye,
                             onClick: () => m.updateLedger.mutate({ id: l.id, isActive: !l.isActive }),
                           },
-                          { show: can("ledgers.delete") && !l.code && l.usage === 0, label: "Hapus", icon: Trash2, onClick: () => removeLedger(l), danger: true },
+                          { show: can("ledgers.delete") && !l.code && l.usage === 0, label: "Delete", icon: Trash2, onClick: () => removeLedger(l), danger: true },
                         ])}
                       </TableCell>
                     </TableRow>
@@ -241,14 +241,14 @@ export default function LedgersPage() {
                           <TableCell>{status(s.isActive)}</TableCell>
                           <TableCell className="text-right pr-6">
                             {actions([
-                              { show: can("ledgers.update"), label: "Ganti nama", icon: Edit2, onClick: () => openName({ kind: "sub", ledger: l, sub: s }) },
+                              { show: can("ledgers.update"), label: "Rename", icon: Edit2, onClick: () => openName({ kind: "sub", ledger: l, sub: s }) },
                               {
                                 show: can("ledgers.update") && !s.code,
-                                label: s.isActive ? "Nonaktifkan" : "Aktifkan",
+                                label: s.isActive ? "Deactivate" : "Activate",
                                 icon: s.isActive ? EyeOff : Eye,
                                 onClick: () => m.updateSubLedger.mutate({ id: s.id, isActive: !s.isActive }),
                               },
-                              { show: can("ledgers.delete") && !s.code && s.usage === 0, label: "Hapus", icon: Trash2, onClick: () => removeSub(s), danger: true },
+                              { show: can("ledgers.delete") && !s.code && s.usage === 0, label: "Delete", icon: Trash2, onClick: () => removeSub(s), danger: true },
                             ])}
                           </TableCell>
                         </TableRow>
@@ -256,7 +256,7 @@ export default function LedgersPage() {
                     {isOpen(l.id) && subs.length === 0 && (
                       <TableRow className="border-primary/5 bg-primary/[0.015]">
                         <TableCell colSpan={5} className="first:pl-12 py-2 text-[12px] text-muted-foreground">
-                          Belum ada Sub Ledger 1.
+                          No Sub Ledger 1 yet.
                         </TableCell>
                       </TableRow>
                     )}
@@ -273,27 +273,27 @@ export default function LedgersPage() {
           <DialogHeader>
             <DialogTitle className="text-lg font-black text-primary">
               {target?.kind === "ledger"
-                ? target.ledger ? "Ganti nama Ledger" : "Tambah Ledger"
-                : target?.sub ? "Ganti nama Sub Ledger 1" : `Tambah Sub Ledger 1 di ${target?.ledger.name ?? ""}`}
+                ? target.ledger ? "Rename Ledger" : "Add Ledger"
+                : target?.sub ? "Rename Sub Ledger 1" : `Add Sub Ledger 1 to ${target?.ledger.name ?? ""}`}
             </DialogTitle>
           </DialogHeader>
           <Input
             autoFocus
             value={name}
-            placeholder="Nama"
+            placeholder="Name"
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && saveName()}
             className="h-11 rounded-xl"
           />
           {(target?.kind === "ledger" ? target.ledger : target?.kind === "sub" ? target.sub : undefined) && (
             <p className="text-[12px] text-muted-foreground">
-              Nama di semua transaksi yang memakainya ikut berganti.
+              Every transaction using it will show the new name.
             </p>
           )}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setTarget(null)} disabled={saving}>Batal</Button>
+            <Button variant="ghost" onClick={() => setTarget(null)} disabled={saving}>Cancel</Button>
             <Button onClick={saveName} disabled={saving || name.trim() === ""}>
-              {saving ? "Menyimpan..." : "Simpan"}
+              {saving ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -502,7 +502,7 @@ export function ProfitLossTab() {
         ...r,
         grossProfit,
         margin,
-        source: r.inSales && r.inCogs ? "Sales & COGS" : r.inSales ? "Hanya Sales" : "Hanya COGS",
+        source: r.inSales && r.inCogs ? "Sales & COGS" : r.inSales ? "Sales only" : "COGS only",
         displayNetSales: formatCurrency(r.netSales),
         displayCogs: formatCurrency(r.cogs),
         displayGrossProfit: formatCurrency(grossProfit),
@@ -702,7 +702,7 @@ export function ProfitLossTab() {
                               {label}
                               <ExcelColumnFilter
                                 columnKey={k} label={label} data={[]} activeFilters={null} sortOnly
-                                sortLabels={['Kecil → Besar', 'Besar → Kecil']}
+                                sortLabels={['Low → High', 'High → Low']}
                                 onFilterChange={() => {}}
                                 onSort={(d) => setGrossSort({ key: k, direction: d })}
                                 currentSort={grossSort}
@@ -714,7 +714,7 @@ export function ProfitLossTab() {
                           <div className="flex items-center gap-1">
                             Sumber
                             <ExcelColumnFilter
-                              columnKey="source" label="Sumber" data={getGrossCascadingData("source")}
+                              columnKey="source" label="Source" data={getGrossCascadingData("source")}
                               activeFilters={grossFilters["source"]}
                               onFilterChange={(v) => setGrossFilters(p => ({ ...p, source: v }))}
                               onSort={(d) => setGrossSort({ key: "source", direction: d })}
@@ -741,7 +741,7 @@ export function ProfitLossTab() {
                               <span className="text-[11px] text-primary/40">Sales & COGS</span>
                             ) : (
                               <Badge
-                                title="Nama project ini hanya ada di salah satu breakdown - cek ejaannya di Sales (Sales Code) dan di COGS (Sub Ledger 2)."
+                                title="This project name appears in only one breakdown - check its spelling in Sales (Sales Code) and in COGS (Sub Ledger 2)."
                                 className="bg-amber-50 text-amber-700 border-none text-[10px] font-bold"
                               >
                                 {item.source}

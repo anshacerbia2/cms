@@ -292,14 +292,14 @@ export function ExcelColumnFilter({
             <>
               <DropdownMenuSeparator className="bg-primary/5" />
               <div className="space-y-2">
-                <div className="text-[10px] font-black uppercase text-primary/50 tracking-widest pl-1">Rentang</div>
+                <div className="text-[10px] font-black uppercase text-primary/50 tracking-widest pl-1">Range</div>
                 <div className="flex items-center gap-2">
                   {(['min', 'max'] as const).map((k) => (
                     <Input
                       key={k}
                       type="number"
                       inputMode="numeric"
-                      placeholder={k === 'min' ? 'Dari' : 'Sampai'}
+                      placeholder={k === 'min' ? 'From' : 'To'}
                       value={rangeDraft[k]}
                       onChange={(e) => setRangeDraft((d) => ({ ...d, [k]: e.target.value }))}
                       // Menu Radix menangkap ketikan untuk pencarian item; di input ini tidak.
@@ -318,10 +318,10 @@ export function ExcelColumnFilter({
                     className="h-8 text-[10px] font-black uppercase bg-white shadow-sm rounded-xl"
                     onClick={() => { onRangeChange({ min: null, max: null }); setIsOpen(false); }}
                   >
-                    Hapus
+                    Clear
                   </Button>
                   <Button size="sm" className="h-8 text-[10px] font-black uppercase rounded-xl" onClick={applyRange}>
-                    Terapkan
+                    Apply
                   </Button>
                 </div>
               </div>

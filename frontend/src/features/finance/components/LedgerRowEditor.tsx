@@ -182,7 +182,7 @@ export const LedgerRowEditor = memo(function LedgerRowEditor({
         value={draft[field]}
         options={options}
         invalid={invalid}
-        emptyHint={field === 'colG' ? 'Pilih Ledger dulu' : undefined}
+        emptyHint={field === 'colG' ? 'Select a Ledger first' : undefined}
         placeholder={placeholder}
         onChange={(v) => onChange(index, field, v)}
         onKeyDown={(e) => onKeyDown?.(e, index, field)}
@@ -238,7 +238,7 @@ export const LedgerRowEditor = memo(function LedgerRowEditor({
           />
         </div>
       </TableCell>
-      <TableCell className={cell}>{text('colB', 'Deskripsi...', 'font-medium')}</TableCell>
+      <TableCell className={cell}>{text('colB', 'Description...', 'font-medium')}</TableCell>
       <TableCell className={cell}>{amount('colC', 'text-rose-600')}</TableCell>
       <TableCell className={cell}>{amount('colD', 'text-emerald-600')}</TableCell>
       <TableCell className={`${cell} text-right pr-4 text-sm font-bold text-primary/40 whitespace-nowrap`}>

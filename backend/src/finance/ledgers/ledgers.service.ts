@@ -66,7 +66,7 @@ export class LedgersService {
 
   private async findLedger(id: number) {
     const ledger = await this.prisma.ledger.findUnique({ where: { id: BigInt(id) } });
-    if (!ledger) throw new NotFoundException(`Ledger ${id} tidak ditemukan.`);
+    if (!ledger) throw new NotFoundException(`Ledger ${id} not found.`);
     return ledger;
   }
 
@@ -76,7 +76,7 @@ export class LedgersService {
     const clash = (await this.prisma.ledger.findMany()).find(
       (l) => l.id !== exceptId && keyOf(l.name, LEDGER_ALIASES) === key,
     );
-    if (clash) throw new BadRequestException(`Ledger "${clash.name}" sudah ada.`);
+    if (clash) throw new BadRequestException(`Ledger "${clash.name}" already exists.`);
   }
 
   async createLedger(dto: CreateLedgerDto) {
@@ -94,7 +94,7 @@ export class LedgersService {
     const name = dto.name?.trim();
 
     if (dto.isActive === false && ledger.code && REPORT_LEDGER_CODES.has(ledger.code)) {
-      throw new BadRequestException(`Ledger "${ledger.name}" dipakai laporan keuangan, tidak bisa dinonaktifkan.`);
+      throw new BadRequestException(`Ledger "${ledger.name}" is used by the financial reports and cannot be deactivated.`);
     }
     if (name && name !== ledger.name) await this.assertLedgerNameFree(name, ledger.id);
 
@@ -113,12 +113,12 @@ export class LedgersService {
   async deleteLedger(id: number) {
     const ledger = await this.findLedger(id);
     if (ledger.code && REPORT_LEDGER_CODES.has(ledger.code)) {
-      throw new BadRequestException(`Ledger "${ledger.name}" dipakai laporan keuangan, tidak bisa dihapus.`);
+      throw new BadRequestException(`Ledger "${ledger.name}" is used by the financial reports and cannot be deleted.`);
     }
     const used = await this.prisma.financialTransaction.count({ where: { ledgerId: ledger.id } });
     if (used > 0) {
       throw new BadRequestException(
-        `Ledger "${ledger.name}" dipakai ${used} transaksi. Nonaktifkan saja supaya hilang dari pilihan.`,
+        `Ledger "${ledger.name}" is used by ${used} transaction(s). Deactivate it instead to hide it from the dropdown.`,
       );
     }
     // Sub Ledger-nya ikut terhapus: tanpa Ledger yang dipakai, tidak ada transaksi yang memakai mereka.
@@ -133,7 +133,7 @@ export class LedgersService {
 
   private async findSub(id: number) {
     const sub = await this.prisma.subLedger.findUnique({ where: { id: BigInt(id) } });
-    if (!sub) throw new NotFoundException(`Sub Ledger ${id} tidak ditemukan.`);
+    if (!sub) throw new NotFoundException(`Sub Ledger ${id} not found.`);
     return sub;
   }
 
@@ -142,7 +142,7 @@ export class LedgersService {
     const clash = (await this.prisma.subLedger.findMany({ where: { ledgerId } })).find(
       (s) => s.id !== exceptId && keyOf(s.name, SUB_LEDGER_ALIASES) === key,
     );
-    if (clash) throw new BadRequestException(`Sub Ledger "${clash.name}" sudah ada di Ledger ini.`);
+    if (clash) throw new BadRequestException(`Sub Ledger "${clash.name}" already exists under this Ledger.`);
   }
 
   async createSubLedger(ledgerId: number, dto: CreateSubLedgerDto) {
@@ -158,7 +158,7 @@ export class LedgersService {
     const name = dto.name?.trim();
 
     if (dto.isActive === false && sub.code && REPORT_SUB_LEDGER_CODES.has(sub.code)) {
-      throw new BadRequestException(`Sub Ledger "${sub.name}" dipakai laporan keuangan, tidak bisa dinonaktifkan.`);
+      throw new BadRequestException(`Sub Ledger "${sub.name}" is used by the financial reports and cannot be deactivated.`);
     }
     if (name && name !== sub.name) await this.assertSubNameFree(sub.ledgerId, name, sub.id);
 
@@ -174,12 +174,12 @@ export class LedgersService {
   async deleteSubLedger(id: number) {
     const sub = await this.findSub(id);
     if (sub.code && REPORT_SUB_LEDGER_CODES.has(sub.code)) {
-      throw new BadRequestException(`Sub Ledger "${sub.name}" dipakai laporan keuangan, tidak bisa dihapus.`);
+      throw new BadRequestException(`Sub Ledger "${sub.name}" is used by the financial reports and cannot be deleted.`);
     }
     const used = await this.prisma.financialTransaction.count({ where: { subLedgerId: sub.id } });
     if (used > 0) {
       throw new BadRequestException(
-        `Sub Ledger "${sub.name}" dipakai ${used} transaksi. Nonaktifkan saja supaya hilang dari pilihan.`,
+        `Sub Ledger "${sub.name}" is used by ${used} transaction(s). Deactivate it instead to hide it from the dropdown.`,
       );
     }
     await this.prisma.subLedger.delete({ where: { id: sub.id } });

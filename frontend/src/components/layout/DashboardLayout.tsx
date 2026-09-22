@@ -94,7 +94,7 @@ function Header() {
                   className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground focus:text-primary"
                 >
                   <KeyRound size={14} />
-                  Ubah Password
+                  Change Password
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => { logout(); navigate("/login"); }}

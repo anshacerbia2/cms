@@ -94,7 +94,7 @@ export const LedgerCombo = memo(function LedgerCombo({
           value={value}
           autoComplete="off"
           aria-invalid={invalid || undefined}
-          title={invalid ? `"${value}" tidak ada di master` : inputProps.title}
+          title={invalid ? `"${value}" is not in the master list` : inputProps.title}
           onChange={(e) => {
             onChange(e.target.value);
             openList(e.target.value);
@@ -141,7 +141,7 @@ export const LedgerCombo = memo(function LedgerCombo({
           >
             {shown.length === 0 ? (
               <div className="px-3 py-2 text-[12px] text-muted-foreground">
-                {options.length === 0 ? emptyHint : 'Tidak ada yang cocok'}
+                {options.length === 0 ? emptyHint : 'No matches'}
               </div>
             ) : (
               shown.map((option, i) => (
