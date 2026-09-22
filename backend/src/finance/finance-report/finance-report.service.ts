@@ -36,6 +36,9 @@ const netDividend = (rows: { colC: Prisma.Decimal | null; colD: Prisma.Decimal |
     new Prisma.Decimal(0),
   );
 
+/** Urutan nama A-Z: tanpa beda huruf besar-kecil, dan angka di dalam nama diurutkan sebagai angka. */
+const byName = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
+
 /** Code Ledger sebuah transaksi, untuk memilah beban tanpa membandingkan nama. */
 const withLedgerCode = { ledger: { select: { code: true } } } as const;
 
@@ -765,7 +768,8 @@ export class FinanceReportService {
         }
       }
 
-      return Array.from(groupedMap.values()).map((group, idx) => {
+      // Urutan default: Sales Code A-Z.
+      return Array.from(groupedMap.values()).sort((a, b) => byName(a.salesCode, b.salesCode)).map((group, idx) => {
         return {
           id: `grouped-sales-${idx}`,
           date: null,
@@ -1261,7 +1265,8 @@ export class FinanceReportService {
     });
 
     // Convert Decimals to strings for the response
-    const rows = Array.from(groupedData.values()).map(row => {
+    // Urutan default: project A-Z.
+    const rows = Array.from(groupedData.values()).sort((a, b) => byName(a.cogs, b.cogs)).map(row => {
       const finalRow: any = { ...row };
       headers.forEach(h => {
         if (h.key !== 'rowTotal') {
