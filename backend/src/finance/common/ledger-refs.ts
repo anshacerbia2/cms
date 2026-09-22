@@ -138,11 +138,11 @@ export class LedgerDirectory {
 
     if (ledgerId !== null) {
       ledger = this.ledgersById.get(ledgerId);
-      if (!ledger) throw new BadRequestException(`Ledger ${ledgerId} tidak ada di master.`);
+      if (!ledger) throw new BadRequestException(`Ledger ${ledgerId} is not in the master list.`);
     } else if (input.colF && input.colF.trim() !== '') {
       ledger = this.findLedgerByName(input.colF);
       if (!ledger) {
-        if (!opts.create) throw new BadRequestException(`Ledger "${input.colF}" tidak ada di master.`);
+        if (!opts.create) throw new BadRequestException(`Ledger "${input.colF}" is not in the master list.`);
         const row = await this.prisma.ledger.create({
           data: { name: input.colF.trim(), orderIndex: 1000 },
         });
@@ -154,19 +154,19 @@ export class LedgerDirectory {
 
     if (subLedgerId !== null) {
       sub = this.subsById.get(subLedgerId);
-      if (!sub) throw new BadRequestException(`Sub Ledger ${subLedgerId} tidak ada di master.`);
+      if (!sub) throw new BadRequestException(`Sub Ledger ${subLedgerId} is not in the master list.`);
     } else if (input.colG && input.colG.trim() !== '') {
-      if (!ledger) throw new BadRequestException(`Sub Ledger "${input.colG}" diisi tanpa Ledger.`);
+      if (!ledger) throw new BadRequestException(`Sub Ledger "${input.colG}" needs a Ledger.`);
       sub = this.findSubByName(ledger.id, input.colG);
       if (!sub) {
         if (!opts.create) {
-          throw new BadRequestException(`Sub Ledger "${input.colG}" tidak ada di bawah Ledger "${ledger.name}".`);
+          throw new BadRequestException(`Sub Ledger "${input.colG}" is not under Ledger "${ledger.name}".`);
         }
         const row = await this.prisma.subLedger.create({
           data: { ledgerId: ledger.id, name: input.colG.trim() },
         });
         this.addSub(row);
-        this.created.push(`Sub Ledger "${row.name}" di bawah "${ledger.name}"`);
+        this.created.push(`Sub Ledger "${row.name}" under "${ledger.name}"`);
         sub = row;
       }
     }
@@ -174,7 +174,7 @@ export class LedgerDirectory {
     // Sub Ledger selalu milik tepat satu Ledger.
     if (sub && !ledger) ledger = this.ledgersById.get(sub.ledgerId);
     if (sub && ledger && sub.ledgerId !== ledger.id) {
-      throw new BadRequestException(`Sub Ledger "${sub.name}" bukan milik Ledger "${ledger.name}".`);
+      throw new BadRequestException(`Sub Ledger "${sub.name}" does not belong to Ledger "${ledger.name}".`);
     }
 
     return {

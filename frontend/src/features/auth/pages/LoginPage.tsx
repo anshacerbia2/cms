@@ -57,8 +57,8 @@ export default function LoginPage() {
       // `err` di sini sudah body respons (lihat api/axios.ts), bukan error axios.
       setError(
         err?.statusCode === 401
-          ? 'Email atau password salah.'
-          : err?.message || 'Login gagal, coba lagi.',
+          ? 'Invalid email or password.'
+          : err?.message || 'Login failed. Please try again.',
       );
     } finally {
       setLoading(false);

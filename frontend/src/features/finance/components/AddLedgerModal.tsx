@@ -242,7 +242,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
     toast.success(`Pasted ${pasteRows.length} rows from Excel`);
     const unknown = pasted.map((r) => ledgerProblem(r, ledgerMaster)).filter(Boolean);
     if (unknown.length > 0) {
-      toast.warning(`${unknown.length} baris: Ledger/SL1 tidak ada di master (ditandai merah). ${unknown[0]}`);
+      toast.warning(`${unknown.length} row(s): Ledger / Sub Ledger 1 not in the master list (marked red). ${unknown[0]}`);
     }
   };
 
@@ -342,7 +342,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
       .map((r, i) => ({ i, problem: ledgerProblem(r, ledgerMaster) }))
       .find((x) => x.problem);
     if (ledgerIssue) {
-      toast.error(`Baris ${rows.indexOf(validRows[ledgerIssue.i]) + 1}: ${ledgerIssue.problem}`);
+      toast.error(`Row ${rows.indexOf(validRows[ledgerIssue.i]) + 1}: ${ledgerIssue.problem}`);
       return;
     }
 
@@ -639,7 +639,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
                               value={row.colG}
                               options={ledgerMaster.subOptions(row.colF)}
                               invalid={row.colG.trim() !== '' && !ledgerMaster.findSub(ledgerMaster.findLedger(row.colF), row.colG)}
-                              emptyHint="Pilih Ledger dulu"
+                              emptyHint="Select a Ledger first"
                               onChange={(v) => updateRow(index, 'colG', v)}
                               onKeyDown={(e) => handleKeyDown(e, index, 'colG')}
                               onPaste={(e) => handlePaste(e, index, 'colG')}

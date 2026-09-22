@@ -26,10 +26,10 @@ export class AuthService {
       (await this.usersService.findOne(Number(userId))).email,
     );
     if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
-      throw new BadRequestException('Password lama salah.');
+      throw new BadRequestException('Current password is incorrect.');
     }
     if (await bcrypt.compare(newPassword, user.password)) {
-      throw new BadRequestException('Password baru harus berbeda dari password lama.');
+      throw new BadRequestException('New password must be different from the current one.');
     }
     return this.usersService.changePassword(Number(userId), newPassword);
   }

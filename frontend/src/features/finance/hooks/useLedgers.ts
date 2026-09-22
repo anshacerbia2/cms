@@ -77,9 +77,9 @@ export function ledgerProblem(row: LedgerFields, master: LedgerMaster | null): s
   const f = row.colF.trim();
   const g = row.colG.trim();
   const ledger = master.findLedger(f);
-  if (f && !ledger) return `Ledger "${f}" tidak ada di master.`;
-  if (g && !ledger) return `Sub Ledger 1 "${g}" diisi tanpa Ledger.`;
-  if (g && !master.findSub(ledger, g)) return `Sub Ledger 1 "${g}" tidak ada di bawah Ledger "${ledger!.name}".`;
+  if (f && !ledger) return `Ledger "${f}" is not in the master list.`;
+  if (g && !ledger) return `Sub Ledger 1 "${g}" needs a Ledger.`;
+  if (g && !master.findSub(ledger, g)) return `Sub Ledger 1 "${g}" is not under Ledger "${ledger!.name}".`;
   return null;
 }
 
@@ -125,7 +125,7 @@ export function useLedgerMutations() {
     // Ganti nama ikut menulis ulang kolom Ledger di transaksi.
     queryClient.invalidateQueries({ queryKey: ["finance", "bank-mutation"] });
   };
-  const onError = (error: any) => toast.error(error?.response?.data?.message || "Gagal menyimpan.");
+  const onError = (error: any) => toast.error(error?.response?.data?.message || "Failed to save.");
   const make = <V,>(fn: (v: V) => Promise<any>) => useMutation({ mutationFn: fn, onSuccess, onError });
 
   return {

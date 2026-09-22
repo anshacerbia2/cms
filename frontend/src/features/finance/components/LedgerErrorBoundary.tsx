@@ -27,7 +27,7 @@ export class LedgerErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     // Tetap dicatat lengkap di console, supaya bisa dilacak sampai komponennya.
-    console.error('[ledger] render gagal:', error, info.componentStack);
+    console.error('[ledger] render failed:', error, info.componentStack);
   }
 
   private reset = () => {
@@ -44,10 +44,10 @@ export class LedgerErrorBoundary extends Component<Props, State> {
         <div className="flex items-start gap-3">
           <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 mt-0.5" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-rose-700">Tabel ledger gagal ditampilkan.</p>
+            <p className="text-sm font-bold text-rose-700">The ledger table could not be displayed.</p>
             <p className="mt-1 text-[13px] text-rose-700/80 break-words font-mono">{error.message}</p>
             <p className="mt-2 text-[11px] text-rose-700/60">
-              Detail lengkap ada di console browser (F12). Kirim pesan di atas kalau ini muncul lagi.
+              Full details are in the browser console (F12). Send the message above if this happens again.
             </p>
             <Button
               size="sm"
@@ -55,7 +55,7 @@ export class LedgerErrorBoundary extends Component<Props, State> {
               className="mt-4 h-8 rounded-lg text-[11px] font-bold"
               onClick={this.reset}
             >
-              Tutup dan tampilkan tabel lagi
+              Close and show the table again
             </Button>
           </div>
         </div>

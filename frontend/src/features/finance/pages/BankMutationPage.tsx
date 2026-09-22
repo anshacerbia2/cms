@@ -168,12 +168,12 @@ export default function BankMutationPage() {
       setSavingInline(true);
       try {
         await updateTransaction()({ id: editingId, data: draftPayload(draft, ledgerMaster) });
-        toast.success("Baris disimpan.");
+        toast.success("Row saved.");
         setEditingId(null);
         refetchTransactions();
         refetchFiscal();
       } catch (error: any) {
-        toast.error(error?.response?.data?.message || "Gagal menyimpan baris.");
+        toast.error(error?.response?.data?.message || "Failed to save row.");
       } finally {
         setSavingInline(false);
       }
@@ -193,12 +193,12 @@ export default function BankMutationPage() {
           tagYear: yearNum,
           afterId: insertAfterId,
         });
-        toast.success(`${drafts.length} baris disisipkan.`);
+        toast.success(`${drafts.length} row(s) inserted.`);
         setInsertAfterId(null);
         refetchTransactions();
         refetchFiscal();
       } catch (error: any) {
-        toast.error(error?.response?.data?.message || "Gagal menyisipkan baris.");
+        toast.error(error?.response?.data?.message || "Failed to insert rows.");
       } finally {
         setSavingInline(false);
       }
