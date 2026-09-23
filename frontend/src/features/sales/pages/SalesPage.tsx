@@ -16,7 +16,7 @@ import { PageContainer } from "@/components/common/PageContainer";
 import AddSalesModal from "../components/AddSalesModal";
 import { useAuthStore } from "@/store/authStore";
 import { Download, Edit2, Plus, Trash2, AlertCircle, FileSpreadsheet, FileText, Eye } from "lucide-react";
-import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
+import { downloadExcelFile, downloadPdfFile, exportFilter } from "@/lib/downloadFile";
 import { toast } from "sonner";
 import EditSalesModal from "../../finance/components/EditSalesModal";
 import { DetailModal } from "@/components/common/DetailModal";
@@ -312,14 +312,14 @@ export default function SalesPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden w-40">
               <DropdownMenuItem 
-                onClick={() => downloadExcelFile(`/finance/sales/export/excel${salesYearFilter !== 'all' ? `?year=${salesYearFilter}` : ''}`, `Sales_${salesYearFilter !== 'all' ? salesYearFilter : 'All'}.xlsx`)}
+                onClick={() => downloadExcelFile(`/finance/sales/export/excel${salesYearFilter !== 'all' ? `?year=${salesYearFilter}` : ''}`, `Sales_${salesYearFilter !== 'all' ? salesYearFilter : 'All'}.xlsx`, exportFilter(isAnyFilterActive, filteredAndSortedSales))}
                 className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-emerald-600 transition-colors flex items-center gap-2"
               >
                 <FileSpreadsheet size={16} strokeWidth={2.5} />
                 Export Excel
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => downloadPdfFile(`/finance/sales/export/pdf${salesYearFilter !== 'all' ? `?year=${salesYearFilter}` : ''}`, `Sales_${salesYearFilter !== 'all' ? salesYearFilter : 'All'}.pdf`)}
+                onClick={() => downloadPdfFile(`/finance/sales/export/pdf${salesYearFilter !== 'all' ? `?year=${salesYearFilter}` : ''}`, `Sales_${salesYearFilter !== 'all' ? salesYearFilter : 'All'}.pdf`, exportFilter(isAnyFilterActive, filteredAndSortedSales))}
                 className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-rose-600 transition-colors flex items-center gap-2"
               >
                 <FileText size={16} strokeWidth={2.5} />

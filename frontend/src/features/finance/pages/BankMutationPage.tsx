@@ -28,7 +28,7 @@ import { Decimal } from "decimal.js";
 import { useBanks } from "@/features/banks/hooks/useBanks";
 import { useAuthStore } from "@/store/authStore";
 import { formatCurrency, formatDate, cleanAmount, cn } from "@/lib/utils";
-import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
+import { downloadExcelFile, downloadPdfFile, exportFilter } from "@/lib/downloadFile";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -819,14 +819,14 @@ export default function BankMutationPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden w-40">
               <DropdownMenuItem 
-                onClick={() => downloadExcelFile(`/bank-mutation/export/excel?accountId=${selectedAccount?.id}&year=${ledgerYearFilter}${ledgerStartDate ? `&startDate=${format(ledgerStartDate, 'yyyy-MM-dd')}` : ''}${ledgerEndDate ? `&endDate=${format(ledgerEndDate, 'yyyy-MM-dd')}` : ''}`, `Bank_Statement_${accountLabel(selectedAccount).replace(/\s+/g, '_')}_${ledgerYearFilter !== 'all' ? ledgerYearFilter : 'All'}.xlsx`)}
+                onClick={() => downloadExcelFile(`/bank-mutation/export/excel?accountId=${selectedAccount?.id}&year=${ledgerYearFilter}${ledgerStartDate ? `&startDate=${format(ledgerStartDate, 'yyyy-MM-dd')}` : ''}${ledgerEndDate ? `&endDate=${format(ledgerEndDate, 'yyyy-MM-dd')}` : ''}`, `Bank_Statement_${accountLabel(selectedAccount).replace(/\s+/g, '_')}_${ledgerYearFilter !== 'all' ? ledgerYearFilter : 'All'}.xlsx`, exportFilter(isAnyFilterActive, filteredAndSortedLedger))}
                 className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-emerald-600 transition-colors flex items-center gap-2"
               >
                 <FileSpreadsheet size={16} strokeWidth={2.5} />
                 Export Excel
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => downloadPdfFile(`/bank-mutation/export/pdf?accountId=${selectedAccount?.id}&year=${ledgerYearFilter}${ledgerStartDate ? `&startDate=${format(ledgerStartDate, 'yyyy-MM-dd')}` : ''}${ledgerEndDate ? `&endDate=${format(ledgerEndDate, 'yyyy-MM-dd')}` : ''}`, `Bank_Statement_${accountLabel(selectedAccount).replace(/\s+/g, '_')}_${ledgerYearFilter !== 'all' ? ledgerYearFilter : 'All'}.pdf`)}
+                onClick={() => downloadPdfFile(`/bank-mutation/export/pdf?accountId=${selectedAccount?.id}&year=${ledgerYearFilter}${ledgerStartDate ? `&startDate=${format(ledgerStartDate, 'yyyy-MM-dd')}` : ''}${ledgerEndDate ? `&endDate=${format(ledgerEndDate, 'yyyy-MM-dd')}` : ''}`, `Bank_Statement_${accountLabel(selectedAccount).replace(/\s+/g, '_')}_${ledgerYearFilter !== 'all' ? ledgerYearFilter : 'All'}.pdf`, exportFilter(isAnyFilterActive, filteredAndSortedLedger))}
                 className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-rose-600 transition-colors flex items-center gap-2"
               >
                 <FileText size={16} strokeWidth={2.5} />

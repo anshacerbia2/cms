@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Query, UseGuards, Param, ParseIntPipe, Pat
 import type { Response } from 'express';
 import { generateExcelBuffer } from '../../common/utils/excel.util';
 import { generatePdfBuffer } from '../../common/utils/pdf.util';
+import { pickExportRows } from '../../common/utils/export-rows.util';
 import { DepreciationService } from './depreciation.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -51,9 +52,9 @@ export class DepreciationController {
 
   @Get('export/excel')
   @Permissions('depreciation.index')
-  async exportDepreciation(@Query('year') year: string, @Res() res: Response) {
+  async exportDepreciation(@Query('year') year: string, @Res() res: Response, ids?: string[]) {
     const data = await this.depreciationService.getAllDepreciations(year ? Number(year) : undefined);
-    const cleanData = data.map(item => {
+    const cleanData = pickExportRows(data, ids).map(item => {
       const { id, tagYear, createdAt, updatedAt, ...rest } = item;
       return rest;
     });
@@ -66,11 +67,26 @@ export class DepreciationController {
     res.end(buffer);
   }
 
+  /*
+   * Kembaran POST dari ekspor di atas. Badannya membawa `ids`: baris yang lolos
+   * filter kolom di layar. Lewat POST karena daftar id bisa ribuan - terlalu
+   * panjang untuk ditaruh di URL. Tanpa `ids`, hasilnya sama persis dengan GET.
+   */
+  @Post('export/excel')
+  @Permissions('depreciation.index')
+  async exportDepreciationFiltered(
+    @Query('year') year: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportDepreciation(year, res, ids);
+  }
+
   @Get('export/pdf')
   @Permissions('depreciation.index')
-  async exportDepreciationPdf(@Query('year') year: string, @Res() res: Response) {
+  async exportDepreciationPdf(@Query('year') year: string, @Res() res: Response, ids?: string[]) {
     const data = await this.depreciationService.getAllDepreciations(year ? Number(year) : undefined);
-    const cleanData = data.map(item => {
+    const cleanData = pickExportRows(data, ids).map(item => {
       const { id, tagYear, createdAt, updatedAt, ...rest } = item;
       return rest;
     });
@@ -81,6 +97,21 @@ export class DepreciationController {
       'Content-Length': buffer.length,
     });
     res.end(buffer);
+  }
+
+  /*
+   * Kembaran POST dari ekspor di atas. Badannya membawa `ids`: baris yang lolos
+   * filter kolom di layar. Lewat POST karena daftar id bisa ribuan - terlalu
+   * panjang untuk ditaruh di URL. Tanpa `ids`, hasilnya sama persis dengan GET.
+   */
+  @Post('export/pdf')
+  @Permissions('depreciation.index')
+  async exportDepreciationPdfFiltered(
+    @Query('year') year: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportDepreciationPdf(year, res, ids);
   }
 
   @Post()

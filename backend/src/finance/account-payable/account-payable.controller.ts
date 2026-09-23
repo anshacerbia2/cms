@@ -6,6 +6,7 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import type { Response } from 'express';
 import { generateExcelBuffer } from '../../common/utils/excel.util';
 import { generatePdfBuffer } from '../../common/utils/pdf.util';
+import { pickExportRows } from '../../common/utils/export-rows.util';
 import { Res } from '@nestjs/common';
 
 /**
@@ -59,9 +60,9 @@ export class AccountPayableController {
 
   @Get('export/excel')
   @Permissions('account-payable.index')
-  async exportExcel(@Query('year') year: string, @Res() res: Response) {
+  async exportExcel(@Query('year') year: string, @Res() res: Response, ids?: string[]) {
     const data = await this.accountPayableService.getAllAccountPayables(year ? Number(year) : undefined);
-    const cleanData = data.map(item => {
+    const cleanData = pickExportRows(data, ids).map(item => {
       const { id, tagYear, createdAt, updatedAt, ...rest } = item;
       return rest;
     });
@@ -71,11 +72,26 @@ export class AccountPayableController {
     res.send(buffer);
   }
 
+  /*
+   * Kembaran POST dari ekspor di atas. Badannya membawa `ids`: baris yang lolos
+   * filter kolom di layar. Lewat POST karena daftar id bisa ribuan - terlalu
+   * panjang untuk ditaruh di URL. Tanpa `ids`, hasilnya sama persis dengan GET.
+   */
+  @Post('export/excel')
+  @Permissions('account-payable.index')
+  async exportExcelFiltered(
+    @Query('year') year: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportExcel(year, res, ids);
+  }
+
   @Get('export/pdf')
   @Permissions('account-payable.index')
-  async exportPdf(@Query('year') year: string, @Res() res: Response) {
+  async exportPdf(@Query('year') year: string, @Res() res: Response, ids?: string[]) {
     const data = await this.accountPayableService.getAllAccountPayables(year ? Number(year) : undefined);
-    const cleanData = data.map(item => {
+    const cleanData = pickExportRows(data, ids).map(item => {
       const { id, tagYear, createdAt, updatedAt, ...rest } = item;
       return rest;
     });
@@ -83,6 +99,21 @@ export class AccountPayableController {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Account_Payable_${year || 'All'}.pdf`);
     res.send(buffer);
+  }
+
+  /*
+   * Kembaran POST dari ekspor di atas. Badannya membawa `ids`: baris yang lolos
+   * filter kolom di layar. Lewat POST karena daftar id bisa ribuan - terlalu
+   * panjang untuk ditaruh di URL. Tanpa `ids`, hasilnya sama persis dengan GET.
+   */
+  @Post('export/pdf')
+  @Permissions('account-payable.index')
+  async exportPdfFiltered(
+    @Query('year') year: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportPdf(year, res, ids);
   }
   @Post()
   @Permissions('account-payable.create')

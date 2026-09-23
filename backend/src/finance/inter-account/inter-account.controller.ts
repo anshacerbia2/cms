@@ -2,6 +2,7 @@ import { Controller, Get, Query, UseGuards, Param, ParseIntPipe, Patch, Delete, 
 import type { Response } from 'express';
 import { generateExcelBuffer } from '../../common/utils/excel.util';
 import { generatePdfBuffer } from '../../common/utils/pdf.util';
+import { pickExportRows } from '../../common/utils/export-rows.util';
 import { InterAccountService } from './inter-account.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -44,9 +45,9 @@ export class InterAccountController {
 
   @Get('export/excel')
   @Permissions('inter-account.index')
-  async exportInterAccount(@Query('year') year: string, @Res() res: Response) {
+  async exportInterAccount(@Query('year') year: string, @Res() res: Response, ids?: string[]) {
     const data = await this.interAccountService.getAllInterAccount(year ? Number(year) : undefined);
-    const cleanData = data.map(item => {
+    const cleanData = pickExportRows(data, ids).map(item => {
       const { id, tagYear, createdAt, updatedAt, ...rest } = item;
       return rest;
     });
@@ -59,11 +60,26 @@ export class InterAccountController {
     res.end(buffer);
   }
 
+  /*
+   * Kembaran POST dari ekspor di atas. Badannya membawa `ids`: baris yang lolos
+   * filter kolom di layar. Lewat POST karena daftar id bisa ribuan - terlalu
+   * panjang untuk ditaruh di URL. Tanpa `ids`, hasilnya sama persis dengan GET.
+   */
+  @Post('export/excel')
+  @Permissions('inter-account.index')
+  async exportInterAccountFiltered(
+    @Query('year') year: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportInterAccount(year, res, ids);
+  }
+
   @Get('export/pdf')
   @Permissions('inter-account.index')
-  async exportInterAccountPdf(@Query('year') year: string, @Res() res: Response) {
+  async exportInterAccountPdf(@Query('year') year: string, @Res() res: Response, ids?: string[]) {
     const data = await this.interAccountService.getAllInterAccount(year ? Number(year) : undefined);
-    const cleanData = data.map(item => {
+    const cleanData = pickExportRows(data, ids).map(item => {
       const { id, tagYear, createdAt, updatedAt, ...rest } = item;
       return rest;
     });
@@ -74,6 +90,21 @@ export class InterAccountController {
       'Content-Length': buffer.length,
     });
     res.end(buffer);
+  }
+
+  /*
+   * Kembaran POST dari ekspor di atas. Badannya membawa `ids`: baris yang lolos
+   * filter kolom di layar. Lewat POST karena daftar id bisa ribuan - terlalu
+   * panjang untuk ditaruh di URL. Tanpa `ids`, hasilnya sama persis dengan GET.
+   */
+  @Post('export/pdf')
+  @Permissions('inter-account.index')
+  async exportInterAccountPdfFiltered(
+    @Query('year') year: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportInterAccountPdf(year, res, ids);
   }
 
   @Get('paginated')

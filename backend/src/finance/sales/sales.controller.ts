@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, UseGuards, Query, Param, ParseIntPipe, Pat
 import type { Response } from 'express';
 import { generateExcelBuffer } from '../../common/utils/excel.util';
 import { generatePdfBuffer } from '../../common/utils/pdf.util';
+import { pickExportRows } from '../../common/utils/export-rows.util';
 import { SalesService } from './sales.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -67,9 +68,9 @@ export class SalesController {
 
   @Get('export/excel')
   @Permissions('sales.index')
-  async exportSales(@Query('year') year: string, @Res() res: Response) {
+  async exportSales(@Query('year') year: string, @Res() res: Response, ids?: string[]) {
     const data = await this.salesService.getAllSales(year ? Number(year) : undefined);
-    const cleanData = data.map(item => {
+    const cleanData = pickExportRows(data, ids).map(item => {
       const { id, tagYear, createdAt, updatedAt, ...rest } = item;
       return rest;
     });
@@ -82,11 +83,26 @@ export class SalesController {
     res.end(buffer);
   }
 
+  /*
+   * Kembaran POST dari ekspor di atas. Badannya membawa `ids`: baris yang lolos
+   * filter kolom di layar. Lewat POST karena daftar id bisa ribuan - terlalu
+   * panjang untuk ditaruh di URL. Tanpa `ids`, hasilnya sama persis dengan GET.
+   */
+  @Post('export/excel')
+  @Permissions('sales.index')
+  async exportSalesFiltered(
+    @Query('year') year: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportSales(year, res, ids);
+  }
+
   @Get('export/pdf')
   @Permissions('sales.index')
-  async exportSalesPdf(@Query('year') year: string, @Res() res: Response) {
+  async exportSalesPdf(@Query('year') year: string, @Res() res: Response, ids?: string[]) {
     const data = await this.salesService.getAllSales(year ? Number(year) : undefined);
-    const cleanData = data.map(item => {
+    const cleanData = pickExportRows(data, ids).map(item => {
       const { id, tagYear, createdAt, updatedAt, ...rest } = item;
       return rest;
     });
@@ -97,6 +113,21 @@ export class SalesController {
       'Content-Length': buffer.length,
     });
     res.end(buffer);
+  }
+
+  /*
+   * Kembaran POST dari ekspor di atas. Badannya membawa `ids`: baris yang lolos
+   * filter kolom di layar. Lewat POST karena daftar id bisa ribuan - terlalu
+   * panjang untuk ditaruh di URL. Tanpa `ids`, hasilnya sama persis dengan GET.
+   */
+  @Post('export/pdf')
+  @Permissions('sales.index')
+  async exportSalesPdfFiltered(
+    @Query('year') year: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportSalesPdf(year, res, ids);
   }
 
   @Post('bulk')

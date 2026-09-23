@@ -2,6 +2,7 @@ import { Controller, Get, Query, UseGuards, Param, ParseIntPipe, Patch, Delete, 
 import type { Response } from 'express';
 import { generateExcelBuffer } from '../../common/utils/excel.util';
 import { generatePdfBuffer } from '../../common/utils/pdf.util';
+import { pickExportRows } from '../../common/utils/export-rows.util';
 import { PpnInOutService } from './ppn-in-out.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -42,9 +43,9 @@ export class PpnInOutController {
 
   @Get('export/excel')
   @Permissions('ppn-in-out.index')
-  async exportPpnInOut(@Query('year') year: string, @Res() res: Response) {
+  async exportPpnInOut(@Query('year') year: string, @Res() res: Response, ids?: string[]) {
     const data = await this.ppnInOutService.getAllPpnInOut(year ? Number(year) : undefined);
-    const cleanData = data.map(item => {
+    const cleanData = pickExportRows(data, ids).map(item => {
       const { id, tagYear, createdAt, updatedAt, ...rest } = item;
       return rest;
     });
@@ -57,11 +58,26 @@ export class PpnInOutController {
     res.end(buffer);
   }
 
+  /*
+   * Kembaran POST dari ekspor di atas. Badannya membawa `ids`: baris yang lolos
+   * filter kolom di layar. Lewat POST karena daftar id bisa ribuan - terlalu
+   * panjang untuk ditaruh di URL. Tanpa `ids`, hasilnya sama persis dengan GET.
+   */
+  @Post('export/excel')
+  @Permissions('ppn-in-out.index')
+  async exportPpnInOutFiltered(
+    @Query('year') year: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportPpnInOut(year, res, ids);
+  }
+
   @Get('export/pdf')
   @Permissions('ppn-in-out.index')
-  async exportPpnInOutPdf(@Query('year') year: string, @Res() res: Response) {
+  async exportPpnInOutPdf(@Query('year') year: string, @Res() res: Response, ids?: string[]) {
     const data = await this.ppnInOutService.getAllPpnInOut(year ? Number(year) : undefined);
-    const cleanData = data.map(item => {
+    const cleanData = pickExportRows(data, ids).map(item => {
       const { id, tagYear, createdAt, updatedAt, ...rest } = item;
       return rest;
     });
@@ -72,6 +88,21 @@ export class PpnInOutController {
       'Content-Length': buffer.length,
     });
     res.end(buffer);
+  }
+
+  /*
+   * Kembaran POST dari ekspor di atas. Badannya membawa `ids`: baris yang lolos
+   * filter kolom di layar. Lewat POST karena daftar id bisa ribuan - terlalu
+   * panjang untuk ditaruh di URL. Tanpa `ids`, hasilnya sama persis dengan GET.
+   */
+  @Post('export/pdf')
+  @Permissions('ppn-in-out.index')
+  async exportPpnInOutPdfFiltered(
+    @Query('year') year: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportPpnInOutPdf(year, res, ids);
   }
 
   @Get()
