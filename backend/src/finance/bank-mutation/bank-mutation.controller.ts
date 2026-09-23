@@ -6,6 +6,7 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 import { generateExcelBuffer } from '../../common/utils/excel.util';
 import { generatePdfBuffer } from '../../common/utils/pdf.util';
+import { pickExportRows } from '../../common/utils/export-rows.util';
 import type { Response } from 'express';
 import { Res } from '@nestjs/common';
 
@@ -51,10 +52,11 @@ export class BankMutationController {
     @Query('year') year: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
-    @Res() res: Response
+    @Res() res: Response,
+    ids?: string[],
   ) {
     const data = await this.bankMutationService.getAllTransactions(accountId, year ? Number(year) : undefined, startDate, endDate);
-    const cleanData = data.map(item => {
+    const cleanData = pickExportRows(data, ids).map(item => {
       const { id, tagYear, internalAccountId, createdAt, updatedAt, ...rest } = item;
       return rest;
     });
@@ -64,6 +66,24 @@ export class BankMutationController {
     res.send(buffer);
   }
 
+  /*
+   * Kembaran POST dari ekspor di atas. Badannya membawa `ids`: baris yang lolos
+   * filter kolom di layar. Lewat POST karena daftar id bisa ribuan - terlalu
+   * panjang untuk ditaruh di URL. Tanpa `ids`, hasilnya sama persis dengan GET.
+   */
+  @Post('export/excel')
+  @Permissions('bank-mutation.index')
+  async exportExcelFiltered(
+    @Query('accountId') accountId: string,
+    @Query('year') year: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportExcel(accountId, year, startDate, endDate, res, ids);
+  }
+
   @Get('export/pdf')
   @Permissions('bank-mutation.index')
   async exportPdf(
@@ -71,10 +91,11 @@ export class BankMutationController {
     @Query('year') year: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
-    @Res() res: Response
+    @Res() res: Response,
+    ids?: string[],
   ) {
     const data = await this.bankMutationService.getAllTransactions(accountId, year ? Number(year) : undefined, startDate, endDate);
-    const cleanData = data.map(item => {
+    const cleanData = pickExportRows(data, ids).map(item => {
       const { id, tagYear, internalAccountId, createdAt, updatedAt, ...rest } = item;
       return rest;
     });
@@ -82,6 +103,24 @@ export class BankMutationController {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Bank_Statement_${year || 'All'}.pdf`);
     res.send(buffer);
+  }
+
+  /*
+   * Kembaran POST dari ekspor di atas. Badannya membawa `ids`: baris yang lolos
+   * filter kolom di layar. Lewat POST karena daftar id bisa ribuan - terlalu
+   * panjang untuk ditaruh di URL. Tanpa `ids`, hasilnya sama persis dengan GET.
+   */
+  @Post('export/pdf')
+  @Permissions('bank-mutation.index')
+  async exportPdfFiltered(
+    @Query('accountId') accountId: string,
+    @Query('year') year: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportPdf(accountId, year, startDate, endDate, res, ids);
   }
 
   @Post('transactions/bulk')

@@ -21,7 +21,7 @@ import { formatCurrency, cleanAmount, getAmountColor } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { Decimal } from "decimal.js";
 import { Edit2, Trash2, AlertCircle, Download, FileSpreadsheet, FileText, Eye } from "lucide-react";
-import { downloadExcelFile, downloadPdfFile } from "@/lib/downloadFile";
+import { downloadExcelFile, downloadPdfFile, exportFilter } from "@/lib/downloadFile";
 import { DetailModal } from "@/components/common/DetailModal";
 import { 
   DropdownMenu,
@@ -280,14 +280,14 @@ export default function AccountReceivablePage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="rounded-xl border-primary/10 shadow-premium bg-white p-0 overflow-hidden w-40">
               <DropdownMenuItem 
-                onClick={() => downloadExcelFile(`/finance/account-receivable/export/excel${arYearFilter !== 'all' ? `?year=${arYearFilter}` : ''}`, `Account_Receivable_${arYearFilter !== 'all' ? arYearFilter : 'All'}.xlsx`)}
+                onClick={() => downloadExcelFile(`/finance/account-receivable/export/excel${arYearFilter !== 'all' ? `?year=${arYearFilter}` : ''}`, `Account_Receivable_${arYearFilter !== 'all' ? arYearFilter : 'All'}.xlsx`, exportFilter(isAnyFilterActive, filteredAndSortedData))}
                 className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-emerald-600 transition-colors flex items-center gap-2"
               >
                 <FileSpreadsheet size={16} strokeWidth={2.5} />
                 Export Excel
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => downloadPdfFile(`/finance/account-receivable/export/pdf${arYearFilter !== 'all' ? `?year=${arYearFilter}` : ''}`, `Account_Receivable_${arYearFilter !== 'all' ? arYearFilter : 'All'}.pdf`)}
+                onClick={() => downloadPdfFile(`/finance/account-receivable/export/pdf${arYearFilter !== 'all' ? `?year=${arYearFilter}` : ''}`, `Account_Receivable_${arYearFilter !== 'all' ? arYearFilter : 'All'}.pdf`, exportFilter(isAnyFilterActive, filteredAndSortedData))}
                 className="text-[11px] font-bold uppercase py-3 px-5 focus:bg-slate-100 rounded-none cursor-pointer border-b border-slate-100/50 last:border-0 text-rose-600 transition-colors flex items-center gap-2"
               >
                 <FileText size={16} strokeWidth={2.5} />
