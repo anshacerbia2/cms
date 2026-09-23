@@ -27,6 +27,10 @@ export interface InternalAccount {
   updatedAt: string;
   /** No Tax invoices must settle to this account. */
   isNonVatSettlement?: boolean;
+  /** Balance of the last fiscal year that has any data: opening + credit - debit. */
+  lastBalance?: string | null;
+  /** Which fiscal year `lastBalance` belongs to - not every account stops in the same year. */
+  lastBalanceYear?: number | null;
 }
 
 export interface CreateBankInput {

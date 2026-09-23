@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatCurrency } from "@/lib/utils";
 
 export function AccountsTab() {
   const [page, setPage] = useState(1);
@@ -278,6 +279,22 @@ export function AccountsTab() {
                           <span className="text-xs font-black text-primary tracking-widest uppercase">{account.branch || "-"}</span>
                       </div>
                     </div>
+                  )}
+               </div>
+
+               {/* Saldo tahun buku terakhir yang punya data. Tahunnya ikut ditulis
+                   karena tidak semua rekening berhenti di tahun yang sama. */}
+               <div className="flex items-end justify-between pt-4 border-t border-primary/5 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[8px] font-extrabold text-muted-foreground uppercase tracking-widest">Last Balance</span>
+                    <span className="text-sm font-black text-primary tabular-nums">
+                      {account.lastBalance != null ? formatCurrency(account.lastBalance) : "-"}
+                    </span>
+                  </div>
+                  {account.lastBalanceYear != null && (
+                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-50">
+                      As of {account.lastBalanceYear}
+                    </span>
                   )}
                </div>
 
