@@ -8,13 +8,17 @@ import { generateExcelBuffer } from '../../common/utils/excel.util';
 import { generatePdfBuffer } from '../../common/utils/pdf.util';
 import { Res } from '@nestjs/common';
 
+/**
+ * Sama dengan AR (permintaan klien 2026-09-23): kolom USD dibuang karena kosong
+ * di 2025 dan 2026, dan EOY / Outstanding IDR dinamai ulang. AP In and Out tetap
+ * ada - masih terisi di enam baris 2025.
+ */
 const AP_COLUMN_MAPPING = {
   colA: 'Payable',
   colB: 'Year',
   colC: 'Vendor',
   colD: 'Keterangan',
-  colE: 'EOY IDR|accounting',
-  colF: 'EOY USD|accounting',
+  colE: 'Beginning Balance|accounting',
   colG: 'Col G|accounting',
   colH: 'Col H',
   colI: 'Col I',
@@ -27,8 +31,7 @@ const AP_COLUMN_MAPPING = {
   colQ: 'Cash IDR|accounting',
   colR: 'Non CB|accounting',
   colS: 'AP In and Out|accounting',
-  colU: 'Outstanding IDR|accounting',
-  colV: 'Outstanding USD|accounting',
+  colU: 'Ending Balance|accounting',
 };
 
 @Controller('finance/account-payable')
