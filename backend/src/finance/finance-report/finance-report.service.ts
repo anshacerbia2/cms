@@ -1157,6 +1157,56 @@ export class FinanceReportService {
    * @param date Optional end date filter.
    * @returns Headers (bank names) and rows (transactions mapped to columns).
    */
+  /**
+   * Gross Profit per project: Net Sales dari tabel Sales ditambah COGS dari bank
+   * statement, dicocokkan lewat nama project tanpa beda huruf besar-kecil.
+   *
+   * Dibangun dari dua breakdown yang sudah ada, jadi angkanya sama persis
+   * dengan yang tampil di layar dan totalnya sama dengan baris GROSS PROFIT.
+   * Project yang hanya ada di salah satu sisi tetap muncul dengan sisi lainnya
+   * nol - kalau dibuang, totalnya tidak lagi cocok.
+   */
+  async getGrossProfitByProject(year?: number, date?: string) {
+    const [sales, cogs] = await Promise.all([
+      this.getPLDetails(year, 'Sales', date),
+      this.getSalesCogsDetails(year, date),
+    ]);
+
+    const key = (name: any) => String(name ?? '').trim().toLowerCase();
+    const rows = new Map<string, { project: string; netSales: Prisma.Decimal; cogs: Prisma.Decimal; inSales: boolean; inCogs: boolean }>();
+    const get = (name: string) => {
+      const k = key(name);
+      if (!rows.has(k)) rows.set(k, { project: name, netSales: new Prisma.Decimal(0), cogs: new Prisma.Decimal(0), inSales: false, inCogs: false });
+      return rows.get(k)!;
+    };
+
+    for (const row of sales as any[]) {
+      const entry = get(row.salesCode || '-');
+      entry.project = row.salesCode || '-';
+      entry.netSales = entry.netSales.plus(new Prisma.Decimal(row.amount || 0));
+      entry.inSales = true;
+    }
+    for (const row of (cogs as any).rows as any[]) {
+      const entry = get(row.cogs || 'Other');
+      entry.cogs = entry.cogs.plus(new Prisma.Decimal(row.rowTotal || 0));
+      entry.inCogs = true;
+    }
+
+    return Array.from(rows.values())
+      .sort((a, b) => a.project.localeCompare(b.project, undefined, { sensitivity: 'base', numeric: true }))
+      .map((r) => {
+        const grossProfit = r.netSales.plus(r.cogs);
+        return {
+          project: r.project,
+          netSales: formatDecimal(r.netSales),
+          cogs: formatDecimal(r.cogs),
+          grossProfit: formatDecimal(grossProfit),
+          margin: r.netSales.isZero() ? null : grossProfit.div(r.netSales).times(100).toFixed(2),
+          source: r.inSales && r.inCogs ? 'Sales & COGS' : r.inSales ? 'Sales only' : 'COGS only',
+        };
+      });
+  }
+
   async getSalesCogsDetails(year?: number, date?: string) {
     // 1. Fetch all internal accounts to build dynamic headers
     const accounts = await this.prisma.internalAccount.findMany({

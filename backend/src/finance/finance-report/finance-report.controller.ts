@@ -8,10 +8,71 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 
+/** Kolom unduhan P&L. Net Sales, COGS, dan Margin hanya terisi di bagian project. */
+const PL_COLUMN_MAPPING = {
+  account: 'Account/Description',
+  total: 'Amount|accounting',
+  netSales: 'Net Sales|accounting',
+  cogs: 'COGS|accounting',
+  margin: 'Margin',
+  source: 'Source',
+};
+
 @Controller('finance')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class FinanceReportController {
   constructor(private readonly financeService: FinanceReportService) {}
+
+  /**
+   * Baris laporan P&L untuk diunduh, ditambah rincian Gross Profit per project
+   * di bawahnya - bagian yang sama dengan yang bisa dibuka di layar.
+   *
+   * Kolom Amount dipakai bersama: untuk baris P&L isinya nilai baris itu, untuk
+   * baris project isinya Gross Profit project tersebut. Net Sales, COGS, dan
+   * Margin hanya terisi di bagian project.
+   */
+  private async plRowsWithGrossProfit(year?: string, date?: string) {
+    const [data, projects] = await Promise.all([
+      this.financeService.getProfitLossStatement(year ? Number(year) : undefined, date),
+      this.financeService.getGrossProfitByProject(year ? Number(year) : undefined, date),
+    ]);
+
+    const rows: any[] = data.tableData.map((row) => ({
+      ...row,
+      account: row.level >= 2 ? `${'    '.repeat(row.level - 1)}${row.account}` : row.account,
+      _style: row.isHeader || row.isTotal ? { bold: true } : undefined,
+    }));
+
+    if (projects.length > 0) {
+      const sum = (field: 'netSales' | 'cogs' | 'grossProfit') =>
+        projects.reduce((total, p) => total + Number((p as any)[field] || 0), 0);
+      const netSales = sum('netSales');
+      const grossProfit = sum('grossProfit');
+
+      rows.push({ account: '' });
+      rows.push({ account: 'GROSS PROFIT PER PROJECT', _style: { bold: true } });
+      for (const p of projects) {
+        rows.push({
+          account: `    ${p.project}`,
+          netSales: p.netSales,
+          cogs: p.cogs,
+          total: p.grossProfit,
+          margin: p.margin === null ? '' : `${p.margin}%`,
+          source: p.source,
+        });
+      }
+      rows.push({
+        account: 'TOTAL',
+        netSales: String(netSales),
+        cogs: String(sum('cogs')),
+        total: String(grossProfit),
+        margin: netSales === 0 ? '' : `${((grossProfit / netSales) * 100).toFixed(2)}%`,
+        _style: { bold: true },
+      });
+    }
+
+    return rows;
+  }
 
 
 
@@ -141,17 +202,8 @@ export class FinanceReportController {
     @Query('date') date: string,
     @Res() res: Response
   ) {
-    const data = await this.financeService.getProfitLossStatement(year ? Number(year) : undefined, date);
-    const PL_COLUMN_MAPPING = {
-      account: 'Account/Description',
-      total: 'Amount'
-    };
-    const indentedData = data.tableData.map(row => ({
-      ...row,
-      account: row.level >= 2 ? `${'    '.repeat(row.level - 1)}${row.account}` : row.account,
-      _style: (row.isHeader || row.isTotal) ? { bold: true } : undefined
-    }));
-    const buffer = generateExcelBuffer(indentedData, 'Profit Loss', PL_COLUMN_MAPPING);
+    const rows = await this.plRowsWithGrossProfit(year, date);
+    const buffer = generateExcelBuffer(rows, 'Profit Loss', PL_COLUMN_MAPPING);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=Profit_Loss_${year || 'All'}.xlsx`);
     res.send(buffer);
@@ -164,17 +216,8 @@ export class FinanceReportController {
     @Query('date') date: string,
     @Res() res: Response
   ) {
-    const data = await this.financeService.getProfitLossStatement(year ? Number(year) : undefined, date);
-    const PL_COLUMN_MAPPING = {
-      account: 'Account/Description',
-      total: 'Amount'
-    };
-    const indentedData = data.tableData.map(row => ({
-      ...row,
-      account: row.level >= 2 ? `${'    '.repeat(row.level - 1)}${row.account}` : row.account,
-      _style: (row.isHeader || row.isTotal) ? { bold: true } : undefined
-    }));
-    const buffer = await generatePdfBuffer(indentedData, `Profit Loss Statement ${year || 'All Time'}`, PL_COLUMN_MAPPING);
+    const rows = await this.plRowsWithGrossProfit(year, date);
+    const buffer = await generatePdfBuffer(rows, `Profit Loss Statement ${year || 'All Time'}`, PL_COLUMN_MAPPING);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Profit_Loss_${year || 'All'}.pdf`);
     res.send(buffer);
