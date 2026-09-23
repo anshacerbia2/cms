@@ -236,7 +236,9 @@ export function ExcelColumnFilter({
   };
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    // modal={false}: tanpa ini Radix mengunci scroll halaman selama popup
+    // terbuka, jadi popup yang muncul di dekat tepi layar tidak bisa dijangkau.
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
       <DropdownMenuTrigger asChild>
         <button className={cn(
           "ml-1.5 p-1 rounded-md hover:bg-primary/5 transition-all inline-flex items-center cursor-pointer opacity-40 hover:opacity-100 group",
@@ -250,12 +252,14 @@ export function ExcelColumnFilter({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        // Radix menggeser popup agar tetap di dalam layar; lebarnya juga dibatasi
-        // lebar layar supaya nilai yang panjang tidak membuatnya menjorok keluar.
+        // Radix menggeser popup agar tetap di dalam layar; lebar dan tingginya juga
+        // dibatasi ukuran layar supaya isi yang panjang tidak menjorok keluar.
+        // Popup jadi kolom flex: hanya daftar nilai yang ikut scroll, sehingga judul,
+        // tombol urut, pencarian, dan tombol OK selalu kelihatan di layar pendek.
         collisionPadding={12}
-        className="w-[22rem] max-w-[calc(100vw-1.5rem)] p-3 bg-white/95 backdrop-blur-xl border-primary/10 shadow-2xl rounded-2xl z-[150]"
+        className="flex flex-col overflow-hidden w-[22rem] max-w-[calc(100vw-1.5rem)] max-h-[min(var(--radix-dropdown-menu-content-available-height,100vh),calc(100vh_-_2rem))] p-3 bg-white/95 backdrop-blur-xl border-primary/10 shadow-2xl rounded-2xl z-[150]"
       >
-        <div className="space-y-3">
+        <div className="flex min-h-0 flex-1 flex-col space-y-3">
           <div className="text-[11px] font-black uppercase text-primary tracking-widest pl-1">{sortOnly ? 'Sort' : 'Filter'}: {label}</div>
           
           {/* Sorting */}
@@ -352,7 +356,7 @@ export function ExcelColumnFilter({
           {/* List */}
           {/* Nilai yang panjang digeser ke samping, bukan dipotong. Baris-barisnya
               selebar isinya (min-w-max) supaya scroll mendatar benar-benar jalan. */}
-          <div className="max-h-64 overflow-y-auto overflow-x-auto pr-1 custom-scrollbar">
+          <div className="min-h-0 flex-1 max-h-64 overflow-y-auto overflow-x-auto pr-1 custom-scrollbar">
             <div className="space-y-0.5 min-w-max">
             <label className="flex items-center space-x-2.5 p-1.5 rounded-lg hover:bg-primary/5 cursor-pointer transition-colors">
               <input 
@@ -458,7 +462,7 @@ export function ExcelColumnFilter({
           <DropdownMenuSeparator className="bg-primary/5" />
 
           {/* Actions */}
-          <div className="flex justify-between items-center pt-1">
+          <div className="flex shrink-0 justify-between items-center pt-1">
             <Button 
               variant="ghost" 
               size="sm" 
