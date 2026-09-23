@@ -68,36 +68,59 @@ export function generatePdfBuffer(data: any[], title: string, columnMapping: Rec
       body.unshift(headers as any[]);
 
       /*
-       * Lebar kolom dihitung dari isi terpanjangnya, lalu kertasnya dibuat
-       * selebar tabel. Sebelumnya kolom angka memakai lebar 'auto' di atas
-       * kertas A3: begitu jumlah kolom bertambah, tabelnya lebih lebar dari
-       * kertas dan kolom paling kanan terpotong.
+       * Lebar kolom diukur dari isinya dengan metrik font yang dipakai PDF ini,
+       * lalu kertasnya dibuat selebar tabel.
        *
-       * Kolom teks dibatasi supaya deskripsi yang panjang membungkus ke bawah,
-       * bukan melebarkan kertas tanpa henti; kolom angka tidak dibatasi keras
-       * supaya nominalnya tidak pernah terpotong.
+       * Dulu kolom angka memakai lebar 'auto' di atas kertas tetap, sehingga
+       * tabel yang lebih lebar dari kertas terpotong di kanan. Menaksir lebar
+       * dari jumlah karakter juga tidak cukup: pdfmake melebarkan sendiri kolom
+       * yang isinya tidak muat, dan tabelnya kembali melewati tepi kertas.
+       *
+       * Lebar yang diberikan ke pdfmake adalah lebar ISI sel; padding dan garis
+       * tabel ditambahkan pdfmake di luar itu, jadi keduanya dihitung terpisah
+       * saat menentukan lebar kertas - kalau tidak, tabelnya melewati tepi
+       * sebanyak satu padding per kolom.
        */
       const FONT_SIZE = 7;
-      const CHAR_WIDTH = FONT_SIZE * 0.55;   // rata-rata lebar karakter Helvetica
-      const CELL_PADDING = 12;
+      const CELL_PADDING = 8;         // paddingLeft + paddingRight bawaan pdfmake
+      const BORDER = 1;               // garis vertikal antar kolom
       const MARGIN_X = 20;
+      const TEXT_COLUMN_CAP = 190;    // kolom teks dibatasi supaya deskripsi panjang membungkus
+
+      const PDFDocument = require('pdfkit');
+      const ruler = new PDFDocument({ autoFirstPage: false });
+      const widthOf = (text: string, bold = false) =>
+        ruler.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(FONT_SIZE).widthOfString(text);
+
+      /** Beberapa teks terpanjang saja yang diukur - huruf terlebar belum tentu yang terbanyak karakternya. */
+      const widest = (texts: string[], bold: boolean) =>
+        texts
+          .sort((a, b) => b.length - a.length)
+          .slice(0, 5)
+          .reduce((max, text) => Math.max(max, widthOf(text, bold)), 0);
 
       const columnWidths = keys.map((k, index) => {
         const mappingVal = columnMapping[k];
         const isNumeric = mappingVal.endsWith('|accounting') || mappingVal.endsWith('|num');
-        let longest = 0;
-        for (const row of body) {
+        const cells = body.slice(1).map((row: any[]) => {
           const cell: any = row[index];
-          const text = String((cell && typeof cell === 'object' ? cell.text : cell) ?? '');
-          if (text.length > longest) longest = text.length;
-        }
-        const needed = longest * CHAR_WIDTH + CELL_PADDING;
-        const max = isNumeric ? 140 : 190;
-        return Math.min(Math.max(needed, 34), max);
+          return String((cell && typeof cell === 'object' ? cell.text : cell) ?? '');
+        });
+
+        const headerWidth = widthOf(String(headers?.[index] ?? ''), true);
+        const contentWidth = widest(cells, false);
+        const needed = Math.max(headerWidth, contentWidth);
+        if (isNumeric) return Math.max(needed, 26);
+
+        // Kolom teks boleh dipangkas sampai batas, tapi tidak boleh lebih sempit
+        // dari kata terpanjangnya: kata tidak bisa dipenggal, dan pdfmake akan
+        // melebarkan kolomnya sendiri - itu yang membuat tabel melewati kertas.
+        const longestWord = widest(cells.flatMap((text) => text.split(/\s+/)), false);
+        return Math.max(Math.min(needed, Math.max(TEXT_COLUMN_CAP, longestWord)), 26);
       });
 
-      const tableWidth = columnWidths.reduce((total, w) => total + w, 0) + keys.length + 2;
-      // Minimal seukuran A4 mendatar; lebih lebar kalau tabelnya memang lebar.
+      const tableWidth =
+        columnWidths.reduce((total, w) => total + w, 0) + keys.length * (CELL_PADDING + BORDER) + BORDER;
       // Tingginya tetap seperti sebelumnya (setara A3 mendatar) supaya jumlah
       // halamannya tidak membengkak; yang menyesuaikan isi hanya lebarnya.
       const customPageSize: any = { width: Math.max(842, Math.ceil(tableWidth + MARGIN_X * 2)), height: 841.89 };
