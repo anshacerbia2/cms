@@ -67,21 +67,48 @@ export function generatePdfBuffer(data: any[], title: string, columnMapping: Rec
       // Put headers at the beginning
       body.unshift(headers as any[]);
 
-      let customPageSize: any = 'A4';
-      if (keys.length > 8 && keys.length <= 14) {
-        customPageSize = 'A3';
-      } else if (keys.length > 14) {
-        // Very wide tables get a custom width to prevent column squishing
-        customPageSize = { width: (keys.length * 90) + 100, height: 842 };
-      }
+      /*
+       * Lebar kolom dihitung dari isi terpanjangnya, lalu kertasnya dibuat
+       * selebar tabel. Sebelumnya kolom angka memakai lebar 'auto' di atas
+       * kertas A3: begitu jumlah kolom bertambah, tabelnya lebih lebar dari
+       * kertas dan kolom paling kanan terpotong.
+       *
+       * Kolom teks dibatasi supaya deskripsi yang panjang membungkus ke bawah,
+       * bukan melebarkan kertas tanpa henti; kolom angka tidak dibatasi keras
+       * supaya nominalnya tidak pernah terpotong.
+       */
+      const FONT_SIZE = 7;
+      const CHAR_WIDTH = FONT_SIZE * 0.55;   // rata-rata lebar karakter Helvetica
+      const CELL_PADDING = 12;
+      const MARGIN_X = 20;
+
+      const columnWidths = keys.map((k, index) => {
+        const mappingVal = columnMapping[k];
+        const isNumeric = mappingVal.endsWith('|accounting') || mappingVal.endsWith('|num');
+        let longest = 0;
+        for (const row of body) {
+          const cell: any = row[index];
+          const text = String((cell && typeof cell === 'object' ? cell.text : cell) ?? '');
+          if (text.length > longest) longest = text.length;
+        }
+        const needed = longest * CHAR_WIDTH + CELL_PADDING;
+        const max = isNumeric ? 140 : 190;
+        return Math.min(Math.max(needed, 34), max);
+      });
+
+      const tableWidth = columnWidths.reduce((total, w) => total + w, 0) + keys.length + 2;
+      // Minimal seukuran A4 mendatar; lebih lebar kalau tabelnya memang lebar.
+      // Tingginya tetap seperti sebelumnya (setara A3 mendatar) supaya jumlah
+      // halamannya tidak membengkak; yang menyesuaikan isi hanya lebarnya.
+      const customPageSize: any = { width: Math.max(842, Math.ceil(tableWidth + MARGIN_X * 2)), height: 841.89 };
 
       const docDefinition: any = {
         pageOrientation: 'landscape',
         pageSize: customPageSize,
-        pageMargins: [20, 30, 20, 30],
+        pageMargins: [MARGIN_X, 30, MARGIN_X, 30],
         defaultStyle: {
           font: 'Helvetica',
-          fontSize: 7, // Smaller font to fit many columns
+          fontSize: FONT_SIZE, // Smaller font to fit many columns
         },
         styles: {
           header: {
@@ -104,15 +131,7 @@ export function generatePdfBuffer(data: any[], title: string, columnMapping: Rec
             table: {
               headerRows: 1,
               // 'auto' keeps numbers compact, '*' allows text to wrap and fill available space evenly
-              widths: keys.map(k => {
-                const mappingVal = columnMapping[k];
-                if (mappingVal.endsWith('|accounting') || mappingVal.endsWith('|num')) {
-                  return 'auto';
-                }
-                // Jika kolom sedikit, '*' akan mengisi sisa kertas.
-                // Jika kolom banyak, page size custom di atas memastikan '*' tidak terlalu sempit.
-                return '*';
-              }),
+              widths: columnWidths,
               body: body
             },
             layout: {
