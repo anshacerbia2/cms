@@ -282,8 +282,9 @@ export function AccountsTab() {
                   )}
                </div>
 
-               {/* Saldo tahun buku terakhir yang punya data. Tahunnya ikut ditulis
-                   karena tidak semua rekening berhenti di tahun yang sama. */}
+               {/* Saldo tahun buku terakhir yang punya data - itulah saldo rekening
+                   ini sekarang. Tahunnya tetap disebut di tooltip: kalau rekening
+                   tidak punya mutasi 2026, angkanya berasal dari 2025. */}
                <div className="flex items-end justify-between pt-4 border-t border-primary/5 gap-4">
                   <div className="flex flex-col gap-1">
                     <span className="text-[8px] font-extrabold text-muted-foreground uppercase tracking-widest">Last Balance</span>
@@ -292,8 +293,11 @@ export function AccountsTab() {
                     </span>
                   </div>
                   {account.lastBalanceYear != null && (
-                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-50">
-                      As of {account.lastBalanceYear}
+                    <span
+                      className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-50"
+                      title={`From fiscal year ${account.lastBalanceYear}, the latest year with any movement.`}
+                    >
+                      As of now
                     </span>
                   )}
                </div>
