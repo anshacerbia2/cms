@@ -5,6 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { CreateBankDto, CreateInternalAccountDto, UpdateBankDto, UpdateInternalAccountDto } from './dto/create-bank.dto';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
@@ -122,6 +123,68 @@ export class BanksService {
     });
   }
 
+  /**
+   * Saldo terakhir tiap rekening, beserta tahun bukunya.
+   *
+   * Diambil dari tahun buku terakhir yang punya data - periode fiskal atau
+   * transaksi - lalu `saldo awal + kredit - debit`. Rumus yang sama dipakai
+   * kolom Current Balance di tab Fiscal Period dan `closingBalanceOf` di
+   * bank-mutation.service.ts, jadi ketiga layar tidak pernah beda angka.
+   *
+   * Sengaja bukan `getLatestAnchor`: fungsi itu menjawab "berapa saldo AWAL
+   * tahun ini", butuh satu tahun acuan, dan menembakkan beberapa query per
+   * rekening. Di sini yang dicari saldo TERAKHIR, dan dua query cukup untuk
+   * seluruh kartu di halaman.
+   *
+   * Tahunnya ikut dikembalikan karena tidak semua rekening berhenti di tahun
+   * yang sama - BRI Tebet dan Mandiri PM tidak punya data 2026 sama sekali,
+   * jadi angkanya harus diberi label "as of 2025", bukan diam-diam dianggap
+   * saldo hari ini.
+   */
+  private async latestBalances(accountIds: bigint[]) {
+    const result = new Map<string, { year: number; balance: string }>();
+    if (accountIds.length === 0) return result;
+
+    const [periods, movements] = await Promise.all([
+      this.prisma.fiscalPeriod.findMany({
+        where: { internalAccountId: { in: accountIds } },
+        select: { internalAccountId: true, year: true, openingBalance: true },
+      }),
+      this.prisma.financialTransaction.groupBy({
+        by: ['internalAccountId', 'tagYear'],
+        where: { internalAccountId: { in: accountIds } },
+        _sum: { colC: true, colD: true },
+      }),
+    ]);
+
+    const latestYear = new Map<string, number>();
+    const noteYear = (id: bigint, year: number) => {
+      const key = id.toString();
+      if (year > (latestYear.get(key) ?? -Infinity)) latestYear.set(key, year);
+    };
+    periods.forEach(p => noteYear(p.internalAccountId, p.year));
+    // Transaksi boleh tidak punya rekening; yang begitu tidak masuk hitungan.
+    movements.forEach(m => m.internalAccountId && noteYear(m.internalAccountId, m.tagYear));
+
+    const openingOf = new Map(
+      periods.map(p => [`${p.internalAccountId}:${p.year}`, p.openingBalance]),
+    );
+    const movementOf = new Map(
+      movements.map(m => [`${m.internalAccountId}:${m.tagYear}`, m._sum]),
+    );
+
+    for (const [key, year] of latestYear) {
+      const opening = openingOf.get(`${key}:${year}`) ?? new Prisma.Decimal(0);
+      const sum = movementOf.get(`${key}:${year}`);
+      result.set(key, {
+        year,
+        balance: formatDecimal(opening.plus(sum?.colD ?? 0).minus(sum?.colC ?? 0)),
+      });
+    }
+
+    return result;
+  }
+
   async findAllInternalAccounts(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
@@ -152,8 +215,17 @@ export class BanksService {
       this.prisma.internalAccount.count({ where }),
     ]);
 
+    const balances = await this.latestBalances(data.map(a => a.id));
+
     return {
-      data,
+      data: data.map(a => {
+        const latest = balances.get(a.id.toString());
+        return {
+          ...a,
+          lastBalance: latest?.balance ?? null,
+          lastBalanceYear: latest?.year ?? null,
+        };
+      }),
       meta: {
         total,
         page,
@@ -248,14 +320,49 @@ export class BanksService {
       this.prisma.fiscalPeriod.count({ where }),
     ]);
 
+    /*
+     * Saldo terakhir tiap periode, dihitung dari transaksinya sendiri:
+     * saldo awal + kredit - debit. Rumusnya sama dengan `closingBalanceOf`
+     * di bank-mutation.service.ts.
+     *
+     * Kolom `closing_balance` sengaja tidak dipakai untuk ini. Kolom itu
+     * ditimpa `recalculateLedger` dengan saldo berjalan untuk tahun apa pun,
+     * jadi untuk tahun yang belum ditutup isinya saldo hari ini - bukan saldo
+     * tutup buku - dan bisa tertinggal kalau perhitungan ulangnya belum sempat
+     * jalan (itu guna kolom `is_stale`). Dihitung di sini, angkanya selalu benar.
+     *
+     * Satu groupBy untuk seluruh baris di halaman ini, bukan satu query per baris.
+     */
+    const movement = new Map<string, { colC: any; colD: any }>();
+    if (data.length > 0) {
+      const sums = await this.prisma.financialTransaction.groupBy({
+        by: ['internalAccountId', 'tagYear'],
+        where: {
+          OR: data.map(p => ({ internalAccountId: p.internalAccountId, tagYear: p.year })),
+        },
+        _sum: { colC: true, colD: true },
+      });
+      for (const s of sums) {
+        movement.set(`${s.internalAccountId}:${s.tagYear}`, s._sum);
+      }
+    }
+
     return {
-      data: data.map(p => ({
-        ...p,
-        id: p.id.toString(),
-        internalAccountId: p.internalAccountId.toString(),
-        openingBalance: formatDecimal(p.openingBalance),
-        closingBalance: p.closingBalance ? formatDecimal(p.closingBalance) : null,
-      })),
+      data: data.map(p => {
+        const sum = movement.get(`${p.internalAccountId}:${p.year}`);
+        const currentBalance = p.openingBalance.plus(sum?.colD ?? 0).minus(sum?.colC ?? 0);
+
+        return {
+          ...p,
+          id: p.id.toString(),
+          internalAccountId: p.internalAccountId.toString(),
+          openingBalance: formatDecimal(p.openingBalance),
+          currentBalance: formatDecimal(currentBalance),
+          // Saldo tutup buku hanya ada kalau bukunya memang sudah ditutup.
+          closingBalance:
+            p.status === 'CLOSED' && p.closingBalance ? formatDecimal(p.closingBalance) : null,
+        };
+      }),
       meta: {
         total,
         page,
