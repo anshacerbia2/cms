@@ -172,8 +172,12 @@
     @apply font-extrabold tracking-tight;
   }
 
+  /* Tebalnya sama untuk kedua arah: width untuk batang tegak, height untuk
+     batang mendatar. Tanpa height, batang mendatar memakai ukuran bawaan
+     peramban yang jauh lebih tebal. */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;

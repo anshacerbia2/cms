@@ -188,16 +188,16 @@ export function ProfitLossTab() {
       }
 
       // Laba bersih: hijau dengan panah naik saat untung, merah dengan panah
-      // turun saat rugi.
-      const isLoss = card.title === "PROFIT AFTER TAX" && Number(card.value) < 0;
+      // turun saat rugi - angkanya ikut berwarna, bukan hanya ikonnya.
+      const isProfit = card.title === "PROFIT AFTER TAX";
+      const isLoss = isProfit && Number(card.value) < 0;
 
       return {
         ...card,
         value: formatCurrency(card.value),
         subValue,
-        color: card.title === "PROFIT AFTER TAX"
-          ? isLoss ? "text-rose-500" : "text-emerald-500"
-          : card.color,
+        color: isProfit ? (isLoss ? "text-rose-500" : "text-emerald-500") : card.color,
+        valueColor: isProfit ? (isLoss ? "text-rose-600" : "text-emerald-600") : "text-primary",
         icon: isLoss ? TrendingDown : iconMap[card.title] || Info,
       };
     });
@@ -1703,7 +1703,7 @@ export function ProfitLossTab() {
                 <card.icon className={`w-4 h-4 ${card.color} transition-opacity`} />
               </div>
               <div className="space-y-1">
-                <h3 className="text-xl font-bold text-primary tracking-tight">
+                <h3 className={`text-xl font-bold tracking-tight ${card.valueColor ?? "text-primary"}`}>
                   {card.value}
                 </h3>
                 <p className="text-[10px] font-bold text-primary/40 uppercase tracking-wider">

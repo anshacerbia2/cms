@@ -9,23 +9,27 @@ import { generateExcelBuffer } from '../../common/utils/excel.util';
 import { generatePdfBuffer } from '../../common/utils/pdf.util';
 import { Res } from '@nestjs/common';
 
+/**
+ * Kolom export Excel dan PDF, atas permintaan klien 2026-09-23.
+ *
+ * Yang dibuang: EOY USD, USD Rate, Outstanding USD, dan PPn In and Out -
+ * keempatnya kosong di seluruh 2025 dan 2026, jadi tidak ada angka yang hilang.
+ * EOY IDR dan Outstanding IDR dinamai ulang jadi Beginning Balance dan Ending
+ * Balance; kolom datanya tetap sama.
+ */
 const AR_COLUMN_MAPPING = {
   colB: 'Type',
   colC: 'Date',
   colD: 'Client',
   colE: 'Description',
-  colF: 'EOY IDR|accounting',
-  colG: 'EOY USD|accounting',
-  colH: 'USD Rate|accounting',
+  colF: 'Beginning Balance|accounting',
   colJ: 'BCA Suhardjo|accounting',
   colK: 'BCA Juanda|accounting',
   colL: 'Mandiri MP|accounting',
   colM: 'BRI Suhardjo|accounting',
   colN: 'Cash IDR|accounting',
   colO: 'Non CB|accounting',
-  colP: 'PPn In and Out|accounting',
-  colR: 'Outstanding IDR|accounting',
-  colS: 'Outstanding USD|accounting',
+  colR: 'Ending Balance|accounting',
 };
 
 @Controller('finance/account-receivable')
