@@ -248,14 +248,49 @@ export class BanksService {
       this.prisma.fiscalPeriod.count({ where }),
     ]);
 
+    /*
+     * Saldo terakhir tiap periode, dihitung dari transaksinya sendiri:
+     * saldo awal + kredit - debit. Rumusnya sama dengan `closingBalanceOf`
+     * di bank-mutation.service.ts.
+     *
+     * Kolom `closing_balance` sengaja tidak dipakai untuk ini. Kolom itu
+     * ditimpa `recalculateLedger` dengan saldo berjalan untuk tahun apa pun,
+     * jadi untuk tahun yang belum ditutup isinya saldo hari ini - bukan saldo
+     * tutup buku - dan bisa tertinggal kalau perhitungan ulangnya belum sempat
+     * jalan (itu guna kolom `is_stale`). Dihitung di sini, angkanya selalu benar.
+     *
+     * Satu groupBy untuk seluruh baris di halaman ini, bukan satu query per baris.
+     */
+    const movement = new Map<string, { colC: any; colD: any }>();
+    if (data.length > 0) {
+      const sums = await this.prisma.financialTransaction.groupBy({
+        by: ['internalAccountId', 'tagYear'],
+        where: {
+          OR: data.map(p => ({ internalAccountId: p.internalAccountId, tagYear: p.year })),
+        },
+        _sum: { colC: true, colD: true },
+      });
+      for (const s of sums) {
+        movement.set(`${s.internalAccountId}:${s.tagYear}`, s._sum);
+      }
+    }
+
     return {
-      data: data.map(p => ({
-        ...p,
-        id: p.id.toString(),
-        internalAccountId: p.internalAccountId.toString(),
-        openingBalance: formatDecimal(p.openingBalance),
-        closingBalance: p.closingBalance ? formatDecimal(p.closingBalance) : null,
-      })),
+      data: data.map(p => {
+        const sum = movement.get(`${p.internalAccountId}:${p.year}`);
+        const currentBalance = p.openingBalance.plus(sum?.colD ?? 0).minus(sum?.colC ?? 0);
+
+        return {
+          ...p,
+          id: p.id.toString(),
+          internalAccountId: p.internalAccountId.toString(),
+          openingBalance: formatDecimal(p.openingBalance),
+          currentBalance: formatDecimal(currentBalance),
+          // Saldo tutup buku hanya ada kalau bukunya memang sudah ditutup.
+          closingBalance:
+            p.status === 'CLOSED' && p.closingBalance ? formatDecimal(p.closingBalance) : null,
+        };
+      }),
       meta: {
         total,
         page,

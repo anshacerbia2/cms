@@ -19,7 +19,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
+
+/**
+ * "BCA · Sahardjo" - merek bank beserta cabangnya.
+ *
+ * Nama pemegang rekening tidak cukup membedakan: enam rekening memakai nama
+ * "PT Panconvince Mitra International" yang sama, dan dua di antaranya sama-sama
+ * Mandiri. Cabangnya yang membedakan.
+ */
+function accountBankLabel(account: any) {
+  const bank = account?.bank?.bankBrand || account?.bank?.bankName || "Internal Ledger";
+  const branch = account?.branch?.trim();
+  return branch ? `${bank} · ${branch}` : bank;
+}
 
 export function FiscalPeriodsTab() {
   const [page, setPage] = useState(1);
@@ -157,9 +170,10 @@ export function FiscalPeriodsTab() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[100px] pl-8">Year</TableHead>
+              <TableHead className="w-[140px] pl-8">Year</TableHead>
               <TableHead>Account & Bank</TableHead>
               <TableHead className="text-right">Opening Balance</TableHead>
+              <TableHead className="text-right">Current Balance</TableHead>
               <TableHead className="text-right pr-8">Closing Balance</TableHead>
             </TableRow>
           </TableHeader>
@@ -170,12 +184,13 @@ export function FiscalPeriodsTab() {
                   <TableCell className="pl-8 "><div className="h-4 w-12 bg-slate-200 rounded"></div></TableCell>
                   <TableCell><div className="h-4 w-48 bg-slate-200 rounded"></div></TableCell>
                   <TableCell><div className="h-4 w-24 bg-slate-200 rounded ml-auto"></div></TableCell>
+                  <TableCell><div className="h-4 w-24 bg-slate-200 rounded ml-auto"></div></TableCell>
                   <TableCell className="text-right "><div className="h-4 w-24 bg-slate-200 rounded ml-auto"></div></TableCell>
                 </TableRow>
               ))
             ) : data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-20 text-center">
+                <TableCell colSpan={5} className="py-20 text-center">
                   <div className="flex flex-col items-center gap-3 opacity-20">
                     <Calendar size={48} />
                     <p className="text-xs font-black uppercase tracking-widest">No Fiscal Periods Found</p>
@@ -183,12 +198,31 @@ export function FiscalPeriodsTab() {
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((item: any) => (
+              data.map((item: any) => {
+                const closed = item.status === "CLOSED";
+                // Buku sudah ditutup tapi saldonya bergerak lagi: ada transaksi yang
+                // disentuh sesudah penutupan, jadi angka tutup bukunya tidak lagi cocok.
+                const driftedAfterClosing =
+                  closed &&
+                  item.closingBalance != null &&
+                  Number(item.currentBalance) !== Number(item.closingBalance);
+
+                return (
                 <TableRow key={item.id} className="group whitespace-nowrap">
                   <TableCell className="pl-8">
                     <div className="flex items-center gap-2">
                        <Calendar size={14} className="text-secondary" />
                        <span className="font-black text-primary text-sm tracking-tight">{item.year}</span>
+                       <span
+                         className={cn(
+                           "text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border",
+                           closed
+                             ? "border-slate-200 bg-slate-50 text-slate-500"
+                             : "border-emerald-200 bg-emerald-50 text-emerald-600",
+                         )}
+                       >
+                         {closed ? "Closed" : "Ongoing"}
+                       </span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -197,7 +231,7 @@ export function FiscalPeriodsTab() {
                       <div className="flex items-center gap-1.5 opacity-60">
                         <Landmark size={10} className="text-muted-foreground" />
                         <span className="text-[10px] font-bold text-muted-foreground uppercase italic tracking-tighter">
-                          {item.internalAccount?.bank?.bankName || item.internalAccount?.bank?.name || "Internal Ledger"}
+                          {accountBankLabel(item.internalAccount)}
                         </span>
                       </div>
                     </div>
@@ -205,11 +239,33 @@ export function FiscalPeriodsTab() {
                   <TableCell className="text-right text-[12px] font-black text-primary whitespace-nowrap tabular-nums">
                     {item.openingBalance != null ? formatCurrency(item.openingBalance) : "-"}
                   </TableCell>
-                  <TableCell className="text-right text-[12px] font-black text-primary pr-8 whitespace-nowrap tabular-nums">
-                    {item.closingBalance != null ? formatCurrency(item.closingBalance) : "-"}
+                  <TableCell
+                    className={cn(
+                      "text-right text-[12px] font-black whitespace-nowrap tabular-nums",
+                      driftedAfterClosing ? "text-amber-600" : "text-primary",
+                    )}
+                    title={
+                      driftedAfterClosing
+                        ? "This differs from the closing balance: transactions changed after the year was closed."
+                        : undefined
+                    }
+                  >
+                    {item.currentBalance != null ? formatCurrency(item.currentBalance) : "-"}
+                  </TableCell>
+                  {/* Saldo tutup buku hanya ada untuk periode yang memang sudah ditutup. */}
+                  <TableCell
+                    className="text-right text-[12px] font-black text-primary pr-8 whitespace-nowrap tabular-nums"
+                    title={closed ? undefined : "The year is still open, so it has no closing balance yet."}
+                  >
+                    {item.closingBalance != null ? (
+                      formatCurrency(item.closingBalance)
+                    ) : (
+                      <span className="text-muted-foreground/40">&mdash;</span>
+                    )}
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
