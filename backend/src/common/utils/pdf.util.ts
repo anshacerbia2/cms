@@ -87,10 +87,36 @@ export function generatePdfBuffer(data: any[], title: string, columnMapping: Rec
       const MARGIN_X = 20;
       const TEXT_COLUMN_CAP = 190;    // kolom teks dibatasi supaya deskripsi panjang membungkus
 
-      const PDFDocument = require('pdfkit');
-      const ruler = new PDFDocument({ autoFirstPage: false });
-      const widthOf = (text: string, bold = false) =>
-        ruler.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(FONT_SIZE).widthOfString(text);
+      /*
+       * Penggaris teks. pdfkit adalah mesin yang dipakai pdfmake untuk menggambar,
+       * jadi metriknya sama persis dengan yang dipakai saat PDF ini dicetak.
+       *
+       * pdfkit bukan dependensi langsung kita, dan pnpm tidak menaruh paket yang
+       * tidak dideklarasikan di node_modules teratas - `require('pdfkit')` polos
+       * gagal di server dan mematikan seluruh unduhan PDF. Jadi dicari lewat
+       * pdfmake yang memang mendeklarasikannya, dan kalau tetap tidak ketemu
+       * lebarnya ditaksir saja: tabel yang lebarnya meleset masih jauh lebih baik
+       * daripada tombol unduh yang gagal.
+       */
+      const widthOf = (() => {
+        try {
+          let mod: any;
+          try {
+            mod = require('pdfkit');
+          } catch {
+            const pdfmakeDir = require('path').dirname(require.resolve('pdfmake'));
+            mod = require(require.resolve('pdfkit', { paths: [pdfmakeDir] }));
+          }
+          const PDFDocument = mod.default ?? mod;
+          const ruler = new PDFDocument({ autoFirstPage: false });
+          const measure = (text: string, bold = false) =>
+            ruler.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(FONT_SIZE).widthOfString(text);
+          measure('probe'); // gagal di sini berarti jatuh ke taksiran, bukan ke error 500
+          return measure;
+        } catch {
+          return (text: string, bold = false) => text.length * FONT_SIZE * (bold ? 0.62 : 0.56);
+        }
+      })();
 
       /** Beberapa teks terpanjang saja yang diukur - huruf terlebar belum tentu yang terbanyak karakternya. */
       const widest = (texts: string[], bold: boolean) =>
@@ -107,7 +133,7 @@ export function generatePdfBuffer(data: any[], title: string, columnMapping: Rec
           return String((cell && typeof cell === 'object' ? cell.text : cell) ?? '');
         });
 
-        const headerWidth = widthOf(String(headers?.[index] ?? ''), true);
+        const headerWidth = widthOf(String(headers?.[index]?.text ?? ''), true);
         const contentWidth = widest(cells, false);
         const needed = Math.max(headerWidth, contentWidth);
         if (isNumeric) return Math.max(needed, 26);
