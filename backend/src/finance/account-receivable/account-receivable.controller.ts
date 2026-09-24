@@ -20,7 +20,7 @@ import { Res } from '@nestjs/common';
  */
 const AR_COLUMN_MAPPING = {
   colB: 'Type',
-  colC: 'Date',
+  colC: 'Year', // isinya tahun (2025, 2026), bukan tanggal
   colD: 'Client',
   colE: 'Description',
   colF: 'Beginning Balance|accounting',

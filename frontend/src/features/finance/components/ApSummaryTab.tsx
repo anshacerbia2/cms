@@ -109,7 +109,7 @@ export function ApSummaryTab() {
       colB: row.colB || "-",
       colC: row.colC || "-",
       colD: row.colD || "-",
-      colE: formatCurrency(row.colE || 0),   // EOY IDR
+      colE: formatCurrency(row.colE || 0),   // Beginning Balance
       colH: row.colH || "-",
       colI: row.colI || "-",
       // colJ are plain strings
@@ -122,7 +122,7 @@ export function ApSummaryTab() {
       colQ: formatCurrency(row.colQ),        // Cash IDR
       colR: formatCurrency(row.colR),        // Non CB
       colS: formatCurrency(row.colS),        // AP In and Out
-      colU: formatCurrency(row.colU),        // Outstanding IDR
+      colU: formatCurrency(row.colU),        // Ending Balance
       // The same figures the fixed columns carry, keyed by account.
       ...Object.fromEntries(
         (row.amounts ?? []).map((a: any) => [accountKey(a.accountId), formatCurrency(a.amount)])
@@ -352,8 +352,8 @@ export function ApSummaryTab() {
                 </TableHead>
                 <TableHead className="text-right w-40 whitespace-nowrap">
                   <div className="flex items-center justify-end gap-1">
-                    IDR
-                    <ExcelColumnFilter columnKey="colE" label="IDR" data={getCascadingData("colE")} activeFilters={apFilters["colE"]} onFilterChange={(v) => { setApFilters(p => ({...p, colE: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colE", direction: d})} />
+                    Beginning Balance
+                    <ExcelColumnFilter columnKey="colE" label="Beginning Balance" data={getCascadingData("colE")} activeFilters={apFilters["colE"]} onFilterChange={(v) => { setApFilters(p => ({...p, colE: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colE", direction: d})} />
                   </div>
                 </TableHead>
 
@@ -395,8 +395,8 @@ export function ApSummaryTab() {
 
                 <TableHead className="text-right w-40 whitespace-nowrap">
                   <div className="flex items-center justify-end gap-1">
-                    Outstanding IDR
-                    <ExcelColumnFilter columnKey="colU" label="Outstanding IDR" data={getCascadingData("colU")} activeFilters={apFilters["colU"]} onFilterChange={(v) => { setApFilters(p => ({...p, colU: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colU", direction: d})} />
+                    Ending Balance
+                    <ExcelColumnFilter columnKey="colU" label="Ending Balance" data={getCascadingData("colU")} activeFilters={apFilters["colU"]} onFilterChange={(v) => { setApFilters(p => ({...p, colU: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colU", direction: d})} />
                   </div>
                 </TableHead>
                 <TableHead className="w-24 px-4 text-center">Actions</TableHead>
@@ -585,7 +585,7 @@ export function ApSummaryTab() {
           { label: "Year", value: selectedViewRecord?.colB },
           { label: "Vendor", value: selectedViewRecord?.colC },
           { label: "Keterangan", value: selectedViewRecord?.colD },
-          { label: "IDR", value: selectedViewRecord?.colE },
+          { label: "Beginning Balance", value: selectedViewRecord?.colE },
           { label: "BCA Shardjo", value: selectedViewRecord?.colK },
           { label: "BCA Juanda", value: selectedViewRecord?.colL },
           { label: "Mandiri Mid Plaza", value: selectedViewRecord?.colM },
@@ -595,7 +595,7 @@ export function ApSummaryTab() {
           { label: "Cash IDR", value: selectedViewRecord?.colQ },
           { label: "Non CB", value: selectedViewRecord?.colR },
           { label: "AP In and Out", value: selectedViewRecord?.colS },
-          { label: "Outstanding IDR", value: selectedViewRecord?.colU },
+          { label: "Ending Balance", value: selectedViewRecord?.colU },
         ]}
       />
     </div>

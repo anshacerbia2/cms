@@ -112,7 +112,6 @@ export default function AccountReceivablePage() {
       colM: formatCurrency(row.colM),
       colN: formatCurrency(row.colN),
       colO: formatCurrency(row.colO),
-      colP: formatCurrency(row.colP),
       // The same figures the fixed columns carry, keyed by account.
       ...Object.fromEntries(
         (row.amounts ?? []).map((a: any) => [accountKey(a.accountId), formatCurrency(a.amount)])
@@ -154,13 +153,12 @@ export default function AccountReceivablePage() {
         colM: acc.colM.plus(new Decimal(cleanAmount(curr.colM))),
         colN: acc.colN.plus(new Decimal(cleanAmount(curr.colN))),
         colO: acc.colO.plus(new Decimal(cleanAmount(curr.colO))),
-        colP: acc.colP.plus(new Decimal(cleanAmount(curr.colP))),
         colR: acc.colR.plus(new Decimal(cleanAmount(curr.colR))),
       };
     }, { 
       colF: new Decimal(0), colJ: new Decimal(0), colK: new Decimal(0), 
       colL: new Decimal(0), colM: new Decimal(0), colN: new Decimal(0), 
-      colO: new Decimal(0), colP: new Decimal(0), colR: new Decimal(0),
+      colO: new Decimal(0), colR: new Decimal(0),
     });
     return { ...byColumn, ...sumAccounts(paginatedData) };
   }, [paginatedData, accountColumns]);
@@ -175,13 +173,12 @@ export default function AccountReceivablePage() {
         colM: acc.colM.plus(new Decimal(cleanAmount(curr.colM))),
         colN: acc.colN.plus(new Decimal(cleanAmount(curr.colN))),
         colO: acc.colO.plus(new Decimal(cleanAmount(curr.colO))),
-        colP: acc.colP.plus(new Decimal(cleanAmount(curr.colP))),
         colR: acc.colR.plus(new Decimal(cleanAmount(curr.colR))),
       };
     }, { 
       colF: new Decimal(0), colJ: new Decimal(0), colK: new Decimal(0), 
       colL: new Decimal(0), colM: new Decimal(0), colN: new Decimal(0), 
-      colO: new Decimal(0), colP: new Decimal(0), colR: new Decimal(0),
+      colO: new Decimal(0), colR: new Decimal(0),
     });
     return { ...byColumn, ...sumAccounts(filteredAndSortedData) };
   }, [filteredAndSortedData, accountColumns]);
@@ -334,8 +331,8 @@ export default function AccountReceivablePage() {
 
                 <TableHead className="text-right w-36">
                   <div className="flex items-center justify-end gap-1">
-                    IDR
-                    <ExcelColumnFilter columnKey="colF" label="IDR" data={getCascadingData("colF")} activeFilters={filters["colF"]} onFilterChange={(v) => { setFilters(p => ({...p, colF: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colF", direction: d})} />
+                    Beginning Balance
+                    <ExcelColumnFilter columnKey="colF" label="Beginning Balance" data={getCascadingData("colF")} activeFilters={filters["colF"]} onFilterChange={(v) => { setFilters(p => ({...p, colF: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colF", direction: d})} />
                   </div>
                 </TableHead>
 
@@ -350,19 +347,10 @@ export default function AccountReceivablePage() {
                   </TableHead>
                 ))}
 
-                {/* Not an account: the VAT clearing position keeps its own
-                    column, read straight from colP. */}
-                <TableHead className="text-right w-36 whitespace-nowrap">
-                  <div className="flex items-center justify-end gap-1">
-                    PPn In and Out
-                    <ExcelColumnFilter columnKey="colP" label="PPn In and Out" data={getCascadingData("colP")} activeFilters={filters["colP"]} onFilterChange={(v) => { setFilters(p => ({...p, colP: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colP", direction: d})} />
-                  </div>
-                </TableHead>
-
                 <TableHead className="text-right w-36">
                   <div className="flex items-center justify-end gap-1">
-                    Outstanding IDR
-                    <ExcelColumnFilter columnKey="colR" label="Outstanding IDR" data={getCascadingData("colR")} activeFilters={filters["colR"]} onFilterChange={(v) => { setFilters(p => ({...p, colR: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colR", direction: d})} />
+                    Ending Balance
+                    <ExcelColumnFilter columnKey="colR" label="Ending Balance" data={getCascadingData("colR")} activeFilters={filters["colR"]} onFilterChange={(v) => { setFilters(p => ({...p, colR: v})); setPage(1); }} currentSort={sort} onSort={(d) => setSort({key: "colR", direction: d})} />
                   </div>
                 </TableHead>
                 <TableHead className="w-24 text-center">Actions</TableHead>
@@ -371,7 +359,7 @@ export default function AccountReceivablePage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8 + accountColumns.length} className="h-64 text-center">
+                  <TableCell colSpan={7 + accountColumns.length} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin" />
                       <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/40">Synchronizing Accounts Receivable...</p>
@@ -380,7 +368,7 @@ export default function AccountReceivablePage() {
                 </TableRow>
               ) : paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8 + accountColumns.length} className="h-64 text-center opacity-20">
+                  <TableCell colSpan={7 + accountColumns.length} className="h-64 text-center opacity-20">
                     <p className="font-black uppercase tracking-widest">No records found</p>
                   </TableCell>
                 </TableRow>
@@ -406,10 +394,6 @@ export default function AccountReceivablePage() {
                           {row[accountKey(account.id)]}
                         </TableCell>
                       ))}
-
-                      <TableCell className={`text-right font-bold ${getAmountColor(row.colP, false)}`}>
-                        {row.colP}
-                      </TableCell>
 
                       <TableCell className={`text-right font-black ${getAmountColor(row.colR, false)}`}>
                         {row.colR}
@@ -464,10 +448,6 @@ export default function AccountReceivablePage() {
                       </TableCell>
                     ))}
 
-                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colP.toString(), false)}`}>
-                      {formatCurrency(subtotalTotals.colP.toString())}
-                    </TableCell>
-                    
                     <TableCell className={`text-right ${getAmountColor(subtotalTotals.colR.toString(), false)}`}>
                       {formatCurrency(subtotalTotals.colR.toString())}
                     </TableCell>
@@ -489,10 +469,6 @@ export default function AccountReceivablePage() {
                       </TableCell>
                     ))}
 
-                    <TableCell className={`text-right ${getAmountColor(grandTotals.colP.toString(), false)}`}>
-                      {formatCurrency(grandTotals.colP.toString())}
-                    </TableCell>
-                    
                     <TableCell className={`text-right ${getAmountColor(grandTotals.colR.toString(), false)}`}>
                       {formatCurrency(grandTotals.colR.toString())}
                     </TableCell>
@@ -577,15 +553,14 @@ export default function AccountReceivablePage() {
           { label: "Year", value: selectedViewRecord?.colC },
           { label: "Client", value: selectedViewRecord?.colD },
           { label: "Description", value: selectedViewRecord?.colE },
-          { label: "IDR", value: selectedViewRecord?.colF },
+          { label: "Beginning Balance", value: selectedViewRecord?.colF },
           { label: "BCA Suhardjo", value: selectedViewRecord?.colJ },
           { label: "BCA Juanda", value: selectedViewRecord?.colK },
           { label: "MANDIRI MP", value: selectedViewRecord?.colL },
           { label: "BRI Suhardjo", value: selectedViewRecord?.colM },
           { label: "Cash IDR", value: selectedViewRecord?.colN },
           { label: "Non CB", value: selectedViewRecord?.colO },
-          { label: "PPn In and Out", value: selectedViewRecord?.colP },
-          { label: "Outstanding IDR", value: selectedViewRecord?.colR },
+          { label: "Ending Balance", value: selectedViewRecord?.colR },
         ]}
       />
     </PageContainer>

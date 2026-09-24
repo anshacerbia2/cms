@@ -55,12 +55,12 @@ const VISIBLE_COLS: (keyof ApRow)[] = [
 
 const LABELS: Partial<Record<keyof ApRow, string>> = {
   colA: 'Payable', colB: 'Year', colC: 'Vendor', colD: 'Keterangan',
-  colE: 'IDR',
+  colE: 'Beginning Balance',
   /* colH: 'Col F', colI: 'Col G', */
   colK: 'BCA Shardjo', colL: 'BCA Juanda', colM: 'Mandiri Mid Plaza',
   colN: 'BTN', colO: 'BRI Shardjo', colP: 'BRI Tebet',
   colQ: 'Cash IDR', colR: 'Non CB', colS: 'AP In and Out',
-  colU: 'Outstanding IDR',
+  colU: 'Ending Balance',
 };
 
 const NUMERIC_COLS: (keyof ApRow)[] = [
