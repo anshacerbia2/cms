@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { formatDecimal } from '../../common/utils/format.utils';
 import {
   syncAccountAmounts, INTER_ACCOUNT_COLUMNS, findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
-import { parseIntSafe } from '../../common/utils/parse.utils';
+import { parseIntSafe, parseDecimalSafe } from '../../common/utils/parse.utils';
 
 @Injectable()
 export class InterAccountService {
@@ -96,19 +96,19 @@ export class InterAccountService {
 
     const data = payload.map(row => ({
       colB: row.colB || null,
-      colC: row.colC?.toString() || null,
-      colD: row.colD?.toString() || null,
-      colE: row.colE?.toString() || null,
-      colF: row.colF?.toString() || null,
-      colG: row.colG?.toString() || null,
-      colH: row.colH?.toString() || null,
-      colI: row.colI?.toString() || null,
-      colJ: row.colJ?.toString() || null,
-      colK: row.colK?.toString() || null,
-      colL: row.colL?.toString() || null,
-      colM: row.colM?.toString() || null,
-      colN: row.colN?.toString() || null,
-      colO: row.colO?.toString() || null,
+      colC: parseDecimalSafe(row.colC, 'colC'),
+      colD: parseDecimalSafe(row.colD, 'colD'),
+      colE: parseDecimalSafe(row.colE, 'colE'),
+      colF: parseDecimalSafe(row.colF, 'colF'),
+      colG: parseDecimalSafe(row.colG, 'colG'),
+      colH: parseDecimalSafe(row.colH, 'colH'),
+      colI: parseDecimalSafe(row.colI, 'colI'),
+      colJ: parseDecimalSafe(row.colJ, 'colJ'),
+      colK: parseDecimalSafe(row.colK, 'colK'),
+      colL: parseDecimalSafe(row.colL, 'colL'),
+      colM: parseDecimalSafe(row.colM, 'colM'),
+      colN: parseDecimalSafe(row.colN, 'colN'),
+      colO: parseDecimalSafe(row.colO, 'colO'),
       tagYear: parsedTagYear,
     }));
 
@@ -134,19 +134,19 @@ export class InterAccountService {
     const saved = await this.prisma.interAccount.create({
       data: {
         colB: data.colB || null,
-        colC: data.colC?.toString() || null,
-        colD: data.colD?.toString() || null,
-        colE: data.colE?.toString() || null,
-        colF: data.colF?.toString() || null,
-        colG: data.colG?.toString() || null,
-        colH: data.colH?.toString() || null,
-        colI: data.colI?.toString() || null,
-        colJ: data.colJ?.toString() || null,
-        colK: data.colK?.toString() || null,
-        colL: data.colL?.toString() || null,
-        colM: data.colM?.toString() || null,
-        colN: data.colN?.toString() || null,
-        colO: data.colO?.toString() || null,
+        colC: parseDecimalSafe(data.colC, 'colC'),
+        colD: parseDecimalSafe(data.colD, 'colD'),
+        colE: parseDecimalSafe(data.colE, 'colE'),
+        colF: parseDecimalSafe(data.colF, 'colF'),
+        colG: parseDecimalSafe(data.colG, 'colG'),
+        colH: parseDecimalSafe(data.colH, 'colH'),
+        colI: parseDecimalSafe(data.colI, 'colI'),
+        colJ: parseDecimalSafe(data.colJ, 'colJ'),
+        colK: parseDecimalSafe(data.colK, 'colK'),
+        colL: parseDecimalSafe(data.colL, 'colL'),
+        colM: parseDecimalSafe(data.colM, 'colM'),
+        colN: parseDecimalSafe(data.colN, 'colN'),
+        colO: parseDecimalSafe(data.colO, 'colO'),
         tagYear: parsedTagYear,
       },
     });

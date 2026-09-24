@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Save } from 'lucide-react';
 import { useAccountReceivable } from '../hooks/useAccountReceivable';
 import { cn, cleanInputAmount, formatInputAmount } from '@/lib/utils';
+import { parseAmountInput } from "@/lib/utils";
 
 interface EditArLedgerModalProps {
   open: boolean;
@@ -83,7 +84,7 @@ export default function EditArLedgerModal({ open, onOpenChange, record, onSucces
       const payload: any = { ...formData };
       NUMERIC_COLS.forEach(key => {
         if (payload[key]) {
-           payload[key] = payload[key].replace(/,/g, '.');
+           payload[key] = parseAmountInput(payload[key]);
         }
       });
       

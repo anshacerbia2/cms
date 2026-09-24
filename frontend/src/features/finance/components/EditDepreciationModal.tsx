@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { parseAmountInput } from "@/lib/utils";
 
 interface EditDepreciationModalProps {
   open: boolean;
@@ -118,7 +119,7 @@ export default function EditDepreciationModal({ open, onOpenChange, recordId, on
       const payload: any = { ...formData };
       NUMERIC_COLS.forEach(key => {
         if (payload[key]) {
-           payload[key] = String(payload[key]).replace(/,/g, '.');
+           payload[key] = parseAmountInput(payload[key]);
         }
       });
       await updateAsset.mutateAsync({

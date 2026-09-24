@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Save } from 'lucide-react';
 import { useAccountPayable } from '../hooks/useAccountPayable';
 import { cn, cleanInputAmount, formatInputAmount } from '@/lib/utils';
+import { parseAmountInput } from "@/lib/utils";
 
 interface EditApLedgerModalProps {
   open: boolean;
@@ -81,7 +82,7 @@ export default function EditApLedgerModal({ open, onOpenChange, record, onSucces
       const payload: any = { ...formData };
       NUMERIC_COLS.forEach(key => {
         if (payload[key]) {
-           payload[key] = payload[key].replace(/,/g, '.');
+           payload[key] = parseAmountInput(payload[key]);
         }
       });
       

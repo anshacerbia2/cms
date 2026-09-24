@@ -20,6 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { parseAmountInput } from "@/lib/utils";
 
 interface EditSalesModalProps {
   open: boolean;
@@ -114,7 +115,7 @@ export default function EditSalesModal({ open, onOpenChange, recordId, onSuccess
       const payload: any = { ...formData };
       NUMERIC_COLS.forEach(key => {
         if (payload[key]) {
-           payload[key] = String(payload[key]).replace(/,/g, '.');
+           payload[key] = parseAmountInput(payload[key]);
         }
       });
       await updateSales.mutateAsync({

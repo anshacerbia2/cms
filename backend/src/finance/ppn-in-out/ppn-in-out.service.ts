@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { formatDecimal } from '../../common/utils/format.utils';
-import { parseIntSafe, parseDateSafe } from '../../common/utils/parse.utils';
+import { parseIntSafe, parseDateSafe, parseDecimalSafe } from '../../common/utils/parse.utils';
 @Injectable()
 export class PpnInOutService {
   constructor(private prisma: PrismaService) {}
@@ -91,14 +91,14 @@ export class PpnInOutService {
       colD: row.colD || null,
       colE: row.colE || null,
       colF: parseIntSafe(row.colF),
-      colG: row.colG?.toString() || null,
-      colH: row.colH?.toString() || null,
-      colI: row.colI?.toString() || null,
-      colJ: row.colJ?.toString() || null,
-      colK: row.colK?.toString() || null,
-      colM: row.colM?.toString() || null,
-      colN: row.colN?.toString() || null,
-      colO: row.colO?.toString() || null,
+      colG: parseDecimalSafe(row.colG, 'colG'),
+      colH: parseDecimalSafe(row.colH, 'colH'),
+      colI: parseDecimalSafe(row.colI, 'colI'),
+      colJ: parseDecimalSafe(row.colJ, 'colJ'),
+      colK: parseDecimalSafe(row.colK, 'colK'),
+      colM: parseDecimalSafe(row.colM, 'colM'),
+      colN: parseDecimalSafe(row.colN, 'colN'),
+      colO: parseDecimalSafe(row.colO, 'colO'),
       colP: row.colP || null,
       colQ: row.colQ || null,
       colR: row.colR || null,
@@ -123,14 +123,14 @@ export class PpnInOutService {
         colD: data.colD || null,
         colE: data.colE || null,
         colF: parseIntSafe(data.colF),
-        colG: data.colG?.toString() || null,
-        colH: data.colH?.toString() || null,
-        colI: data.colI?.toString() || null,
-        colJ: data.colJ?.toString() || null,
-        colK: data.colK?.toString() || null,
-        colM: data.colM?.toString() || null,
-        colN: data.colN?.toString() || null,
-        colO: data.colO?.toString() || null,
+        colG: parseDecimalSafe(data.colG, 'colG'),
+        colH: parseDecimalSafe(data.colH, 'colH'),
+        colI: parseDecimalSafe(data.colI, 'colI'),
+        colJ: parseDecimalSafe(data.colJ, 'colJ'),
+        colK: parseDecimalSafe(data.colK, 'colK'),
+        colM: parseDecimalSafe(data.colM, 'colM'),
+        colN: parseDecimalSafe(data.colN, 'colN'),
+        colO: parseDecimalSafe(data.colO, 'colO'),
         colP: data.colP || null,
         colQ: data.colQ || null,
         colR: data.colR || null,

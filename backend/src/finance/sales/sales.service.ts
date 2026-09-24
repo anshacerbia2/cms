@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 import { PaginatedResult } from '../../common/interfaces/paginated-result.interface';
 import { formatDecimal } from '../../common/utils/format.utils';
-import { parseIntSafe, parseDateSafe } from '../../common/utils/parse.utils';
+import { parseIntSafe, parseDateSafe, parseDecimalSafe } from '../../common/utils/parse.utils';
 import {
   syncAccountAmounts, SALES_RECORD_COLUMNS, findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
 
@@ -113,27 +113,27 @@ export class SalesService {
       colE: row.colE || null,
       colF: row.colF || null,
       colG: row.colG || null,
-      colH: row.colH?.toString() || null,
-      colI: row.colI?.toString() || null,
-      colJ: row.colJ?.toString() || null,
-      colK: row.colK?.toString() || null,
+      colH: parseDecimalSafe(row.colH, 'colH'),
+      colI: parseDecimalSafe(row.colI, 'colI'),
+      colJ: parseDecimalSafe(row.colJ, 'colJ'),
+      colK: parseDecimalSafe(row.colK, 'colK'),
       colL: parseDateSafe(row.colL),
-      colM: row.colM?.toString() || null,
-      colN: row.colN?.toString() || null,
-      colO: row.colO?.toString() || null,
-      colP: row.colP?.toString() || null,
-      colQ: row.colQ?.toString() || null,
-      colR: row.colR?.toString() || null,
-      colS: row.colS?.toString() || null,
-      colT: row.colT?.toString() || null,
-      colU: row.colU?.toString() || null,
-      colV: row.colV?.toString() || null,
-      colW: row.colW?.toString() || null,
-      colX: row.colX?.toString() || null,
-      colZ: row.colZ?.toString() || null,
-      colAA: row.colAA?.toString() || null,
-      colAB: row.colAB?.toString() || null,
-      colAC: row.colAC?.toString() || null,
+      colM: parseDecimalSafe(row.colM, 'colM'),
+      colN: parseDecimalSafe(row.colN, 'colN'),
+      colO: parseDecimalSafe(row.colO, 'colO'),
+      colP: parseDecimalSafe(row.colP, 'colP'),
+      colQ: parseDecimalSafe(row.colQ, 'colQ'),
+      colR: parseDecimalSafe(row.colR, 'colR'),
+      colS: parseDecimalSafe(row.colS, 'colS'),
+      colT: parseDecimalSafe(row.colT, 'colT'),
+      colU: parseDecimalSafe(row.colU, 'colU'),
+      colV: parseDecimalSafe(row.colV, 'colV'),
+      colW: parseDecimalSafe(row.colW, 'colW'),
+      colX: parseDecimalSafe(row.colX, 'colX'),
+      colZ: parseDecimalSafe(row.colZ, 'colZ'),
+      colAA: parseDecimalSafe(row.colAA, 'colAA'),
+      colAB: parseDecimalSafe(row.colAB, 'colAB'),
+      colAC: parseDecimalSafe(row.colAC, 'colAC'),
       colAD: row.colAD || null,
       tagYear: parsedTagYear,
     }));
