@@ -196,24 +196,24 @@ export class DepreciationService {
     if ('colA' in data) updateData.colA = parseDateSafe(data.colA);
     if ('colB' in data) updateData.colB = data.colB || null;
     if ('colC' in data) updateData.colC = data.colC || null;
-    if ('colD' in data) updateData.colD = data.colD?.toString() || null;
+    if ('colD' in data) updateData.colD = parseDecimalSafe(data.colD, 'colD');
     if ('colE' in data) updateData.colE = parseIntSafe(data.colE);
-    if ('colF' in data) updateData.colF = data.colF?.toString() || null;
-    if ('colG' in data) updateData.colG = data.colG?.toString() || null;
-    if ('colH' in data) updateData.colH = data.colH?.toString() || null;
-    if ('colI' in data) updateData.colI = data.colI?.toString() || null;
-    if ('colJ' in data) updateData.colJ = data.colJ?.toString() || null;
-    if ('colK' in data) updateData.colK = data.colK?.toString() || null;
-    if ('colL' in data) updateData.colL = data.colL?.toString() || null;
-    if ('colM' in data) updateData.colM = data.colM?.toString() || null;
-    if ('colN' in data) updateData.colN = data.colN?.toString() || null;
-    if ('colO' in data) updateData.colO = data.colO?.toString() || null;
-    if ('colP' in data) updateData.colP = data.colP?.toString() || null;
-    if ('colQ' in data) updateData.colQ = data.colQ?.toString() || null;
-    if ('colR' in data) updateData.colR = data.colR?.toString() || null;
-    if ('colS' in data) updateData.colS = data.colS?.toString() || null;
-    if ('colT' in data) updateData.colT = data.colT?.toString() || null;
-    if ('colU' in data) updateData.colU = data.colU?.toString() || null;
+    if ('colF' in data) updateData.colF = parseDecimalSafe(data.colF, 'colF');
+    if ('colG' in data) updateData.colG = parseDecimalSafe(data.colG, 'colG');
+    if ('colH' in data) updateData.colH = parseDecimalSafe(data.colH, 'colH');
+    if ('colI' in data) updateData.colI = parseDecimalSafe(data.colI, 'colI');
+    if ('colJ' in data) updateData.colJ = parseDecimalSafe(data.colJ, 'colJ');
+    if ('colK' in data) updateData.colK = parseDecimalSafe(data.colK, 'colK');
+    if ('colL' in data) updateData.colL = parseDecimalSafe(data.colL, 'colL');
+    if ('colM' in data) updateData.colM = parseDecimalSafe(data.colM, 'colM');
+    if ('colN' in data) updateData.colN = parseDecimalSafe(data.colN, 'colN');
+    if ('colO' in data) updateData.colO = parseDecimalSafe(data.colO, 'colO');
+    if ('colP' in data) updateData.colP = parseDecimalSafe(data.colP, 'colP');
+    if ('colQ' in data) updateData.colQ = parseDecimalSafe(data.colQ, 'colQ');
+    if ('colR' in data) updateData.colR = parseDecimalSafe(data.colR, 'colR');
+    if ('colS' in data) updateData.colS = parseDecimalSafe(data.colS, 'colS');
+    if ('colT' in data) updateData.colT = parseDecimalSafe(data.colT, 'colT');
+    if ('colU' in data) updateData.colU = parseDecimalSafe(data.colU, 'colU');
 
     return this.prisma.depreciation.update({
       where: { id },

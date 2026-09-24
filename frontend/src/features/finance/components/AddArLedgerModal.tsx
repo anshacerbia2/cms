@@ -34,23 +34,23 @@ interface ArRow {
   colF: string | number;
   colJ: string | number; colK: string | number;
   colL: string | number; colM: string | number; colN: string | number;
-  colO: string | number; colP: string | number;
+  colO: string | number;
   colR: string | number;
 }
 
 const COL_ORDER: (keyof ArRow)[] = [
-  'colB', 'colC', 'colD', 'colE', 'colF', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colR'
+  'colB', 'colC', 'colD', 'colE', 'colF', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colR'
 ];
 
 const LABELS: Record<keyof ArRow, string> = {
   colB: 'Type', colC: 'Year', colD: 'Client', colE: 'Description',
-  colF: 'IDR',
+  colF: 'Beginning Balance',
   colJ: 'BCA Suhardjo', colK: 'BCA Juanda', colL: 'MANDIRI MP',
   colM: 'BRI Suhardjo', colN: 'Cash IDR', colO: 'Non CB',
-  colP: 'PPn In and Out', colR: 'Outstanding IDR'
+  colR: 'Ending Balance'
 };
 
-const NUMERIC_COLS: (keyof ArRow)[] = ['colF', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colR'];
+const NUMERIC_COLS: (keyof ArRow)[] = ['colF', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colR'];
 
 export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }: AddArLedgerModalProps) {
   const { createBulkAR } = useAccountReceivable();
@@ -62,7 +62,7 @@ export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }
       setRows(Array(5).fill(null).map(() => ({
         colB: '', colC: '', colD: '', colE: '',
         colF: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
-        colO: '', colP: '', colR: ''
+        colO: '', colR: ''
       } as ArRow)));
     }
   }, [open]);
@@ -71,7 +71,7 @@ export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }
     setRows([...rows, {
       colB: '', colC: '', colD: '', colE: '',
       colF: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
-      colO: '', colP: '', colR: ''
+      colO: '', colR: ''
     } as ArRow]);
   };
 
@@ -122,7 +122,7 @@ export default function AddArLedgerModal({ open, onOpenChange, onSuccess, year }
         newRows.push({
           colB: '', colC: '', colD: '', colE: '',
           colF: '', colJ: '', colK: '', colL: '', colM: '', colN: '',
-          colO: '', colP: '', colR: ''
+          colO: '', colR: ''
         } as ArRow);
       }
       pasteCols.forEach((cellText, j) => {

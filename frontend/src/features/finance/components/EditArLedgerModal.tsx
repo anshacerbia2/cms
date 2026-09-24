@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Save } from 'lucide-react';
 import { useAccountReceivable } from '../hooks/useAccountReceivable';
 import { cn, cleanInputAmount, formatInputAmount } from '@/lib/utils';
-import { parseAmountInput } from "@/lib/utils";
+import { toSubmitAmount } from "@/lib/utils";
 
 interface EditArLedgerModalProps {
   open: boolean;
@@ -23,15 +23,15 @@ interface EditArLedgerModalProps {
 
 const LABELS = {
   colB: 'Type', colC: 'Year', colD: 'Client',
-  colE: 'Description', colF: 'IDR',
+  colE: 'Description', colF: 'Beginning Balance',
   colJ: 'BCA Suhardjo', colK: 'BCA Juanda', colL: 'Mandiri MP',
   colM: 'BRI Suhardjo', colN: 'Cash IDR', colO: 'Non CB',
-  colP: 'PPn In and Out', colR: 'Outstanding IDR',
+  colR: 'Ending Balance',
 };
 
 const NUMERIC_COLS = [
   'colF', 'colJ', 'colK', 'colL', 'colM',
-  'colN', 'colO', 'colP', 'colR',
+  'colN', 'colO', 'colR',
 ];
 
 export default function EditArLedgerModal({ open, onOpenChange, record, onSuccess }: EditArLedgerModalProps) {
@@ -84,7 +84,7 @@ export default function EditArLedgerModal({ open, onOpenChange, record, onSucces
       const payload: any = { ...formData };
       NUMERIC_COLS.forEach(key => {
         if (payload[key]) {
-           payload[key] = parseAmountInput(payload[key]);
+           payload[key] = toSubmitAmount(payload[key]);
         }
       });
       

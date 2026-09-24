@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Save } from 'lucide-react';
 import { useAccountPayable } from '../hooks/useAccountPayable';
 import { cn, cleanInputAmount, formatInputAmount } from '@/lib/utils';
-import { parseAmountInput } from "@/lib/utils";
+import { toSubmitAmount } from "@/lib/utils";
 
 interface EditApLedgerModalProps {
   open: boolean;
@@ -22,13 +22,13 @@ interface EditApLedgerModalProps {
 }
 
 const LABELS = {
-  colA: 'Payable', colB: 'Year', colC: 'Vendor', colD: 'Keterangan',
-  colE: 'IDR',
+  colA: 'Payable', colB: 'Year', colC: 'Vendor', colD: 'Description',
+  colE: 'Beginning Balance',
   /* colH: 'Col F', colI: 'Col G', */
   colK: 'BCA Shardjo', colL: 'BCA Juanda', colM: 'Mandiri Mid Plaza',
   colN: 'BTN', colO: 'BRI Shardjo', colP: 'BRI Tebet',
   colQ: 'Cash IDR', colR: 'Non CB', colS: 'AP In and Out',
-  colU: 'Outstanding IDR',
+  colU: 'Ending Balance',
 };
 
 const NUMERIC_COLS = [
@@ -82,7 +82,7 @@ export default function EditApLedgerModal({ open, onOpenChange, record, onSucces
       const payload: any = { ...formData };
       NUMERIC_COLS.forEach(key => {
         if (payload[key]) {
-           payload[key] = parseAmountInput(payload[key]);
+           payload[key] = toSubmitAmount(payload[key]);
         }
       });
       

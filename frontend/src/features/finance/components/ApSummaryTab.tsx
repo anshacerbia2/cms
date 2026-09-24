@@ -109,7 +109,7 @@ export function ApSummaryTab() {
       colB: row.colB || "-",
       colC: row.colC || "-",
       colD: row.colD || "-",
-      colE: formatCurrency(row.colE || 0),   // EOY IDR
+      colE: formatCurrency(row.colE || 0),   // Beginning Balance
       colH: row.colH || "-",
       colI: row.colI || "-",
       // colJ are plain strings
@@ -122,7 +122,7 @@ export function ApSummaryTab() {
       colQ: formatCurrency(row.colQ),        // Cash IDR
       colR: formatCurrency(row.colR),        // Non CB
       colS: formatCurrency(row.colS),        // AP In and Out
-      colU: formatCurrency(row.colU),        // Outstanding IDR
+      colU: formatCurrency(row.colU),        // Ending Balance
       // The same figures the fixed columns carry, keyed by account.
       ...Object.fromEntries(
         (row.amounts ?? []).map((a: any) => [accountKey(a.accountId), formatCurrency(a.amount)])
@@ -251,7 +251,7 @@ export function ApSummaryTab() {
         <div className="relative flex-1 w-full">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <Input 
-            placeholder="Search payables (Vendor, Keterangan)..." 
+            placeholder="Search payables (Vendor, Description)..." 
             className="pl-12 h-12 bg-white border-0 rounded-xl shadow-sm focus-visible:ring-primary/10 text-[13px] font-medium"
             value={apSearch}
             onChange={(e) => { setApSearch(e.target.value); setApPage(1); }}
@@ -346,14 +346,14 @@ export function ApSummaryTab() {
                 </TableHead>
                 <TableHead className="w-64 px-4">
                   <div className="flex items-center gap-1">
-                    Keterangan
-                    <ExcelColumnFilter columnKey="colD" label="Keterangan" data={getCascadingData("colD")} activeFilters={apFilters["colD"]} onFilterChange={(v) => { setApFilters(p => ({...p, colD: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colD", direction: d})} />
+                    Description
+                    <ExcelColumnFilter columnKey="colD" label="Description" data={getCascadingData("colD")} activeFilters={apFilters["colD"]} onFilterChange={(v) => { setApFilters(p => ({...p, colD: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colD", direction: d})} />
                   </div>
                 </TableHead>
                 <TableHead className="text-right w-40 whitespace-nowrap">
                   <div className="flex items-center justify-end gap-1">
-                    IDR
-                    <ExcelColumnFilter columnKey="colE" label="IDR" data={getCascadingData("colE")} activeFilters={apFilters["colE"]} onFilterChange={(v) => { setApFilters(p => ({...p, colE: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colE", direction: d})} />
+                    Beginning Balance
+                    <ExcelColumnFilter columnKey="colE" label="Beginning Balance" data={getCascadingData("colE")} activeFilters={apFilters["colE"]} onFilterChange={(v) => { setApFilters(p => ({...p, colE: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colE", direction: d})} />
                   </div>
                 </TableHead>
 
@@ -395,8 +395,8 @@ export function ApSummaryTab() {
 
                 <TableHead className="text-right w-40 whitespace-nowrap">
                   <div className="flex items-center justify-end gap-1">
-                    Outstanding IDR
-                    <ExcelColumnFilter columnKey="colU" label="Outstanding IDR" data={getCascadingData("colU")} activeFilters={apFilters["colU"]} onFilterChange={(v) => { setApFilters(p => ({...p, colU: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colU", direction: d})} />
+                    Ending Balance
+                    <ExcelColumnFilter columnKey="colU" label="Ending Balance" data={getCascadingData("colU")} activeFilters={apFilters["colU"]} onFilterChange={(v) => { setApFilters(p => ({...p, colU: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colU", direction: d})} />
                   </div>
                 </TableHead>
                 <TableHead className="w-24 px-4 text-center">Actions</TableHead>
@@ -406,7 +406,7 @@ export function ApSummaryTab() {
             <TableBody>
               {apLoading ? (
                 <TableRow>
-                  <TableCell colSpan={12 + accountColumns.length} className="h-96 text-center">
+                  <TableCell colSpan={8 + accountColumns.length} className="h-96 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin" />
                       <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/40 animate-pulse">Synchronizing Accounts Payable...</p>
@@ -415,7 +415,7 @@ export function ApSummaryTab() {
                 </TableRow>
               ) : paginatedAP.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12 + accountColumns.length} className="h-64 text-center opacity-20">
+                  <TableCell colSpan={8 + accountColumns.length} className="h-64 text-center opacity-20">
                     <p className="mt-4 font-black uppercase tracking-widest">No match found</p>
                   </TableCell>
                 </TableRow>
@@ -485,8 +485,6 @@ export function ApSummaryTab() {
                       Subtotal (Page {apPage})
                     </TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(subtotalTotals.colE.toString())}</TableCell>
-                    <TableCell />
-                    <TableCell />
 
                     {accountColumns.map((account) => (
                       <TableCell key={account.id} className={`text-right whitespace-nowrap ${getValueColor(((subtotalTotals as any)[accountKey(account.id)] ?? 0).toString())}`}>
@@ -503,8 +501,6 @@ export function ApSummaryTab() {
                       Period Totals ({filteredAndSortedAP.length} results)
                     </TableCell>
                     <TableCell className="text-right text-primary whitespace-nowrap">{formatCurrency(grandTotals.colE.toString())}</TableCell>
-                    <TableCell />
-                    <TableCell />
 
                     {accountColumns.map((account) => (
                       <TableCell key={account.id} className={`text-right whitespace-nowrap ${getValueColor(((grandTotals as any)[accountKey(account.id)] ?? 0).toString())}`}>
@@ -584,8 +580,8 @@ export function ApSummaryTab() {
           { label: "Payable", value: selectedViewRecord?.colA },
           { label: "Year", value: selectedViewRecord?.colB },
           { label: "Vendor", value: selectedViewRecord?.colC },
-          { label: "Keterangan", value: selectedViewRecord?.colD },
-          { label: "IDR", value: selectedViewRecord?.colE },
+          { label: "Description", value: selectedViewRecord?.colD },
+          { label: "Beginning Balance", value: selectedViewRecord?.colE },
           { label: "BCA Shardjo", value: selectedViewRecord?.colK },
           { label: "BCA Juanda", value: selectedViewRecord?.colL },
           { label: "Mandiri Mid Plaza", value: selectedViewRecord?.colM },
@@ -595,7 +591,7 @@ export function ApSummaryTab() {
           { label: "Cash IDR", value: selectedViewRecord?.colQ },
           { label: "Non CB", value: selectedViewRecord?.colR },
           { label: "AP In and Out", value: selectedViewRecord?.colS },
-          { label: "Outstanding IDR", value: selectedViewRecord?.colU },
+          { label: "Ending Balance", value: selectedViewRecord?.colU },
         ]}
       />
     </div>

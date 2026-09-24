@@ -100,6 +100,24 @@ export function parseAmountInput(val: any): string {
   return negative ? '-' + out : out;
 }
 
+/**
+ * Angka dari state form yang siap dikirim ke server.
+ *
+ * State form Edit sudah berbentuk mesin ("1234.56") - diisi dari record atau
+ * dari `cleanInputAmount`. Bentuk itu dikirim apa adanya. Jangan dilewatkan
+ * `parseAmountInput`: fungsi itu membaca TEKS TAMPILAN gaya Indonesia, di
+ * mana titik adalah pemisah ribuan, sehingga "1234.56" terbaca 123456.
+ * Kesalahan persis itu sempat ada di prod (24 Sep 2026, 7f24851) sebelum
+ * ada baris yang terlanjur disunting.
+ *
+ * Hanya yang belum berbentuk mesin yang dibaca ulang.
+ */
+export function toSubmitAmount(val: any): string {
+  const s = String(val ?? '').trim();
+  if (/^-?\d+(\.\d+)?$/.test(s)) return s;
+  return parseAmountInput(s);
+}
+
 export function getAmountColor(val: any, showEmerald = true) {
   try {
     const num = new Decimal(cleanAmount(val));
@@ -123,32 +141,15 @@ export function formatInputAmount(val: string | number) {
   return isNegative ? `-${result}` : result;
 }
 
+/**
+ * Ketikan di kolom angka (form Edit, editor baris Bank Statement).
+ * Aturan bacanya ada di `parseAmountInput`. Satu sel "56,981,982" yang
+ * ditempel dulu jadi "56.981982" - tersimpan diam-diam sebagai 56,98.
+ */
 export function cleanInputAmount(val: string) {
   if (!val) return '';
   if (val === '-') return '-';
-  
-  const isNegative = val.startsWith('-');
-  let cleaned = val.replace(/[^0-9,.]/g, '');
-  
-  cleaned = cleaned.replace(/\./g, ''); // Remove dots
-  cleaned = cleaned.replace(/,/g, '.'); // Convert comma to dot
-  
-  // Ensure only one dot
-  const parts = cleaned.split(".");
-  if (parts.length > 2) {
-    cleaned = parts[0] + "." + parts.slice(1).join("");
-  }
-  
-  // Handle leading dot
-  if (cleaned.startsWith('.')) cleaned = '0' + cleaned;
-  
-  // Trim leading zeros (e.g. "05" -> "5", but "0.5" stays "0.5")
-  if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.') {
-    cleaned = cleaned.replace(/^0+/, '');
-    if (cleaned === '' || cleaned.startsWith('.')) cleaned = '0' + cleaned;
-  }
-  
-  return isNegative ? `-${cleaned}` : cleaned;
+  return parseAmountInput(val);
 }
 
 /**
@@ -211,20 +212,11 @@ export function parseSmartDate(value: string): string {
 /**
  * Mengubah angka yang ditempel dari Excel (1.234.567,89) jadi bentuk mentah (1234567.89).
  */
+/**
+ * Angka dari baris yang ditempel (Bank Statement). Sel kosong jadi '0'.
+ * Aturan bacanya ada di `parseAmountInput`.
+ */
 export function cleanNumber(val: string): string {
-  if (!val || val.trim() === '') return '0';
-  let cleaned = val.replace(/\./g, ''); // Remove thousand dots
-  cleaned = cleaned.replace(/,/g, '.'); // Convert decimal comma to dot
-  const hasMinus = cleaned.startsWith('-');
-  cleaned = cleaned.replace(/[^0-9.]/g, ''); // Final safety strip
-
-  if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.') {
-    cleaned = cleaned.replace(/^0+/, '');
-    if (cleaned === '' || cleaned.startsWith('.')) {
-      cleaned = '0' + cleaned;
-    }
-  }
-  if (hasMinus) cleaned = '-' + cleaned;
-  if (cleaned === '-') return '0';
-  return cleaned || '0';
+  const parsed = parseAmountInput(val);
+  return parsed === '' || parsed === '-' ? '0' : parsed;
 }
