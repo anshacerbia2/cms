@@ -163,19 +163,19 @@ export class InterAccountService {
   async updateInterAccount(id: number, data: any) {
     const updateData: any = {};
     if ('colB' in data) updateData.colB = data.colB || null;
-    if ('colC' in data) updateData.colC = data.colC?.toString() || null;
-    if ('colD' in data) updateData.colD = data.colD?.toString() || null;
-    if ('colE' in data) updateData.colE = data.colE?.toString() || null;
-    if ('colF' in data) updateData.colF = data.colF?.toString() || null;
-    if ('colG' in data) updateData.colG = data.colG?.toString() || null;
-    if ('colH' in data) updateData.colH = data.colH?.toString() || null;
-    if ('colI' in data) updateData.colI = data.colI?.toString() || null;
-    if ('colJ' in data) updateData.colJ = data.colJ?.toString() || null;
-    if ('colK' in data) updateData.colK = data.colK?.toString() || null;
-    if ('colL' in data) updateData.colL = data.colL?.toString() || null;
-    if ('colM' in data) updateData.colM = data.colM?.toString() || null;
-    if ('colN' in data) updateData.colN = data.colN?.toString() || null;
-    if ('colO' in data) updateData.colO = data.colO?.toString() || null;
+    if ('colC' in data) updateData.colC = parseDecimalSafe(data.colC, 'colC');
+    if ('colD' in data) updateData.colD = parseDecimalSafe(data.colD, 'colD');
+    if ('colE' in data) updateData.colE = parseDecimalSafe(data.colE, 'colE');
+    if ('colF' in data) updateData.colF = parseDecimalSafe(data.colF, 'colF');
+    if ('colG' in data) updateData.colG = parseDecimalSafe(data.colG, 'colG');
+    if ('colH' in data) updateData.colH = parseDecimalSafe(data.colH, 'colH');
+    if ('colI' in data) updateData.colI = parseDecimalSafe(data.colI, 'colI');
+    if ('colJ' in data) updateData.colJ = parseDecimalSafe(data.colJ, 'colJ');
+    if ('colK' in data) updateData.colK = parseDecimalSafe(data.colK, 'colK');
+    if ('colL' in data) updateData.colL = parseDecimalSafe(data.colL, 'colL');
+    if ('colM' in data) updateData.colM = parseDecimalSafe(data.colM, 'colM');
+    if ('colN' in data) updateData.colN = parseDecimalSafe(data.colN, 'colN');
+    if ('colO' in data) updateData.colO = parseDecimalSafe(data.colO, 'colO');
 
     const saved = await this.prisma.interAccount.update({
       where: { id },
