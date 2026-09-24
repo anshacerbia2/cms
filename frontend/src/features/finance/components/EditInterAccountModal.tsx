@@ -20,7 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { parseAmountInput } from "@/lib/utils";
+import { toSubmitAmount } from "@/lib/utils";
 
 interface EditInterAccountModalProps {
   open: boolean;
@@ -108,7 +108,7 @@ export default function EditInterAccountModal({ open, onOpenChange, recordId, on
       const payload: any = { ...formData };
       NUMERIC_COLS.forEach(key => {
         if (payload[key]) {
-           payload[key] = parseAmountInput(payload[key]);
+           payload[key] = toSubmitAmount(payload[key]);
         }
       });
       await updateInterAccount.mutateAsync({

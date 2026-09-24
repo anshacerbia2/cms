@@ -100,6 +100,24 @@ export function parseAmountInput(val: any): string {
   return negative ? '-' + out : out;
 }
 
+/**
+ * Angka dari state form yang siap dikirim ke server.
+ *
+ * State form Edit sudah berbentuk mesin ("1234.56") - diisi dari record atau
+ * dari `cleanInputAmount`. Bentuk itu dikirim apa adanya. Jangan dilewatkan
+ * `parseAmountInput`: fungsi itu membaca TEKS TAMPILAN gaya Indonesia, di
+ * mana titik adalah pemisah ribuan, sehingga "1234.56" terbaca 123456.
+ * Kesalahan persis itu sempat ada di prod (24 Sep 2026, 7f24851) sebelum
+ * ada baris yang terlanjur disunting.
+ *
+ * Hanya yang belum berbentuk mesin yang dibaca ulang.
+ */
+export function toSubmitAmount(val: any): string {
+  const s = String(val ?? '').trim();
+  if (/^-?\d+(\.\d+)?$/.test(s)) return s;
+  return parseAmountInput(s);
+}
+
 export function getAmountColor(val: any, showEmerald = true) {
   try {
     const num = new Decimal(cleanAmount(val));
