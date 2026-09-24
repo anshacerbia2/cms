@@ -18,7 +18,7 @@ const AP_COLUMN_MAPPING = {
   colA: 'Payable',
   colB: 'Year',
   colC: 'Vendor',
-  colD: 'Keterangan',
+  colD: 'Description',
   colE: 'Beginning Balance|accounting',
   colG: 'Col G|accounting',
   colH: 'Col H',

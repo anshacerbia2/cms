@@ -251,7 +251,7 @@ export function ApSummaryTab() {
         <div className="relative flex-1 w-full">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <Input 
-            placeholder="Search payables (Vendor, Keterangan)..." 
+            placeholder="Search payables (Vendor, Description)..." 
             className="pl-12 h-12 bg-white border-0 rounded-xl shadow-sm focus-visible:ring-primary/10 text-[13px] font-medium"
             value={apSearch}
             onChange={(e) => { setApSearch(e.target.value); setApPage(1); }}
@@ -346,8 +346,8 @@ export function ApSummaryTab() {
                 </TableHead>
                 <TableHead className="w-64 px-4">
                   <div className="flex items-center gap-1">
-                    Keterangan
-                    <ExcelColumnFilter columnKey="colD" label="Keterangan" data={getCascadingData("colD")} activeFilters={apFilters["colD"]} onFilterChange={(v) => { setApFilters(p => ({...p, colD: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colD", direction: d})} />
+                    Description
+                    <ExcelColumnFilter columnKey="colD" label="Description" data={getCascadingData("colD")} activeFilters={apFilters["colD"]} onFilterChange={(v) => { setApFilters(p => ({...p, colD: v})); setApPage(1); }} currentSort={apSort} onSort={(d) => setApSort({key: "colD", direction: d})} />
                   </div>
                 </TableHead>
                 <TableHead className="text-right w-40 whitespace-nowrap">
@@ -580,7 +580,7 @@ export function ApSummaryTab() {
           { label: "Payable", value: selectedViewRecord?.colA },
           { label: "Year", value: selectedViewRecord?.colB },
           { label: "Vendor", value: selectedViewRecord?.colC },
-          { label: "Keterangan", value: selectedViewRecord?.colD },
+          { label: "Description", value: selectedViewRecord?.colD },
           { label: "Beginning Balance", value: selectedViewRecord?.colE },
           { label: "BCA Shardjo", value: selectedViewRecord?.colK },
           { label: "BCA Juanda", value: selectedViewRecord?.colL },

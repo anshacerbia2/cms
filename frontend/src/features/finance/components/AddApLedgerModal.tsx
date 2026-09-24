@@ -54,7 +54,7 @@ const VISIBLE_COLS: (keyof ApRow)[] = [
 ];
 
 const LABELS: Partial<Record<keyof ApRow, string>> = {
-  colA: 'Payable', colB: 'Year', colC: 'Vendor', colD: 'Keterangan',
+  colA: 'Payable', colB: 'Year', colC: 'Vendor', colD: 'Description',
   colE: 'Beginning Balance',
   /* colH: 'Col F', colI: 'Col G', */
   colK: 'BCA Shardjo', colL: 'BCA Juanda', colM: 'Mandiri Mid Plaza',
