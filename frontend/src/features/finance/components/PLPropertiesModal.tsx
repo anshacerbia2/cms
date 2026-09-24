@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Save, ShieldCheck, Info, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEquity } from '../hooks/useEquity';
-import { parseAmountInput } from "@/lib/utils";
+import { parseAmountInput, singlePastedAmount } from "@/lib/utils";
 
 
 interface PLPropertiesModalProps {
@@ -74,6 +74,11 @@ export default function PLPropertiesModal({ open, onOpenChange, year }: PLProper
     }
   };
 
+  const handleInputPaste = (key: string, e: React.ClipboardEvent<HTMLInputElement>) => {
+    const v = singlePastedAmount(e);
+    if (v !== null) setForm(prev => ({ ...prev, [key]: v }));
+  };
+
   const handleInputChange = (key: string, value: string) => {
     const parsed = parseDisplay(value);
     setForm(prev => ({ ...prev, [key]: parsed }));
@@ -124,6 +129,7 @@ export default function PLPropertiesModal({ open, onOpenChange, year }: PLProper
                         placeholder="0"
                         value={formatInput(form.PL_NET_SALES)}
                         onChange={(e) => handleInputChange('PL_NET_SALES', e.target.value)}
+                        onPaste={(e) => handleInputPaste('PL_NET_SALES', e)}
                         className="h-12 pl-12 bg-slate-50 border-0 focus-visible:ring-primary/10 font-bold text-primary rounded-xl"
                       />
                     </div>
@@ -137,6 +143,7 @@ export default function PLPropertiesModal({ open, onOpenChange, year }: PLProper
                         placeholder="0"
                         value={formatInput(form.PL_COGS)}
                         onChange={(e) => handleInputChange('PL_COGS', e.target.value)}
+                        onPaste={(e) => handleInputPaste('PL_COGS', e)}
                         className="h-12 pl-12 bg-slate-50 border-0 focus-visible:ring-primary/10 font-bold text-rose-600 rounded-xl"
                       />
                     </div>
@@ -155,6 +162,7 @@ export default function PLPropertiesModal({ open, onOpenChange, year }: PLProper
                         placeholder="0"
                         value={formatInput(form.PL_PERSONNEL_EXP)}
                         onChange={(e) => handleInputChange('PL_PERSONNEL_EXP', e.target.value)}
+                        onPaste={(e) => handleInputPaste('PL_PERSONNEL_EXP', e)}
                         className="h-12 pl-12 bg-slate-50 border-0 focus-visible:ring-primary/10 font-bold text-rose-600 rounded-xl"
                       />
                     </div>
@@ -168,6 +176,7 @@ export default function PLPropertiesModal({ open, onOpenChange, year }: PLProper
                         placeholder="0"
                         value={formatInput(form.PL_OFFICE_EXP)}
                         onChange={(e) => handleInputChange('PL_OFFICE_EXP', e.target.value)}
+                        onPaste={(e) => handleInputPaste('PL_OFFICE_EXP', e)}
                         className="h-12 pl-12 bg-slate-50 border-0 focus-visible:ring-primary/10 font-bold text-rose-600 rounded-xl"
                       />
                     </div>
@@ -181,6 +190,7 @@ export default function PLPropertiesModal({ open, onOpenChange, year }: PLProper
                         placeholder="0"
                         value={formatInput(form.PL_MARKETING_EXP)}
                         onChange={(e) => handleInputChange('PL_MARKETING_EXP', e.target.value)}
+                        onPaste={(e) => handleInputPaste('PL_MARKETING_EXP', e)}
                         className="h-12 pl-12 bg-slate-50 border-0 focus-visible:ring-primary/10 font-bold text-rose-600 rounded-xl"
                       />
                     </div>
@@ -194,6 +204,7 @@ export default function PLPropertiesModal({ open, onOpenChange, year }: PLProper
                         placeholder="0"
                         value={formatInput(form.PL_FINANCIAL_EXP)}
                         onChange={(e) => handleInputChange('PL_FINANCIAL_EXP', e.target.value)}
+                        onPaste={(e) => handleInputPaste('PL_FINANCIAL_EXP', e)}
                         className="h-12 pl-12 bg-slate-50 border-0 focus-visible:ring-primary/10 font-bold text-rose-600 rounded-xl"
                       />
                     </div>
@@ -213,6 +224,7 @@ export default function PLPropertiesModal({ open, onOpenChange, year }: PLProper
                           placeholder="0"
                           value={formatInput(form.PL_OTHER_INCOME)}
                           onChange={(e) => handleInputChange('PL_OTHER_INCOME', e.target.value)}
+                        onPaste={(e) => handleInputPaste('PL_OTHER_INCOME', e)}
                           className="h-12 pl-12 bg-slate-50 border-0 focus-visible:ring-primary/10 font-bold text-emerald-600 rounded-xl"
                         />
                       </div>
@@ -226,6 +238,7 @@ export default function PLPropertiesModal({ open, onOpenChange, year }: PLProper
                           placeholder="0"
                           value={formatInput(form.PL_DEPRECIATION)}
                           onChange={(e) => handleInputChange('PL_DEPRECIATION', e.target.value)}
+                        onPaste={(e) => handleInputPaste('PL_DEPRECIATION', e)}
                           className="h-12 pl-12 bg-slate-50 border-0 focus-visible:ring-primary/10 font-bold text-rose-600 rounded-xl"
                         />
                       </div>
@@ -239,6 +252,7 @@ export default function PLPropertiesModal({ open, onOpenChange, year }: PLProper
                           placeholder="0"
                           value={formatInput(form.PL_INCOME_TAX)}
                           onChange={(e) => handleInputChange('PL_INCOME_TAX', e.target.value)}
+                        onPaste={(e) => handleInputPaste('PL_INCOME_TAX', e)}
                           className="h-12 pl-12 bg-slate-50 border-0 focus-visible:ring-primary/10 font-bold text-rose-600 rounded-xl"
                         />
                       </div>
@@ -252,6 +266,7 @@ export default function PLPropertiesModal({ open, onOpenChange, year }: PLProper
                           placeholder="0"
                           value={formatInput(form.PL_NET_PROFIT)}
                           onChange={(e) => handleInputChange('PL_NET_PROFIT', e.target.value)}
+                        onPaste={(e) => handleInputPaste('PL_NET_PROFIT', e)}
                           className="h-12 pl-12 bg-primary/5 border-2 border-primary/10 focus-visible:ring-primary/20 font-black text-primary rounded-xl"
                         />
                       </div>

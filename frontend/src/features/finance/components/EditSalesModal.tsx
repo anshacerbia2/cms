@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Save, Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSales } from '../hooks/useSales';
-import { cn, formatInputAmount, cleanInputAmount } from '@/lib/utils';
+import { cn, formatInputAmount, cleanInputAmount, singlePastedAmount } from '@/lib/utils';
 import { format, parseISO, isValid } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -188,6 +188,7 @@ export default function EditSalesModal({ open, onOpenChange, recordId, onSuccess
                       name={col} 
                       value={formatInputAmount(formData[col] || '')} 
                       onChange={handleChange} 
+                      onPaste={(e) => { const v = singlePastedAmount(e); if (v !== null) setFormData((prev: any) => ({ ...prev, [col]: v })); }}
                       className="h-11 rounded-xl bg-muted/20 border border-primary/10 shadow-none font-medium text-[13px] text-right focus-visible:border-primary/30 transition-all"
                     />
                   ) : (

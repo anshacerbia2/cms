@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Save, ShieldCheck, Info, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEquity } from '../hooks/useEquity';
-import { parseAmountInput } from "@/lib/utils";
+import { parseAmountInput, singlePastedAmount } from "@/lib/utils";
 
 
 interface EquityPropertiesModalProps {
@@ -76,6 +76,11 @@ export default function EquityPropertiesModal({ open, onOpenChange, year }: Equi
 
   const parseDisplay = (val: string) => parseAmountInput(val);
 
+  const handleInputPaste = (key: string, e: React.ClipboardEvent<HTMLInputElement>) => {
+    const v = singlePastedAmount(e);
+    if (v !== null) setForm(prev => ({ ...prev, [key]: v }));
+  };
+
   const handleInputChange = (key: string, value: string) => {
     const parsed = parseDisplay(value);
     setForm(prev => ({ ...prev, [key]: parsed }));
@@ -121,6 +126,7 @@ export default function EquityPropertiesModal({ open, onOpenChange, year }: Equi
                       placeholder="0"
                       value={formatInput(form.SHARED_CAPITAL)}
                       onChange={(e) => handleInputChange('SHARED_CAPITAL', e.target.value)}
+                        onPaste={(e) => handleInputPaste('SHARED_CAPITAL', e)}
                       className="h-12 pl-12 bg-slate-50 border-0 focus-visible:ring-primary/10 font-bold text-primary rounded-xl"
                     />
                   </div>
@@ -134,6 +140,7 @@ export default function EquityPropertiesModal({ open, onOpenChange, year }: Equi
                       placeholder="0"
                       value={formatInput(form.RE_PREV_YEARS)}
                       onChange={(e) => handleInputChange('RE_PREV_YEARS', e.target.value)}
+                        onPaste={(e) => handleInputPaste('RE_PREV_YEARS', e)}
                       className="h-12 pl-12 bg-slate-50 border-0 focus-visible:ring-primary/10 font-bold text-primary rounded-xl"
                     />
                   </div>
@@ -147,6 +154,7 @@ export default function EquityPropertiesModal({ open, onOpenChange, year }: Equi
                       placeholder="0"
                       value={formatInput(form.PL_NET_PROFIT)}
                       onChange={(e) => handleInputChange('PL_NET_PROFIT', e.target.value)}
+                        onPaste={(e) => handleInputPaste('PL_NET_PROFIT', e)}
                       className="h-12 pl-12 bg-slate-50 border-0 focus-visible:ring-primary/10 font-bold text-emerald-600 rounded-xl"
                     />
                   </div>
@@ -160,6 +168,7 @@ export default function EquityPropertiesModal({ open, onOpenChange, year }: Equi
                       placeholder="0"
                       value={formatInput(form.DIVIDENDS)}
                       onChange={(e) => handleInputChange('DIVIDENDS', e.target.value)}
+                        onPaste={(e) => handleInputPaste('DIVIDENDS', e)}
                       className="h-12 pl-12 bg-slate-50 border-0 focus-visible:ring-primary/10 font-bold text-rose-600 rounded-xl"
                     />
                   </div>

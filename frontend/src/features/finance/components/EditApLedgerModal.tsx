@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Save } from 'lucide-react';
 import { useAccountPayable } from '../hooks/useAccountPayable';
-import { cn, cleanInputAmount, formatInputAmount } from '@/lib/utils';
+import { cn, cleanInputAmount, formatInputAmount, singlePastedAmount } from '@/lib/utils';
 import { toSubmitAmount } from "@/lib/utils";
 
 interface EditApLedgerModalProps {
@@ -124,6 +124,7 @@ export default function EditApLedgerModal({ open, onOpenChange, record, onSucces
                   name={key}
                   value={isNumeric ? formatInputAmount(formData[key]) : (formData[key] || '')}
                   onChange={handleChange}
+                  onPaste={isNumeric ? (e) => { const v = singlePastedAmount(e); if (v !== null) setFormData((prev: any) => ({ ...prev, [key]: v })); } : undefined}
                   className={cn(
                     "h-11 rounded-xl bg-muted/20 border border-primary/10 shadow-none font-medium text-[13px] focus-visible:border-primary/30 transition-all",
                     isNumeric && "text-right"

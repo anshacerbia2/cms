@@ -16,6 +16,7 @@ import {
 } from './LedgerRowEditor';
 import { formatRowNo, rowNoCell } from './LedgerDisplayRow';
 import { type LedgerMaster, canonicalLedger, ledgerProblem, withLedger } from '../hooks/useLedgers';
+import { parsePastedAmount } from '@/lib/utils';
 
 /** Draf setelah satu sel berubah. Mengganti Ledger mengosongkan SL1 yang bukan miliknya. */
 const changed = (d: LedgerDraft, field: DraftField, value: string, master: LedgerMaster | null) =>
@@ -102,7 +103,15 @@ export function InlineEditRow({ raw, master, showRowNo, saving, onSave, onCancel
   // Satu baris saja; sisanya disebutkan, tidak diam-diam dibuang.
   const onPaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>, _: number, field: DraftField) => {
     const text = e.clipboardData.getData('text/plain');
-    if (!isGridPaste(text)) return;
+    if (!isGridPaste(text)) {
+      // Satu nilai ke Debit/Kredit: aturan tempel, bukan aturan ketik.
+      if (field === 'colC' || field === 'colD') {
+        e.preventDefault();
+        const v = parsePastedAmount(text);
+        setDraft((d) => changed(d, field, v, master));
+      }
+      return;
+    }
     e.preventDefault();
     const lines = pastedLines(text);
     if (lines.length === 0) return;
@@ -232,7 +241,15 @@ export function InlineInsertRows({ anchorSaldo, master, showRowNo, anchorRowNo, 
   /** Menempel blok dari Excel: tiap baris jadi satu draf, mulai dari sel yang sedang aktif. */
   const onPaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>, index: number, field: DraftField) => {
     const text = e.clipboardData.getData('text/plain');
-    if (!isGridPaste(text)) return; // satu nilai: biarkan tempel biasa
+    if (!isGridPaste(text)) {
+      // Satu nilai ke Debit/Kredit: aturan tempel, bukan aturan ketik.
+      if (field === 'colC' || field === 'colD') {
+        e.preventDefault();
+        const v = parsePastedAmount(text);
+        setDrafts((all) => all.map((d, i) => (i === index ? changed(d, field, v, master) : d)));
+      }
+      return; // nilai teks: biarkan tempel biasa
+    }
     e.preventDefault();
     const lines = pastedLines(text);
     const next = [...latest.current];
