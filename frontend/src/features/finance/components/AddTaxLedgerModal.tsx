@@ -27,7 +27,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useAccountPayable } from '../hooks/useAccountPayable';
-import { parseAmountInput } from "@/lib/utils";
+import { parseAmountInput, parsePastedAmount } from "@/lib/utils";
 
 interface AddTaxLedgerModalProps {
   open: boolean;
@@ -121,8 +121,8 @@ export default function AddTaxLedgerModal({ open, onOpenChange, onSuccess, type,
   };
 
   const cleanNumber = (val: string) => {
-    const parsed = parseAmountInput(val);
-    return parsed === '' || parsed === '-' ? '0' : parsed;
+    const parsed = parsePastedAmount(val);
+    return parsed === '' ? '0' : parsed;
   };
 
   const formatInput = (val: string | number) => {
@@ -141,7 +141,15 @@ export default function AddTaxLedgerModal({ open, onOpenChange, onSuccess, type,
 
   const handlePaste = (e: React.ClipboardEvent, rowIndex: number, colKey: keyof TaxRow) => {
     const pasteData = e.clipboardData.getData('text');
-    if (!pasteData.includes('\t') && !pasteData.includes('\n')) return;
+    if (!pasteData.includes('\t') && !pasteData.includes('\n')) {
+      // Satu nilai ke kolom angka: baca dengan aturan tempel, bukan aturan ketik
+      // ("6,500" dari spreadsheet berbahasa Inggris = 6500, bukan 6,5).
+      if (NUMERIC_COLS.includes(colKey)) {
+        e.preventDefault();
+        updateRow(rowIndex, colKey, cleanNumber(pasteData));
+      }
+      return;
+    }
     e.preventDefault();
     const pasteRows = pasteData.split(/\r?\n/).filter(row => row.trim() !== '');
     const newRows = [...rows];

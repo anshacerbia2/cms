@@ -29,7 +29,7 @@ import {
 import { useBankMutation } from '../hooks/useBankMutation';
 import { useLedgerMaster, canonicalLedger, ledgerIds, ledgerProblem, withLedger } from '../hooks/useLedgers';
 import { LedgerCombo } from './LedgerCombo';
-import { parseSmartDate, cleanNumber } from '@/lib/utils';
+import { parseSmartDate, cleanNumber, singlePastedAmount } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import Decimal from 'decimal.js';
 import { parseAmountInput } from "@/lib/utils";
@@ -166,7 +166,14 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
 
   const handlePaste = (e: React.ClipboardEvent, rowIndex: number, colKey: keyof LedgerRow) => {
     const pasteData = e.clipboardData.getData('text');
-    if (!pasteData.includes('\t') && !pasteData.includes('\n')) return; // Regular paste
+    if (!pasteData.includes('\t') && !pasteData.includes('\n')) {
+      // Satu nilai ke kolom angka: baca dengan aturan tempel, bukan aturan ketik.
+      if (colKey === 'colC' || colKey === 'colD') {
+        e.preventDefault();
+        updateRow(rowIndex, colKey, cleanNumber(pasteData));
+      }
+      return;
+    }
 
     e.preventDefault();
     const pasteRows = pasteData.split(/\r?\n/).filter(row => row.trim() !== '');
@@ -418,6 +425,7 @@ export default function AddLedgerModal({ open, onOpenChange, onSuccess, selected
                         disabled={anchorData?.canEdit === false}
                         value={formatInput(startingBalance)}
                         onChange={(e) => setStartingBalance(parseDisplay(e.target.value))}
+                        onPaste={(e) => { const v = singlePastedAmount(e); if (v !== null) setStartingBalance(v); }}
                         className={`w-40 h-8 border-none shadow-none focus-visible:ring-0 text-base font-bold p-0 text-right transition-all rounded-sm px-2 ${
                           anchorData?.canEdit !== false
                             ? 'bg-slate-100 text-slate-900 ring-1 ring-slate-200' 

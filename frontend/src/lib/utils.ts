@@ -142,6 +142,67 @@ export function formatInputAmount(val: string | number) {
 }
 
 /**
+ * Angka yang DITEMPEL - dari Excel, Google Sheets, web, atau PDF.
+ *
+ * Beda dengan ketikan, teks tempelan bisa bergaya Indonesia atau Inggris
+ * tergantung setelan mesin sumbernya, jadi bentuknya yang dibaca:
+ *
+ *   1. Ada titik DAN koma  -> yang terakhir desimal   (1.234,56 / 1,234.56)
+ *   2. Satu jenis, berulang -> pemisah ribuan         (56,981,982 / 56.981.982)
+ *   3. Satu jenis, sekali, 1-3 angka di depan dan tepat 3 di belakang -> ribuan
+ *      (6,500 / 6.500 = 6500; tapi 0,125 dan 1234,567 tetap desimal)
+ *   4. Selain itu -> desimal                          (6,5 / 12.75 / 1234.56)
+ *
+ * Aturan 3 yang membedakannya dari ketikan: "6,500" yang diketik berarti 6,5,
+ * tapi yang ditempel hampir pasti 6.500 dari spreadsheet berbahasa Inggris -
+ * angka rupiah bertiga desimal praktis tidak ada.
+ */
+export function parsePastedAmount(val: any): string {
+  if (val === undefined || val === null) return '';
+  const raw = String(val).trim();
+  if (raw === '') return '';
+
+  const negative = raw.includes('-') || (raw.startsWith('(') && raw.endsWith(')'));
+  const body = raw.replace(/[^0-9.,]/g, '');
+  if (body === '') return '';
+
+  const dots = (body.match(/\./g) || []).length;
+  const commas = (body.match(/,/g) || []).length;
+  let decimalAt = -1;
+  if (dots > 0 && commas > 0) {
+    decimalAt = Math.max(body.lastIndexOf('.'), body.lastIndexOf(','));
+  } else if (dots + commas === 1) {
+    // Ribuan hanya kalau bentuknya memang bisa ribuan: 1-3 angka di depan
+    // (bukan diawali 0) dan tepat 3 angka di belakang. "0,125" dan
+    // "1234,567" tidak mungkin ribuan, jadi desimal.
+    const at = Math.max(body.indexOf('.'), body.indexOf(','));
+    const looksGrouped = /^[1-9]\d{0,2}$/.test(body.slice(0, at)) && body.length - at - 1 === 3;
+    if (!looksGrouped) decimalAt = at;
+  }
+
+  const digitsOnly = (text: string) => text.replace(/[.,]/g, '');
+  let intPart = digitsOnly(decimalAt >= 0 ? body.slice(0, decimalAt) : body).replace(/^0+(?=\d)/, '');
+  const decPart = decimalAt >= 0 ? digitsOnly(body.slice(decimalAt + 1)) : '';
+  if (intPart === '') intPart = '0';
+  const out = decPart !== '' ? `${intPart}.${decPart}` : intPart;
+  return negative && out !== '0' ? '-' + out : out;
+}
+
+/**
+ * Tangkap tempelan SATU nilai ke input angka dan baca dengan aturan tempel.
+ * Tanpa ini, tempelan satu sel jatuh ke jalur ketik, yang membaca "6,500"
+ * sebagai 6,5. Blok banyak sel (ada tab atau baris baru di tengah)
+ * dikembalikan null, supaya penangan tempel-tabel yang mengurusnya.
+ */
+export function singlePastedAmount(e: { clipboardData: DataTransfer; preventDefault: () => void }): string | null {
+  const text = e.clipboardData.getData('text/plain') || e.clipboardData.getData('text');
+  const trimmed = text.replace(/[\r\n]+$/, '');
+  if (/[\t\r\n]/.test(trimmed)) return null;
+  e.preventDefault();
+  return parsePastedAmount(trimmed);
+}
+
+/**
  * Ketikan di kolom angka (form Edit, editor baris Bank Statement).
  * Aturan bacanya ada di `parseAmountInput`. Satu sel "56,981,982" yang
  * ditempel dulu jadi "56.981982" - tersimpan diam-diam sebagai 56,98.
@@ -214,9 +275,9 @@ export function parseSmartDate(value: string): string {
  */
 /**
  * Angka dari baris yang ditempel (Bank Statement). Sel kosong jadi '0'.
- * Aturan bacanya ada di `parseAmountInput`.
+ * Aturan bacanya ada di `parsePastedAmount`.
  */
 export function cleanNumber(val: string): string {
-  const parsed = parseAmountInput(val);
-  return parsed === '' || parsed === '-' ? '0' : parsed;
+  const parsed = parsePastedAmount(val);
+  return parsed === '' ? '0' : parsed;
 }

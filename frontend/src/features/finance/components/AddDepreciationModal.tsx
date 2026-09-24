@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { parseAmountInput } from "@/lib/utils";
+import { parseAmountInput, parsePastedAmount } from "@/lib/utils";
 
 interface AddDepreciationModalProps {
   open: boolean;
@@ -146,8 +146,8 @@ export default function AddDepreciationModal({ open, onOpenChange, onSuccess, ye
   };
 
   const cleanNumber = (val: string) => {
-    const parsed = parseAmountInput(val);
-    return parsed === '' || parsed === '-' ? '0' : parsed;
+    const parsed = parsePastedAmount(val);
+    return parsed === '' ? '0' : parsed;
   };
 
   const formatInput = (val: string | number) => {
@@ -166,7 +166,15 @@ export default function AddDepreciationModal({ open, onOpenChange, onSuccess, ye
 
   const handlePaste = (e: React.ClipboardEvent, rowIndex: number, colKey: keyof DepreciationRow) => {
     const pasteData = e.clipboardData.getData('text');
-    if (!pasteData.includes('\t') && !pasteData.includes('\n')) return;
+    if (!pasteData.includes('\t') && !pasteData.includes('\n')) {
+      // Satu nilai ke kolom angka: baca dengan aturan tempel, bukan aturan ketik
+      // ("6,500" dari spreadsheet berbahasa Inggris = 6500, bukan 6,5).
+      if (NUMERIC_COLS.includes(colKey)) {
+        e.preventDefault();
+        updateRow(rowIndex, colKey, cleanNumber(pasteData));
+      }
+      return;
+    }
 
     e.preventDefault();
     const pasteRows = pasteData.split(/\r?\n/).filter(row => row.trim() !== '');
