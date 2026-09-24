@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Save, ShieldCheck, Info, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEquity } from '../hooks/useEquity';
+import { parseAmountInput } from "@/lib/utils";
 
 
 interface EquityPropertiesModalProps {
@@ -73,32 +74,7 @@ export default function EquityPropertiesModal({ open, onOpenChange, year }: Equi
     return isNegative ? `-${result}` : result;
   };
 
-  const parseDisplay = (val: string) => {
-    if (val === '-') return '-';
-    
-    const isNegative = val.startsWith('-');
-    let cleaned = val.replace(/[^0-9,.]/g, '');
-    
-    cleaned = cleaned.replace(/\./g, ''); // Remove dots
-    cleaned = cleaned.replace(/,/g, '.'); // Convert comma to dot
-    
-    // Ensure only one dot
-    const parts = cleaned.split(".");
-    if (parts.length > 2) {
-      cleaned = parts[0] + "." + parts.slice(1).join("");
-    }
-    
-    // Handle leading dot
-    if (cleaned.startsWith('.')) cleaned = '0' + cleaned;
-    
-    // Trim leading zeros (e.g. "05" -> "5", but "0.5" stays "0.5")
-    if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.') {
-      cleaned = cleaned.replace(/^0+/, '');
-      if (cleaned === '' || cleaned.startsWith('.')) cleaned = '0' + cleaned;
-    }
-    
-    return isNegative ? `-${cleaned}` : cleaned;
-  };
+  const parseDisplay = (val: string) => parseAmountInput(val);
 
   const handleInputChange = (key: string, value: string) => {
     const parsed = parseDisplay(value);

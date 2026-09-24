@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { formatDecimal } from '../../common/utils/format.utils';
+import { parseDecimalSafe } from '../../common/utils/parse.utils';
 
 
 /**
@@ -137,8 +138,8 @@ export class BankMutationService {
         internalAccountId: account.id,
         colA: item.colA ? new Date(item.colA) : null,
         colB: item.colB || "",
-        colC: item.colC?.toString() || "0",
-        colD: item.colD?.toString() || "0",
+        colC: parseDecimalSafe(item.colC, 'Debit') ?? '0',
+        colD: parseDecimalSafe(item.colD, 'Credit') ?? '0',
         colE: 0,
         ledgerId: refs[index].ledgerId,
         subLedgerId: refs[index].subLedgerId,
@@ -241,8 +242,8 @@ export class BankMutationService {
       data: {
         colA: newDate,
         colB: data.colB ?? existing.colB,
-        colC: data.colC !== undefined ? data.colC.toString() : existing.colC,
-        colD: data.colD !== undefined ? data.colD.toString() : existing.colD,
+        colC: data.colC !== undefined ? parseDecimalSafe(data.colC, 'Debit') ?? '0' : existing.colC,
+        colD: data.colD !== undefined ? parseDecimalSafe(data.colD, 'Credit') ?? '0' : existing.colD,
         ...ledgerData,
         colH: data.colH ?? existing.colH,
         colI: data.colI ?? existing.colI,
@@ -483,8 +484,8 @@ export class BankMutationService {
         // sebagian besar barisnya, dan seeder menyimpannya kosong juga.
         colA: data.colA ? new Date(data.colA) : null,
         colB: data.colB || '',
-        colC: data.colC !== undefined && data.colC !== '' ? data.colC.toString() : '0',
-        colD: data.colD !== undefined && data.colD !== '' ? data.colD.toString() : '0',
+        colC: parseDecimalSafe(data.colC, 'Debit') ?? '0',
+        colD: parseDecimalSafe(data.colD, 'Credit') ?? '0',
         colE: 0,
         ledgerId: refs[i].ledgerId,
         subLedgerId: refs[i].subLedgerId,

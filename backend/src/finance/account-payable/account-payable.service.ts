@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { formatDecimal } from '../../common/utils/format.utils';
 import {
   syncAccountAmounts, ACCOUNT_PAYABLE_COLUMNS, findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
-import { parseIntSafe, parseDateSafe } from '../../common/utils/parse.utils';
+import { parseIntSafe, parseDateSafe, parseDecimalSafe } from '../../common/utils/parse.utils';
 
 @Injectable()
 export class AccountPayableService {
@@ -99,22 +99,22 @@ export class AccountPayableService {
         colB: parseIntSafe(data.colB),
         colC: data.colC || null,
         colD: data.colD || null,
-        colE: data.colE?.toString() || null,   // EOY IDR
-        colF: data.colF?.toString() || null,   // EOY USD
-        colG: data.colG?.toString() || null,   // col G
+        colE: parseDecimalSafe(data.colE, 'colE'),   // EOY IDR
+        colF: parseDecimalSafe(data.colF, 'colF'),   // EOY USD
+        colG: parseDecimalSafe(data.colG, 'colG'),   // col G
         colH: data.colH || null,               // col H (string)
         colI: data.colI || null,               // col I (string)
-        colK: data.colK?.toString() || null,   // BCA Shardjo
-        colL: data.colL?.toString() || null,   // BCA Juanda
-        colM: data.colM?.toString() || null,   // Mandiri Mid Plaza
-        colN: data.colN?.toString() || null,   // BTN
-        colO: data.colO?.toString() || null,   // BRI Shardjo
-        colP: data.colP?.toString() || null,   // BRI Tebet
-        colQ: data.colQ?.toString() || null,   // Cash IDR
-        colR: data.colR?.toString() || null,   // Non CB
-        colS: data.colS?.toString() || null,   // AP In and Out
-        colU: data.colU?.toString() || null,   // Outstanding IDR
-        colV: data.colV?.toString() || null,   // Outstanding USD
+        colK: parseDecimalSafe(data.colK, 'colK'),   // BCA Shardjo
+        colL: parseDecimalSafe(data.colL, 'colL'),   // BCA Juanda
+        colM: parseDecimalSafe(data.colM, 'colM'),   // Mandiri Mid Plaza
+        colN: parseDecimalSafe(data.colN, 'colN'),   // BTN
+        colO: parseDecimalSafe(data.colO, 'colO'),   // BRI Shardjo
+        colP: parseDecimalSafe(data.colP, 'colP'),   // BRI Tebet
+        colQ: parseDecimalSafe(data.colQ, 'colQ'),   // Cash IDR
+        colR: parseDecimalSafe(data.colR, 'colR'),   // Non CB
+        colS: parseDecimalSafe(data.colS, 'colS'),   // AP In and Out
+        colU: parseDecimalSafe(data.colU, 'colU'),   // Outstanding IDR
+        colV: parseDecimalSafe(data.colV, 'colV'),   // Outstanding USD
         tagYear: parsedTagYear,
       },
     });
@@ -184,22 +184,22 @@ export class AccountPayableService {
       colB: parseIntSafe(row.colB),
       colC: row.colC || null,
       colD: row.colD || null,
-      colE: row.colE?.toString() || null,   // EOY IDR
-      colF: row.colF?.toString() || null,   // EOY USD
-      colG: row.colG?.toString() || null,   // col G
+      colE: parseDecimalSafe(row.colE, 'colE'),   // EOY IDR
+      colF: parseDecimalSafe(row.colF, 'colF'),   // EOY USD
+      colG: parseDecimalSafe(row.colG, 'colG'),   // col G
       colH: row.colH || null,               // col H (string)
       colI: row.colI || null,               // col I (string)
-      colK: row.colK?.toString() || null,   // BCA Shardjo
-      colL: row.colL?.toString() || null,   // BCA Juanda
-      colM: row.colM?.toString() || null,   // Mandiri Mid Plaza
-      colN: row.colN?.toString() || null,   // BTN
-      colO: row.colO?.toString() || null,   // BRI Shardjo
-      colP: row.colP?.toString() || null,   // BRI Tebet
-      colQ: row.colQ?.toString() || null,   // Cash IDR
-      colR: row.colR?.toString() || null,   // Non CB
-      colS: row.colS?.toString() || null,   // AP In and Out
-      colU: row.colU?.toString() || null,   // Outstanding IDR
-      colV: row.colV?.toString() || null,   // Outstanding USD
+      colK: parseDecimalSafe(row.colK, 'colK'),   // BCA Shardjo
+      colL: parseDecimalSafe(row.colL, 'colL'),   // BCA Juanda
+      colM: parseDecimalSafe(row.colM, 'colM'),   // Mandiri Mid Plaza
+      colN: parseDecimalSafe(row.colN, 'colN'),   // BTN
+      colO: parseDecimalSafe(row.colO, 'colO'),   // BRI Shardjo
+      colP: parseDecimalSafe(row.colP, 'colP'),   // BRI Tebet
+      colQ: parseDecimalSafe(row.colQ, 'colQ'),   // Cash IDR
+      colR: parseDecimalSafe(row.colR, 'colR'),   // Non CB
+      colS: parseDecimalSafe(row.colS, 'colS'),   // AP In and Out
+      colU: parseDecimalSafe(row.colU, 'colU'),   // Outstanding IDR
+      colV: parseDecimalSafe(row.colV, 'colV'),   // Outstanding USD
       tagYear: parsedTagYear,
     }));
     const savedRows = await this.prisma.accountPayable.createManyAndReturn({ data: records });

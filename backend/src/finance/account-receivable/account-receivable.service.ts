@@ -5,7 +5,7 @@ import { PaginatedResult } from '../../common/interfaces/paginated-result.interf
 import { formatDecimal } from '../../common/utils/format.utils';
 import {
   syncAccountAmounts, ACCOUNT_RECEIVABLE_COLUMNS, findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
-import { parseIntSafe } from '../../common/utils/parse.utils';
+import { parseIntSafe, parseDecimalSafe } from '../../common/utils/parse.utils';
 
 @Injectable()
 export class AccountReceivableService {
@@ -91,18 +91,18 @@ export class AccountReceivableService {
         colC: data.colC || null,
         colD: data.colD || null,
         colE: data.colE || null,
-        colF: data.colF?.toString() || null,
-        colG: data.colG?.toString() || null,
-        colH: data.colH?.toString() || null,
-        colJ: data.colJ?.toString() || null,
-        colK: data.colK?.toString() || null,
-        colL: data.colL?.toString() || null,
-        colM: data.colM?.toString() || null,
-        colN: data.colN?.toString() || null,
-        colO: data.colO?.toString() || null,
-        colP: data.colP?.toString() || null,
-        colR: data.colR?.toString() || null,
-        colS: data.colS?.toString() || null,
+        colF: parseDecimalSafe(data.colF, 'colF'),
+        colG: parseDecimalSafe(data.colG, 'colG'),
+        colH: parseDecimalSafe(data.colH, 'colH'),
+        colJ: parseDecimalSafe(data.colJ, 'colJ'),
+        colK: parseDecimalSafe(data.colK, 'colK'),
+        colL: parseDecimalSafe(data.colL, 'colL'),
+        colM: parseDecimalSafe(data.colM, 'colM'),
+        colN: parseDecimalSafe(data.colN, 'colN'),
+        colO: parseDecimalSafe(data.colO, 'colO'),
+        colP: parseDecimalSafe(data.colP, 'colP'),
+        colR: parseDecimalSafe(data.colR, 'colR'),
+        colS: parseDecimalSafe(data.colS, 'colS'),
         tagYear: parsedTagYear,
       },
     });
@@ -166,18 +166,18 @@ export class AccountReceivableService {
       colC: row.colC || null,
       colD: row.colD || null,
       colE: row.colE || null,
-      colF: row.colF?.toString() || null,
-      colG: row.colG?.toString() || null,
-      colH: row.colH?.toString() || null,
-      colJ: row.colJ?.toString() || null,
-      colK: row.colK?.toString() || null,
-      colL: row.colL?.toString() || null,
-      colM: row.colM?.toString() || null,
-      colN: row.colN?.toString() || null,
-      colO: row.colO?.toString() || null,
-      colP: row.colP?.toString() || null,
-      colR: row.colR?.toString() || null,
-      colS: row.colS?.toString() || null,
+      colF: parseDecimalSafe(row.colF, 'colF'),
+      colG: parseDecimalSafe(row.colG, 'colG'),
+      colH: parseDecimalSafe(row.colH, 'colH'),
+      colJ: parseDecimalSafe(row.colJ, 'colJ'),
+      colK: parseDecimalSafe(row.colK, 'colK'),
+      colL: parseDecimalSafe(row.colL, 'colL'),
+      colM: parseDecimalSafe(row.colM, 'colM'),
+      colN: parseDecimalSafe(row.colN, 'colN'),
+      colO: parseDecimalSafe(row.colO, 'colO'),
+      colP: parseDecimalSafe(row.colP, 'colP'),
+      colR: parseDecimalSafe(row.colR, 'colR'),
+      colS: parseDecimalSafe(row.colS, 'colS'),
       tagYear: parsedTagYear,
     }));
 

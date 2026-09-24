@@ -20,6 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { parseAmountInput } from "@/lib/utils";
 
 interface EditPpnInOutModalProps {
   open: boolean;
@@ -110,7 +111,7 @@ export default function EditPpnInOutModal({ open, onOpenChange, recordId, onSucc
       const payload: any = { ...formData };
       NUMERIC_COLS.forEach(key => {
         if (payload[key]) {
-           payload[key] = String(payload[key]).replace(/,/g, '.');
+           payload[key] = parseAmountInput(payload[key]);
         }
       });
       if (payload.colF) {

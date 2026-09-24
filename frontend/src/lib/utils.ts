@@ -45,6 +45,61 @@ export function cleanAmount(val: any) {
   return cleaned.replace(/[^0-9.-]+/g, "") || "0";
 }
 
+/**
+ * Angka yang diketik atau ditempel orang, jadi angka yang bisa dibaca mesin.
+ *
+ * Aplikasi ini menulis angka gaya Indonesia - titik ribuan, koma desimal
+ * ("1.234.567,89") - jadi itulah bacaan bawaannya: titik dibuang, koma jadi
+ * titik desimal. Ketikan di kolom angka selalu gaya ini, karena tampilannya
+ * diformat ulang tiap tombol ditekan.
+ *
+ * Yang ditempel dari Excel bisa bergaya Inggris ("56,981,982" atau
+ * "1,234.56"), tergantung setelan mesin pemakainya. Teks seperti itu tidak
+ * mungkin angka Indonesia - koma desimal hanya boleh satu, dan tidak ada titik
+ * sesudahnya - jadi hanya teks semacam itu yang dibaca gaya Inggris: koma
+ * dibuang, titik terakhir jadi desimal. Selain itu bacaannya tidak berubah
+ * dari sebelumnya.
+ *
+ * Dulu tiap koma diganti titik tanpa memeriksa apa pun. "56,981,982" jadi
+ * "56.981.982" - tiga titik, bukan angka - dan penyimpanan PPN In/Out gagal
+ * dengan galat 500 dari database (24 Sep 2026).
+ *
+ * Pemisah desimal di ujung dipertahankan ("1," jadi "1."), supaya angka yang
+ * sedang diketik tidak terpenggal di tengah jalan.
+ */
+export function parseAmountInput(val: any): string {
+  if (val === undefined || val === null) return '';
+  const raw = String(val).trim();
+  if (raw === '') return '';
+
+  const negative = raw.includes('-') || (raw.startsWith('(') && raw.endsWith(')'));
+  const body = raw.replace(/[^0-9.,]/g, '');
+  if (body === '') return negative ? '-' : '';
+
+  const commas = (body.match(/,/g) || []).length;
+  const englishStyle = commas > 1 || (commas === 1 && body.lastIndexOf('.') > body.indexOf(','));
+
+  let normalized: string;
+  if (englishStyle) {
+    // koma = ribuan; titik terakhir (kalau ada) = desimal
+    const noCommas = body.replace(/,/g, '');
+    const lastDot = noCommas.lastIndexOf('.');
+    normalized = lastDot < 0
+      ? noCommas
+      : noCommas.slice(0, lastDot).replace(/\./g, '') + '.' + noCommas.slice(lastDot + 1);
+  } else {
+    // titik = ribuan; koma (paling banyak satu) = desimal
+    normalized = body.replace(/\./g, '').replace(',', '.');
+  }
+
+  const [intRaw, decPart] = normalized.split('.');
+  let intPart = intRaw.replace(/^0+(?=\d)/, '');
+  if (decPart !== undefined && intPart === '') intPart = '0';
+  const out = decPart !== undefined ? `${intPart}.${decPart}` : intPart;
+  if (out === '' || out === '.') return negative ? '-' : '';
+  return negative ? '-' + out : out;
+}
+
 export function getAmountColor(val: any, showEmerald = true) {
   try {
     const num = new Decimal(cleanAmount(val));

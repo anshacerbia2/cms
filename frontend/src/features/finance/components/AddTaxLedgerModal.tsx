@@ -27,6 +27,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useAccountPayable } from '../hooks/useAccountPayable';
+import { parseAmountInput } from "@/lib/utils";
 
 interface AddTaxLedgerModalProps {
   open: boolean;
@@ -120,19 +121,8 @@ export default function AddTaxLedgerModal({ open, onOpenChange, onSuccess, type,
   };
 
   const cleanNumber = (val: string) => {
-    if (val === undefined || val === null) return '0';
-    let strVal = val.toString().trim();
-    if (strVal === '') return '0';
-    const hasMinus = strVal.includes('-') || (strVal.startsWith('(') && strVal.endsWith(')'));
-    let cleaned = strVal.replace(/\./g, '');
-    cleaned = cleaned.replace(/,/g, '.');
-    cleaned = cleaned.replace(/[^0-9.]/g, '');
-    if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.') {
-      cleaned = cleaned.replace(/^0+/, '');
-      if (cleaned === '' || cleaned.startsWith('.')) cleaned = '0' + cleaned;
-    }
-    if (hasMinus) cleaned = '-' + cleaned;
-    return cleaned === '-' ? '0' : cleaned;
+    const parsed = parseAmountInput(val);
+    return parsed === '' || parsed === '-' ? '0' : parsed;
   };
 
   const formatInput = (val: string | number) => {
@@ -147,23 +137,7 @@ export default function AddTaxLedgerModal({ open, onOpenChange, onSuccess, type,
     return isNegative ? `-${formatted}` : formatted;
   };
 
-  const parseDisplay = (val: string) => {
-    if (val === undefined || val === null) return '';
-    let strVal = val.toString().trim();
-    const hasMinus = strVal.includes('-') || (strVal.startsWith('(') && strVal.endsWith(')'));
-    let cleaned = strVal.replace(/\./g, '');
-    cleaned = cleaned.replace(/,/g, '.');
-    cleaned = cleaned.replace(/[^0-9.]/g, '');
-    const parts = cleaned.split(".");
-    cleaned = parts[0] + (parts.length > 1 ? "." + parts.slice(1).join("") : "");
-    if (cleaned.length > 1 && cleaned.startsWith('0') && cleaned[1] !== '.') {
-      cleaned = cleaned.replace(/^0+/, '');
-      if (cleaned === '' || cleaned.startsWith('.')) cleaned = '0' + cleaned;
-    }
-    if (cleaned.startsWith('.')) cleaned = '0' + cleaned;
-    const result = hasMinus ? '-' + cleaned : cleaned;
-    return result === '-' ? '-' : result;
-  };
+  const parseDisplay = (val: string) => parseAmountInput(val);
 
   const handlePaste = (e: React.ClipboardEvent, rowIndex: number, colKey: keyof TaxRow) => {
     const pasteData = e.clipboardData.getData('text');
