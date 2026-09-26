@@ -1251,3 +1251,27 @@ model SubLedger {
   @@unique([ledgerId, name])
   @@map("sub_ledgers")
 }
+
+/// Activity log - diisi oleh trigger `audit_row_change` di database, tidak
+/// pernah ditulis oleh kode aplikasi. Lihat migrasi 20260926000000_add_audit_log.
+model AuditLog {
+  id             BigInt   @id @default(autoincrement())
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  tableName      String   @map("table_name")
+  rowId          BigInt?  @map("row_id")
+  action         String
+  userId         BigInt?  @map("user_id")
+  userEmail      String?  @map("user_email")
+  requestId      String?  @map("request_id")
+  source         String
+  dbUser         String   @default(dbgenerated("CURRENT_USER")) @map("db_user")
+  changedColumns String[] @map("changed_columns")
+  oldData        Json?    @map("old_data")
+  newData        Json?    @map("new_data")
+
+  @@index([tableName, rowId, occurredAt], map: "audit_logs_row_idx")
+  @@index([occurredAt], map: "audit_logs_time_idx")
+  @@index([userId, occurredAt], map: "audit_logs_user_idx")
+  @@index([requestId], map: "audit_logs_request_idx")
+  @@map("audit_logs")
+}

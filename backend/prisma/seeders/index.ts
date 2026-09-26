@@ -8,6 +8,7 @@ import { seedRbacPermissions } from './rbac.seeder';
 import { seedPdfTemplates } from './pdf-templates.seeder';
 import { seedMasterDataPermissions } from './master-data.seeder';
 import { seedLedgers } from './ledgers.seeder';
+import { seedAuditLogPermissions } from './audit-logs.seeder';
 import { enforceViewerScope } from './utils/access-control';
 import { seedCustomers } from './customers.seeder';
 import { seedSuppliers } from './suppliers.seeder';
@@ -16,7 +17,11 @@ import { seedBanks } from './banks.seeder';
 import { seedFinance } from './finance.seeder';
 import { seedEquity } from './equity.seeder';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // Trigger activity log melewati tulisan seeder: isinya dimuat ulang dari workbook.
+  application_name: 'cms-seeder',
+});
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
@@ -33,6 +38,7 @@ async function main() {
     await seedMasterDataPermissions(prisma);
     // Master Ledger, penghubungan transaksi, dan permission + menu-nya.
     await seedLedgers(prisma);
+    await seedAuditLogPermissions(prisma);
     await enforceViewerScope(prisma);
     
     // Independent entities

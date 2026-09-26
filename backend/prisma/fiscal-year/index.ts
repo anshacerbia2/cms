@@ -16,7 +16,11 @@ import { seedPpnInOut } from './ppn-in-out.seeder';
 import { applyAdjustments } from './adjustments';
 import { seedLedgerMaster } from '../seeders/ledgers.seeder';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // Trigger activity log melewati tulisan seeder: isinya dimuat ulang dari workbook.
+  application_name: 'cms-seeder',
+});
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 

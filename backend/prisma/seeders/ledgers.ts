@@ -13,7 +13,11 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { seedLedgers } from './ledgers.seeder';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // Trigger activity log melewati tulisan seeder: isinya dimuat ulang dari workbook.
+  application_name: 'cms-seeder',
+});
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 seedLedgers(prisma)

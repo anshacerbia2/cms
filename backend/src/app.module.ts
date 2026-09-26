@@ -21,6 +21,7 @@ import { EquityPropertyModule } from './finance/equity-property/equity-property.
 import { PpnInOutModule } from './finance/ppn-in-out/ppn-in-out.module';
 import { InterAccountModule } from './finance/inter-account/inter-account.module';
 import { LedgersModule } from './finance/ledgers/ledgers.module';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ProposalsModule } from './proposals/proposals.module';
 import { BoqsModule } from './boqs/boqs.module';
@@ -53,6 +54,7 @@ import { VouchersModule } from './vouchers/vouchers.module';
     PpnInOutModule,
     InterAccountModule,
     LedgersModule,
+    AuditLogsModule,
     ProjectsModule,
     ProposalsModule,
     BoqsModule,
