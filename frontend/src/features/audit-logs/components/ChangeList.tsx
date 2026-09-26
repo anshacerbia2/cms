@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { columnLabel, HIDDEN_COLUMNS } from "../labels";
+import { columnLabel, isHidden, visibleChanges } from "../labels";
 import type { AuditEntry } from "../hooks/useAuditLogs";
 
 const numberFormat = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 4 });
@@ -32,9 +32,9 @@ export function formatAuditValue(value: any, column?: string): string {
 }
 
 /** Kolom yang diisi pada baris itu, untuk catatan Created dan Deleted. */
-function filledColumns(data: Record<string, any> | null) {
+function filledColumns(table: string, data: Record<string, any> | null) {
   if (!data) return [];
-  return Object.keys(data).filter((k) => !HIDDEN_COLUMNS.has(k) && data[k] !== null && data[k] !== "");
+  return Object.keys(data).filter((k) => !isHidden(table, k) && data[k] !== null && data[k] !== "");
 }
 
 /**
@@ -58,7 +58,7 @@ export function ChangeList({ entry }: { entry: AuditEntry }) {
   }
 
   if (entry.action === "UPDATE") {
-    const columns = entry.changedColumns.filter((c) => !HIDDEN_COLUMNS.has(c));
+    const columns = visibleChanges(entry.table, entry.changedColumns);
     return (
       <table className="w-full text-[12px]">
         <thead>
@@ -82,7 +82,7 @@ export function ChangeList({ entry }: { entry: AuditEntry }) {
   }
 
   const data = entry.action === "DELETE" ? entry.before : entry.after;
-  const columns = filledColumns(data);
+  const columns = filledColumns(entry.table, data);
   return (
     <dl className={cn("grid grid-cols-[max-content_1fr] gap-x-4 gap-y-0.5 text-[12px]", entry.action === "DELETE" && "opacity-80")}>
       {columns.map((c) => (

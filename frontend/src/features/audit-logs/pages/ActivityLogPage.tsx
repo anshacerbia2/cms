@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuditLogs, useAuditLogUsers, type AuditEntry } from "../hooks/useAuditLogs";
-import { ACTION_LABELS, FILTERABLE_TABLES, HIDDEN_COLUMNS, TABLE_LABELS, columnLabel } from "../labels";
+import { ACTION_LABELS, FILTERABLE_TABLES, TABLE_LABELS, columnLabel, visibleChanges } from "../labels";
 import { AuditEntryHeader, formatAuditTime } from "../components/AuditEntryHeader";
 import { ChangeList } from "../components/ChangeList";
 import { HistoryDialog } from "../components/HistoryDialog";
@@ -26,7 +26,7 @@ const dayAfter = (date: string) => {
 function summary(e: AuditEntry) {
   if (e.table.endsWith("_amounts")) return `Account amount: ${e.accountLabel ?? "account"}`;
   if (e.action === "UPDATE") {
-    const cols = e.changedColumns.filter((c) => !HIDDEN_COLUMNS.has(c)).map((c) => columnLabel(e.table, c));
+    const cols = visibleChanges(e.table, e.changedColumns).map((c) => columnLabel(e.table, c));
     return cols.length > 3 ? `${cols.slice(0, 3).join(", ")} +${cols.length - 3} more` : cols.join(", ");
   }
   return e.action === "INSERT" ? "New record" : "Record deleted";

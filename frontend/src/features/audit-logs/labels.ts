@@ -115,6 +115,38 @@ export const HIDDEN_COLUMNS = new Set([
   "account_receivable_id", "account_payable_id", "sales_record_id", "inter_account_id",
 ]);
 
+/**
+ * Kolom yang tidak ditampilkan per tabel. Bank Statement: nomor urut dan saldo
+ * berjalan dihitung ulang sesudah setiap perubahan, jadi nilai yang tercatat
+ * saat baris dibuat bukan nilai akhirnya (row_no 319500 = "sisip di antara
+ * baris 319 dan 320", lalu dirapikan). ID Ledger diwakili namanya (col_f/col_g).
+ */
+export const TABLE_HIDDEN_COLUMNS: Record<string, Set<string>> = {
+  financial_transactions: new Set(["row_no", "col_e", "ledger_id", "sub_ledger_id"]),
+};
+
+/**
+ * Kolom yang ditampilkan menggantikan kolom lain. Perubahan Ledger tercatat di
+ * ledger_id (namanya, col_f, tidak dianggap perubahan karena cuma cermin), jadi
+ * yang ditunjukkan ke user adalah namanya sebelum dan sesudah.
+ */
+export const DISPLAY_AS: Record<string, Record<string, string>> = {
+  financial_transactions: { ledger_id: "col_f", sub_ledger_id: "col_g" },
+};
+
+export const isHidden = (table: string, column: string) =>
+  HIDDEN_COLUMNS.has(column) || !!TABLE_HIDDEN_COLUMNS[table]?.has(column);
+
+/** Kolom berubah yang layak ditampilkan, dengan pengganti nama untuk ID. */
+export function visibleChanges(table: string, changed: string[]) {
+  const out: string[] = [];
+  for (const c of changed) {
+    const shown = DISPLAY_AS[table]?.[c] ?? c;
+    if (!isHidden(table, shown) && !out.includes(shown)) out.push(shown);
+  }
+  return out;
+}
+
 export function columnLabel(table: string, column: string) {
   return COLUMN_LABELS[table]?.[column] ?? COMMON[column] ?? column;
 }
