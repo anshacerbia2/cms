@@ -44,3 +44,18 @@ export async function accountsUsing(
   });
   return rows.map((r) => r.internalAccountId!);
 }
+
+/** Ruang nama kunci register Sales. */
+export const SALES_LOCK_NS = 7102;
+
+/**
+ * Mengunci register Sales satu tahun selama transaksi berjalan. Menambah,
+ * menyisip, dan menghapus baris semuanya menulis `row_no` seluruh tahun itu,
+ * jadi dua penyimpanan bersamaan harus bergiliran - kalau tidak, keduanya
+ * membaca nomor terakhir yang sama dan barisnya bertumpuk di nomor itu.
+ * Sales tidak punya saldo berjalan, dan tulisannya tidak pernah menyeberang ke
+ * tahun lain, jadi kunci per tahun cukup dan tidak bisa membentuk lingkaran.
+ */
+export async function lockSalesYear(db: Prisma.TransactionClient, year: number) {
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(${SALES_LOCK_NS}::int, ${year}::int)`;
+}
