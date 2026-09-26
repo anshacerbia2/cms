@@ -29,21 +29,23 @@ interface EditPpnInOutModalProps {
   onSuccess: () => void;
 }
 
+// Kolom 2025 dan 2026 digabung. Sales (tahun, colF) disembunyikan dari layar;
+// karena tidak ikut dikirim, nilainya di baris 2025 tidak tersentuh saat edit.
 const COL_ORDER = [
-  'colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ',
+  'colA', 'colB', 'colC', 'colD', 'colE', 'dpp', 'status', 'colH', 'colI', 'colJ',
   'colK', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR', 'colS'
 ];
 
 const LABELS: Record<string, string> = {
-  colA: 'Masa', colB: 'Col B', colC: 'No Faktur', colD: 'Client/Suplier',
-  colE: 'Invoice No', colF: 'Sales', colG: 'Status', colH: 'PPN',
+  colA: 'Masa', colB: 'PPN Type', colC: 'No Faktur', colD: 'Customer/Vendor',
+  colE: 'Invoice No', dpp: 'DPP PPN', status: 'Status', colH: 'PPN',
   colI: 'WAPU', colJ: 'PAID', colK: 'AP PPN WAPU',
   colM: 'Non WAPU', colN: 'Masukan', colO: 'AP PPN Non WAPU',
   colP: 'Ledger', colQ: 'Sub Ledger-1', colR: 'Sub Ledger-2', colS: 'Sub Ledger-3'
 };
 
 const NUMERIC_COLS = [
-  'colG', 'colH', 'colI', 'colJ', 'colK', 'colM', 'colN', 'colO'
+  'dpp', 'colH', 'colI', 'colJ', 'colK', 'colM', 'colN', 'colO'
 ];
 
 const DATE_COLS = ['colA'];
@@ -84,8 +86,6 @@ export default function EditPpnInOutModal({ open, onOpenChange, recordId, onSucc
     const { name, value } = e.target;
     if (NUMERIC_COLS.includes(name)) {
       setFormData((prev) => ({ ...prev, [name]: cleanInputAmount(value) }));
-    } else if (name === 'colF') {
-      setFormData((prev) => ({ ...prev, [name]: value.replace(/[^0-9]/g, '') }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
@@ -114,9 +114,6 @@ export default function EditPpnInOutModal({ open, onOpenChange, recordId, onSucc
            payload[key] = toSubmitAmount(payload[key]);
         }
       });
-      if (payload.colF) {
-         payload.colF = parseInt(payload.colF, 10);
-      }
       await updatePpnInOut.mutateAsync({
         id: recordId,
         data: payload

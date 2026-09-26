@@ -48,6 +48,37 @@ import {
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
 
+/**
+ * Kolom 2025 dan 2026 digabung; DPP PPN hanya ada di 2026, jadi baris 2025
+ * tampil "-". Sales (tahun, colF) dari workbook 2025 tetap tersimpan dan ikut
+ * ekspor, tapi tidak ditampilkan di layar.
+ */
+const COLS: { k: string; l: string; num?: boolean; isDate?: boolean }[] = [
+  { k: 'colA', l: 'Masa', isDate: true },
+  { k: 'colB', l: 'PPN Type' },
+  { k: 'colC', l: 'No Faktur' },
+  { k: 'colD', l: 'Customer/Vendor' },
+  { k: 'colE', l: 'Invoice No' },
+  { k: 'dpp', l: 'DPP PPN', num: true },
+  { k: 'status', l: 'Status' },
+  { k: 'colH', l: 'PPN', num: true },
+  { k: 'colI', l: 'WAPU', num: true },
+  { k: 'colJ', l: 'PAID', num: true },
+  { k: 'colK', l: 'AP PPN WAPU', num: true },
+  { k: 'colM', l: 'Non WAPU', num: true },
+  { k: 'colN', l: 'Masukan', num: true },
+  { k: 'colO', l: 'AP PPN Non WAPU', num: true },
+  { k: 'colP', l: 'Ledger' },
+  { k: 'colQ', l: 'Sub Ledger-1' },
+  { k: 'colR', l: 'Sub Ledger-2' },
+  { k: 'colS', l: 'Sub Ledger-3' },
+];
+
+const TOTAL_KEYS = COLS.filter((c) => c.num).map((c) => c.k);
+
+/** Angka mentah dari API disimpan di sebelah nilai tampilannya: colH → rawColH, dpp → rawDpp. */
+const rawKey = (k: string) => `raw${k[0].toUpperCase()}${k.slice(1)}`;
+
 export function PpnInOutTable() {
   const { can } = useAuthStore();
   const [historyRow, setHistoryRow] = useState<any | null>(null);
@@ -87,9 +118,9 @@ export function PpnInOutTable() {
       colC: row.colC || "-",
       colD: row.colD || "-",
       colE: row.colE || "-",
-      colF: row.colF || "-",
-      colG: formatCurrency(row.colG),
-      rawColG: row.colG,
+      dpp: formatCurrency(row.dpp),
+      rawDpp: row.dpp,
+      status: row.status || "-",
       colH: formatCurrency(row.colH),
       rawColH: row.colH,
       colI: formatCurrency(row.colI),
@@ -156,20 +187,11 @@ export function PpnInOutTable() {
         cleaned = cleaned.replace(/[^0-9.-]+/g, "");
         return cleaned ? new Decimal(cleaned) : new Decimal(0);
       };
-      return {
-        colG: acc.colG.plus(getNum(curr.rawColG ?? curr.colG)),
-        colH: acc.colH.plus(getNum(curr.rawColH ?? curr.colH)),
-        colI: acc.colI.plus(getNum(curr.rawColI ?? curr.colI)),
-        colJ: acc.colJ.plus(getNum(curr.rawColJ ?? curr.colJ)),
-        colK: acc.colK.plus(getNum(curr.rawColK ?? curr.colK)),
-        colM: acc.colM.plus(getNum(curr.rawColM ?? curr.colM)),
-        colN: acc.colN.plus(getNum(curr.rawColN ?? curr.colN)),
-        colO: acc.colO.plus(getNum(curr.rawColO ?? curr.colO)),
-      };
-    }, { 
-      colG: new Decimal(0), colH: new Decimal(0), colI: new Decimal(0), colJ: new Decimal(0), colK: new Decimal(0),
-      colM: new Decimal(0), colN: new Decimal(0), colO: new Decimal(0)
-    });
+      for (const k of TOTAL_KEYS) {
+        acc[k] = acc[k].plus(getNum(curr[rawKey(k)] ?? curr[k]));
+      }
+      return acc;
+    }, Object.fromEntries(TOTAL_KEYS.map((k) => [k, new Decimal(0)])) as Record<string, Decimal>);
   };
 
   const subtotalTotals = useMemo(() => calcTotals(paginatedData), [paginatedData]);
@@ -201,26 +223,9 @@ export function PpnInOutTable() {
   };
 
 
-  const cols = [
-    { k: 'colA', l: 'Masa', isDate: true },
-    { k: 'colB', l: 'Col B' },
-    { k: 'colC', l: 'No Faktur' },
-    { k: 'colD', l: 'Client/Suplier' },
-    { k: 'colE', l: 'Invoice No' },
-    { k: 'colF', l: 'Sales' },
-    { k: 'colG', l: 'Status', num: true },
-    { k: 'colH', l: 'PPN', num: true },
-    { k: 'colI', l: 'WAPU', num: true },
-    { k: 'colJ', l: 'PAID', num: true },
-    { k: 'colK', l: 'AP PPN WAPU', num: true },
-    { k: 'colM', l: 'Non WAPU', num: true },
-    { k: 'colN', l: 'Masukan', num: true },
-    { k: 'colO', l: 'AP PPN Non WAPU', num: true },
-    { k: 'colP', l: 'Ledger' },
-    { k: 'colQ', l: 'Sub Ledger-1' },
-    { k: 'colR', l: 'Sub Ledger-2' },
-    { k: 'colS', l: 'Sub Ledger-3' },
-  ];
+  const cols = COLS;
+  // Label total mengisi kolom teks di depan angka pertama.
+  const leadCols = cols.findIndex((c) => c.num);
 
   return (
     <div className="space-y-6 mt-6">
@@ -379,34 +384,28 @@ export function PpnInOutTable() {
 
                   {/* Subtotal Row */}
                   <TableRow className="bg-secondary/5 border-t-2 border-secondary/30 font-bold whitespace-nowrap">
-                    <TableCell colSpan={6} className="px-4 text-[11px] text-secondary/80 uppercase tracking-[0.2em]">
+                    <TableCell colSpan={leadCols} className="px-4 text-[11px] text-secondary/80 uppercase tracking-[0.2em]">
                       Subtotal (Page {page})
                     </TableCell>
-                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colG.toString())}`}>{formatCurrency(subtotalTotals.colG.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colH.toString())}`}>{formatCurrency(subtotalTotals.colH.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colI.toString())}`}>{formatCurrency(subtotalTotals.colI.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colJ.toString())}`}>{formatCurrency(subtotalTotals.colJ.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colK.toString())}`}>{formatCurrency(subtotalTotals.colK.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colM.toString())}`}>{formatCurrency(subtotalTotals.colM.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colN.toString())}`}>{formatCurrency(subtotalTotals.colN.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(subtotalTotals.colO.toString())}`}>{formatCurrency(subtotalTotals.colO.toString())}</TableCell>
-                    <TableCell colSpan={5} className="bg-secondary/[0.02]" />
+                    {cols.slice(leadCols).map((c) => c.num ? (
+                      <TableCell key={c.k} className={`text-right px-4 ${getAmountColor(subtotalTotals[c.k].toString())}`}>{formatCurrency(subtotalTotals[c.k].toString())}</TableCell>
+                    ) : (
+                      <TableCell key={c.k} className="bg-secondary/[0.02]" />
+                    ))}
+                    <TableCell className="bg-secondary/[0.02]" />
                   </TableRow>
 
                   {/* Grand Total Row */}
                   <TableRow className="bg-secondary/10 border-t border-secondary/30 font-bold whitespace-nowrap">
-                    <TableCell colSpan={6} className="px-4 text-[11px] text-secondary uppercase tracking-[0.2em]">
+                    <TableCell colSpan={leadCols} className="px-4 text-[11px] text-secondary uppercase tracking-[0.2em]">
                       Grand Totals ({filteredAndSortedData.length} records)
                     </TableCell>
-                    <TableCell className={`text-right ${getAmountColor(grandTotals.colG.toString())}`}>{formatCurrency(grandTotals.colG.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(grandTotals.colH.toString())}`}>{formatCurrency(grandTotals.colH.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(grandTotals.colI.toString())}`}>{formatCurrency(grandTotals.colI.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(grandTotals.colJ.toString())}`}>{formatCurrency(grandTotals.colJ.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(grandTotals.colK.toString())}`}>{formatCurrency(grandTotals.colK.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(grandTotals.colM.toString())}`}>{formatCurrency(grandTotals.colM.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(grandTotals.colN.toString())}`}>{formatCurrency(grandTotals.colN.toString())}</TableCell>
-                    <TableCell className={`text-right ${getAmountColor(grandTotals.colO.toString())}`}>{formatCurrency(grandTotals.colO.toString())}</TableCell>
-                    <TableCell colSpan={5} className="bg-secondary/[0.02]" />
+                    {cols.slice(leadCols).map((c) => c.num ? (
+                      <TableCell key={c.k} className={`text-right px-4 ${getAmountColor(grandTotals[c.k].toString())}`}>{formatCurrency(grandTotals[c.k].toString())}</TableCell>
+                    ) : (
+                      <TableCell key={c.k} className="bg-secondary/[0.02]" />
+                    ))}
+                    <TableCell className="bg-secondary/[0.02]" />
                   </TableRow>
                 </>
               )}

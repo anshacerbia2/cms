@@ -10,6 +10,7 @@ export class PpnInOutService {
     return {
       ...row,
       colG: row.colG ? formatDecimal(row.colG) : null,
+      dpp: row.dpp ? formatDecimal(row.dpp) : null,
       colH: row.colH ? formatDecimal(row.colH) : null,
       colI: row.colI ? formatDecimal(row.colI) : null,
       colJ: row.colJ ? formatDecimal(row.colJ) : null,
@@ -92,6 +93,8 @@ export class PpnInOutService {
       colE: row.colE || null,
       colF: parseIntSafe(row.colF),
       colG: parseDecimalSafe(row.colG, 'colG'),
+      dpp: parseDecimalSafe(row.dpp, 'dpp'),
+      status: row.status || null,
       colH: parseDecimalSafe(row.colH, 'colH'),
       colI: parseDecimalSafe(row.colI, 'colI'),
       colJ: parseDecimalSafe(row.colJ, 'colJ'),
@@ -124,6 +127,8 @@ export class PpnInOutService {
         colE: data.colE || null,
         colF: parseIntSafe(data.colF),
         colG: parseDecimalSafe(data.colG, 'colG'),
+        dpp: parseDecimalSafe(data.dpp, 'dpp'),
+        status: data.status || null,
         colH: parseDecimalSafe(data.colH, 'colH'),
         colI: parseDecimalSafe(data.colI, 'colI'),
         colJ: parseDecimalSafe(data.colJ, 'colJ'),
@@ -149,6 +154,8 @@ export class PpnInOutService {
     if ('colE' in data) updateData.colE = data.colE || null;
     if ('colF' in data) updateData.colF = parseIntSafe(data.colF);
     if ('colG' in data) updateData.colG = parseDecimalSafe(data.colG, 'colG');
+    if ('dpp' in data) updateData.dpp = parseDecimalSafe(data.dpp, 'dpp');
+    if ('status' in data) updateData.status = data.status || null;
     if ('colH' in data) updateData.colH = parseDecimalSafe(data.colH, 'colH');
     if ('colI' in data) updateData.colI = parseDecimalSafe(data.colI, 'colI');
     if ('colJ' in data) updateData.colJ = parseDecimalSafe(data.colJ, 'colJ');

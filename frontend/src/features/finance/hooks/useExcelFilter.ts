@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { compareCellValues } from "@/lib/utils";
 
 interface SortConfig {
   key: string;
@@ -103,34 +104,9 @@ export function useExcelFilter<T extends Record<string, any>>({
           }
         }
 
-        // 2. Numeric Sort (Handle currencies/numbers)
-        const isStrictlyNumeric = (v: any) => {
-          if (typeof v === 'number') return true;
-          const s = String(v || "").trim();
-          if (s === '-' || s === '') return true;
-          return /^[-+]?[Rp$€£]?\s*[\d.,\s]+$/.test(s);
-        };
-
-        if (isStrictlyNumeric(valA) && isStrictlyNumeric(valB)) {
-          const parseNum = (v: any) => {
-             const s = String(v || "").trim();
-             if (s === '-' || s === '') return 0;
-             return parseFloat(s.replace(/[^0-9.-]+/g, ""));
-          };
-          const numA = typeof valA === 'number' ? valA : parseNum(valA);
-          const numB = typeof valB === 'number' ? valB : parseNum(valB);
-          
-          if (!isNaN(numA) && !isNaN(numB)) {
-            return sort.direction === 'asc' ? numA - numB : numB - numA;
-          }
-        }
-        
-        // 3. String Sort Fallback
-        const strA = String(valA || "").toLowerCase();
-        const strB = String(valB || "").toLowerCase();
-        return sort.direction === 'asc' 
-          ? strA.localeCompare(strB, undefined, { numeric: true }) 
-          : strB.localeCompare(strA, undefined, { numeric: true });
+        // 2. Nominal menurut nilainya, teks menurut abjad
+        const order = compareCellValues(valA, valB);
+        return sort.direction === 'asc' ? order : -order;
       });
     }
 
