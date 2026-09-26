@@ -26,7 +26,7 @@ import { formatRowNo, rowNoCell } from './SalesDisplayRow';
  * tabel Sales. Di sini yang dirender ulang cuma baris yang sedang diketik.
  */
 
-const actionCell = 'px-4 bg-amber-50/60';
+const actionCell = 'px-4 pr-8 bg-amber-50/60';
 const draftNoCell = `${rowNoCell} bg-amber-50/60`;
 
 type EditProps = {
@@ -97,7 +97,7 @@ export function SalesInlineEditRow({ raw, accountColumns, saving, onSave, onCanc
         onPaste={onPaste}
       />
       <TableCell className={actionCell}>
-        <div className="flex items-center justify-center gap-1">
+        <div className="flex items-center justify-end gap-1">
           <Button
             variant="ghost"
             size="icon"
@@ -220,7 +220,7 @@ export function SalesInlineInsertRows({ accountColumns, anchorRowNo, colSpan, sa
             onPaste={onPaste}
           />
           <TableCell className={actionCell}>
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-end">
               {drafts.length > 1 && (
                 <Button
                   variant="ghost"
