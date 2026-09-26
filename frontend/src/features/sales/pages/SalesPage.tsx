@@ -1,5 +1,4 @@
-import { useState, useMemo } from "react";
-import { History as HistoryIcon } from 'lucide-react';
+import { Fragment, useState, useMemo, useCallback, useEffect } from "react";
 import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
 import { Decimal } from "decimal.js";
 import { ShoppingCart, Search, FilterX } from 'lucide-react';
@@ -17,10 +16,12 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
 import AddSalesModal from "../components/AddSalesModal";
 import { useAuthStore } from "@/store/authStore";
-import { Download, Edit2, Plus, Trash2, AlertCircle, FileSpreadsheet, FileText, Eye, CornerDownRight } from "lucide-react";
+import { Download, Plus, AlertCircle, FileSpreadsheet, FileText } from "lucide-react";
 import { downloadExcelFile, downloadPdfFile, exportFilter } from "@/lib/downloadFile";
 import { toast } from "sonner";
-import EditSalesModal from "../../finance/components/EditSalesModal";
+import { SalesDisplayRow } from "../components/SalesDisplayRow";
+import { SalesInlineEditRow, SalesInlineInsertRows } from "../components/SalesInlineRows";
+import { draftPayload, type SalesDraft } from "../components/SalesRowEditor";
 import { DetailModal } from "@/components/common/DetailModal";
 import {
   Dialog,
@@ -48,11 +49,13 @@ export default function SalesPage() {
   const { can } = useAuthStore();
   const [historyRow, setHistoryRow] = useState<any | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  // Baris yang ditumpangi tombol "Insert below"; form menyisip tepat di bawahnya.
-  const [insertAfter, setInsertAfter] = useState<{ id: number; rowNo: number | null; tagYear: number } | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  // Menyunting dan menyisip langsung di tabel, seperti Bank Statement. Satu per satu:
+  // selama ada yang diketik, tombol sunting/sisip baris lain dikunci.
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [insertAfterId, setInsertAfterId] = useState<number | null>(null);
+  const [savingInline, setSavingInline] = useState(false);
+  const inlineBusy = editingId !== null || insertAfterId !== null;
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
   const [selectedViewRecord, setSelectedViewRecord] = useState<any>(null);
   const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -70,7 +73,10 @@ export default function SalesPage() {
     return years;
   }, []);
 
-  const { getAllSales, deleteSales } = useSales();
+  const { getAllSales, deleteSales, updateSales, insertSales } = useSales();
+  // mutateAsync stabil antar render; objek mutasinya tidak.
+  const updateSalesAsync = updateSales.mutateAsync;
+  const insertSalesAsync = insertSales.mutateAsync;
   const accountColumns = useAccountColumns(
     "sales",
     salesYearFilter !== "all" ? yearNum : undefined,
@@ -145,6 +151,19 @@ export default function SalesPage() {
     return filteredAndSortedSales.slice(start, start + salesLimit);
   }, [filteredAndSortedSales, salesPage, salesLimit]);
 
+  const canEdit = can('sales.update');
+  const canCreate = can('sales.create');
+  const canDelete = can('sales.delete');
+  const canHistory = can('audit-logs.index');
+
+  // Pindah halaman, filter, atau tahun menyembunyikan baris yang sedang diketik:
+  // batalkan, jangan biarkan draf yang tak terlihat tetap mengunci tombol.
+  useEffect(() => {
+    const visible = (id: number | null) => id === null || paginatedSales.some((r: any) => r.id === id);
+    if (!visible(editingId)) setEditingId(null);
+    if (!visible(insertAfterId)) setInsertAfterId(null);
+  }, [paginatedSales, editingId, insertAfterId]);
+
   const salesMeta = {
     total: filteredAndSortedSales.length,
     page: salesPage,
@@ -152,15 +171,63 @@ export default function SalesPage() {
     lastPage: Math.ceil(filteredAndSortedSales.length / salesLimit) || 1
   };
 
-  const handleEdit = (id: number) => {
-    setSelectedRecordId(id);
-    setIsEditModalOpen(true);
-  };
+  // Baris mentah dari API, sebelum diformat - sumber draf yang disunting.
+  const rawById = useMemo(
+    () => new Map<number, any>((allSalesRaw || []).map((r: any) => [r.id, r])),
+    [allSalesRaw],
+  );
 
-  const handleView = (row: any) => {
+  // Semua callback baris stabil (useCallback), supaya SalesDisplayRow yang
+  // di-memo tidak ikut dirender ulang setiap halaman berubah.
+  const handleView = useCallback((row: any) => {
     setSelectedViewRecord(row);
     setIsViewModalOpen(true);
-  };
+  }, []);
+  const handleHistory = useCallback((row: any) => setHistoryRow(row), []);
+  const handleEdit = useCallback((row: any) => setEditingId(row.id), []);
+  const handleInsertAfter = useCallback((row: any) => setInsertAfterId(row.id), []);
+  const handleAskDelete = useCallback((id: number) => setRecordToDelete(id), []);
+  const cancelInline = useCallback(() => {
+    setEditingId(null);
+    setInsertAfterId(null);
+  }, []);
+
+  const saveEdit = useCallback(
+    async (draft: SalesDraft) => {
+      if (editingId === null || savingInline) return;
+      setSavingInline(true);
+      try {
+        await updateSalesAsync({ id: editingId, data: draftPayload(draft) });
+        toast.success("Sales record updated.");
+        setEditingId(null);
+        refetchSales();
+      } catch (error: any) {
+        toast.error(error?.response?.data?.message || "Failed to update sales record.");
+      } finally {
+        setSavingInline(false);
+      }
+    },
+    [editingId, savingInline, updateSalesAsync, refetchSales],
+  );
+
+  const saveInsert = useCallback(
+    async (drafts: SalesDraft[]) => {
+      if (insertAfterId === null || savingInline) return;
+      const anchor = rawById.get(insertAfterId);
+      if (!anchor) return;
+      setSavingInline(true);
+      try {
+        await insertSalesAsync({ rows: drafts.map(draftPayload), tagYear: anchor.tagYear, afterId: insertAfterId });
+        setInsertAfterId(null);
+        refetchSales();
+      } catch {
+        // insertSales sudah menampilkan pesan galatnya; draf tetap di layar.
+      } finally {
+        setSavingInline(false);
+      }
+    },
+    [insertAfterId, savingInline, rawById, insertSalesAsync, refetchSales],
+  );
 
   const handleDelete = async () => {
     if (!recordToDelete) return;
@@ -430,65 +497,41 @@ export default function SalesPage() {
               ) : (
                 <>
                   {paginatedSales.map((row: any) => (
-                    <TableRow key={row.id} className="border-primary/5 hover:bg-primary/[0.01] transition-colors whitespace-nowrap group">
-                      <TableCell className="pl-8 px-4 w-20 tabular-nums text-primary/50">{row.rowNo ?? "-"}</TableCell>
-                      <TableCell className="px-4 w-40">{row.colB}</TableCell>
-                      <TableCell className="px-4 w-32">{row.colC}</TableCell>
-                      <TableCell className="px-4 w-20">{row.colD}</TableCell>
-                      <TableCell className="px-4 w-48">{row.colE}</TableCell>
-                      <TableCell className="px-4 w-32">{row.colF}</TableCell>
-                      <TableCell className="px-4 w-64 truncate max-w-[200px]">{row.colG}</TableCell>
-                      
-                      <TableCell className="px-4 w-40 text-right">{row.colH}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colI}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colJ}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colK}</TableCell>
-                      {/* <TableCell className="px-4 w-40">{row.colL}</TableCell> */}
-
-                      {accountColumns.map((account) => (
-                        <TableCell key={account.id} className="px-4 w-40 text-right">{row[accountKey(account.id)]}</TableCell>
-                      ))}
-
-                      <TableCell className="px-4 w-40 text-right font-bold">{row.colX}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colZ}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colAA}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colAB}</TableCell>
-                      <TableCell className="px-4 w-40 text-right">{row.colAC}</TableCell>
-                      <TableCell className="pr-8 w-64">{row.colAD}</TableCell>
-                      <TableCell className="px-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleView(row); }}>
-                            <Eye size={12} strokeWidth={2.5} />
-                          </Button>
-                          {can('audit-logs.index') && (
-                            <Button variant="ghost" size="icon" title="History" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); setHistoryRow(row); }}>
-                              <HistoryIcon size={12} strokeWidth={2.5} />
-                            </Button>
-                          )}
-                          {can('sales.create') && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Insert a row below this one"
-                              className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
-                              onClick={(e) => { e.stopPropagation(); setInsertAfter({ id: row.id, rowNo: row.rowNo ?? null, tagYear: row.tagYear }); }}
-                            >
-                              <CornerDownRight size={12} strokeWidth={2.5} />
-                            </Button>
-                          )}
-                          {can('sales.update') && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
-                              <Edit2 size={12} strokeWidth={2.5} />
-                            </Button>
-                          )}
-                          {can('sales.delete') && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
-                              <Trash2 size={12} strokeWidth={2.5} />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <Fragment key={row.id}>
+                      {editingId === row.id ? (
+                        <SalesInlineEditRow
+                          raw={rawById.get(row.id)}
+                          accountColumns={accountColumns}
+                          saving={savingInline}
+                          onSave={saveEdit}
+                          onCancel={cancelInline}
+                        />
+                      ) : (
+                        <SalesDisplayRow
+                          row={row}
+                          accountColumns={accountColumns}
+                          busy={inlineBusy}
+                          canEdit={canEdit}
+                          canCreate={canCreate}
+                          canDelete={canDelete}
+                          onView={handleView}
+                          onHistory={canHistory ? handleHistory : undefined}
+                          onEdit={handleEdit}
+                          onInsert={handleInsertAfter}
+                          onDelete={handleAskDelete}
+                        />
+                      )}
+                      {insertAfterId === row.id && (
+                        <SalesInlineInsertRows
+                          accountColumns={accountColumns}
+                          anchorRowNo={row.rowNo}
+                          colSpan={18 + accountColumns.length}
+                          saving={savingInline}
+                          onSave={saveInsert}
+                          onCancel={cancelInline}
+                        />
+                      )}
+                    </Fragment>
                   ))}
                   {/* Summary Rows */}
                   {/* Subtotal (Current Page) */}
@@ -550,27 +593,12 @@ export default function SalesPage() {
           toast.success("Sales data refreshed successfully");
         }}
       />
-      <AddSalesModal
-        open={insertAfter !== null}
-        onOpenChange={(o) => { if (!o) setInsertAfter(null); }}
-        year={insertAfter?.tagYear ?? yearNum}
-        insertAfter={insertAfter}
-        onSuccess={() => { refetchSales(); }}
-      />
       <HistoryDialog
         open={historyRow !== null}
         onOpenChange={(o) => { if (!o) setHistoryRow(null); }}
         table="sales_records"
         rowId={historyRow?.id}
         title={[historyRow?.colB, historyRow?.colF].filter(Boolean).join(' — ')}
-      />
-      <EditSalesModal 
-        open={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
-        recordId={selectedRecordId}
-        onSuccess={() => {
-          refetchSales();
-        }}
       />
       <Dialog 
         open={recordToDelete !== null} 
