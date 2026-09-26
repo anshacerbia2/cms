@@ -518,7 +518,7 @@ export default function SalesPage() {
                 <TableHead className="w-64 px-4 pr-8">
                   <div className="flex items-center gap-1">Remarks <ExcelColumnFilter columnKey="colAD" label="Remarks" data={getCascadingData("colAD")} activeFilters={salesFilters["colAD"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colAD: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colAD", direction: d}); setSalesPage(1); }} /></div>
                 </TableHead>
-                <TableHead className="w-24 px-4 pr-8 text-right">Actions</TableHead>
+                <TableHead className="w-24 px-4 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
