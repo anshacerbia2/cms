@@ -9,6 +9,7 @@ import { useSales } from "../../finance/hooks/useSales";
 import { useAccountColumns, accountKey } from "../../finance/hooks/useAccountColumns";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { ExcelColumnFilter } from "../../finance/components/ExcelColumnFilter";
+import { LedgerErrorBoundary } from "../../finance/components/LedgerErrorBoundary";
 import { formatCurrency, formatDate, cleanAmount, getAmountColor } from "@/lib/utils";
 import { useExcelFilter } from "../../finance/hooks/useExcelFilter";
 
@@ -87,8 +88,20 @@ export default function SalesPage() {
     { enabled: !!salesYearFilter }
   );
 
+  /** Filter rentang kolom No (inklusif), seperti Bank Statement. */
+  const [rowNoRange, setRowNoRange] = useState<{ min: number | null; max: number | null }>({ min: null, max: null });
+  const isRowNoRangeActive = rowNoRange.min !== null || rowNoRange.max !== null;
+
+  // Rentang No disaring di sini, sebelum filter kolom lain, supaya daftar nilai
+  // di filter lain, subtotal, dan grand total ikut mengikuti rentangnya.
   const displaySales = useMemo(() => {
-    return (allSalesRaw || []).map((row: any) => ({
+    const inRange = (row: any) => {
+      if (!isRowNoRangeActive) return true;
+      const no = row.rowNo === null || row.rowNo === undefined ? null : row.rowNo;
+      if (no === null) return false;
+      return (rowNoRange.min === null || no >= rowNoRange.min) && (rowNoRange.max === null || no <= rowNoRange.max);
+    };
+    return (allSalesRaw || []).filter(inRange).map((row: any) => ({
       ...row,
       colB: row.colB || "-",
       rawColC: row.colC,
@@ -126,7 +139,7 @@ export default function SalesPage() {
         (row.amounts ?? []).map((a: any) => [accountKey(a.accountId), formatCurrency(a.amount)])
       ),
     }));
-  }, [allSalesRaw]);
+  }, [allSalesRaw, isRowNoRangeActive, rowNoRange]);
 
   const {
     page: salesPage,
@@ -139,12 +152,19 @@ export default function SalesPage() {
     setSort: setSalesSort,
     getCascadingData,
     filteredAndSortedData: filteredAndSortedSales,
-    clearFilters: handleClearFilters,
-    isAnyFilterActive
+    clearFilters: handleClearFiltersBase,
+    isAnyFilterActive: isExcelFilterActive
   } = useExcelFilter({
     data: displaySales,
     searchFields: ['colB', 'colD', 'colE', 'colF', 'colG']
   });
+
+  const handleClearFilters = () => {
+    handleClearFiltersBase();
+    setRowNoRange({ min: null, max: null });
+  };
+
+  const isAnyFilterActive = isExcelFilterActive || isRowNoRangeActive;
 
   const paginatedSales = useMemo(() => {
     const start = (salesPage - 1) * salesLimit;
@@ -191,6 +211,14 @@ export default function SalesPage() {
     setEditingId(null);
     setInsertAfterId(null);
   }, []);
+
+  // Ganti tahun, pencarian, filter kolom, urutan, atau rentang No: baris yang
+  // sedang diketik dibatalkan. Isi tabelnya sudah bukan yang tadi, dan menyisip
+  // "di bawah baris ini" di tampilan yang tersaring atau terurut lain
+  // membingungkan - posisinya tetap menurut urutan register.
+  useEffect(() => {
+    cancelInline();
+  }, [salesYearFilter, salesSearch, salesFilters, salesSort, rowNoRange, cancelInline]);
 
   const saveEdit = useCallback(
     async (draft: SalesDraft) => {
@@ -338,7 +366,7 @@ export default function SalesPage() {
             onChange={(e) => { setSalesSearch(e.target.value); setSalesPage(1); }}
           />
         </div>
-        <Select value={salesYearFilter} onValueChange={(v) => { setSalesYearFilter(v); setSalesPage(1); }}>
+        <Select value={salesYearFilter} onValueChange={(v) => { setSalesYearFilter(v); setSalesPage(1); setRowNoRange({ min: null, max: null }); }}>
           <SelectTrigger className="w-full xl:w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
             <SelectValue placeholder="Year" />
           </SelectTrigger>
@@ -366,7 +394,7 @@ export default function SalesPage() {
           
           {can('sales.create') && (
             <Button 
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={(e) => { e.stopPropagation(); cancelInline(); setIsAddModalOpen(true); }}
               className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 disabled:grayscale transition-all active:scale-95 cursor-pointer"
             >
               <Plus size={20} strokeWidth={3} />
@@ -404,11 +432,12 @@ export default function SalesPage() {
 
       <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-premium border border-primary/5 overflow-hidden mt-6">
         <div className="overflow-x-auto">
+          <LedgerErrorBoundary onReset={cancelInline} title="The sales table could not be displayed.">
           <Table className="min-w-[4200px]">
             <TableHeader className="bg-slate-50/50">
               <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
                 <TableHead className="pl-8 w-20 px-4">
-                  <div className="flex items-center gap-1">No <ExcelColumnFilter columnKey="rowNo" label="No" data={[]} activeFilters={null} onFilterChange={() => {}} sortOnly sortLabels={['1 → 9', '9 → 1']} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "rowNo", direction: d}); setSalesPage(1); }} /></div>
+                  <div className="flex items-center gap-1">No <ExcelColumnFilter columnKey="rowNo" label="No" data={[]} activeFilters={null} onFilterChange={() => {}} sortOnly sortLabels={['1 → 9', '9 → 1']} range={rowNoRange} onRangeChange={(r) => { setRowNoRange(r); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "rowNo", direction: d}); setSalesPage(1); }} /></div>
                 </TableHead>
                 <TableHead className="w-40 px-4">
                   <div className="flex items-center gap-1">Invoice No <ExcelColumnFilter columnKey="colB" label="Invoice No" data={getCascadingData("colB")} activeFilters={salesFilters["colB"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colB: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colB", direction: d}); setSalesPage(1); }} /></div>
@@ -581,6 +610,7 @@ export default function SalesPage() {
               )}
             </TableBody>
           </Table>
+          </LedgerErrorBoundary>
         </div>
       </div>
       <PaginationControls meta={salesMeta} onPageChange={setSalesPage} isFetching={salesLoading} />
