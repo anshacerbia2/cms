@@ -1256,7 +1256,7 @@ model SubLedger {
 /// pernah ditulis oleh kode aplikasi. Lihat migrasi 20260926000000_add_audit_log.
 model AuditLog {
   id             BigInt   @id @default(autoincrement())
-  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  occurredAt     DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("occurred_at")
   tableName      String   @map("table_name")
   rowId          BigInt?  @map("row_id")
   action         String

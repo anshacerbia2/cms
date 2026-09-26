@@ -10,7 +10,10 @@
 
 CREATE TABLE "audit_logs" (
   "id"              BIGSERIAL PRIMARY KEY,
-  "occurred_at"     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- Waktu UTC tanpa zona, seperti kolom waktu lain di skema ini. TIMESTAMPTZ
+  -- tidak dipakai: sesi database berzona Asia/Jakarta, dan adapter Prisma
+  -- membuang offset '+07' saat membacanya, sehingga waktunya maju 7 jam.
+  "occurred_at"     TIMESTAMP(3) NOT NULL DEFAULT timezone('utc', now()),
   "table_name"      TEXT NOT NULL,
   "row_id"          BIGINT,
   "action"          TEXT NOT NULL,          -- INSERT / UPDATE / DELETE

@@ -65,9 +65,11 @@ export class AuditLogsService {
     if (query.requestId) and.push({ requestId: query.requestId });
     if (query.from) and.push({ occurredAt: { gte: new Date(query.from) } });
     if (query.to) {
-      // `to` berupa tanggal: sertakan seluruh hari itu.
+      // Halaman mengirim batas hari menurut jam lokal user sebagai waktu
+      // lengkap (eksklusif). Kalau yang datang tanggal polos, seluruh hari
+      // itu (UTC) disertakan.
       const end = new Date(query.to);
-      if (/^\d{4}-\d{2}-\d{2}$/.test(query.to)) end.setDate(end.getDate() + 1);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(query.to)) end.setUTCDate(end.getUTCDate() + 1);
       and.push({ occurredAt: { lt: end } });
     }
 
