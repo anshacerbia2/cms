@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { CornerDownRight, Edit2, Eye, Trash2 } from 'lucide-react';
+import { CornerDownRight, Edit2, Eye, History, Trash2 } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 
@@ -27,6 +27,8 @@ type Props = {
   canCreate: boolean;
   canDelete: boolean;
   onView: (row: any) => void;
+  /** Riwayat perubahan baris ini. Tidak diisi kalau user tidak berhak melihat activity log. */
+  onHistory?: (row: any) => void;
   onEdit: (row: any) => void;
   onInsert: (row: any) => void;
   onDelete: (id: number) => void;
@@ -42,7 +44,7 @@ type Props = {
  * (useCallback); kalau tidak, memo tidak berguna.
  */
 export const LedgerDisplayRow = memo(function LedgerDisplayRow({
-  row, showRowNo, busy, canEdit, canCreate, canDelete, onView, onEdit, onInsert, onDelete,
+  row, showRowNo, busy, canEdit, canCreate, canDelete, onView, onHistory, onEdit, onInsert, onDelete,
 }: Props) {
   return (
     <TableRow className="hover:bg-slate-50 transition-colors whitespace-nowrap group">
@@ -68,6 +70,17 @@ export const LedgerDisplayRow = memo(function LedgerDisplayRow({
           >
             <Eye size={12} strokeWidth={2.5} />
           </Button>
+          {onHistory && (
+            <Button
+              variant="ghost"
+              size="icon"
+              title="History"
+              className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
+              onClick={(e) => { e.stopPropagation(); onHistory(row); }}
+            >
+              <History size={12} strokeWidth={2.5} />
+            </Button>
+          )}
           {canEdit && (
             <Button 
               variant="ghost" 

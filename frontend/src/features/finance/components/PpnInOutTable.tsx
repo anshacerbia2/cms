@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { History as HistoryIcon } from 'lucide-react';
+import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
 import { Search, FilterX } from 'lucide-react';
 import { 
   Table, 
@@ -48,6 +50,7 @@ import { useAuthStore } from "@/store/authStore";
 
 export function PpnInOutTable() {
   const { can } = useAuthStore();
+  const [historyRow, setHistoryRow] = useState<any | null>(null);
   const limit = 10;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -354,6 +357,11 @@ export function PpnInOutTable() {
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleView(row); }}>
                             <Eye size={12} strokeWidth={2.5} />
                           </Button>
+                          {can('audit-logs.index') && (
+                            <Button variant="ghost" size="icon" title="History" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); setHistoryRow(row); }}>
+                              <HistoryIcon size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                           {can('ppn-in-out.update') && (
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
                               <Edit2 size={12} strokeWidth={2.5} />
@@ -416,6 +424,20 @@ export function PpnInOutTable() {
         }} 
         onPageChange={setPage} 
         isFetching={isLoading} 
+      />
+
+      <HistoryDialog
+
+        open={historyRow !== null}
+
+        onOpenChange={(o) => { if (!o) setHistoryRow(null); }}
+
+        table="ppn_in_out"
+
+        rowId={historyRow?.id}
+
+        title={[historyRow?.colC, historyRow?.colD].filter(Boolean).join(' — ')}
+
       />
 
       <EditPpnInOutModal 

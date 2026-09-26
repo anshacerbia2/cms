@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { History as HistoryIcon } from 'lucide-react';
+import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
 import { Decimal } from "decimal.js";
 import { ShoppingCart, Search, FilterX } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -44,6 +46,7 @@ import {
 
 export default function SalesPage() {
   const { can } = useAuthStore();
+  const [historyRow, setHistoryRow] = useState<any | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -451,6 +454,11 @@ export default function SalesPage() {
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleView(row); }}>
                             <Eye size={12} strokeWidth={2.5} />
                           </Button>
+                          {can('audit-logs.index') && (
+                            <Button variant="ghost" size="icon" title="History" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); setHistoryRow(row); }}>
+                              <HistoryIcon size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                           {can('sales.update') && (
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
                               <Edit2 size={12} strokeWidth={2.5} />
@@ -524,6 +532,13 @@ export default function SalesPage() {
           refetchSales();
           toast.success("Sales data refreshed successfully");
         }}
+      />
+      <HistoryDialog
+        open={historyRow !== null}
+        onOpenChange={(o) => { if (!o) setHistoryRow(null); }}
+        table="sales_records"
+        rowId={historyRow?.id}
+        title={[historyRow?.colB, historyRow?.colF].filter(Boolean).join(' — ')}
       />
       <EditSalesModal 
         open={isEditModalOpen}

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, Fragment } from "react";
+import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
 import { 
   Search, 
   Landmark,
@@ -149,6 +150,8 @@ export default function BankMutationPage() {
   // LedgerDisplayRow benar-benar mencegah render ulang. Tombolnya sendiri sudah
   // dikunci selama ada yang diketik, jadi di sini tidak perlu dicek lagi.
   const handleEditTransaction = useCallback((row: any) => setEditingId(row.id), []);
+  const [historyRow, setHistoryRow] = useState<any | null>(null);
+  const handleHistory = useCallback((row: any) => setHistoryRow(row), []);
 
   /** Baris baru mendarat tepat di bawah `row`, bukan di ujung daftar. */
   const handleInsertAfter = useCallback((row: any) => setInsertAfterId(row.id), []);
@@ -1007,6 +1010,7 @@ export default function BankMutationPage() {
                       canCreate={canCreate}
                       canDelete={canDelete}
                       onView={handleViewTransaction}
+                      onHistory={can('audit-logs.index') ? handleHistory : undefined}
                       onEdit={handleEditTransaction}
                       onInsert={handleInsertAfter}
                       onDelete={handleDeleteTransaction}
@@ -1069,6 +1073,20 @@ export default function BankMutationPage() {
           isFetching={transLoading} 
         />
       )}
+
+      <HistoryDialog
+
+        open={historyRow !== null}
+
+        onOpenChange={(o) => { if (!o) setHistoryRow(null); }}
+
+        table="financial_transactions"
+
+        rowId={historyRow?.id}
+
+        title={[historyRow?.colA, historyRow?.colB].filter(Boolean).join(' — ')}
+
+      />
 
       <AddLedgerModal 
         open={isAddModalOpen} 

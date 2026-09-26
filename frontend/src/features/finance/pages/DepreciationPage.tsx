@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { History as HistoryIcon } from 'lucide-react';
+import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
 import { ArrowUpRight, Search, FilterX, Plus, Pin } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useDepreciation } from "../hooks/useDepreciation";
@@ -43,6 +45,7 @@ import {
 
 export default function DepreciationPage() {
   const { can } = useAuthStore();
+  const [historyRow, setHistoryRow] = useState<any | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -528,6 +531,11 @@ export default function DepreciationPage() {
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleView(row); }}>
                             <Eye size={12} strokeWidth={2.5} />
                           </Button>
+                          {can('audit-logs.index') && (
+                            <Button variant="ghost" size="icon" title="History" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); setHistoryRow(row); }}>
+                              <HistoryIcon size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                           {can('depreciation.update') && (
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
                               <Edit2 size={12} strokeWidth={2.5} />
@@ -599,6 +607,13 @@ export default function DepreciationPage() {
         onOpenChange={setIsAddModalOpen} 
         year={yearNum}
         onSuccess={() => assetsQuery.refetch()} 
+      />
+      <HistoryDialog
+        open={historyRow !== null}
+        onOpenChange={(o) => { if (!o) setHistoryRow(null); }}
+        table="depreciation"
+        rowId={historyRow?.id}
+        title={historyRow?.colC}
       />
       <EditDepreciationModal 
         open={isEditModalOpen}

@@ -28,6 +28,7 @@ import RolesPage from './features/access-control/pages/RolesPage';
 import PermissionsPage from './features/access-control/pages/PermissionsPage';
 import MenusPage from './features/access-control/pages/MenusPage';
 import PdfTemplatesPage from './features/print-templates/pages/PdfTemplatesPage';
+import ActivityLogPage from './features/audit-logs/pages/ActivityLogPage';
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ function App() {
             <Route path="permissions" element={<PermissionsPage />} />
             <Route path="menus" element={<MenusPage />} />
             <Route path="pdf-templates" element={<PdfTemplatesPage />} />
+            <Route path="audit-logs" element={<ActivityLogPage />} />
             <Route path="payment-vouchers" element={<PaymentVouchersPage />} />
           </Route>
         </Routes>
