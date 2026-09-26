@@ -1,4 +1,4 @@
-import { VIEWER_MENU_GROUPS, VIEWER_MODULES, moduleOf } from './utils/access-control';
+import { MENU_GROUP_ORDER, VIEWER_MENU_GROUPS, VIEWER_MODULES, moduleOf } from './utils/access-control';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -210,21 +210,21 @@ export async function seedAuth(prisma: PrismaClient) {
   await prisma.menu.deleteMany();
 
   const menuGroups = [
-    { id: 100, name: 'Overview', icon: 'LayoutDashboard', order: 1, forFinance: true, items: [
+    { id: 100, name: 'Overview', icon: 'LayoutDashboard', order: MENU_GROUP_ORDER[100], forFinance: true, items: [
       { id: 1001, name: 'Dashboard', icon: 'LayoutDashboard', route: 'dashboard.view', order: 1, forFinance: true },
     ]},
-    { id: 200, name: 'Master Data', icon: 'Database', order: 2, forFinance: false, items: [
+    { id: 200, name: 'Master Data', icon: 'Database', order: MENU_GROUP_ORDER[200], forFinance: false, items: [
       { id: 2001, name: 'Customers', icon: 'Users', route: 'customers.index', order: 1, forFinance: false },
       { id: 2002, name: 'Suppliers', icon: 'Truck', route: 'suppliers.index', order: 2, forFinance: false },
       { id: 2003, name: 'Products', icon: 'Package', route: 'products.index', order: 3, forFinance: false },
       { id: 2004, name: 'Staff', icon: 'UserCog', route: 'users.index', order: 4, forFinance: false },
     ]},
-    { id: 300, name: 'Transactions', icon: 'ClipboardList', order: 3, forFinance: false, items: [
+    { id: 300, name: 'Transactions', icon: 'ClipboardList', order: MENU_GROUP_ORDER[300], forFinance: false, items: [
       { id: 3001, name: 'Invoices', icon: 'FileText', route: 'finance.index', order: 1, forFinance: false },
       { id: 3002, name: 'Receive Vouchers', icon: 'CreditCard', route: 'finance.index', order: 2, forFinance: false },
       { id: 3003, name: 'Payment Vouchers', icon: 'Wallet', route: 'finance.index', order: 3, forFinance: false },
     ]},
-    { id: 400, name: 'Finance', icon: 'Landmark', order: 4, forFinance: true, items: [
+    { id: 400, name: 'Finance', icon: 'Landmark', order: MENU_GROUP_ORDER[400], forFinance: true, items: [
       { id: 4001, name: 'Accounts & Banks', icon: 'Landmark', route: 'internal-accounts.index', order: 1, forFinance: true },
       { id: 4002, name: 'Bank Mutation', icon: 'RefreshCw', route: 'bank-mutation.index', order: 2, forFinance: true },
       { id: 4003, name: 'Account Payable', icon: 'ArrowUpRight', route: 'account-payable.index', order: 3, forFinance: true },
@@ -235,7 +235,7 @@ export async function seedAuth(prisma: PrismaClient) {
       { id: 4008, name: 'Sales', icon: 'DollarSign', route: 'sales.index', order: 8, forFinance: true },
       { id: 4009, name: 'Financial Reports', icon: 'FileText', route: 'finance.reports', order: 9, forFinance: true },
     ]},
-    { id: 500, name: 'Operations', icon: 'Briefcase', order: 5, forFinance: false, items: [
+    { id: 500, name: 'Operations', icon: 'Briefcase', order: MENU_GROUP_ORDER[500], forFinance: false, items: [
       { id: 5001, name: 'Projects', icon: 'Briefcase', route: 'finance.index', order: 1, forFinance: false },
     ]},
   ];

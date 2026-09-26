@@ -29,6 +29,36 @@ export type AdminOnly = { adminOnly?: boolean };
  * `pnpm seed:access` tidak diam-diam membukanya lagi.
  */
 export const VIEWER_MENU_GROUPS = new Set<number>([100, 400]);
+
+/**
+ * Urutan grup menu di sidebar, menurut id grupnya. Finance tepat sesudah
+ * Overview. `db seed` membuat grupnya dengan urutan ini, dan `seed:access`
+ * menyetelnya di database yang sudah ada.
+ */
+export const MENU_GROUP_ORDER: Record<number, number> = {
+  100: 1, // Overview
+  400: 2, // Finance
+  200: 3, // Master Data
+  300: 4, // Transactions
+  500: 5, // Operations
+  600: 6, // Settings
+};
+
+/**
+ * Menyetel urutan grup menu yang sudah ada menurut MENU_GROUP_ORDER. Hanya
+ * order_index grup tingkat atas yang disentuh; grup yang belum ada tidak dibuat.
+ */
+export async function ensureMenuGroupOrder(prisma: PrismaClient): Promise<number> {
+  let changed = 0;
+  for (const [id, order] of Object.entries(MENU_GROUP_ORDER)) {
+    const { count } = await prisma.menu.updateMany({
+      where: { id: BigInt(id), parentId: null, NOT: { orderIndex: order } },
+      data: { orderIndex: order },
+    });
+    changed += count;
+  }
+  return changed;
+}
 export const VIEWER_MODULES = new Set<string>([
   'dashboard',
   'finance',
