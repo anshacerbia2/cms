@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Filter, Search, ArrowUpAZ, ArrowDownZA, ChevronRight, ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, compareCellValues } from "@/lib/utils";
 
 interface ExcelColumnFilterProps {
   columnKey: string;
@@ -104,12 +104,7 @@ export function ExcelColumnFilter({
       }
     });
 
-    const sortedLabels = Array.from(dToR.keys()).sort((a, b) => {
-      const numA = parseFloat(a.replace(/[^0-9,-]/g, '').replace(',', '.'));
-      const numB = parseFloat(b.replace(/[^0-9,-]/g, '').replace(',', '.'));
-      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-    });
+    const sortedLabels = Array.from(dToR.keys()).sort(compareCellValues);
 
     return { uniqueValues: sortedLabels, displayToRawMap: dToR, dateTree: tree };
   }, [data, columnKey, valueFormatter, type, dateKey]);

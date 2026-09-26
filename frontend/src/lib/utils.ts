@@ -100,6 +100,43 @@ export function parseAmountInput(val: any): string {
   return negative ? '-' + out : out;
 }
 
+/** Sel yang seluruh isinya angka atau nominal: "12", "Rp 1.516.305,00", "-Rp 5.000", "(1,234.00)". */
+const NUMERIC_CELL = /^\(?\s*-?\s*(?:rp|idr|us\$|usd|\$)?\s*-?\s*\d[\d.,\s]*\)?$/i;
+
+type CellSortKey = { rank: number; num: number; text: string };
+
+function cellSortKey(value: unknown): CellSortKey {
+  if (typeof value === 'number') return { rank: 1, num: value, text: String(value) };
+  const text = String(value ?? '').trim().replace(/−/g, '-');
+  if (text === '' || text === '(Blanks)') return { rank: 0, num: 0, text: '' };
+  // "-" adalah nol yang ditampilkan formatCurrency.
+  if (text === '-') return { rank: 1, num: 0, text };
+  if (NUMERIC_CELL.test(text)) {
+    const num = Number(parseAmountInput(text));
+    if (!Number.isNaN(num)) return { rank: 1, num, text };
+  }
+  return { rank: 2, num: 0, text };
+}
+
+/**
+ * Urutan naik dua nilai sel tabel, untuk sort kolom dan daftar di filter kolom.
+ *
+ * Nilai dibaca sebagai angka hanya kalau SELURUH isinya angka atau nominal.
+ * Dulu huruf dibuang lebih dulu, sehingga "XL Smart Booth DTI-CX 2026 JICC"
+ * terbaca −2026 dan terselip di tengah daftar nama, sementara "Rp 2.000.000"
+ * tidak dikenali sebagai angka dan kalah dari "Rp 13.000".
+ *
+ * Urutannya: kosong, lalu angka (menurut nilainya), lalu teks menurut abjad
+ * dengan angka di dalamnya dibaca wajar ("Inv 2" sebelum "Inv 10").
+ */
+export function compareCellValues(a: unknown, b: unknown): number {
+  const ka = cellSortKey(a);
+  const kb = cellSortKey(b);
+  if (ka.rank !== kb.rank) return ka.rank - kb.rank;
+  if (ka.rank === 1 && ka.num !== kb.num) return ka.num - kb.num;
+  return ka.text.localeCompare(kb.text, undefined, { numeric: true, sensitivity: 'base' });
+}
+
 /**
  * Angka dari state form yang siap dikirim ke server.
  *
