@@ -22,10 +22,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:access": "tsx prisma/seeders/access.ts",
-    "seed:ledgers": "tsx prisma/seeders/ledgers.ts",
-    "seed:year": "tsx prisma/fiscal-year/index.ts",
-    "renumber:row-no": "tsx prisma/scripts/renumber-row-no.ts",
-    "renumber:sales-row-no": "tsx prisma/scripts/renumber-sales-row-no.ts"
+    "seed:year": "tsx prisma/fiscal-year/index.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
