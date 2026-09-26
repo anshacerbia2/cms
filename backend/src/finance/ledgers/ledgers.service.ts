@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { accountsUsing, lockAccounts } from '../common/ledger-lock';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   LEDGER_ALIASES,
@@ -99,6 +100,9 @@ export class LedgersService {
     if (name && name !== ledger.name) await this.assertLedgerNameFree(name, ledger.id);
 
     await this.prisma.$transaction(async (tx) => {
+      // Ganti nama menulis ulang teks Ledger di baris-baris Bank Statement;
+      // rekening-rekening itu dikunci dulu seperti penyimpanan Bank Statement.
+      if (name && name !== ledger.name) await lockAccounts(tx, await accountsUsing(tx, { ledgerId: ledger.id }));
       await tx.ledger.update({
         where: { id: ledger.id },
         data: { name, orderIndex: dto.orderIndex, isActive: dto.isActive },
@@ -163,6 +167,7 @@ export class LedgersService {
     if (name && name !== sub.name) await this.assertSubNameFree(sub.ledgerId, name, sub.id);
 
     await this.prisma.$transaction(async (tx) => {
+      if (name && name !== sub.name) await lockAccounts(tx, await accountsUsing(tx, { subLedgerId: sub.id }));
       await tx.subLedger.update({ where: { id: sub.id }, data: { name, isActive: dto.isActive } });
       if (name && name !== sub.name) {
         await tx.financialTransaction.updateMany({ where: { subLedgerId: sub.id }, data: { colG: name } });

@@ -12,8 +12,8 @@
  * disimpan: urutan id tiap rekening-tahun direkam, dinomori ulang, direkam lagi,
  * dan kalau ada satu saja yang beda seluruh perubahan dibatalkan.
  *
- * Semua rekening-tahun dikunci selama berjalan (kunci yang sama dengan yang
- * dipakai aplikasi saat menyisip/menghapus), jadi aman dijalankan walau
+ * Semua rekening dikunci selama berjalan (kunci yang sama dengan yang dipakai
+ * aplikasi saat menyisip/menghapus/menghitung saldo), jadi aman dijalankan walau
  * aplikasi sedang dipakai. Activity log tidak mencatatnya: perubahan row_no
  * diabaikan trigger.
  */
@@ -21,6 +21,7 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
+import { lockAccounts } from '../../src/finance/common/ledger-lock';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 
@@ -51,10 +52,9 @@ const readOrder = (tx: any): Promise<Order[]> =>
         const before = await readOrder(tx);
         groups = before.length;
 
-        // Kunci setiap rekening-tahun, sama dengan kunci aplikasi saat menyisip/menghapus.
-        for (const g of before) {
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${Number(g.acc)}::int, ${g.year}::int)`;
-        }
+        // Kunci setiap rekening - kunci yang sama dengan yang diambil aplikasi
+        // sebelum menyisip, menghapus, atau menghitung ulang saldo.
+        await lockAccounts(tx, [...new Set(before.map((g) => g.acc))].map(BigInt));
 
         changed = await tx.$executeRaw`
           UPDATE financial_transactions f
