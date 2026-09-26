@@ -49,8 +49,9 @@ import {
 import { useAuthStore } from "@/store/authStore";
 
 /**
- * Kolom 2025 dan 2026 digabung. Sales (tahun) hanya ada di workbook 2025,
- * DPP PPN hanya di 2026; baris dari tahun yang tidak punya kolomnya tampil "-".
+ * Kolom 2025 dan 2026 digabung; DPP PPN hanya ada di 2026, jadi baris 2025
+ * tampil "-". Sales (tahun, colF) dari workbook 2025 tetap tersimpan dan ikut
+ * ekspor, tapi tidak ditampilkan di layar.
  */
 const COLS: { k: string; l: string; num?: boolean; isDate?: boolean }[] = [
   { k: 'colA', l: 'Masa', isDate: true },
@@ -58,7 +59,6 @@ const COLS: { k: string; l: string; num?: boolean; isDate?: boolean }[] = [
   { k: 'colC', l: 'No Faktur' },
   { k: 'colD', l: 'Customer/Vendor' },
   { k: 'colE', l: 'Invoice No' },
-  { k: 'colF', l: 'Sales' },
   { k: 'dpp', l: 'DPP PPN', num: true },
   { k: 'status', l: 'Status' },
   { k: 'colH', l: 'PPN', num: true },
@@ -118,7 +118,6 @@ export function PpnInOutTable() {
       colC: row.colC || "-",
       colD: row.colD || "-",
       colE: row.colE || "-",
-      colF: row.colF || "-",
       dpp: formatCurrency(row.dpp),
       rawDpp: row.dpp,
       status: row.status || "-",
