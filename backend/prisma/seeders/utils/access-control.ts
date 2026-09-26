@@ -29,6 +29,21 @@ export type AdminOnly = { adminOnly?: boolean };
  * `pnpm seed:access` tidak diam-diam membukanya lagi.
  */
 export const VIEWER_MENU_GROUPS = new Set<number>([100, 400]);
+
+/**
+ * Urutan grup menu di sidebar, menurut id grupnya. Finance tepat sesudah
+ * Overview. Hanya untuk database baru (`db seed`); di database yang sudah
+ * jalan urutannya diatur lewat menu Settings > Menus, dan seed:access tidak
+ * menimpanya.
+ */
+export const MENU_GROUP_ORDER: Record<number, number> = {
+  100: 1, // Overview
+  400: 2, // Finance
+  200: 3, // Master Data
+  300: 4, // Transactions
+  500: 5, // Operations
+  600: 6, // Settings
+};
 export const VIEWER_MODULES = new Set<string>([
   'dashboard',
   'finance',

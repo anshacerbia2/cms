@@ -6,6 +6,8 @@ type Props = {
   children: ReactNode;
   /** Dipanggil saat pengguna menutup pesan error - misalnya untuk membatalkan baris yang sedang diketik. */
   onReset?: () => void;
+  /** Judul pesan error; bawaannya untuk tabel ledger Bank Statement. */
+  title?: string;
 };
 
 type State = { error: Error | null };
@@ -44,7 +46,7 @@ export class LedgerErrorBoundary extends Component<Props, State> {
         <div className="flex items-start gap-3">
           <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 mt-0.5" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-rose-700">The ledger table could not be displayed.</p>
+            <p className="text-sm font-bold text-rose-700">{this.props.title ?? 'The ledger table could not be displayed.'}</p>
             <p className="mt-1 text-[13px] text-rose-700/80 break-words font-mono">{error.message}</p>
             <p className="mt-2 text-[11px] text-rose-700/60">
               Full details are in the browser console (F12). Send the message above if this happens again.

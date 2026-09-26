@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { expireSession, isLoginRequest } from '../store/authStore';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
@@ -27,11 +28,7 @@ api.interceptors.response.use(
   (error) => {
     // 401 dari login berarti password salah, bukan sesi habis. Redirect di sini
     // me-reload halaman login dan pesan error-nya hilang sebelum sempat tampil.
-    const isLogin = String(error.config?.url ?? '').includes('/auth/login');
-    if (error.response?.status === 401 && !isLogin) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
+    if (error.response?.status === 401 && !isLoginRequest(error.config?.url)) expireSession();
     return Promise.reject(error.response?.data || error.message);
   }
 );

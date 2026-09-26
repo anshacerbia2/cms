@@ -2,9 +2,9 @@
  * Master Ledger / Sub Ledger 1 untuk Bank Statement: isi master, penghubungan
  * transaksi ke master, dan permission + menu Finance > Ledgers.
  *
- * Semuanya upsert dan aman diulang, jadi satu perintah ini yang dijalankan di
- * produksi: `pnpm seed:ledgers`. Di dev, `prisma db seed` memanggilnya, dan
- * `pnpm seed:year` memastikan masternya ada sebelum memuat bank statement.
+ * Semuanya upsert dan aman diulang. `prisma db seed` memanggil semuanya,
+ * `pnpm seed:year` memastikan masternya ada sebelum memuat bank statement, dan
+ * di produksi permission + menunya ikut `pnpm seed:access`.
  *
  * Daftar masternya ada di `data/ledger-master.ts`.
  */

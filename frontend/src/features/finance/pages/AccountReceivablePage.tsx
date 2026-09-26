@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { History as HistoryIcon } from 'lucide-react';
-import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
+import { HistoryDialog, historyTitle } from '@/features/audit-logs/components/HistoryDialog';
 import { ArrowUpRight, Search, FilterX, Plus } from 'lucide-react';
 import { 
   Table, 
@@ -517,7 +517,7 @@ export default function AccountReceivablePage() {
 
         rowId={historyRow?.id}
 
-        title={[historyRow?.colD, historyRow?.colE].filter(Boolean).join(' — ')}
+        title={historyTitle(historyRow?.colD, historyRow?.colE)}
 
       />
 

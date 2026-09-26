@@ -16,12 +16,24 @@ import {
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
+const isValidDate = (v: unknown): v is Date => v instanceof Date && !Number.isNaN(v.getTime())
+
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  defaultMonth,
   ...props
 }: CalendarProps) {
+  // Kalender yang dibuka saat tanggalnya sudah terisi mulai di bulan tanggal
+  // itu - bukan bulan ini, dan bukan bulan bawaan pemanggilnya (awal/akhir
+  // tahun laporan). `defaultMonth` pemanggil hanya dipakai selama belum ada
+  // tanggal. Tanggal yang tidak valid (sedang diketik setengah) diabaikan.
+  const selected = (props as { selected?: unknown }).selected
+  const openAt = isValidDate(selected) ? selected : defaultMonth
+  const safeProps =
+    selected instanceof Date && !isValidDate(selected) ? { ...props, selected: undefined } : props
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -106,7 +118,8 @@ function Calendar({
           );
         },
       }}
-      {...props}
+      {...(safeProps as CalendarProps)}
+      defaultMonth={openAt}
     />
   )
 }

@@ -120,20 +120,32 @@ export function useLedgerMaster(): LedgerMaster | null {
 
 export function useLedgerMutations() {
   const queryClient = useQueryClient();
-  const onSuccess = () => {
+  const refresh = () => {
     queryClient.invalidateQueries({ queryKey: TREE_KEY });
     // Ganti nama ikut menulis ulang kolom Ledger di transaksi.
     queryClient.invalidateQueries({ queryKey: ["finance", "bank-mutation"] });
   };
   const onError = (error: any) => toast.error(error?.response?.data?.message || "Failed to save.");
-  const make = <V,>(fn: (v: V) => Promise<any>) => useMutation({ mutationFn: fn, onSuccess, onError });
+  /** Setiap aksi memberi tahu hasilnya - sukses maupun gagal, bukan cuma gagal. */
+  const make = <V,>(fn: (v: V) => Promise<any>, done: (v: V) => string) =>
+    useMutation({
+      mutationFn: fn,
+      onSuccess: (_data, vars) => {
+        refresh();
+        toast.success(done(vars));
+      },
+      onError,
+    });
+  /** Ubah: aktif/nonaktif atau ganti nama, tergantung yang dikirim. */
+  const updated = (what: string) => (v: any) =>
+    'isActive' in v && !('name' in v) ? `${what} ${v.isActive ? 'activated' : 'deactivated'}.` : `${what} saved.`;
 
   return {
-    createLedger: make(ledgersService.createLedger),
-    updateLedger: make(ledgersService.updateLedger),
-    deleteLedger: make(ledgersService.deleteLedger),
-    createSubLedger: make(ledgersService.createSubLedger),
-    updateSubLedger: make(ledgersService.updateSubLedger),
-    deleteSubLedger: make(ledgersService.deleteSubLedger),
+    createLedger: make(ledgersService.createLedger, () => 'Ledger created.'),
+    updateLedger: make(ledgersService.updateLedger, updated('Ledger')),
+    deleteLedger: make(ledgersService.deleteLedger, () => 'Ledger deleted.'),
+    createSubLedger: make(ledgersService.createSubLedger, () => 'Sub Ledger 1 created.'),
+    updateSubLedger: make(ledgersService.updateSubLedger, updated('Sub Ledger 1')),
+    deleteSubLedger: make(ledgersService.deleteSubLedger, () => 'Sub Ledger 1 deleted.'),
   };
 }

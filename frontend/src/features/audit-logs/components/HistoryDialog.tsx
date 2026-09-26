@@ -19,6 +19,17 @@ type Props = {
  * dan nilai sebelum-sesudahnya. Perubahan rincian per rekening ikut tampil.
  * Riwayat hanya ada sejak activity log aktif; perubahan sebelum itu tidak tercatat.
  */
+/**
+ * Judul dialog dari kolom-kolom pengenal baris. Nilainya diambil dari baris yang
+ * sudah diformat untuk tabel, dan tabel menulis sel kosong sebagai "-" - tanpa
+ * disaring, baris yang dua kolomnya kosong berjudul "- — -".
+ */
+export const historyTitle = (...parts: unknown[]) =>
+  parts
+    .map((p) => (p === null || p === undefined ? '' : String(p).trim()))
+    .filter((p) => p !== '' && p !== '-')
+    .join(' — ');
+
 export function HistoryDialog({ open, onOpenChange, table, rowId, title }: Props) {
   const { data, isPending, isError } = useAuditLogs(
     { table, rowId: rowId != null ? String(rowId) : undefined, limit: 200 },

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, Fragment } from "react";
-import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
+import { HistoryDialog, historyTitle } from '@/features/audit-logs/components/HistoryDialog';
 import { 
   Search, 
   Landmark,
@@ -93,6 +93,10 @@ function accountLabel(acc: any): string {
   return [brand, branch].filter(Boolean).join(" ") || "Select Account";
 }
 
+/** Saldo tepat sebelum sebuah baris: saldo sesudahnya dikurangi mutasinya sendiri. */
+const saldoBefore = (raw: any) =>
+  Number(raw?.colE || 0) - Number(raw?.colD || 0) + Number(raw?.colC || 0);
+
 export default function BankMutationPage() {
   const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
   const [ledgerYearFilter, setLedgerYearFilter] = useState(new Date().getFullYear().toString());
@@ -117,6 +121,9 @@ export default function BankMutationPage() {
   // hidup di komponen barisnya, supaya mengetik tidak merender ulang seluruh tabel.
   const [editingId, setEditingId] = useState<number | null>(null);
   const [insertAfterId, setInsertAfterId] = useState<number | null>(null);
+  // Sisip di atas baris No 1 - satu-satunya tempat yang tidak bisa dicapai dengan
+  // "sisip di bawah baris sebelumnya". Disimpan dengan afterId null (paling atas).
+  const [insertAboveId, setInsertAboveId] = useState<number | null>(null);
   const [savingInline, setSavingInline] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedViewTransaction, setSelectedViewTransaction] = useState<any>(null);
@@ -144,7 +151,7 @@ export default function BankMutationPage() {
   const ledgerMaster = useLedgerMaster();
 
   /** Sedang ada baris yang diketik - tombol edit/sisip di baris lain dikunci supaya ketikan tidak hilang. */
-  const inlineBusy = editingId !== null || insertAfterId !== null;
+  const inlineBusy = editingId !== null || insertAfterId !== null || insertAboveId !== null;
 
   // Semua callback ke baris tabel stabil (useCallback), supaya memo di
   // LedgerDisplayRow benar-benar mencegah render ulang. Tombolnya sendiri sudah
@@ -155,6 +162,7 @@ export default function BankMutationPage() {
 
   /** Baris baru mendarat tepat di bawah `row`, bukan di ujung daftar. */
   const handleInsertAfter = useCallback((row: any) => setInsertAfterId(row.id), []);
+  const handleInsertAbove = useCallback((row: any) => setInsertAboveId(row.id), []);
 
   const canEdit = can('bank-mutation.edit');
   const canCreate = can('bank-mutation.create');
@@ -163,6 +171,7 @@ export default function BankMutationPage() {
   const cancelInline = useCallback(() => {
     setEditingId(null);
     setInsertAfterId(null);
+    setInsertAboveId(null);
   }, []);
 
   const saveEdit = useCallback(
@@ -187,17 +196,19 @@ export default function BankMutationPage() {
 
   const saveInsert = useCallback(
     async (drafts: LedgerDraft[]) => {
-      if (insertAfterId === null || savingInline) return;
+      if ((insertAfterId === null && insertAboveId === null) || savingInline) return;
       setSavingInline(true);
       try {
         await insertTransaction()({
           rows: drafts.map((d) => draftPayload(d, ledgerMaster)),
           accountId: selectedAccount?.id,
           tagYear: yearNum,
-          afterId: insertAfterId,
+          // Sisip atas hanya ada di baris No 1, jadi "di atasnya" = paling atas.
+          afterId: insertAboveId !== null ? null : insertAfterId,
         });
         toast.success(`${drafts.length} row(s) inserted.`);
         setInsertAfterId(null);
+        setInsertAboveId(null);
         refetchTransactions();
         refetchFiscal();
       } catch (error: any) {
@@ -207,7 +218,7 @@ export default function BankMutationPage() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [insertAfterId, savingInline, selectedAccount?.id, yearNum, ledgerMaster],
+    [insertAfterId, insertAboveId, savingInline, selectedAccount?.id, yearNum, ledgerMaster],
   );
 
   const handleViewTransaction = useCallback((row: any) => {
@@ -407,7 +418,8 @@ export default function BankMutationPage() {
     const visible = (id: number) => paginatedLedger.some((r: any) => r.id === id);
     if (editingId !== null && !visible(editingId)) setEditingId(null);
     if (insertAfterId !== null && !visible(insertAfterId)) setInsertAfterId(null);
-  }, [paginatedLedger, editingId, insertAfterId]);
+    if (insertAboveId !== null && !visible(insertAboveId)) setInsertAboveId(null);
+  }, [paginatedLedger, editingId, insertAfterId, insertAboveId]);
 
   const ledgerMeta = { 
     total: filteredAndSortedLedger.length, 
@@ -992,6 +1004,17 @@ export default function BankMutationPage() {
                 <>
                   {paginatedLedger.map((row: any) => (
                     <Fragment key={row.id}>
+                    {insertAboveId === row.id && (
+                      <InlineInsertRows
+                        anchorSaldo={saldoBefore(rawById.get(row.id))}
+                        master={ledgerMaster}
+                        showRowNo={showRowNo}
+                        anchorRowNo={0}
+                        saving={savingInline}
+                        onSave={saveInsert}
+                        onCancel={cancelInline}
+                      />
+                    )}
                     {editingId === row.id ? (
                       <InlineEditRow
                         raw={rawById.get(row.id)}
@@ -1013,6 +1036,7 @@ export default function BankMutationPage() {
                       onHistory={can('audit-logs.index') ? handleHistory : undefined}
                       onEdit={handleEditTransaction}
                       onInsert={handleInsertAfter}
+                      onInsertAbove={rawById.get(row.id)?.rowNo === 1 ? handleInsertAbove : undefined}
                       onDelete={handleDeleteTransaction}
                     />
                     )}
@@ -1084,7 +1108,7 @@ export default function BankMutationPage() {
 
         rowId={historyRow?.id}
 
-        title={[historyRow?.colA, historyRow?.colB].filter(Boolean).join(' — ')}
+        title={historyTitle(historyRow?.colA, historyRow?.colB)}
 
       />
 

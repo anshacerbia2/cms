@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { History as HistoryIcon } from 'lucide-react';
-import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
+import { HistoryDialog, historyTitle } from '@/features/audit-logs/components/HistoryDialog';
 import { ArrowUpRight, Search, FilterX, Plus, Pin } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useDepreciation } from "../hooks/useDepreciation";
@@ -613,7 +613,7 @@ export default function DepreciationPage() {
         onOpenChange={(o) => { if (!o) setHistoryRow(null); }}
         table="depreciation"
         rowId={historyRow?.id}
-        title={historyRow?.colC}
+        title={historyTitle(historyRow?.colC)}
       />
       <EditDepreciationModal 
         open={isEditModalOpen}

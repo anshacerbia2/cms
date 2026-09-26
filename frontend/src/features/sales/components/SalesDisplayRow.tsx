@@ -2,24 +2,18 @@ import { memo } from 'react';
 import { CornerDownRight, CornerUpRight, Edit2, Eye, History, Trash2 } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { accountKey, type AccountColumn } from '@/features/finance/hooks/useAccountColumns';
 
-/**
- * Nomor urut baris untuk kolom "No" - nilai `row_no` apa adanya. Backend
- * menjaganya tetap 1, 2, 3 tanpa lubang: menyisip menggeser baris sesudahnya,
- * menghapus menaikkannya lagi.
- */
+/** Sel "No" - row_no apa adanya; backend menjaganya 1, 2, 3 tanpa lubang. */
+export const rowNoCell = 'pl-8 px-4 w-20 tabular-nums text-primary/50';
 export const formatRowNo = (rowNo: number | null | undefined) =>
   rowNo === null || rowNo === undefined ? '-' : String(rowNo);
-
-/** Sel "No" - hanya di rekening Non CB. */
-export const rowNoCell = 'pl-4 w-20 text-primary/50 tabular-nums';
 
 type Props = {
   /** Baris yang sudah diformat untuk tampilan. */
   row: any;
-  /** Tampilkan kolom "No" (row_no) di paling kiri - hanya untuk Non CB. */
-  showRowNo?: boolean;
-  /** Ada baris lain yang sedang diketik - tombol edit/sisip dikunci. */
+  accountColumns: AccountColumn[];
+  /** Ada baris lain yang sedang diketik - tombol sunting/sisip dikunci. */
   busy: boolean;
   canEdit: boolean;
   canCreate: boolean;
@@ -35,36 +29,46 @@ type Props = {
 };
 
 /**
- * Satu baris ledger yang sedang tidak disunting.
+ * Satu baris Sales yang sedang tidak disunting.
  *
  * Dibungkus memo supaya baris yang tidak berubah tidak ikut dirender ulang
  * ketika halamannya berubah - misalnya saat mulai atau selesai menyunting.
- * BCA Sahardjo menampilkan semua barisnya tanpa paginasi, jadi ini ratusan
- * baris sekaligus. Karena itu semua callback dari halaman harus stabil
- * (useCallback); kalau tidak, memo tidak berguna.
+ * Karena itu semua callback dari halaman harus stabil (useCallback); kalau
+ * tidak, memo tidak berguna.
  */
-export const LedgerDisplayRow = memo(function LedgerDisplayRow({
-  row, showRowNo, busy, canEdit, canCreate, canDelete, onView, onHistory, onEdit, onInsert, onInsertAbove, onDelete,
+export const SalesDisplayRow = memo(function SalesDisplayRow({
+  row, accountColumns, busy, canEdit, canCreate, canDelete, onView, onHistory, onEdit, onInsert, onInsertAbove, onDelete,
 }: Props) {
   return (
-    <TableRow className="hover:bg-slate-50 transition-colors whitespace-nowrap group">
-      {showRowNo && <TableCell className={rowNoCell}>{formatRowNo(row.rowNo)}</TableCell>}
-      <TableCell className="text-primary/60">{row.colA}</TableCell>
-      <TableCell className="font-medium text-primary transition-colors max-w-md truncate" title={row.colB}>
-        {row.colB}
-      </TableCell>
-      <TableCell className="text-right text-rose-600 pr-4 font-bold">{row.colC}</TableCell>
-      <TableCell className="text-right text-emerald-600 pr-4 font-bold">{row.colD}</TableCell>
-      <TableCell className="text-right pr-4 text-primary font-bold">{row.colE}</TableCell>
-      <TableCell className="tracking-tighter" title={row.colF}>{row.colF}</TableCell>
-      <TableCell className="text-primary truncate max-w-[150px]" title={row.colG}>{row.colG}</TableCell>
-      <TableCell className="text-primary truncate max-w-[150px]" title={row.colH}>{row.colH}</TableCell>
-      <TableCell className="text-primary truncate max-w-[150px]" title={row.colI}>{row.colI}</TableCell>
-      <TableCell className="pr-4">
-        <div className="flex items-center justify-end gap-1 transition-opacity">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+    <TableRow className="border-primary/5 hover:bg-primary/[0.01] transition-colors whitespace-nowrap group">
+      <TableCell className={rowNoCell}>{formatRowNo(row.rowNo)}</TableCell>
+      <TableCell className="px-4 w-40">{row.colB}</TableCell>
+      <TableCell className="px-4 w-32">{row.colC}</TableCell>
+      <TableCell className="px-4 w-20">{row.colD}</TableCell>
+      <TableCell className="px-4 w-48">{row.colE}</TableCell>
+      <TableCell className="px-4 w-32">{row.colF}</TableCell>
+      <TableCell className="px-4 w-64 truncate max-w-[200px]">{row.colG}</TableCell>
+
+      <TableCell className="px-4 w-40 text-right">{row.colH}</TableCell>
+      <TableCell className="px-4 w-40 text-right">{row.colI}</TableCell>
+      <TableCell className="px-4 w-40 text-right">{row.colJ}</TableCell>
+      <TableCell className="px-4 w-40 text-right">{row.colK}</TableCell>
+
+      {accountColumns.map((account) => (
+        <TableCell key={account.id} className="px-4 w-40 text-right">{row[accountKey(account.id)]}</TableCell>
+      ))}
+
+      <TableCell className="px-4 w-40 text-right font-bold">{row.colX}</TableCell>
+      <TableCell className="px-4 w-40 text-right">{row.colZ}</TableCell>
+      <TableCell className="px-4 w-40 text-right">{row.colAA}</TableCell>
+      <TableCell className="px-4 w-40 text-right">{row.colAB}</TableCell>
+      <TableCell className="px-4 w-40 text-right">{row.colAC}</TableCell>
+      <TableCell className="pr-8 w-64">{row.colAD}</TableCell>
+      <TableCell className="px-4 text-center">
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
             className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
             onClick={(e) => { e.stopPropagation(); onView(row); }}
           >
@@ -82,9 +86,10 @@ export const LedgerDisplayRow = memo(function LedgerDisplayRow({
             </Button>
           )}
           {canEdit && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Edit"
               className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
               disabled={busy}
               onClick={(e) => { e.stopPropagation(); onEdit(row); }}
@@ -117,9 +122,9 @@ export const LedgerDisplayRow = memo(function LedgerDisplayRow({
             </Button>
           )}
           {canDelete && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm"
               onClick={(e) => { e.stopPropagation(); onDelete(row.id); }}
             >

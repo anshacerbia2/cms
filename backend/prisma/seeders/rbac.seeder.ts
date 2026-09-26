@@ -9,7 +9,7 @@
  *   pnpm seed:access
  */
 import { PrismaClient } from '@prisma/client';
-import { ensureMenuGroup, ensureMenus, ensurePermissions, MenuSpec, ModuleSpec } from './utils/access-control';
+import { ensureMenuGroup, ensureMenus, ensurePermissions, MENU_GROUP_ORDER, MenuSpec, ModuleSpec } from './utils/access-control';
 
 // Access control is configuration, not data: `viewer` gets no read on it either,
 // or a read-only account could enumerate every role and grant in the system.
@@ -24,7 +24,7 @@ const MODULES: ModuleSpec[] = [
   { module: 'users', label: 'User' },
 ];
 
-const SETTINGS_GROUP = { id: 600, name: 'Settings', icon: 'Settings', order: 6, adminOnly: true };
+const SETTINGS_GROUP = { id: 600, name: 'Settings', icon: 'Settings', order: MENU_GROUP_ORDER[600], adminOnly: true };
 
 const MENUS: MenuSpec[] = [
   { id: 6001, parentId: 600, name: 'Roles', icon: 'ShieldCheck', route: 'roles.index', order: 1, adminOnly: true },

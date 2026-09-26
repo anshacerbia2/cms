@@ -171,7 +171,7 @@ type InsertProps = {
   master: LedgerMaster | null;
   /** Kolom "No" ditampilkan (Non CB). */
   showRowNo?: boolean;
-  /** row_no baris tempat menyisip; draf diberi nomor lanjutannya. */
+  /** row_no baris tempat menyisip; draf diberi nomor lanjutannya. 0 = menyisip paling atas. */
   anchorRowNo?: number | null;
   saving: boolean;
   /** Menerima draf yang sudah diisi dan lolos pemeriksaan, siap dikirim. */
@@ -270,7 +270,7 @@ export function InlineInsertRows({ anchorSaldo, master, showRowNo, anchorRowNo, 
           {showRowNo && (
             // Nomor yang akan didapat setelah disimpan: lanjutan baris di atasnya.
             <TableCell className={`${rowNoCell} bg-amber-50/60`}>
-              {anchorRowNo ? formatRowNo(anchorRowNo + i + 1) : '-'}
+              {anchorRowNo === null || anchorRowNo === undefined ? '-' : formatRowNo(anchorRowNo + i + 1)}
             </TableCell>
           )}
           <LedgerRowEditor

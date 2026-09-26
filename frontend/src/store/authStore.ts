@@ -52,3 +52,31 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+/** 401 dari endpoint login artinya password salah, bukan sesi habis. */
+export const isLoginRequest = (url?: string) => String(url ?? '').includes('/auth/login');
+
+let expiring = false;
+
+/**
+ * Sesi habis: server menjawab 401 pada request apa pun selain login.
+ *
+ * Keluar sepenuhnya - token, `auth-storage`, dan state - lalu ke halaman login
+ * dengan keterangan. Dulu client utama (lib/api) tidak menangani 401 sama
+ * sekali, jadi halaman tetap terbuka dengan request yang gagal diam-diam; dan
+ * client satunya hanya menghapus `token`, sehingga user+token di
+ * `auth-storage` masih membuat aplikasi mengira sudah login.
+ *
+ * Sekali saja: request lain yang ikut kena 401 bersamaan tidak memicu
+ * redirect kedua.
+ */
+export function expireSession() {
+  if (expiring) return;
+  expiring = true;
+  useAuthStore.getState().logout();
+  if (!window.location.pathname.startsWith('/login')) {
+    window.location.replace('/login?expired=1');
+  } else {
+    expiring = false;
+  }
+}
