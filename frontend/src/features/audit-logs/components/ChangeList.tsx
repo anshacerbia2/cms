@@ -10,6 +10,8 @@ const ORIGIN: Record<string, string> = { APP: "App", SEED: "Workbook" };
 /** Nilai mentah dari log, ditulis seperti di layar. */
 export function formatAuditValue(value: any, column?: string): string {
   if (column === "source" && typeof value === "string") return ORIGIN[value] ?? value;
+  // Nomor baris dan ID ditulis polos, bukan "1.500".
+  if (column === "row_no" || column?.endsWith("_id")) return value === null || value === undefined ? "—" : String(value);
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "number" || (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value))) {

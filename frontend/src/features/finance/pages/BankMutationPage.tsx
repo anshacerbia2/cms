@@ -275,7 +275,7 @@ export default function BankMutationPage() {
   const displayTransactions = useMemo(() => {
     const inRange = (row: any) => {
       if (!isRowNoRangeActive) return true;
-      const no = row.rowNo === null || row.rowNo === undefined ? null : row.rowNo / 1000;
+      const no = row.rowNo === null || row.rowNo === undefined ? null : row.rowNo;
       if (no === null) return false;
       return (rowNoRange.min === null || no >= rowNoRange.min) && (rowNoRange.max === null || no <= rowNoRange.max);
     };

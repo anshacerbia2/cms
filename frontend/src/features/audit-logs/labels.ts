@@ -116,13 +116,13 @@ export const HIDDEN_COLUMNS = new Set([
 ]);
 
 /**
- * Kolom yang tidak ditampilkan per tabel. Bank Statement: nomor urut dan saldo
- * berjalan dihitung ulang sesudah setiap perubahan, jadi nilai yang tercatat
- * saat baris dibuat bukan nilai akhirnya (row_no 319500 = "sisip di antara
- * baris 319 dan 320", lalu dirapikan). ID Ledger diwakili namanya (col_f/col_g).
+ * Kolom yang tidak ditampilkan per tabel. Bank Statement: saldo berjalan dihitung
+ * ulang sesudah setiap perubahan, jadi nilai yang tercatat saat baris dibuat
+ * bukan nilai akhirnya. ID Ledger diwakili namanya (col_f/col_g). Nomor urut
+ * tetap ditampilkan: yang tercatat saat baris dibuat adalah nomor aslinya.
  */
 export const TABLE_HIDDEN_COLUMNS: Record<string, Set<string>> = {
-  financial_transactions: new Set(["row_no", "col_e", "ledger_id", "sub_ledger_id"]),
+  financial_transactions: new Set(["col_e", "ledger_id", "sub_ledger_id"]),
 };
 
 /**

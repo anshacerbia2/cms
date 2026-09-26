@@ -4,14 +4,12 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 
 /**
- * Nomor urut baris untuk kolom "No". `row_no` diberi jarak 1000 supaya bisa
- * menyisip di tengah, dan backend merapatkannya lagi sesudah setiap sisip atau
- * hapus - jadi dibagi 1000 hasilnya selalu 1, 2, 3 berurutan.
+ * Nomor urut baris untuk kolom "No" - nilai `row_no` apa adanya. Backend
+ * menjaganya tetap 1, 2, 3 tanpa lubang: menyisip menggeser baris sesudahnya,
+ * menghapus menaikkannya lagi.
  */
 export const formatRowNo = (rowNo: number | null | undefined) =>
-  rowNo === null || rowNo === undefined
-    ? '-'
-    : (rowNo / 1000).toLocaleString('en-US', { maximumFractionDigits: 3, useGrouping: false });
+  rowNo === null || rowNo === undefined ? '-' : String(rowNo);
 
 /** Sel "No" - hanya di rekening Non CB. */
 export const rowNoCell = 'pl-4 w-20 text-primary/50 tabular-nums';
