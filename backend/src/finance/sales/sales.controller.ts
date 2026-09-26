@@ -136,6 +136,16 @@ export class SalesController {
     return this.salesService.createBulkSales(body.data, body.tagYear);
   }
 
+  /**
+   * Menyisip baris di bawah `afterId` (null = paling atas); baris di bawahnya
+   * bergeser turun. Hak aksesnya sama dengan menambah baris.
+   */
+  @Post('insert')
+  @Permissions('sales.create')
+  async insertSales(@Body() body: { rows: any[]; tagYear: number; afterId?: number | null }) {
+    return this.salesService.insertSales(body.rows, body.tagYear, body.afterId ?? null);
+  }
+
   @Get(':id')
   @Permissions('sales.index')
   async getSalesById(@Param('id', ParseIntPipe) id: number) {

@@ -9,6 +9,20 @@ import {
   isRowEmpty 
 } from '../utils/excel';
 
+/**
+ * Bank master and the eleven internal accounts - created when missing, never
+ * changed once they exist.
+ *
+ * Finance edits these in the app: on prod BNI got its account number, Cash was
+ * renamed Petty Cash, and the display order was rearranged. This seeder used
+ * to upsert on (account no, type, holder, branch), so an edited account no
+ * longer matched, a duplicate was created beside it, and every account that
+ * did match had its edits overwritten. `seed:year` runs this every time, so
+ * it has to be safe against a live database.
+ *
+ * An account is recognised by its display name, the same key the fiscal-year
+ * seeders use to find the account for a sheet or column.
+ */
 export async function seedBanks(prisma: PrismaClient) {
   console.log('🏛️ Seeding banks master & internal accounts...');
   
@@ -25,6 +39,10 @@ export async function seedBanks(prisma: PrismaClient) {
     }
     const header = headerLine.split(';');
     
+    // Dua kode muncul dua kali di CSV (110, 494). Dulu upsert membuat baris
+    // terakhir yang menang, dan begitulah isi prod (494 = BANK RAYA, nama baru
+    // BRI Agroniaga), jadi yang dipakai tetap baris terakhir per kode.
+    const rowsByCode = new Map<string, { data: any; brands: string[] }>();
     // Skip header and empty lines
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -43,26 +61,30 @@ export async function seedBanks(prisma: PrismaClient) {
       if (!bankCode) continue;
       bankCode = bankCode.padStart(3, '0');
 
-      const bank = await prisma.bank.upsert({
-        where: { bankCode },
-        update: {
-          bankName: data.bank_name || null,
-          bankAddress: data.bank_address || null,
-          bankBrand: data.bank_brand || null,
-        },
-        create: {
-          bankCode,
-          bankName: data.bank_name || null,
-          bankAddress: data.bank_address || null,
-          bankBrand: data.bank_brand || null,
-        },
-      });
-
-      if (data.bank_brand) {
-        bankIds[data.bank_brand] = bank.id;
-      }
+      const brands = rowsByCode.get(bankCode)?.brands ?? [];
+      if (data.bank_brand) brands.push(data.bank_brand);
+      rowsByCode.set(bankCode, { data, brands });
     }
-    console.log(`✅ Banks from CSV seeded.`);
+
+    let created = 0;
+    for (const [bankCode, { data, brands }] of rowsByCode) {
+      // Bank yang sudah ada tidak diubah - mungkin sudah disunting di aplikasi.
+      let bank = await prisma.bank.findUnique({ where: { bankCode } });
+      if (!bank) {
+        bank = await prisma.bank.create({
+          data: {
+            bankCode,
+            bankName: data.bank_name || null,
+            bankAddress: data.bank_address || null,
+            bankBrand: data.bank_brand || null,
+          },
+        });
+        created++;
+      }
+
+      for (const brand of brands) bankIds[brand] = bank.id;
+    }
+    console.log(`✅ Banks from CSV: ${created} created, existing ones left as they are.`);
   } else {
     console.warn('⚠️ Banks CSV not found at:', banksCsvPath);
   }
@@ -82,7 +104,14 @@ export async function seedBanks(prisma: PrismaClient) {
     { accountNo: '', branch: '', holderName: 'Non Cash & Bank', type: 'OTHER', displayName: 'Non CB', displayOrder: 11 },
   ];
 
+  let createdAccounts = 0;
   for (const acc of legacyAccounts) {
+    const existing = await prisma.internalAccount.findFirst({
+      where: { displayName: acc.displayName },
+      select: { id: true },
+    });
+    if (existing) continue;
+
     let bankId: bigint | null = null;
     
     // Only attempt to find a bankId if the account type is 'BANK'
@@ -98,26 +127,18 @@ export async function seedBanks(prisma: PrismaClient) {
     // Exclude bankBrand (if present) from the data sent to Prisma
     const { bankBrand, ...accData } = acc as any;
     
-    await prisma.internalAccount.upsert({
-      where: { 
-        accountNo_type_holderName_branch: {
-          accountNo: accData.accountNo || "",
-          type: accData.type,
-          holderName: accData.holderName,
-          branch: accData.branch || ""
-        }
-      },
-      update: {
+    await prisma.internalAccount.create({
+      data: {
         ...accData,
         bankId: bankId
       },
-      create: { 
-        ...accData, 
-        bankId: bankId 
-      },
     });
+    createdAccounts++;
   }
-  
-  console.log('✅ Internal accounts seeding completed.');
+
+  console.log(
+    `✅ Internal accounts: ${createdAccounts} created, ` +
+      `${legacyAccounts.length - createdAccounts} already there and left as they are.`,
+  );
 }
 

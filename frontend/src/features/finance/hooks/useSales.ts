@@ -40,6 +40,17 @@ export function useSales() {
     }
   });
 
+  const insertSales = useMutation({
+    mutationFn: (payload: { rows: any[]; tagYear: number; afterId: number | null }) => salesService.insertSales(payload),
+    onSuccess: (_data, payload) => {
+      queryClient.invalidateQueries({ queryKey: ["finance", "sales"] });
+      toast.success(`${payload.rows.length} row(s) inserted`);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to insert sales rows");
+    }
+  });
+
   const getSalesById = (id: number | null, options?: any) => 
     useQuery<any>({
       queryKey: ["finance", "sales", id],
@@ -71,6 +82,7 @@ export function useSales() {
     getAllSales,
     createSales,
     createBulkSales,
+    insertSales,
     getSalesById,
     updateSales,
     deleteSales,

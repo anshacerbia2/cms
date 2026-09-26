@@ -24,6 +24,12 @@ export const salesService = {
     return data;
   },
 
+  /** Menyisip baris di bawah `afterId` (null = paling atas); baris di bawahnya bergeser turun. */
+  insertSales: async (payload: { rows: any[]; tagYear: number; afterId: number | null }): Promise<any> => {
+    const { data } = await api.post("/finance/sales/insert", payload);
+    return data;
+  },
+
   getSalesById: async (id: number): Promise<any> => {
     const { data } = await api.get(`/finance/sales/${id}`);
     return data;

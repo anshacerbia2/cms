@@ -63,7 +63,7 @@ export const COLUMN_LABELS: Record<string, Record<string, string>> = {
     colS: "AP In and Out", colT: "Col T", colU: "Ending Balance", colV: "Outstanding USD",
   },
   sales_records: {
-    colA: "No", colB: "Invoice No", colC: "Date", colD: "Year", colE: "Billing To",
+    row_no: "Row No", colA: "No (workbook)", colB: "Invoice No", colC: "Date", colD: "Year", colE: "Billing To",
     colF: "Sales Code", colG: "Description", colH: "Basic Price", colI: "Management Fee",
     colJ: "PPN", colK: "Account Receivable IDR", colL: "Date Received", colM: "BCA Sahardjo",
     colN: "BCA Juanda", colO: "Mandiri Mid Plaza", colP: "Mandiri Plaza Mandiri", colQ: "BRI Tebet",

@@ -17,7 +17,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { PageContainer } from "@/components/common/PageContainer";
 import AddSalesModal from "../components/AddSalesModal";
 import { useAuthStore } from "@/store/authStore";
-import { Download, Edit2, Plus, Trash2, AlertCircle, FileSpreadsheet, FileText, Eye } from "lucide-react";
+import { Download, Edit2, Plus, Trash2, AlertCircle, FileSpreadsheet, FileText, Eye, CornerDownRight } from "lucide-react";
 import { downloadExcelFile, downloadPdfFile, exportFilter } from "@/lib/downloadFile";
 import { toast } from "sonner";
 import EditSalesModal from "../../finance/components/EditSalesModal";
@@ -48,6 +48,8 @@ export default function SalesPage() {
   const { can } = useAuthStore();
   const [historyRow, setHistoryRow] = useState<any | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  // Baris yang ditumpangi tombol "Insert below"; form menyisip tepat di bawahnya.
+  const [insertAfter, setInsertAfter] = useState<{ id: number; rowNo: number | null; tagYear: number } | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
@@ -338,7 +340,10 @@ export default function SalesPage() {
           <Table className="min-w-[4200px]">
             <TableHeader className="bg-slate-50/50">
               <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
-                <TableHead className="pl-8 w-40 px-4">
+                <TableHead className="pl-8 w-20 px-4">
+                  <div className="flex items-center gap-1">No <ExcelColumnFilter columnKey="rowNo" label="No" data={[]} activeFilters={null} onFilterChange={() => {}} sortOnly sortLabels={['1 → 9', '9 → 1']} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "rowNo", direction: d}); setSalesPage(1); }} /></div>
+                </TableHead>
+                <TableHead className="w-40 px-4">
                   <div className="flex items-center gap-1">Invoice No <ExcelColumnFilter columnKey="colB" label="Invoice No" data={getCascadingData("colB")} activeFilters={salesFilters["colB"]} onFilterChange={(v: Set<string> | null) => { setSalesFilters(p => ({...p, colB: v})); setSalesPage(1); }} currentSort={salesSort} onSort={(d: 'asc' | 'desc') => { setSalesSort({key: "colB", direction: d}); setSalesPage(1); }} /></div>
                 </TableHead>
                 <TableHead className="w-32 px-4">
@@ -408,7 +413,7 @@ export default function SalesPage() {
             <TableBody>
               {salesLoading ? (
                 <TableRow>
-                  <TableCell colSpan={17 + accountColumns.length} className="h-96 text-center">
+                  <TableCell colSpan={18 + accountColumns.length} className="h-96 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin"></div>
                       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 animate-pulse">Synchronizing Global Sales Data...</p>
@@ -417,7 +422,7 @@ export default function SalesPage() {
                 </TableRow>
               ) : paginatedSales.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={17 + accountColumns.length} className="h-64 text-center opacity-20">
+                  <TableCell colSpan={18 + accountColumns.length} className="h-64 text-center opacity-20">
                     <Search size={48} className="mx-auto" />
                     <p className="mt-4 font-black uppercase tracking-widest">No sales records found</p>
                   </TableCell>
@@ -426,7 +431,8 @@ export default function SalesPage() {
                 <>
                   {paginatedSales.map((row: any) => (
                     <TableRow key={row.id} className="border-primary/5 hover:bg-primary/[0.01] transition-colors whitespace-nowrap group">
-                      <TableCell className="pl-8 px-4 w-40">{row.colB}</TableCell>
+                      <TableCell className="pl-8 px-4 w-20 tabular-nums text-primary/50">{row.rowNo ?? "-"}</TableCell>
+                      <TableCell className="px-4 w-40">{row.colB}</TableCell>
                       <TableCell className="px-4 w-32">{row.colC}</TableCell>
                       <TableCell className="px-4 w-20">{row.colD}</TableCell>
                       <TableCell className="px-4 w-48">{row.colE}</TableCell>
@@ -459,6 +465,17 @@ export default function SalesPage() {
                               <HistoryIcon size={12} strokeWidth={2.5} />
                             </Button>
                           )}
+                          {can('sales.create') && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Insert a row below this one"
+                              className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm"
+                              onClick={(e) => { e.stopPropagation(); setInsertAfter({ id: row.id, rowNo: row.rowNo ?? null, tagYear: row.tagYear }); }}
+                            >
+                              <CornerDownRight size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                           {can('sales.update') && (
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
                               <Edit2 size={12} strokeWidth={2.5} />
@@ -476,7 +493,7 @@ export default function SalesPage() {
                   {/* Summary Rows */}
                   {/* Subtotal (Current Page) */}
                   <TableRow className="bg-secondary/5 border-t-2 border-secondary/30 hover:bg-secondary/5 transition-none font-bold">
-                    <TableCell colSpan={6} className="pl-8 py-3 text-[11px] text-secondary/80 uppercase tracking-[0.2em]">
+                    <TableCell colSpan={7} className="pl-8 py-3 text-[11px] text-secondary/80 uppercase tracking-[0.2em]">
                       Subtotal (Page {salesPage})
                     </TableCell>
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesPageSubtotals.colH.toString())}`}>{formatCurrency(salesPageSubtotals.colH.toString())}</TableCell>
@@ -498,7 +515,7 @@ export default function SalesPage() {
 
                   {/* Grand Total (All Pages) */}
                   <TableRow className="bg-secondary/10 border-t border-secondary/30 hover:bg-secondary/10 transition-none font-bold">
-                    <TableCell colSpan={6} className="pl-8 py-3 text-[11px] text-secondary uppercase tracking-[0.2em]">
+                    <TableCell colSpan={7} className="pl-8 py-3 text-[11px] text-secondary uppercase tracking-[0.2em]">
                       Grand Total ({salesMeta.total} rows)
                     </TableCell>
                     <TableCell className={`py-3 text-right pr-4 whitespace-nowrap ${getAmountColor(salesGrandTotals.colH.toString())}`}>{formatCurrency(salesGrandTotals.colH.toString())}</TableCell>
@@ -532,6 +549,13 @@ export default function SalesPage() {
           refetchSales();
           toast.success("Sales data refreshed successfully");
         }}
+      />
+      <AddSalesModal
+        open={insertAfter !== null}
+        onOpenChange={(o) => { if (!o) setInsertAfter(null); }}
+        year={insertAfter?.tagYear ?? yearNum}
+        insertAfter={insertAfter}
+        onSuccess={() => { refetchSales(); }}
       />
       <HistoryDialog
         open={historyRow !== null}
@@ -579,6 +603,7 @@ export default function SalesPage() {
         title="Sales Details"
         subtitle={`Invoice No: ${selectedViewRecord?.colB}`}
         data={[
+          { label: "No", value: selectedViewRecord?.rowNo ?? "-" },
           { label: "Invoice No", value: selectedViewRecord?.colB },
           { label: "Date", value: selectedViewRecord?.colC },
           { label: "Year", value: selectedViewRecord?.colD },

@@ -214,7 +214,22 @@ export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) 
     return;
   }
 
-  await prisma.salesRecord.createMany({ data: records.map((r) => ({ ...r, ...SEEDED })) });
+  // Nomor baris mengikuti urutan sheet. Baris yang diketik di aplikasi dan
+  // selamat dari seed ulang menyimpan nomornya sendiri; penomoran ulang di bawah
+  // merapikan tahun itu jadi 1..n tanpa mengubah urutan siapa pun.
+  await prisma.salesRecord.createMany({
+    data: records.map((r, i) => ({ ...r, ...SEEDED, rowNo: i + 1 })),
+  });
+  await prisma.$executeRaw`
+    UPDATE sales_records s
+       SET row_no = x.n
+      FROM (
+             SELECT id, row_number() OVER (ORDER BY row_no ASC NULLS LAST, id ASC) AS n
+               FROM sales_records
+              WHERE "tagYear" = ${FISCAL_YEAR}
+           ) x
+     WHERE s.id = x.id
+       AND s.row_no IS DISTINCT FROM x.n`;
   console.log(
     `✅ Seeded ${records.length} sales invoices for ${FISCAL_YEAR}` +
       ` (${skipped} row(s) skipped: ${totalsLike} total row(s), ${skipped - totalsLike} empty template(s)).`,

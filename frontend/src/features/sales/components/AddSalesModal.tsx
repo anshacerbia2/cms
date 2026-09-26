@@ -34,6 +34,11 @@ interface AddSalesModalProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   year: number;
+  /**
+   * Diisi saat form dibuka dari tombol "Insert below" sebuah baris: baris-baris
+   * yang disimpan masuk tepat di bawah baris itu, bukan di ujung tahun.
+   */
+  insertAfter?: { id: number; rowNo: number | null; tagYear: number } | null;
 }
 
 interface SalesRow {
@@ -71,8 +76,8 @@ const NUMERIC_COLS: (keyof SalesRow)[] = [
 
 const DATE_COLS: (keyof SalesRow)[] = ['colC', 'colL'];
 
-export default function AddSalesModal({ open, onOpenChange, onSuccess, year }: AddSalesModalProps) {
-  const { createBulkSales } = useSales();
+export default function AddSalesModal({ open, onOpenChange, onSuccess, year, insertAfter = null }: AddSalesModalProps) {
+  const { createBulkSales, insertSales } = useSales();
   const [rows, setRows] = useState<SalesRow[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -255,7 +260,11 @@ export default function AddSalesModal({ open, onOpenChange, onSuccess, year }: A
     }
     setLoading(true);
     try {
-      await createBulkSales.mutateAsync({ data: validRows, tagYear: year });
+      if (insertAfter) {
+        await insertSales.mutateAsync({ rows: validRows, tagYear: insertAfter.tagYear, afterId: insertAfter.id });
+      } else {
+        await createBulkSales.mutateAsync({ data: validRows, tagYear: year });
+      }
       onSuccess();
       onOpenChange(false);
     } catch (error) {
@@ -273,10 +282,12 @@ export default function AddSalesModal({ open, onOpenChange, onSuccess, year }: A
             <div className="space-y-1">
               <DialogTitle className="text-lg md:text-2xl font-black tracking-tight text-primary flex items-center gap-3">
                 <ShoppingCart className="text-secondary shrink-0" size={20} />
-                Bulk Sales Import
+                {insertAfter ? `Insert Rows Below No ${insertAfter.rowNo ?? ''}` : 'Bulk Sales Import'}
               </DialogTitle>
               <div className="text-muted-foreground text-xs md:text-sm font-medium">
-                Import massive sales datasets. <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20 font-semibold px-1.5 py-0 inline-flex align-middle mx-1">EXCEL READY</Badge>
+                {insertAfter
+                  ? 'The rows below it move down to make room.'
+                  : 'Import massive sales datasets.'} <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20 font-semibold px-1.5 py-0 inline-flex align-middle mx-1">EXCEL READY</Badge>
               </div>
             </div>
             <div className="flex items-center gap-2 w-full md:w-auto">

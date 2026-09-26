@@ -447,6 +447,12 @@ model SalesRecord {
   colAC     Decimal?  @db.Decimal(19, 4) // Non WAPU
   colAD     String?   @db.Text // Remarks
   tagYear   Int // Tag Year
+  /// Urutan baris di register Sales, 1, 2, 3 ... per tagYear - sama seperti
+  /// row_no Bank Statement. Menyisip di tengah menggeser baris di bawahnya,
+  /// menghapus menutup lubangnya. Dibaca selalu sebagai
+  /// [{ rowNo: 'asc' }, { id: 'asc' }]; baris yang belum bernomor jatuh di ujung.
+  /// Beda dengan colA ("No" dari workbook), yang tidak diurus sistem.
+  rowNo     Int?      @map("row_no")
   /// Siapa yang menaruh baris ini: 'SEED' kalau dimuat dari workbook, 'APP'
   /// kalau diinput lewat aplikasi. Seeder hanya menghapus barisnya sendiri,
   /// jadi baris yang diketik orang selamat saat seed ulang tanpa perlu dicatat
@@ -458,6 +464,7 @@ model SalesRecord {
 
   amounts SalesRecordAmount[]
 
+  @@index([tagYear, rowNo])
   @@map("sales_records")
 }
 
