@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
   CardHeader,
@@ -36,6 +36,9 @@ export default function LoginPage() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Dikirim ke sini oleh expireSession() saat server menolak token yang kedaluwarsa.
+  const [searchParams] = useSearchParams();
+  const expired = searchParams.get('expired') === '1';
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -131,6 +134,13 @@ export default function LoginPage() {
                   )}
                 />
                 
+                {expired && !error && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-[11px] font-bold text-amber-700 animate-in fade-in zoom-in-95">
+                    <ShieldCheck className="h-4 w-4 shrink-0" />
+                    Your session has expired. Please sign in again.
+                  </div>
+                )}
+
                 {error && (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/5 border border-destructive/10 text-[11px] font-bold text-destructive animate-in fade-in zoom-in-95">
                     <ShieldCheck className="h-4 w-4 shrink-0" />
