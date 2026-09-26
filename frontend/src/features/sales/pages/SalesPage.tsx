@@ -54,8 +54,11 @@ export default function SalesPage() {
   // selama ada yang diketik, tombol sunting/sisip baris lain dikunci.
   const [editingId, setEditingId] = useState<number | null>(null);
   const [insertAfterId, setInsertAfterId] = useState<number | null>(null);
+  // Sisip di atas baris No 1 - satu-satunya tempat yang tidak bisa dicapai dengan
+  // "sisip di bawah baris sebelumnya". Disimpan dengan afterId null (paling atas).
+  const [insertAboveId, setInsertAboveId] = useState<number | null>(null);
   const [savingInline, setSavingInline] = useState(false);
-  const inlineBusy = editingId !== null || insertAfterId !== null;
+  const inlineBusy = editingId !== null || insertAfterId !== null || insertAboveId !== null;
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedViewRecord, setSelectedViewRecord] = useState<any>(null);
   const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
@@ -184,7 +187,8 @@ export default function SalesPage() {
     const visible = (id: number) => paginatedSales.some((r: any) => r.id === id);
     if (editingId !== null && !visible(editingId)) setEditingId(null);
     if (insertAfterId !== null && !visible(insertAfterId)) setInsertAfterId(null);
-  }, [paginatedSales, editingId, insertAfterId]);
+    if (insertAboveId !== null && !visible(insertAboveId)) setInsertAboveId(null);
+  }, [paginatedSales, editingId, insertAfterId, insertAboveId]);
 
   const salesMeta = {
     total: filteredAndSortedSales.length,
@@ -208,10 +212,12 @@ export default function SalesPage() {
   const handleHistory = useCallback((row: any) => setHistoryRow(row), []);
   const handleEdit = useCallback((row: any) => setEditingId(row.id), []);
   const handleInsertAfter = useCallback((row: any) => setInsertAfterId(row.id), []);
+  const handleInsertAbove = useCallback((row: any) => setInsertAboveId(row.id), []);
   const handleAskDelete = useCallback((id: number) => setRecordToDelete(id), []);
   const cancelInline = useCallback(() => {
     setEditingId(null);
     setInsertAfterId(null);
+    setInsertAboveId(null);
   }, []);
 
   // Ganti tahun, pencarian, filter kolom, urutan, atau rentang No: baris yang
@@ -242,13 +248,20 @@ export default function SalesPage() {
 
   const saveInsert = useCallback(
     async (drafts: SalesDraft[]) => {
-      if (insertAfterId === null || savingInline) return;
-      const anchor = rawById.get(insertAfterId);
+      const anchorId = insertAboveId ?? insertAfterId;
+      if (anchorId === null || savingInline) return;
+      const anchor = rawById.get(anchorId);
       if (!anchor) return;
       setSavingInline(true);
       try {
-        await insertSalesAsync({ rows: drafts.map(draftPayload), tagYear: anchor.tagYear, afterId: insertAfterId });
+        // Sisip atas hanya ada di baris No 1, jadi "di atasnya" = paling atas.
+        await insertSalesAsync({
+          rows: drafts.map(draftPayload),
+          tagYear: anchor.tagYear,
+          afterId: insertAboveId !== null ? null : insertAfterId,
+        });
         setInsertAfterId(null);
+        setInsertAboveId(null);
         refetchSales();
       } catch {
         // insertSales sudah menampilkan pesan galatnya; draf tetap di layar.
@@ -256,7 +269,7 @@ export default function SalesPage() {
         setSavingInline(false);
       }
     },
-    [insertAfterId, savingInline, rawById, insertSalesAsync, refetchSales],
+    [insertAfterId, insertAboveId, savingInline, rawById, insertSalesAsync, refetchSales],
   );
 
   const handleDelete = async () => {
@@ -529,6 +542,16 @@ export default function SalesPage() {
                 <>
                   {paginatedSales.map((row: any) => (
                     <Fragment key={row.id}>
+                      {insertAboveId === row.id && (
+                        <SalesInlineInsertRows
+                          accountColumns={accountColumns}
+                          anchorRowNo={0}
+                          colSpan={18 + accountColumns.length}
+                          saving={savingInline}
+                          onSave={saveInsert}
+                          onCancel={cancelInline}
+                        />
+                      )}
                       {editingId === row.id ? (
                         <SalesInlineEditRow
                           raw={rawById.get(row.id)}
@@ -549,6 +572,7 @@ export default function SalesPage() {
                           onHistory={canHistory ? handleHistory : undefined}
                           onEdit={handleEdit}
                           onInsert={handleInsertAfter}
+                          onInsertAbove={row.rowNo === 1 ? handleInsertAbove : undefined}
                           onDelete={handleAskDelete}
                         />
                       )}

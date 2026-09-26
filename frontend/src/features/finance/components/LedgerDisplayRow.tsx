@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { CornerDownRight, Edit2, Eye, History, Trash2 } from 'lucide-react';
+import { CornerDownRight, CornerUpRight, Edit2, Eye, History, Trash2 } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 
@@ -29,6 +29,8 @@ type Props = {
   onHistory?: (row: any) => void;
   onEdit: (row: any) => void;
   onInsert: (row: any) => void;
+  /** Sisip DI ATAS baris ini. Hanya diisi untuk baris No 1 - di tempat lain, sisip bawah baris di atasnya. */
+  onInsertAbove?: (row: any) => void;
   onDelete: (id: number) => void;
 };
 
@@ -42,7 +44,7 @@ type Props = {
  * (useCallback); kalau tidak, memo tidak berguna.
  */
 export const LedgerDisplayRow = memo(function LedgerDisplayRow({
-  row, showRowNo, busy, canEdit, canCreate, canDelete, onView, onHistory, onEdit, onInsert, onDelete,
+  row, showRowNo, busy, canEdit, canCreate, canDelete, onView, onHistory, onEdit, onInsert, onInsertAbove, onDelete,
 }: Props) {
   return (
     <TableRow className="hover:bg-slate-50 transition-colors whitespace-nowrap group">
@@ -88,6 +90,18 @@ export const LedgerDisplayRow = memo(function LedgerDisplayRow({
               onClick={(e) => { e.stopPropagation(); onEdit(row); }}
             >
               <Edit2 size={12} strokeWidth={2.5} />
+            </Button>
+          )}
+          {canCreate && onInsertAbove && (
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Insert a row above this one"
+              className="h-7 w-7 text-primary/40 hover:text-secondary hover:bg-secondary/5 rounded-sm"
+              disabled={busy}
+              onClick={(e) => { e.stopPropagation(); onInsertAbove(row); }}
+            >
+              <CornerUpRight size={12} strokeWidth={2.5} />
             </Button>
           )}
           {canCreate && (

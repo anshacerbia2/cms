@@ -126,7 +126,7 @@ export function SalesInlineEditRow({ raw, accountColumns, saving, onSave, onCanc
 
 type InsertProps = {
   accountColumns: AccountColumn[];
-  /** row_no baris tempat menyisip; draf diberi nomor lanjutannya. */
+  /** row_no baris tempat menyisip; draf diberi nomor lanjutannya. 0 = menyisip paling atas. */
   anchorRowNo?: number | null;
   /** Jumlah kolom tabel, untuk baris tombol di bawah draf. */
   colSpan: number;
@@ -208,7 +208,7 @@ export function SalesInlineInsertRows({ accountColumns, anchorRowNo, colSpan, sa
       {drafts.map((draft, i) => (
         <TableRow key={`ins-${i}`} className="whitespace-nowrap">
           {/* Nomor yang akan didapat setelah disimpan: lanjutan baris di atasnya. */}
-          <TableCell className={draftNoCell}>{anchorRowNo ? formatRowNo(anchorRowNo + i + 1) : '-'}</TableCell>
+          <TableCell className={draftNoCell}>{anchorRowNo === null || anchorRowNo === undefined ? '-' : formatRowNo(anchorRowNo + i + 1)}</TableCell>
           <SalesRowEditor
             index={i}
             draft={draft}
