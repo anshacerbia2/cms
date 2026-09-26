@@ -29,21 +29,22 @@ interface EditPpnInOutModalProps {
   onSuccess: () => void;
 }
 
+// Semua kolom 2025 dan 2026: Sales hanya terisi di baris 2025, DPP PPN di 2026.
 const COL_ORDER = [
-  'colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ',
+  'colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'dpp', 'status', 'colH', 'colI', 'colJ',
   'colK', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR', 'colS'
 ];
 
 const LABELS: Record<string, string> = {
-  colA: 'Masa', colB: 'Col B', colC: 'No Faktur', colD: 'Client/Suplier',
-  colE: 'Invoice No', colF: 'Sales', colG: 'Status', colH: 'PPN',
+  colA: 'Masa', colB: 'PPN Type', colC: 'No Faktur', colD: 'Customer/Vendor',
+  colE: 'Invoice No', colF: 'Sales', dpp: 'DPP PPN', status: 'Status', colH: 'PPN',
   colI: 'WAPU', colJ: 'PAID', colK: 'AP PPN WAPU',
   colM: 'Non WAPU', colN: 'Masukan', colO: 'AP PPN Non WAPU',
   colP: 'Ledger', colQ: 'Sub Ledger-1', colR: 'Sub Ledger-2', colS: 'Sub Ledger-3'
 };
 
 const NUMERIC_COLS = [
-  'colG', 'colH', 'colI', 'colJ', 'colK', 'colM', 'colN', 'colO'
+  'dpp', 'colH', 'colI', 'colJ', 'colK', 'colM', 'colN', 'colO'
 ];
 
 const DATE_COLS = ['colA'];

@@ -8,14 +8,17 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 
+// Kolom 2025 dan 2026 digabung: Sales hanya ada di 2025, DPP PPN hanya di 2026.
+// colG (Status lama, bertipe angka) tidak pernah terisi, jadi tidak diekspor.
 const PPN_IN_OUT_COLUMN_MAPPING = {
   colA: 'Masa (Date)',
-  colB: 'col B',
+  colB: 'PPN Type',
   colC: 'No Faktur',
-  colD: 'Client/Suplier',
+  colD: 'Customer/Vendor',
   colE: 'Invoice No',
-  colF: 'Sales (Year integer)|num',
-  colG: 'Status|accounting',
+  colF: 'Sales (Year)|num',
+  dpp: 'DPP PPN|accounting',
+  status: 'Status',
   colH: 'PPN|accounting',
   colI: 'WAPU|accounting',
   colJ: 'PAID|accounting',

@@ -675,11 +675,16 @@ model PpnInOut {
   colC      String?   @db.Text // No Faktur
   colD      String?   @db.Text // Client/Suplier
   colE      String?   @db.Text // Invoice No
-  colF      Int? // Sales (Year integer)
-  colG      Decimal?  @db.Decimal(19, 4) // Status
+  colF      Int? // Sales (Year integer) - hanya workbook 2025
+  colG      Decimal?  @db.Decimal(19, 4) // Status lama; bertipe angka, tidak pernah terisi
+  /// DPP PPN - dasar pengenaan pajak. Kolom F di workbook 2026 (2025 tidak punya).
+  dpp       Decimal?  @db.Decimal(19, 4)
+  /// STATUS dari workbook apa adanya: 2025 berisi jenis (WAPU / Non WAPU /
+  /// Masukan / Pembayaran), 2026 berisi status bayar (Paid / UnPaid / CLAIMED).
+  status    String?   @db.Text
   colH      Decimal?  @db.Decimal(19, 4) // PPN
   colI      Decimal?  @db.Decimal(19, 4) // WAPU
-  colJ      Decimal?  @db.Decimal(19, 4) // PAID
+  colJ      Decimal?  @db.Decimal(19, 4) // PAID - disimpan positif (konvensi 2026)
   colK      Decimal?  @db.Decimal(19, 4) // AP PPN WAPU
   colL      String?   @db.Text // Blank
   colM      Decimal?  @db.Decimal(19, 4) // Non WAPU

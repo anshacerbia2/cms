@@ -72,8 +72,8 @@ export const COLUMN_LABELS: Record<string, Record<string, string>> = {
     colAB: "WAPU", colAC: "Non WAPU", colAD: "Remarks",
   },
   ppn_in_out: {
-    colA: "Masa", colB: "Col B", colC: "No Faktur", colD: "Client/Supplier", colE: "Invoice No",
-    colF: "Sales", colG: "Status", colH: "PPN", colI: "WAPU", colJ: "PAID", colK: "AP PPN WAPU",
+    colA: "Masa", colB: "PPN Type", colC: "No Faktur", colD: "Customer/Vendor", colE: "Invoice No",
+    colF: "Sales", colG: "Status (old)", dpp: "DPP PPN", status: "Status", colH: "PPN", colI: "WAPU", colJ: "PAID", colK: "AP PPN WAPU",
     colL: "Blank", colM: "Non WAPU", colN: "Masukan", colO: "AP PPN Non WAPU", colP: "Ledger",
     colQ: "Sub Ledger-1", colR: "Sub Ledger-2", colS: "Sub Ledger-3",
   },

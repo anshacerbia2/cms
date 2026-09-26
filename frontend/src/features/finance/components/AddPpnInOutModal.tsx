@@ -34,31 +34,40 @@ interface AddPpnInOutModalProps {
 
 interface PpnInOutRow {
   colA: string; colB: string | number; colC: string | number; colD: string | number;
-  colE: string | number; colF: string | number; colG: string | number;
+  colE: string | number; dpp: string | number; status: string | number;
   colH: string | number; colI: string | number; colJ: string | number;
   colK: string | number; colM: string | number;
   colN: string | number; colO: string | number; colP: string | number;
   colQ: string | number; colR: string | number; colS: string | number;
 }
 
-const COL_ORDER: (keyof PpnInOutRow)[] = [
-  'colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ',
-  'colK', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR', 'colS'
+/**
+ * Urutan kolom workbook PPN 2026, A sampai S, supaya satu baris yang disalin
+ * dari sana jatuh ke kolom yang benar. `null` adalah kolom L (BLANK): ikut
+ * tersalin sebagai sel kosong, jadi harus dilompati - bukan dianggap Non WAPU.
+ * Sales (tahun) hanya ada di workbook 2025 dan tidak diisi dari sini.
+ */
+const PASTE_ORDER: (keyof PpnInOutRow | null)[] = [
+  'colA', 'colB', 'colC', 'colD', 'colE', 'dpp', 'status', 'colH', 'colI', 'colJ',
+  'colK', null, 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR', 'colS'
 ];
 
-const VISIBLE_COLS = COL_ORDER;
+const VISIBLE_COLS = PASTE_ORDER.filter((c): c is keyof PpnInOutRow => c !== null);
 
 const LABELS: Record<keyof PpnInOutRow, string> = {
-  colA: 'Masa', colB: 'Col B', colC: 'No Faktur', colD: 'Client/Suplier',
-  colE: 'Invoice No', colF: 'Sales', colG: 'Status', colH: 'PPN',
+  colA: 'Masa', colB: 'PPN Type', colC: 'No Faktur', colD: 'Customer/Vendor',
+  colE: 'Invoice No', dpp: 'DPP PPN', status: 'Status', colH: 'PPN',
   colI: 'WAPU', colJ: 'PAID', colK: 'AP PPN WAPU',
   colM: 'Non WAPU', colN: 'Masukan', colO: 'AP PPN Non WAPU',
   colP: 'Ledger', colQ: 'Sub Ledger-1', colR: 'Sub Ledger-2', colS: 'Sub Ledger-3'
 };
 
 const NUMERIC_COLS: (keyof PpnInOutRow)[] = [
-  'colG', 'colH', 'colI', 'colJ', 'colK', 'colM', 'colN', 'colO'
+  'dpp', 'colH', 'colI', 'colJ', 'colK', 'colM', 'colN', 'colO'
 ];
+
+const emptyRow = (): PpnInOutRow =>
+  Object.fromEntries(VISIBLE_COLS.map((c) => [c, ''])) as unknown as PpnInOutRow;
 
 export default function AddPpnInOutModal({ open, onOpenChange, onSuccess, year }: AddPpnInOutModalProps) {
   const { createBulkPpnInOut } = usePpnInOut();
@@ -67,20 +76,12 @@ export default function AddPpnInOutModal({ open, onOpenChange, onSuccess, year }
 
   useEffect(() => {
     if (open) {
-      setRows(Array(5).fill(null).map(() => ({
-        colA: '', colB: '', colC: '', colD: '', colE: '', colF: '', colG: '',
-        colH: '', colI: '', colJ: '', colK: '', colM: '', colN: '', colO: '',
-        colP: '', colQ: '', colR: '', colS: ''
-      })));
+      setRows(Array(5).fill(null).map(emptyRow));
     }
   }, [open]);
 
   const addRow = () => {
-    setRows([...rows, {
-      colA: '', colB: '', colC: '', colD: '', colE: '', colF: '', colG: '',
-      colH: '', colI: '', colJ: '', colK: '', colM: '', colN: '', colO: '',
-      colP: '', colQ: '', colR: '', colS: ''
-    }]);
+    setRows([...rows, emptyRow()]);
   };
 
   const removeRow = (index: number) => {
@@ -116,9 +117,17 @@ export default function AddPpnInOutModal({ open, onOpenChange, onSuccess, year }
       jan: '01', feb: '02', mar: '03', apr: '04', mei: '05', jun: '06',
       jul: '07', agt: '08', ags: '08', sep: '09', okt: '10', nov: '11', des: '12',
       januari: '01', februari: '02', maret: '03', april: '04', juni: '06',
-      juli: '07', agustus: '08', september: '09', oktober: '10', november: '11', desember: '12'
+      juli: '07', agustus: '08', september: '09', oktober: '10', november: '11', desember: '12',
+      may: '05', aug: '08', oct: '10', dec: '12',
+      january: '01', february: '02', march: '03', june: '06', july: '07', august: '08',
+      october: '10', december: '12'
     };
     const parts = value.toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean);
+    // Masa di workbook tampil sebagai bulan-tahun ("Jan-26", "Juni 2025"): tanggal 1.
+    if (parts.length === 2 && months[parts[0]] && /^\d{2}(\d{2})?$/.test(parts[1])) {
+      const y = parts[1].length === 2 ? `20${parts[1]}` : parts[1];
+      return `${y}-${months[parts[0]]}-01`;
+    }
     if (parts.length === 3) {
       let d = '', m = '', y = '';
       if (parts[0].length === 4) { y = parts[0]; m = parts[1]; d = parts[2]; }
@@ -149,25 +158,20 @@ export default function AddPpnInOutModal({ open, onOpenChange, onSuccess, year }
     e.preventDefault();
     const pasteRows = pasteData.split(/\r?\n/).filter(row => row.trim() !== '');
     const newRows = [...rows];
-    const startColIndex = COL_ORDER.indexOf(colKey);
+    const startColIndex = PASTE_ORDER.indexOf(colKey);
 
     pasteRows.forEach((pasteRowText, i) => {
       const targetRowIndex = rowIndex + i;
       const pasteCols = pasteRowText.split('\t');
       if (targetRowIndex >= newRows.length) {
-        newRows.push({
-          colA: '', colB: '', colC: '', colD: '', colE: '', colF: '', colG: '',
-          colH: '', colI: '', colJ: '', colK: '', colM: '', colN: '', colO: '',
-          colP: '', colQ: '', colR: '', colS: ''
-        });
+        newRows.push(emptyRow());
       }
       pasteCols.forEach((cellText, j) => {
         const targetColIndex = startColIndex + j;
-        if (targetColIndex < COL_ORDER.length) {
-          const field = COL_ORDER[targetColIndex];
+        const field = PASTE_ORDER[targetColIndex];
+        if (field) {
           let value: any = cellText.trim();
           if (NUMERIC_COLS.includes(field)) value = cleanNumber(value);
-          else if (field === 'colF') value = value.replace(/[^0-9]/g, '');
           else if (field === 'colA') value = parseSmartDate(value);
           newRows[targetRowIndex] = { ...newRows[targetRowIndex], [field]: value };
         }
@@ -332,7 +336,6 @@ export default function AddPpnInOutModal({ open, onOpenChange, onSuccess, year }
                                 onChange={(e) => {
                                   let val = e.target.value;
                                   if (isNumeric) val = parseDisplay(val);
-                                  else if (col === 'colF') val = val.replace(/[^0-9]/g, '');
                                   updateRow(idx, col, val);
                                 }}
                                 onPaste={(e) => handlePaste(e, idx, col)}
