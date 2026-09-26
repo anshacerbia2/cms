@@ -1,11 +1,14 @@
 import { Fragment, useState } from "react";
-import { ChevronDown, ChevronRight, History, RotateCcw } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronDown, ChevronRight, History, RotateCcw } from "lucide-react";
+import { format, isValid, parseISO } from "date-fns";
 import { PageContainer } from "@/components/common/PageContainer";
 import { PageHeader } from "@/components/common/PageHeader";
 import { PaginationControls } from "@/components/common/PaginationControls";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuditLogs, useAuditLogUsers, type AuditEntry } from "../hooks/useAuditLogs";
 import { ACTION_LABELS, FILTERABLE_TABLES, TABLE_LABELS, columnLabel, visibleChanges } from "../labels";
@@ -14,6 +17,60 @@ import { ChangeList } from "../components/ChangeList";
 import { HistoryDialog } from "../components/HistoryDialog";
 
 const ALL = "all";
+
+/** Tanggal YYYY-MM-DD dari filter sebagai Date untuk kalender, atau kosong. */
+const toDate = (v: string) => {
+  const d = v ? parseISO(v) : undefined;
+  return d && isValid(d) ? d : undefined;
+};
+
+/**
+ * Pemilih tanggal filter, sama dengan rentang tanggal di Bank Statement:
+ * tombol berlabel (FROM / UNTIL) yang membuka kalender. Nilainya tetap
+ * YYYY-MM-DD seperti sebelumnya, jadi query ke API tidak berubah.
+ */
+function DateFilter({ label, tone, value, onChange }: {
+  label: string;
+  tone: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const selected = toDate(value);
+  const thisYear = new Date().getFullYear();
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            "h-11 px-4 bg-white border-0 shadow-sm rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all justify-start text-left hover:bg-white hover:shadow-sm text-muted-foreground hover:text-muted-foreground min-w-[150px]",
+            !selected && "text-muted-foreground opacity-60"
+          )}
+        >
+          <div className="flex flex-col items-start gap-0.5">
+            <span className={`text-[7px] font-black ${tone}`}>{label}</span>
+            <div className="flex items-center gap-2">
+              <CalendarIcon size={12} className={tone} />
+              {selected ? format(selected, "dd MMM y") : <span>{label === "FROM" ? "Start Date" : "End Date"}</span>}
+            </div>
+          </div>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0 shadow-premium border-primary/5 overflow-hidden" align="end">
+        <Calendar
+          mode="single"
+          captionLayout="dropdown"
+          selected={selected}
+          onSelect={(d) => onChange(d ? format(d, "yyyy-MM-dd") : "")}
+          startMonth={new Date(2025, 0)}
+          endMonth={new Date(thisYear, 11)}
+          defaultMonth={selected}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 /** Awal hari sesudah `date` (YYYY-MM-DD) menurut jam lokal - batas akhir yang eksklusif. */
 const dayAfter = (date: string) => {
@@ -104,9 +161,8 @@ export default function ActivityLogPage() {
           </SelectContent>
         </Select>
         <div className="flex items-center gap-2">
-          <Input type="date" value={from} onChange={(e) => onFilter(setFrom)(e.target.value)} className="h-11 bg-white border-0 rounded-xl shadow-sm w-[160px]" aria-label="From date" />
-          <span className="text-muted-foreground text-[12px]">to</span>
-          <Input type="date" value={to} onChange={(e) => onFilter(setTo)(e.target.value)} className="h-11 bg-white border-0 rounded-xl shadow-sm w-[160px]" aria-label="To date" />
+          <DateFilter label="FROM" tone="text-secondary" value={from} onChange={onFilter(setFrom)} />
+          <DateFilter label="UNTIL" tone="text-rose-500" value={to} onChange={onFilter(setTo)} />
         </div>
         {filtered && (
           <Button variant="ghost" onClick={reset} className="h-11 rounded-xl text-[12px] font-bold gap-2">
