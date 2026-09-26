@@ -1,5 +1,5 @@
 import { Fragment, useState, useMemo, useCallback, useEffect } from "react";
-import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
+import { HistoryDialog, historyTitle } from '@/features/audit-logs/components/HistoryDialog';
 import { Decimal } from "decimal.js";
 import { ShoppingCart, Search, FilterX } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -630,7 +630,7 @@ export default function SalesPage() {
         onOpenChange={(o) => { if (!o) setHistoryRow(null); }}
         table="sales_records"
         rowId={historyRow?.id}
-        title={[historyRow?.colB, historyRow?.colF].filter(Boolean).join(' — ')}
+        title={historyTitle(historyRow?.colB, historyRow?.colF)}
       />
       <Dialog 
         open={recordToDelete !== null} 

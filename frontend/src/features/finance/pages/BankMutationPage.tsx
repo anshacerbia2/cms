@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, Fragment } from "react";
-import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
+import { HistoryDialog, historyTitle } from '@/features/audit-logs/components/HistoryDialog';
 import { 
   Search, 
   Landmark,
@@ -1084,7 +1084,7 @@ export default function BankMutationPage() {
 
         rowId={historyRow?.id}
 
-        title={[historyRow?.colA, historyRow?.colB].filter(Boolean).join(' — ')}
+        title={historyTitle(historyRow?.colA, historyRow?.colB)}
 
       />
 

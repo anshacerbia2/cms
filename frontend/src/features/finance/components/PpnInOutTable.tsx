@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { History as HistoryIcon } from 'lucide-react';
-import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
+import { HistoryDialog, historyTitle } from '@/features/audit-logs/components/HistoryDialog';
 import { Search, FilterX } from 'lucide-react';
 import { 
   Table, 
@@ -435,7 +435,7 @@ export function PpnInOutTable() {
 
         rowId={historyRow?.id}
 
-        title={[historyRow?.colC, historyRow?.colD].filter(Boolean).join(' — ')}
+        title={historyTitle(historyRow?.colC, historyRow?.colD)}
 
       />
 
