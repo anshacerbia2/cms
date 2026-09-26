@@ -248,15 +248,7 @@ export default function AddSalesModal({ open, onOpenChange, onSuccess, year }: A
   };
 
   const handleSave = async () => {
-    const isFilled = (row: SalesRow) => !!(row.colB || row.colG || row.colH);
-    const lastFilled = rows.map(isFilled).lastIndexOf(true);
-    // Baris kosong DI ATAS baris yang diisi adalah nomor invoice yang sengaja
-    // dicadangkan (client mengisi baris ke-4 supaya 225-227 tetap ada), jadi
-    // disimpan sebagai baris cadangan "-" - sama dengan cara manual client.
-    // Baris kosong di bawah baris terakhir yang diisi tetap dibuang.
-    const validRows = rows
-      .slice(0, lastFilled + 1)
-      .map((row) => (isFilled(row) ? row : { ...row, colB: '-' }));
+    const validRows = rows.filter(row => row.colB || row.colG || row.colH);
     if (validRows.length === 0) {
       toast.error("Please add at least one valid record");
       return;
@@ -405,10 +397,6 @@ export default function AddSalesModal({ open, onOpenChange, onSuccess, year }: A
             <div className="flex items-center gap-2 italic normal-case opacity-80 pt-1 border-t border-primary/[0.03]">
               <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
               Tip: Copy any rectangular range from Excel and paste — rows/cols expand automatically.
-            </div>
-            <div className="flex items-center gap-2 italic normal-case opacity-80">
-              <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
-              Empty rows above a filled row are saved as reserved rows ("-") to keep their invoice numbers free.
             </div>
           </div>
           <div className="px-8 py-4 flex items-center justify-end w-full gap-3">
