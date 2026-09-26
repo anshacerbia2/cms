@@ -176,12 +176,14 @@ export default function SalesPage() {
   const canDelete = can('sales.delete');
   const canHistory = can('audit-logs.index');
 
-  // Pindah halaman, filter, atau tahun menyembunyikan baris yang sedang diketik:
-  // batalkan, jangan biarkan draf yang tak terlihat tetap mengunci tombol.
+  // Jaring pengaman untuk semua cara lain baris itu hilang dari layar - pindah
+  // halaman, filter kolom, pencarian. Tanpa ini editornya lenyap tapi statusnya
+  // masih "sedang mengetik", dan semua tombol edit/sisip terkunci tanpa ada
+  // tombol Batal yang bisa dipencet.
   useEffect(() => {
-    const visible = (id: number | null) => id === null || paginatedSales.some((r: any) => r.id === id);
-    if (!visible(editingId)) setEditingId(null);
-    if (!visible(insertAfterId)) setInsertAfterId(null);
+    const visible = (id: number) => paginatedSales.some((r: any) => r.id === id);
+    if (editingId !== null && !visible(editingId)) setEditingId(null);
+    if (insertAfterId !== null && !visible(insertAfterId)) setInsertAfterId(null);
   }, [paginatedSales, editingId, insertAfterId]);
 
   const salesMeta = {
