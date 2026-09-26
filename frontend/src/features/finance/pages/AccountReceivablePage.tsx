@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { History as HistoryIcon } from 'lucide-react';
+import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
 import { ArrowUpRight, Search, FilterX, Plus } from 'lucide-react';
 import { 
   Table, 
@@ -51,6 +53,7 @@ import { PageContainer } from "@/components/common/PageContainer";
 
 export default function AccountReceivablePage() {
   const { can } = useAuthStore();
+  const [historyRow, setHistoryRow] = useState<any | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const limit = 10;
 
@@ -408,6 +411,11 @@ export default function AccountReceivablePage() {
                           >
                             <Eye size={12} strokeWidth={2.5} />
                           </Button>
+                          {can('audit-logs.index') && (
+                            <Button variant="ghost" size="icon" title="History" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); setHistoryRow(row); }}>
+                              <HistoryIcon size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                           {can('account-receivable.update') && (
                             <Button 
                               variant="ghost" 
@@ -497,6 +505,20 @@ export default function AccountReceivablePage() {
         onOpenChange={setIsAddModalOpen} 
         year={yearNum}
         onSuccess={() => refetch()} 
+      />
+
+      <HistoryDialog
+
+        open={historyRow !== null}
+
+        onOpenChange={(o) => { if (!o) setHistoryRow(null); }}
+
+        table="account_receivables"
+
+        rowId={historyRow?.id}
+
+        title={[historyRow?.colD, historyRow?.colE].filter(Boolean).join(' — ')}
+
       />
 
       <EditArLedgerModal

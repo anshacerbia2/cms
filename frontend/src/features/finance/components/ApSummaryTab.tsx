@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { History as HistoryIcon } from 'lucide-react';
+import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
 import { Search, FilterX } from 'lucide-react';
 import { 
   Table, 
@@ -58,6 +60,7 @@ const clean = (val: any) => {
 
 export function ApSummaryTab() {
   const { can } = useAuthStore();
+  const [historyRow, setHistoryRow] = useState<any | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const apLimit = 10;
 
@@ -454,6 +457,11 @@ export function ApSummaryTab() {
                           >
                             <Eye size={12} strokeWidth={2.5} />
                           </Button>
+                          {can('audit-logs.index') && (
+                            <Button variant="ghost" size="icon" title="History" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); setHistoryRow(row); }}>
+                              <HistoryIcon size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                           {can('account-payable.update') && (
                             <Button 
                               variant="ghost" 
@@ -525,6 +533,20 @@ export function ApSummaryTab() {
         onOpenChange={setIsAddModalOpen} 
         year={yearNum}
         onSuccess={() => refetch()} 
+      />
+
+      <HistoryDialog
+
+        open={historyRow !== null}
+
+        onOpenChange={(o) => { if (!o) setHistoryRow(null); }}
+
+        table="account_payables"
+
+        rowId={historyRow?.id}
+
+        title={[historyRow?.colC, historyRow?.colD].filter(Boolean).join(' — ')}
+
       />
 
       <EditApLedgerModal

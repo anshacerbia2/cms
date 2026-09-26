@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { History as HistoryIcon } from 'lucide-react';
+import { HistoryDialog } from '@/features/audit-logs/components/HistoryDialog';
 import { 
   Table, 
   TableBody, 
@@ -47,6 +49,7 @@ import { useAuthStore } from "@/store/authStore";
 
 export const InterAccountTable: React.FC = () => {
   const { can } = useAuthStore();
+  const [historyRow, setHistoryRow] = useState<any | null>(null);
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString());
   const yearNum = useMemo(() => Number(yearFilter), [yearFilter]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -346,6 +349,11 @@ export const InterAccountTable: React.FC = () => {
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleView(row); }}>
                             <Eye size={12} strokeWidth={2.5} />
                           </Button>
+                          {can('audit-logs.index') && (
+                            <Button variant="ghost" size="icon" title="History" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); setHistoryRow(row); }}>
+                              <HistoryIcon size={12} strokeWidth={2.5} />
+                            </Button>
+                          )}
                           {can('inter-account.update') && (
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
                               <Edit2 size={12} strokeWidth={2.5} />
@@ -379,6 +387,13 @@ export const InterAccountTable: React.FC = () => {
           </Table>
         </div>
       </div>
+      <HistoryDialog
+        open={historyRow !== null}
+        onOpenChange={(o) => { if (!o) setHistoryRow(null); }}
+        table="inter_account"
+        rowId={historyRow?.id}
+        title={historyRow?.colB}
+      />
       <EditInterAccountModal 
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}

@@ -132,9 +132,10 @@ export class BankMutationController {
   /**
    * Menyisip satu atau lebih baris tepat di bawah `afterId`; `afterId` null berarti paling atas.
    *
-   * Beda dengan transactions/bulk yang selalu menambah di ujung. Baris di bawahnya
-   * turun satu posisi tanpa disentuh - tidak ada id yang berubah dan tidak ada
-   * nilai yang ditulis ulang.
+   * Beda dengan transactions/bulk yang selalu menambah di ujung. Baris baru
+   * mendapat nomor lanjutan dari baris di atasnya, dan nomor baris-baris di
+   * bawahnya bergeser sebanyak baris yang disisipkan; id dan isi baris lain
+   * tidak berubah.
    */
   @Post('transactions/insert')
   @Permissions('bank-mutation.create')

@@ -35,9 +35,6 @@ function periodStatus(closedAt: Date | null): 'CLOSED' | 'ONGOING' {
   return FISCAL_YEAR < new Date().getFullYear() ? 'CLOSED' : 'ONGOING';
 }
 
-/** Jarak antar nomor baris, menyisakan ruang untuk menyisip. */
-const ROW_NO_GAP = 1000;
-
 const WORKBOOK = 'PCMI-Bank Statements-14Sept26.xlsx';
 
 /**
@@ -156,11 +153,9 @@ function parseSheet(rows: any[][], layout: SheetLayout): { parsed: ParsedRow[]; 
         colH: cleanString(row[7]),
         colI: cleanString(row[8]),
         tagYear: FISCAL_YEAR,
-        // Berjarak 1000 supaya ada ruang menyisip di antara dua baris workbook
-        // tanpa menyentuh baris mana pun. Sheet dibaca turun satu per satu dan
-        // urutannya tidak diapa-apakan lagi di bawah, jadi ini otomatis sama
-        // dengan urutan baris di file.
-        rowNo: (parsed.length + 1) * ROW_NO_GAP,
+        // Nomor urut 1, 2, 3 mengikuti baris di file: sheet dibaca turun satu
+        // per satu dan urutannya tidak diapa-apakan lagi di bawah.
+        rowNo: parsed.length + 1,
       },
     });
   }
@@ -322,9 +317,9 @@ export async function seedBankStatements(prisma: PrismaClient, workbook?: XLSX.W
       orderBy: [{ rowNo: 'asc' }, { id: 'asc' }],
     });
 
-    let tail = ordered.length * ROW_NO_GAP;
+    let tail = ordered.length;
     for (const row of appended) {
-      tail += ROW_NO_GAP;
+      tail += 1;
       running = running.plus(row.colD ?? 0).minus(row.colC ?? 0);
       await prisma.financialTransaction.update({
         where: { id: row.id },

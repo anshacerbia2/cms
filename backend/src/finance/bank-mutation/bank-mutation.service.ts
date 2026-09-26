@@ -10,24 +10,29 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { formatDecimal } from '../../common/utils/format.utils';
 import { parseDecimalSafe } from '../../common/utils/parse.utils';
+import { lockAccount } from '../common/ledger-lock';
 
 
 /**
  * Urutan ledger, dipakai di mana pun baris dibaca berderet: daftar di layar,
  * export Excel dan PDF, dan perantaian ulang kolom saldo.
  *
- * `rowNo` yang menentukan; `id` cuma pemecah seri, untuk baris yang belum
- * sempat di-backfill dan untuk dua orang yang menyisip di titik yang sama.
- * Postgres menaruh NULL di belakang pada ASC, jadi baris tanpa `rowNo` jatuh
- * di ujung - persis perilaku "ditambahkan paling bawah" yang lama.
+ * `rowNo` yang menentukan; `id` cuma pemecah seri untuk baris yang row_no-nya
+ * masih kosong. Postgres menaruh NULL di belakang pada ASC, jadi baris tanpa
+ * `rowNo` jatuh di ujung - persis perilaku "ditambahkan paling bawah" yang lama.
  */
 const LEDGER_ORDER: Prisma.FinancialTransactionOrderByWithRelationInput[] = [
   { rowNo: 'asc' },
   { id: 'asc' },
 ];
 
-/** Jarak antar baris, menyisakan ruang untuk menyisip tanpa menyentuh tetangganya. */
-const ROW_NO_GAP = 1000;
+/**
+ * Batas waktu transaksi ledger. Hitung ulang saldo kini satu UPDATE (sekitar
+ * 0,1 detik per rekening-tahun), tapi bisa berantai ke tahun-tahun sesudahnya,
+ * dan penyimpanan lain di rekening yang sama menunggu gilirannya.
+ */
+const LEDGER_TX = { timeout: 60_000, maxWait: 30_000 };
+
 
 @Injectable()
 export class BankMutationService {
@@ -119,58 +124,56 @@ export class BankMutationService {
       }
     }
 
-    // 3. Handle Starting Balance ONLY if explicitly provided (Initial Migration)
-    if (startingBalance) {
-      await this.updateOpeningBalance(accountId, tagYear, startingBalance);
-    }
-
-    const currentFiscal = await this.prisma.fiscalPeriod.findUnique({
-      where: { internalAccountId_year: { internalAccountId: accountIdBig, year: tagYear } }
-    });
-
     // 4. Insert transactions with LINKING to internalAccountId.
     // Ditambahkan di ujung, meneruskan nomor urut terakhir - sama seperti sebelum
     // ada row_no, waktu urutan masih menumpang pada id yang menaik.
     const refs = await this.resolveLedgers(data);
-    const tail = await this.lastRowNo(accountIdBig, tagYear);
-    await this.prisma.financialTransaction.createMany({
-      data: data.map((item, index) => ({
-        internalAccountId: account.id,
-        colA: item.colA ? new Date(item.colA) : null,
-        colB: item.colB || "",
-        colC: parseDecimalSafe(item.colC, 'Debit') ?? '0',
-        colD: parseDecimalSafe(item.colD, 'Credit') ?? '0',
-        colE: 0,
-        ledgerId: refs[index].ledgerId,
-        subLedgerId: refs[index].subLedgerId,
-        colF: refs[index].colF ?? "",
-        colG: refs[index].colG ?? "",
-        colH: item.colH || "",
-        colI: item.colI || "",
-        tagYear: tagYear,
-        rowNo: tail + (index + 1) * ROW_NO_GAP,
-      })),
-    });
+    await this.prisma.$transaction(async (tx) => {
+      await lockAccount(tx, accountIdBig);
 
-    // 5. If saving to an OPEN period, change status to ONGOING because transactions now exist
-    if (currentFiscal && currentFiscal.status === 'OPEN' && data.length > 0) {
-      await this.prisma.fiscalPeriod.update({
-        where: { id: currentFiscal.id },
-        data: { status: 'ONGOING' }
+      // Saldo awal hanya kalau memang dikirim (pengisian pertama).
+      if (startingBalance) {
+        await tx.fiscalPeriod.create({
+          data: { internalAccountId: accountIdBig, year: tagYear, openingBalance: startingBalance, status: 'OPEN', isStale: false },
+        });
+      }
+      const currentFiscal = await tx.fiscalPeriod.findUnique({
+        where: { internalAccountId_year: { internalAccountId: accountIdBig, year: tagYear } },
       });
-    }
 
-    // 6. Mark current and future years as STALE (Chain reaction: current changes affect all futures)
-    await this.prisma.fiscalPeriod.updateMany({
-      where: {
-        internalAccountId: accountIdBig,
-        year: { gte: tagYear }
-      },
-      data: { isStale: true }
-    });
+      const tail = await this.lastRowNo(tx, accountIdBig, tagYear);
+      await tx.financialTransaction.createMany({
+        data: data.map((item, index) => ({
+          internalAccountId: account.id,
+          colA: item.colA ? new Date(item.colA) : null,
+          colB: item.colB || "",
+          colC: parseDecimalSafe(item.colC, 'Debit') ?? '0',
+          colD: parseDecimalSafe(item.colD, 'Credit') ?? '0',
+          colE: 0,
+          ledgerId: refs[index].ledgerId,
+          subLedgerId: refs[index].subLedgerId,
+          colF: refs[index].colF ?? "",
+          colG: refs[index].colG ?? "",
+          colH: item.colH || "",
+          colI: item.colI || "",
+          tagYear: tagYear,
+          rowNo: tail + index + 1,
+        })),
+      });
 
-    // 7. Trigger Cascading Recalculation (FORCE recursion for bulk imports to auto-heal future years)
-    await this.recalculateLedger(accountId, tagYear, true);
+      // Periode OPEN jadi ONGOING begitu punya transaksi.
+      if (currentFiscal && currentFiscal.status === 'OPEN' && data.length > 0) {
+        await tx.fiscalPeriod.update({ where: { id: currentFiscal.id }, data: { status: 'ONGOING' } });
+      }
+
+      // Tahun ini dan sesudahnya ditandai basi, lalu dihitung ulang di dalam
+      // kunci yang sama - baris dan saldonya selesai bersamaan.
+      await tx.fiscalPeriod.updateMany({
+        where: { internalAccountId: accountIdBig, year: { gte: tagYear } },
+        data: { isStale: true },
+      });
+      await this.recalcLocked(tx, accountIdBig, tagYear, true);
+    }, LEDGER_TX);
 
     return { success: true, count: data.length };
   }
@@ -237,30 +240,29 @@ export class BankMutationService {
       };
     }
 
-    await this.prisma.financialTransaction.update({
-      where: { id: trxId },
-      data: {
-        colA: newDate,
-        colB: data.colB ?? existing.colB,
-        colC: data.colC !== undefined ? parseDecimalSafe(data.colC, 'Debit') ?? '0' : existing.colC,
-        colD: data.colD !== undefined ? parseDecimalSafe(data.colD, 'Credit') ?? '0' : existing.colD,
-        ...ledgerData,
-        colH: data.colH ?? existing.colH,
-        colI: data.colI ?? existing.colI,
-      }
-    });
+    await this.prisma.$transaction(async (tx) => {
+      await lockAccount(tx, accountIdBig);
+      await tx.financialTransaction.update({
+        where: { id: trxId },
+        data: {
+          colA: newDate,
+          colB: data.colB ?? existing.colB,
+          colC: data.colC !== undefined ? parseDecimalSafe(data.colC, 'Debit') ?? '0' : existing.colC,
+          colD: data.colD !== undefined ? parseDecimalSafe(data.colD, 'Credit') ?? '0' : existing.colD,
+          ...ledgerData,
+          colH: data.colH ?? existing.colH,
+          colI: data.colI ?? existing.colI,
+        }
+      });
 
-    // Mark years as stale
-    await this.prisma.fiscalPeriod.updateMany({
-      where: {
-        internalAccountId: accountIdBig,
-        year: { gte: tagYear }
-      },
-      data: { isStale: true }
-    });
-
-    // Trigger recalculation starting from the affected year
-    await this.recalculateLedger(accountIdBig.toString(), tagYear, true);
+      // Tahun ini dan sesudahnya ditandai basi, lalu dihitung ulang di dalam
+      // kunci yang sama - baris dan saldonya selesai bersamaan.
+      await tx.fiscalPeriod.updateMany({
+        where: { internalAccountId: accountIdBig, year: { gte: tagYear } },
+        data: { isStale: true },
+      });
+      await this.recalcLocked(tx, accountIdBig, tagYear, true);
+    }, LEDGER_TX);
 
     return { success: true };
   }
@@ -280,21 +282,20 @@ export class BankMutationService {
       where: { internalAccountId_year: { internalAccountId: accountIdBig, year: tagYear } }
     });
 
-    await this.prisma.financialTransaction.delete({
-      where: { id: trxId }
-    });
-    // Tanpa ini nomor baris yang dihapus bolong di kolom "No".
-    await this.repackRowNo(accountIdBig, tagYear);
+    await this.prisma.$transaction(async (tx) => {
+      await lockAccount(tx, accountIdBig);
+      await tx.financialTransaction.delete({ where: { id: trxId } });
+      // Baris-baris sesudahnya naik satu, supaya nomornya tidak bolong.
+      await this.repackRowNo(tx, accountIdBig, tagYear);
 
-    await this.prisma.fiscalPeriod.updateMany({
-      where: {
-        internalAccountId: accountIdBig,
-        year: { gte: tagYear }
-      },
-      data: { isStale: true }
-    });
-
-    await this.recalculateLedger(accountIdBig.toString(), tagYear, true);
+      // Tahun ini dan sesudahnya ditandai basi, lalu dihitung ulang di dalam
+      // kunci yang sama - baris dan saldonya selesai bersamaan.
+      await tx.fiscalPeriod.updateMany({
+        where: { internalAccountId: accountIdBig, year: { gte: tagYear } },
+        data: { isStale: true },
+      });
+      await this.recalcLocked(tx, accountIdBig, tagYear, true);
+    }, LEDGER_TX);
 
     return { success: true };
   }
@@ -330,8 +331,8 @@ export class BankMutationService {
   // --- Menyisip baris di tengah ledger ---
 
   /** Nomor urut terakhir yang terpakai di satu rekening-tahun, 0 kalau belum ada. */
-  private async lastRowNo(accountId: bigint, year: number): Promise<number> {
-    const last = await this.prisma.financialTransaction.findFirst({
+  private async lastRowNo(db: Prisma.TransactionClient, accountId: bigint, year: number): Promise<number> {
+    const last = await db.financialTransaction.findFirst({
       // Baris yang row_no-nya masih kosong sengaja dilewati: pada ASC ia jatuh di
       // ujung daftar, tapi pada DESC Postgres menaruhnya paling depan, dan
       // membacanya di sini akan membuat baris berikutnya menumpuk di nomor kecil.
@@ -343,67 +344,15 @@ export class BankMutationService {
   }
 
   /**
-   * Nomor urut untuk `count` baris baru tepat di bawah `afterId`; `null` = paling atas.
-   *
-   * Dibagi rata di celah antara baris itu dan baris sesudahnya, jadi menyisip
-   * berapa pun baris tetap satu INSERT - tidak ada tetangga yang digeser, `id`
-   * dan nilainya tetap. Mengembalikan `null` kalau celahnya tidak cukup untuk
-   * semuanya, artinya perlu dirapatkan dulu.
+   * Menomori ulang satu rekening-tahun jadi 1, 2, 3, ... tanpa lubang, mengikuti
+   * urutan yang ada sekarang (row_no, lalu id) - urutannya sendiri tidak berubah.
+   * Baris yang row_no-nya masih kosong mendapat nomor di ujung. Satu UPDATE, dan
+   * hanya baris yang nomornya benar-benar berubah yang ditulis.
    */
-  private async rowNosAfter(
-    accountId: bigint,
-    year: number,
-    afterId: bigint | null,
-    count: number,
-  ): Promise<number[] | null> {
-    let floor = 0;
-
-    if (afterId !== null) {
-      const anchorRow = await this.prisma.financialTransaction.findUnique({
-        where: { id: afterId },
-        select: { internalAccountId: true, tagYear: true, rowNo: true },
-      });
-      if (!anchorRow) throw new NotFoundException(`Transaction ${afterId} not found`);
-      if (anchorRow.internalAccountId !== accountId || anchorRow.tagYear !== year) {
-        throw new BadRequestException(
-          `Transaction ${afterId} belongs to another account or year`,
-        );
-      }
-      if (anchorRow.rowNo === null) return null;
-      floor = anchorRow.rowNo;
-    }
-
-    const next = await this.prisma.financialTransaction.findFirst({
-      where: { internalAccountId: accountId, tagYear: year, rowNo: { gt: floor } },
-      orderBy: [{ rowNo: 'asc' }],
-      select: { rowNo: true },
-    });
-
-    // Tanpa baris sesudahnya, berarti menyisip di ujung: satu langkah penuh per baris.
-    const ceiling = next?.rowNo ?? floor + (count + 1) * ROW_NO_GAP;
-    const step = (ceiling - floor) / (count + 1);
-    if (step < 1) return null;
-
-    const numbers = Array.from({ length: count }, (_, i) => Math.floor(floor + step * (i + 1)));
-    // Pembulatan ke bawah bisa membuat dua nomor kembar kalau celahnya sempit;
-    // kalau begitu, rapatkan dulu daripada menaruh dua baris di nomor yang sama.
-    const distinct = new Set(numbers).size === count && numbers[0] > floor;
-    return distinct ? numbers : null;
-  }
-
-  /**
-   * Menulis ulang nomor urut satu rekening-tahun jadi kelipatan ROW_NO_GAP lagi.
-   *
-   * Dipanggil saat celah antara dua baris habis, dan sesudah setiap sisip atau
-   * hapus supaya row_no / ROW_NO_GAP selalu 1, 2, 3 tanpa pecahan atau lubang -
-   * itu yang tampil di kolom "No". Urutannya tidak berubah sama sekali, dan
-   * baris yang row_no-nya masih kosong ikut mendapat nomor di ujung.
-   * Satu UPDATE, tanpa menyentuh updated_at: nomor bergeser bukan suntingan.
-   */
-  private async repackRowNo(accountId: bigint, year: number): Promise<void> {
-    await this.prisma.$executeRaw`
+  private async repackRowNo(db: Prisma.TransactionClient, accountId: bigint, year: number): Promise<void> {
+    await db.$executeRaw`
       UPDATE financial_transactions f
-         SET row_no = x.n * ${ROW_NO_GAP}
+         SET row_no = x.n
         FROM (
                SELECT id,
                       row_number() OVER (ORDER BY row_no ASC NULLS LAST, id ASC) AS n
@@ -412,44 +361,16 @@ export class BankMutationService {
                   AND "tagYear" = ${year}
              ) x
        WHERE f.id = x.id
-    `;
-  }
-
-  /**
-   * Menggeser semua baris sesudah `afterId` sejauh `count` langkah, supaya ada
-   * ruang untuk menyisip sebanyak itu sekaligus. Dipanggil sesudah repack, jadi
-   * jaraknya sudah rata ROW_NO_GAP. Tanpa ini, menempel blok besar dari Excel
-   * gagal begitu barisnya lebih banyak dari satu celah.
-   */
-  private async makeRoomAfter(
-    accountId: bigint,
-    year: number,
-    afterId: bigint | null,
-    count: number,
-  ): Promise<void> {
-    let floor = 0;
-    if (afterId !== null) {
-      const anchorRow = await this.prisma.financialTransaction.findUnique({
-        where: { id: afterId },
-        select: { rowNo: true },
-      });
-      floor = anchorRow?.rowNo ?? 0;
-    }
-    await this.prisma.$executeRaw`
-      UPDATE financial_transactions
-         SET row_no = row_no + ${count * ROW_NO_GAP}
-       WHERE internal_account_id = ${accountId}
-         AND "tagYear" = ${year}
-         AND row_no > ${floor}
+         AND f.row_no IS DISTINCT FROM x.n
     `;
   }
 
   /**
    * Menambah satu atau lebih baris tepat di bawah `afterId` (atau paling atas kalau null).
    *
-   * Baris-baris baru masuk berurutan sesuai urutan kirimnya, dan baris di bawahnya
-   * turun tanpa disentuh: yang menentukan posisi adalah row_no, bukan banyaknya
-   * baris di atasnya. Sesudahnya kolom saldo dirantai ulang sekali untuk semuanya.
+   * Baris-baris baru masuk berurutan sesuai urutan kirimnya dan mendapat nomor
+   * lanjutan dari baris di atasnya; baris di bawahnya bergeser turun sebanyak
+   * jumlah baris baru. Sesudahnya kolom saldo dirantai ulang sekali untuk semuanya.
    */
   async insertTransactions(rows: any[], accountId: string, tagYear: number, afterId?: number | null) {
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -462,53 +383,66 @@ export class BankMutationService {
     const account = await this.prisma.internalAccount.findUnique({ where: { id: accountIdBig } });
     if (!account) throw new NotFoundException(`Account ${accountId} not found`);
 
-    let rowNos = await this.rowNosAfter(accountIdBig, tagYear, after, rows.length);
-    if (rowNos === null) {
-      await this.repackRowNo(accountIdBig, tagYear);
-      await this.makeRoomAfter(accountIdBig, tagYear, after, rows.length);
-      rowNos = await this.rowNosAfter(accountIdBig, tagYear, after, rows.length);
-    }
-    if (rowNos === null) {
-      // Sesudah diberi ruang, ini hanya terjadi kalau ada yang menyisip di titik
-      // yang sama pada detik yang sama. Ditolak dengan jelas, bukan diam-diam
-      // mendarat di tempat lain.
-      throw new BadRequestException('Could not determine the row position. Please try again.');
-    }
-
     const refs = await this.resolveLedgers(rows);
 
-    await this.prisma.financialTransaction.createMany({
-      data: rows.map((data, i) => ({
-        internalAccountId: accountIdBig,
-        // Tanggal boleh kosong: buku non-kas memang tidak memberi tanggal pada
-        // sebagian besar barisnya, dan seeder menyimpannya kosong juga.
-        colA: data.colA ? new Date(data.colA) : null,
-        colB: data.colB || '',
-        colC: parseDecimalSafe(data.colC, 'Debit') ?? '0',
-        colD: parseDecimalSafe(data.colD, 'Credit') ?? '0',
-        colE: 0,
-        ledgerId: refs[i].ledgerId,
-        subLedgerId: refs[i].subLedgerId,
-        colF: refs[i].colF ?? '',
-        colG: refs[i].colG ?? '',
-        colH: data.colH || '',
-        colI: data.colI || '',
-        tagYear,
-        rowNo: rowNos![i],
-      })),
-    });
+    await this.prisma.$transaction(async (tx) => {
+      await lockAccount(tx, accountIdBig);
 
-    // Nomor urut dirapatkan lagi: baris sisipan jadi nomor lanjutan dari baris
-    // di atasnya dan baris sesudahnya bergeser, jadi kolom "No" tetap 1, 2, 3
-    // tanpa pecahan. Urutannya sendiri tidak berubah.
-    await this.repackRowNo(accountIdBig, tagYear);
+      // Rapikan dulu jadi 1..n, supaya nomor baris tempat menyisip pasti bersih.
+      await this.repackRowNo(tx, accountIdBig, tagYear);
 
-    await this.prisma.fiscalPeriod.updateMany({
-      where: { internalAccountId: accountIdBig, year: { gte: tagYear } },
-      data: { isStale: true },
-    });
+      let floor = 0; // menyisip paling atas
+      if (after !== null) {
+        const anchor = await tx.financialTransaction.findUnique({
+          where: { id: after },
+          select: { internalAccountId: true, tagYear: true, rowNo: true },
+        });
+        if (!anchor) throw new NotFoundException(`Transaction ${after} not found`);
+        if (anchor.internalAccountId !== accountIdBig || anchor.tagYear !== tagYear) {
+          throw new BadRequestException(`Transaction ${after} belongs to another account or year`);
+        }
+        floor = anchor.rowNo ?? 0;
+      }
 
-    await this.recalculateLedger(accountId, tagYear, true);
+      // Baris 1 2 3, menyisip dua baris di bawah baris 2: baris 3 jadi 5, dan
+      // baris baru mendapat 3 dan 4.
+      await tx.$executeRaw`
+        UPDATE financial_transactions
+           SET row_no = row_no + ${rows.length}
+         WHERE internal_account_id = ${accountIdBig}
+           AND "tagYear" = ${tagYear}
+           AND row_no > ${floor}
+      `;
+
+      await tx.financialTransaction.createMany({
+        data: rows.map((data, i) => ({
+          internalAccountId: accountIdBig,
+          // Tanggal boleh kosong: buku non-kas memang tidak memberi tanggal pada
+          // sebagian besar barisnya, dan seeder menyimpannya kosong juga.
+          colA: data.colA ? new Date(data.colA) : null,
+          colB: data.colB || '',
+          colC: parseDecimalSafe(data.colC, 'Debit') ?? '0',
+          colD: parseDecimalSafe(data.colD, 'Credit') ?? '0',
+          colE: 0,
+          ledgerId: refs[i].ledgerId,
+          subLedgerId: refs[i].subLedgerId,
+          colF: refs[i].colF ?? '',
+          colG: refs[i].colG ?? '',
+          colH: data.colH || '',
+          colI: data.colI || '',
+          tagYear,
+          rowNo: floor + i + 1,
+        })),
+      });
+
+      // Tahun ini dan sesudahnya ditandai basi, lalu dihitung ulang di dalam
+      // kunci yang sama - baris dan saldonya selesai bersamaan.
+      await tx.fiscalPeriod.updateMany({
+        where: { internalAccountId: accountIdBig, year: { gte: tagYear } },
+        data: { isStale: true },
+      });
+      await this.recalcLocked(tx, accountIdBig, tagYear, true);
+    }, LEDGER_TX);
 
     return { success: true, count: rows.length };
   }
@@ -678,165 +612,196 @@ export class BankMutationService {
   }
 
 
-  private async updateOpeningBalance(accountId: string, year: number, amount: string) {
-    const accountIdBig = BigInt(accountId);
- 
-    // Create new fiscal record with OPEN status for initial setup
-    return this.prisma.fiscalPeriod.create({
-      data: {
-        internalAccountId: accountIdBig,
-        year: year,
-        openingBalance: amount,
-        status: 'OPEN',
-        isStale: false
-      }
-    });
-  }
-
   // --- Fiscal Control & Recalculation ---
 
 
   async closeYear(accountId: string, year: number, userId: string) {
     const accountIdBig = BigInt(accountId);
- 
-    // 0. Perform a final recalculation to ensure the closing balance is 100% accurate before snapshot
-    const recalc = await this.recalculateLedger(accountId, year);
-    const closingBalance = recalc.finalBalance;
 
-    // 1. Fetch correct opening balance if we need to create the record
-    const anchor = await this.getLatestAnchor(accountId, year);
-    const openingBalance = anchor?.balance || "0";
+    const closingBalance = await this.prisma.$transaction(async (tx) => {
+      await lockAccount(tx, accountIdBig);
 
-    // 2. Snapshot the current year as CLOSED
-    await this.prisma.fiscalPeriod.upsert({
-      where: { internalAccountId_year: { internalAccountId: accountIdBig, year } },
-      update: {
-        status: 'CLOSED',
-        closingBalance: closingBalance,
-        closedAt: new Date(),
-        closedById: BigInt(userId),
-        isStale: false // Freshly recalculated and closed
-      },
-      create: {
-        internalAccountId: accountIdBig,
-        year,
-        openingBalance: openingBalance,
-        status: 'CLOSED',
-        closingBalance: closingBalance,
-        closedAt: new Date(),
-        closedById: BigInt(userId),
-        isStale: false
-      }
-    });
+      // Hitung ulang terakhir, supaya saldo akhir yang dibekukan benar-benar tepat.
+      const closing = await this.recalcLocked(tx, accountIdBig, year, false);
+      const existing = await tx.fiscalPeriod.findUnique({
+        where: { internalAccountId_year: { internalAccountId: accountIdBig, year } },
+      });
+      const opening = existing ? existing.openingBalance : await this.openingFromPrevious(tx, accountIdBig, year);
 
-    // 3. Trigger recursive cascading recalculation for all years following the closed one
-    // This will automatically handle opening balance updates and transaction re-syncs
-    await this.recalculateLedger(accountId, year + 1, true);
+      await tx.fiscalPeriod.upsert({
+        where: { internalAccountId_year: { internalAccountId: accountIdBig, year } },
+        update: { status: 'CLOSED', closingBalance: closing, closedAt: new Date(), closedById: BigInt(userId), isStale: false },
+        create: {
+          internalAccountId: accountIdBig, year, openingBalance: opening, status: 'CLOSED',
+          closingBalance: closing, closedAt: new Date(), closedById: BigInt(userId), isStale: false,
+        },
+      });
+
+      // Tahun-tahun sesudahnya mengikuti saldo akhir yang baru dibekukan.
+      await this.recalcLocked(tx, accountIdBig, year + 1, true);
+      return closing;
+    }, LEDGER_TX);
 
     return { success: true, closingBalance: formatDecimal(closingBalance) };
   }
 
+  /**
+   * Menghitung ulang saldo berjalan (col_e) satu rekening-tahun, lalu saldo akhir
+   * tahunnya dan saldo awal tahun berikutnya. Dipanggil oleh tombol Recalculate;
+   * sisip, edit, hapus, tambah, dan tutup tahun memanggil `recalcLocked` di dalam
+   * transaksinya sendiri.
+   */
   async recalculateLedger(accountId: string, year: number, forceRecursion = false) {
     const accountIdBig = BigInt(accountId);
- 
-    // 1. Get Starting Point (Discovery)
-    // We look for the record first, but if it doesn't exist, we discover the anchor on-the-fly.
-    const period = await this.prisma.fiscalPeriod.findUnique({
-      where: { internalAccountId_year: { internalAccountId: accountIdBig, year } }
-    });
- 
-    let startingBalance = "0";
-    if (period) {
-      startingBalance = period.openingBalance.toString();
-    } else {
-      const anchor = await this.getLatestAnchor(accountId, year);
-      startingBalance = anchor?.balance || "0";
-    }
-    
-    let runningBalance = new Prisma.Decimal(startingBalance);
-
-    // 2. Ambil seluruh transaksi rekening-tahun ini MENURUT URUTAN YANG DITAMPILKAN.
-    // Dulu di sini diurutkan tanggal, padahal daftarnya tampil urut baris workbook,
-    // jadi saldo di satu baris bukan hasil penjumlahan baris-baris di atasnya. Paling
-    // jauh melesetnya di Non CB: 382 barisnya bertanggal di luar tahun bukunya.
-    const transactions = await this.prisma.financialTransaction.findMany({
-      where: {
-        internalAccountId: accountIdBig,
-        tagYear: year
+    const closing = await this.prisma.$transaction(
+      async (tx) => {
+        await lockAccount(tx, accountIdBig);
+        return this.recalcLocked(tx, accountIdBig, year, forceRecursion);
       },
-      orderBy: LEDGER_ORDER
+      LEDGER_TX,
+    );
+    return { success: true, finalBalance: formatDecimal(closing) };
+  }
+
+  /**
+   * Inti hitung ulang saldo. HARUS dipanggil di dalam transaksi yang sudah
+   * memegang kunci (rekening, tahun) ini - dengan begitu penyimpanan lain di
+   * rekening-tahun yang sama menunggu sampai baris DAN saldonya selesai, dan
+   * dua hitungan tidak bisa saling menimpa.
+   *
+   * Dulu saldo ditulis baris per baris di luar kunci (7-9 detik untuk 3.300
+   * baris). Dua penyimpanan yang berdekatan menjalankan dua hitungan bersamaan;
+   * yang mulai lebih dulu tidak tahu baris kedua, dan kalau ia selesai paling
+   * akhir, saldo ribuan baris - dan saldo awal tahun berikutnya - tertinggal
+   * salah. Sekarang satu UPDATE: saldo tiap baris = saldo awal + jumlah
+   * (kredit - debit) sampai baris itu, menurut urutan baris. Hanya baris yang
+   * saldonya berubah yang ditulis.
+   *
+   * Kunci rekening sudah dipegang pemanggil, jadi tahun-tahun sesudahnya ikut
+   * aman ditulis di sini tanpa kunci tambahan.
+   */
+  private async recalcLocked(
+    tx: Prisma.TransactionClient,
+    accountId: bigint,
+    year: number,
+    forceRecursion: boolean,
+  ): Promise<Prisma.Decimal> {
+    const period = await tx.fiscalPeriod.findUnique({
+      where: { internalAccountId_year: { internalAccountId: accountId, year } },
     });
+    const opening = period ? new Prisma.Decimal(period.openingBalance) : await this.openingFromPrevious(tx, accountId, year);
 
-    // 3. Update each transaction's Saldo (colE) sequentially (STRICT: colE = Saldo AFTER transaction)
-    for (const trx of transactions) {
-      const debit = new Prisma.Decimal(trx.colC || 0);
-      const credit = new Prisma.Decimal(trx.colD || 0);
-      
-      // FORMULA: Previous Saldo - Debit + Credit
-      runningBalance = runningBalance.minus(debit).plus(credit);
+    // col_e = saldo SESUDAH baris itu: saldo awal - debit + kredit, berurutan.
+    await tx.$executeRaw`
+      UPDATE financial_transactions f
+         SET col_e = x.saldo
+        FROM (
+               SELECT id,
+                      ${opening.toString()}::numeric
+                      + SUM(COALESCE(col_d, 0) - COALESCE(col_c, 0)) OVER (
+                          ORDER BY row_no ASC NULLS LAST, id ASC
+                          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                        ) AS saldo
+                 FROM financial_transactions
+                WHERE internal_account_id = ${accountId}
+                  AND "tagYear" = ${year}
+             ) x
+       WHERE f.id = x.id
+         AND f.col_e IS DISTINCT FROM x.saldo
+    `;
 
-      // Save the resulting balance to the database
-      await this.prisma.financialTransaction.update({
-        where: { id: trx.id },
-        data: { colE: runningBalance }
-      });
-    }
+    const [{ movement }] = await tx.$queryRaw<{ movement: string }[]>`
+      SELECT COALESCE(SUM(COALESCE(col_d, 0) - COALESCE(col_c, 0)), 0)::text AS movement
+        FROM financial_transactions
+       WHERE internal_account_id = ${accountId} AND "tagYear" = ${year}
+    `;
+    const closing = opening.plus(movement);
 
-    // 3.5. Update CURRENT year's fiscal record with the new closing balance
     if (period) {
-      await this.prisma.fiscalPeriod.update({
+      await tx.fiscalPeriod.update({
         where: { id: period.id },
-        data: { 
-          closingBalance: runningBalance,
-          isStale: false // Normalize after success
-        }
+        data: { closingBalance: closing, isStale: false },
       });
     }
 
-    // 4. CASCADING UPDATE: Find the NEXT year that has ANY data (Fiscal OR Transactions)
+    // Tahun berikutnya yang punya data - periode fiskal ATAU transaksi.
     const [nextFiscal, nextTrans] = await Promise.all([
-      this.prisma.fiscalPeriod.findFirst({
-        where: { internalAccountId: accountIdBig, year: { gt: year } },
-        orderBy: { year: 'asc' }
+      tx.fiscalPeriod.findFirst({
+        where: { internalAccountId: accountId, year: { gt: year } },
+        orderBy: { year: 'asc' },
       }),
-      this.prisma.financialTransaction.findFirst({
-        where: { internalAccountId: accountIdBig, tagYear: { gte: year + 1 } },
-        orderBy: [{ colA: 'asc' }, { id: 'asc' }]
-      })
+      tx.financialTransaction.aggregate({
+        where: { internalAccountId: accountId, tagYear: { gt: year } },
+        _min: { tagYear: true },
+      }),
     ]);
-
-    const nextFiscalYear = nextFiscal?.year || Infinity;
-    const nextTransYear = nextTrans?.tagYear || Infinity;
-    const nextDataYear = Math.min(nextFiscalYear, nextTransYear);
+    const nextDataYear = Math.min(nextFiscal?.year ?? Infinity, nextTrans._min.tagYear ?? Infinity);
 
     if (nextDataYear !== Infinity) {
-      // If the next data year has a fiscal record, update its opening balance
       if (nextFiscal && nextFiscal.year === nextDataYear) {
-        await this.prisma.fiscalPeriod.update({
+        await tx.fiscalPeriod.update({
           where: { id: nextFiscal.id },
-          data: { 
-            openingBalance: runningBalance,
-            // If we are NOT recursing, mark it as stale so the user knows to sync
-            isStale: period?.status !== 'CLOSED' 
-          }
+          data: {
+            openingBalance: closing,
+            // Tanpa rekursi, tahun berikutnya ditandai perlu dihitung ulang.
+            isStale: period?.status !== 'CLOSED',
+          },
         });
       }
- 
-      // ONLY Recurse if the CURRENT period being recalculated is CLOSED (Historical Correction)
-      // Otherwise, we stop here to save performance and let the 'isStale' flag handle the rest
-      // Recurse if the CURRENT period is CLOSED OR if we are forcing recursion (e.g. during bulk import)
+      // Diteruskan kalau tahun ini CLOSED (koreksi histori) atau diminta.
       if (period?.status === 'CLOSED' || forceRecursion) {
-        await this.recalculateLedger(accountId, nextDataYear, forceRecursion);
+        await this.recalcLocked(tx, accountId, nextDataYear, forceRecursion);
       }
     }
 
-    // 5. Reset Stale Flag for the current year after successful recalculation
-    await this.prisma.fiscalPeriod.updateMany({
-      where: { internalAccountId: accountIdBig, year },
-      data: { isStale: false }
+    await tx.fiscalPeriod.updateMany({
+      where: { internalAccountId: accountId, year },
+      data: { isStale: false },
     });
 
-    return { success: true, finalBalance: formatDecimal(runningBalance) };
+    return closing;
+  }
+
+  /**
+   * Saldo awal tahun yang belum punya periode fiskal: penutup tahun terakhir
+   * sebelumnya yang punya data. Aturannya sama dengan `getLatestAnchor`, tapi
+   * dibaca di dalam transaksi yang sedang berjalan - jadi ikut melihat saldo
+   * yang baru saja ditulis di transaksi ini (misalnya saat tutup tahun),
+   * bukan nilai lama yang belum di-commit.
+   */
+  private async openingFromPrevious(tx: Prisma.TransactionClient, accountId: bigint, year: number): Promise<Prisma.Decimal> {
+    const [lastFiscal, lastTrans] = await Promise.all([
+      tx.fiscalPeriod.findFirst({
+        where: { internalAccountId: accountId, year: { lt: year } },
+        orderBy: { year: 'desc' },
+      }),
+      tx.financialTransaction.aggregate({
+        where: { internalAccountId: accountId, tagYear: { lt: year } },
+        _max: { tagYear: true },
+      }),
+    ]);
+    const searchYear = Math.max(lastFiscal?.year ?? 0, lastTrans._max.tagYear ?? 0);
+    if (searchYear === 0) return new Prisma.Decimal(0);
+
+    const prevFiscal = lastFiscal?.year === searchYear
+      ? lastFiscal
+      : await tx.fiscalPeriod.findUnique({
+          where: { internalAccountId_year: { internalAccountId: accountId, year: searchYear } },
+        });
+    const movement = await tx.financialTransaction.aggregate({
+      where: { internalAccountId: accountId, tagYear: searchYear },
+      _sum: { colC: true, colD: true },
+    });
+    const hasMovement = movement._sum.colC !== null || movement._sum.colD !== null;
+    const summed = prevFiscal || hasMovement
+      ? new Prisma.Decimal(prevFiscal?.openingBalance ?? 0).plus(movement._sum.colD ?? 0).minus(movement._sum.colC ?? 0)
+      : null;
+
+    if (prevFiscal) {
+      if (prevFiscal.closingBalance !== null) return new Prisma.Decimal(prevFiscal.closingBalance);
+      return summed ?? new Prisma.Decimal(prevFiscal.openingBalance);
+    }
+    return summed ?? new Prisma.Decimal(0);
   }
 
 }

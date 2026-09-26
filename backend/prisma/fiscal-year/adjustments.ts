@@ -134,7 +134,7 @@ async function applyInserts(prisma: PrismaClient, inserts: Insert[], ledgers: Le
         `SELECT coalesce(max(row_no), 0)::int AS tail FROM financial_transactions
           WHERE internal_account_id = ${cols.internal_account_id} AND "tagYear" = ${FISCAL_YEAR}`,
       );
-      cols.row_no = tail + 1000;
+      cols.row_no = tail + 1;
     }
 
     const names = Object.keys(cols).map((k) => (/[A-Z]/.test(k) ? `"${k}"` : k));

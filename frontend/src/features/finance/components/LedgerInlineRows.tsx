@@ -270,7 +270,7 @@ export function InlineInsertRows({ anchorSaldo, master, showRowNo, anchorRowNo, 
           {showRowNo && (
             // Nomor yang akan didapat setelah disimpan: lanjutan baris di atasnya.
             <TableCell className={`${rowNoCell} bg-amber-50/60`}>
-              {anchorRowNo ? formatRowNo(anchorRowNo + (i + 1) * 1000) : '-'}
+              {anchorRowNo ? formatRowNo(anchorRowNo + i + 1) : '-'}
             </TableCell>
           )}
           <LedgerRowEditor

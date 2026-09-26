@@ -5,6 +5,9 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { randomUUID } from 'crypto';
+import { auditContext } from './common/audit/audit-context';
+import { AuditUserInterceptor } from './common/audit/audit-user.interceptor';
  
 // BigInt & Decimal Serialization Fix
 (BigInt.prototype as any).toJSON = function () {
@@ -24,6 +27,11 @@ try {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Konteks activity log untuk setiap request: id request dulu, user-nya
+  // menyusul lewat AuditUserInterceptor sesudah guard JWT. Harus dipasang
+  // sebelum apa pun menyentuh database.
+  app.use((_req: any, _res: any, next: () => void) => auditContext.run({ requestId: randomUUID() }, next));
+
   // Global Prefix
   app.setGlobalPrefix('api');
 
@@ -40,6 +48,7 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   // Global Interceptors
+  app.useGlobalInterceptors(new AuditUserInterceptor());
   app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalInterceptors(new TransformInterceptor());
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
