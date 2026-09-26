@@ -177,12 +177,15 @@ export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) 
   //   - Tanpa teks pengenal sama sekali (invoice, billing to, sales code,
   //     deskripsi): blok total, sub-judul, baris kosong - dilewati. Ini tetap
   //     benar walau baris kosong pemisah sebelum total suatu saat hilang.
-  //   - Tanpa nomor invoice DAN semua nominal nol: template/placeholder - dilewati.
+  //   - Tanpa nomor invoice DAN semua nominal nol, tapi ber-No: nomor invoice
+  //     yang sengaja disisakan. Disimpan sebagai baris cadangan selama letaknya
+  //     sebelum invoice terakhir; sesudahnya itu sisa template - dibuang.
+  //   - Tanpa nomor invoice DAN semua nominal nol, tanpa No: dilewati.
   // Invoice bernomor dengan nominal nol tetap dimuat, seperti di workbook.
   const IDENTITY = ['colB', 'colE', 'colF', 'colG'];
   const AMOUNTS = ['colH', 'colI', 'colJ', 'colK'];
-  const records: Prisma.SalesRecordCreateManyInput[] = [];
-  const perRow: RowAmounts[] = [];
+  const entries: { record: any; amounts: RowAmounts; reserved: boolean }[] = [];
+  let lastInvoice = -1;
   let skipped = 0;
   let totalsLike = 0;
   for (let i = layout.firstDataRow; i < rows.length; i++) {
@@ -196,18 +199,29 @@ export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) 
     }
     const hasText = (slot: string) => String(record[slot] ?? '').trim() !== '';
     const hasAmount = AMOUNTS.some((slot) => Number(record[slot] ?? 0) !== 0);
-    if (!IDENTITY.some(hasText)) {
+    // Cadangan: ada No (angka), belum ada invoice, belum ada nominal.
+    const reserved = !hasText('colB') && !hasAmount && /^\d+$/.test(String(record.colA ?? '').trim());
+    if (!reserved && !IDENTITY.some(hasText)) {
       skipped++;
       if (hasAmount) totalsLike++;
       continue;
     }
-    if (!hasText('colB') && !hasAmount) {
+    if (!reserved && !hasText('colB') && !hasAmount) {
       skipped++;
       continue;
     }
-    records.push(record);
-    perRow.push(readRowAmounts(row, accounts.columns));
+    if (!reserved) lastInvoice = entries.length;
+    entries.push({ record, amounts: readRowAmounts(row, accounts.columns), reserved });
   }
+
+  // Cadangan sesudah invoice terakhir bukan nomor yang disisakan, tapi sisa
+  // template di bawah data.
+  const kept = entries.filter((e, i) => !e.reserved || i < lastInvoice);
+  const reservedKept = kept.filter((e) => e.reserved).length;
+  const trailing = entries.length - kept.length;
+  skipped += trailing;
+  const records: Prisma.SalesRecordCreateManyInput[] = kept.map((e) => e.record);
+  const perRow: RowAmounts[] = kept.map((e) => e.amounts);
 
   if (records.length === 0) {
     console.warn('⚠️  No invoice rows found — nothing seeded.');
@@ -231,7 +245,8 @@ export async function seedSales(prisma: PrismaClient, workbook?: XLSX.WorkBook) 
      WHERE s.id = x.id
        AND s.row_no IS DISTINCT FROM x.n`;
   console.log(
-    `✅ Seeded ${records.length} sales invoices for ${FISCAL_YEAR}` +
+    `✅ Seeded ${records.length} sales rows for ${FISCAL_YEAR}: ${records.length - reservedKept} invoice(s),` +
+      ` ${reservedKept} reserved number(s)` +
       ` (${skipped} row(s) skipped: ${totalsLike} total row(s), ${skipped - totalsLike} empty template(s)).`,
   );
 
