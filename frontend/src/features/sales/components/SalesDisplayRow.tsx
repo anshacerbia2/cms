@@ -64,8 +64,8 @@ export const SalesDisplayRow = memo(function SalesDisplayRow({
       <TableCell className="px-4 w-40 text-right">{row.colAB}</TableCell>
       <TableCell className="px-4 w-40 text-right">{row.colAC}</TableCell>
       <TableCell className="pr-8 w-64">{row.colAD}</TableCell>
-      <TableCell className="px-4 text-center">
-        <div className="flex items-center justify-center gap-1">
+      <TableCell className="px-4 pr-8">
+        <div className="flex items-center justify-end gap-1">
           <Button
             variant="ghost"
             size="icon"
