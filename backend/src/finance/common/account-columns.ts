@@ -158,14 +158,12 @@ export async function syncAccountAmounts(
   }
 
   const id = BigInt(parentId);
-  // Rewritten wholesale: an edit that clears a column has to remove its row,
-  // and there are at most a dozen of them.
-  await amountModel.deleteMany({ where: { [parentKey]: id } });
-  if (wanted.length === 0) return;
 
-  const accounts = await prisma.internalAccount.findMany({
-    where: { displayName: { in: wanted.map((w) => w.name) } },
-  });
+  const accounts = wanted.length
+    ? await prisma.internalAccount.findMany({
+        where: { displayName: { in: wanted.map((w) => w.name) } },
+      })
+    : [];
   const byName = new Map(accounts.map((a) => [a.displayName as string, a.id]));
 
   const missing = wanted.filter((w) => !byName.has(w.name)).map((w) => w.name);
@@ -176,11 +174,34 @@ export async function syncAccountAmounts(
     );
   }
 
-  await amountModel.createMany({
-    data: wanted.map((w) => ({
-      [parentKey]: id,
-      internalAccountId: byName.get(w.name)!,
-      amount: w.amount,
-    })),
+  // Changed in place, not rewritten: an amount that stays the same is not
+  // touched, a changed one is updated, a new one is added and a cleared one
+  // removed. Rewriting everything left a deleted-and-recreated pair in the
+  // activity log for every account on every save, even with nothing changed.
+  const target = new Map(wanted.map((w) => [String(byName.get(w.name)!), w.amount]));
+  const existing: { id: bigint; internalAccountId: bigint; amount: any }[] = await amountModel.findMany({
+    where: { [parentKey]: id },
+    select: { id: true, internalAccountId: true, amount: true },
   });
+
+  for (const row of existing) {
+    const key = String(row.internalAccountId);
+    const amount = target.get(key);
+    if (amount === undefined) {
+      await amountModel.delete({ where: { id: row.id } });
+    } else if (!new Prisma.Decimal(row.amount).equals(amount)) {
+      await amountModel.update({ where: { id: row.id }, data: { amount } });
+    }
+    target.delete(key);
+  }
+
+  if (target.size > 0) {
+    await amountModel.createMany({
+      data: [...target].map(([accountId, amount]) => ({
+        [parentKey]: id,
+        internalAccountId: BigInt(accountId),
+        amount,
+      })),
+    });
+  }
 }
