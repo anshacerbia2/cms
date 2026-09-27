@@ -31,6 +31,11 @@ export const ppnInOutService = {
   createBulkPpnInOut: async (payload: any): Promise<any> => {
     const { data } = await api.post(`/finance/ppn-in-out/bulk`, payload);
     return data;
+  },
+  /** Menyisip baris di bawah `afterId` (null = paling atas); baris di bawahnya bergeser turun. */
+  insertPpnInOut: async (payload: { rows: any[]; tagYear: number; afterId: number | null }): Promise<any> => {
+    const { data } = await api.post(`/finance/ppn-in-out/insert`, payload);
+    return data;
   }
 };
 
@@ -99,6 +104,17 @@ export function usePpnInOut() {
     }
   });
 
+  const insertPpnInOut = useMutation({
+    mutationFn: (payload: { rows: any[]; tagYear: number; afterId: number | null }) => ppnInOutService.insertPpnInOut(payload),
+    onSuccess: (_data, payload) => {
+      queryClient.invalidateQueries({ queryKey: ["finance", "ppn-in-out"] });
+      toast.success(`${payload.rows.length} row(s) inserted`);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || "Failed to insert PPN rows");
+    }
+  });
+
   return {
     getPpnInOut,
     getAllPpnInOut,
@@ -106,6 +122,7 @@ export function usePpnInOut() {
     updatePpnInOut,
     deletePpnInOut,
     createPpnInOut,
-    createBulkPpnInOut
+    createBulkPpnInOut,
+    insertPpnInOut
   };
 }

@@ -270,6 +270,12 @@ export function parseSmartDate(value: string): string {
   // Remove unwanted chars and split
   const parts = value.toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(Boolean);
 
+  // Bulan-tahun saja ("Jan-26", "Juni 2025") - cara Masa ditulis di workbook PPN: tanggal 1.
+  if (parts.length === 2 && months[parts[0]] && /^\d{2}(\d{2})?$/.test(parts[1])) {
+    const y = parts[1].length === 2 ? `20${parts[1]}` : parts[1];
+    return `${y}-${months[parts[0]]}-01`;
+  }
+
   if (parts.length === 3) {
     let d = '', m = '', y = '';
 

@@ -59,3 +59,16 @@ export const SALES_LOCK_NS = 7102;
 export async function lockSalesYear(db: Prisma.TransactionClient, year: number) {
   await db.$executeRaw`SELECT pg_advisory_xact_lock(${SALES_LOCK_NS}::int, ${year}::int)`;
 }
+
+/** Ruang nama kunci PPN In/Out. */
+export const PPN_LOCK_NS = 7103;
+
+/**
+ * Mengunci PPN In/Out satu tahun selama transaksi berjalan. Menambah, menyisip,
+ * mengubah, dan menghapus semuanya menulis `row_no` dan saldo berjalan colO
+ * seluruh tahun itu, jadi harus bergiliran. Saldo O mulai 0 tiap tahun, jadi
+ * tulisan tidak pernah menyeberang ke tahun lain - kunci per tahun cukup.
+ */
+export async function lockPpnYear(db: Prisma.TransactionClient, year: number) {
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(${PPN_LOCK_NS}::int, ${year}::int)`;
+}

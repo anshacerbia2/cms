@@ -184,8 +184,39 @@ export async function seedPpnInOut(prisma: PrismaClient) {
   const removed = await prisma.ppnInOut.deleteMany({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } });
   if (removed.count > 0) console.log(`🧹 Cleared ${removed.count} existing ${FISCAL_YEAR} rows.`);
 
-  await prisma.ppnInOut.createMany({ data: records.map((r) => ({ ...r, ...SEEDED })) });
+  // Nomor baris mengikuti urutan sheet; baris yang diketik di aplikasi dan
+  // selamat dari seed ulang menyimpan nomornya sendiri, lalu tahun itu dirapikan
+  // jadi 1..n tanpa mengubah urutan siapa pun.
+  await prisma.ppnInOut.createMany({ data: records.map((r, i) => ({ ...r, ...SEEDED, rowNo: i + 1 })) });
+  await prisma.$executeRaw`
+    UPDATE ppn_in_out s
+       SET row_no = x.n
+      FROM (
+             SELECT id, row_number() OVER (ORDER BY row_no ASC NULLS LAST, id ASC) AS n
+               FROM ppn_in_out
+              WHERE "tagYear" = ${FISCAL_YEAR}
+           ) x
+     WHERE s.id = x.id
+       AND s.row_no IS DISTINCT FROM x.n`;
+  // AP PPN Non WAPU dihitung aplikasi sebagai saldo berjalan (0 - Non WAPU +
+  // Masukan, per tahun). Rumus workbook sama; kalau angkanya beda, disebutkan.
+  const recalculated = await prisma.$executeRaw`
+    UPDATE ppn_in_out s
+       SET "colO" = x.saldo
+      FROM (
+             SELECT id,
+                    SUM(COALESCE("colN", 0) - COALESCE("colM", 0))
+                      OVER (ORDER BY row_no ASC NULLS LAST, id ASC
+                            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS saldo
+               FROM ppn_in_out
+              WHERE "tagYear" = ${FISCAL_YEAR}
+           ) x
+     WHERE s.id = x.id
+       AND s."colO" IS DISTINCT FROM x.saldo`;
   console.log(`✅ Seeded ${records.length} PPN in/out rows for ${FISCAL_YEAR}.`);
+  if (recalculated > 0) {
+    console.warn(`⚠️  AP PPN Non WAPU differed from the running balance on ${recalculated} row(s); the running balance was kept.`);
+  }
 
   reportLayout([map], SLOTS, ['jenisppn', 'invoiceno', 'blank']);
   reportTail(rows, stoppedAt);
