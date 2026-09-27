@@ -52,9 +52,11 @@ export function ChangeList({ entry }: { entry: AuditEntry }) {
       <div className="text-[12px] text-primary/80">
         <span className="font-bold">{entry.accountLabel ?? `Account #${(entry.after ?? entry.before)?.internal_account_id}`}</span>
         {": "}
-        <span className="tabular-nums">{formatAuditValue(entry.before?.amount)}</span>
+        {/* Selalu dibaca sebagai perubahan nilai pada record induknya: rekening
+            yang baru diisi dari "—", yang dikosongkan menjadi "—". */}
+        <span className="tabular-nums">{entry.before ? formatAuditValue(entry.before.amount) : "—"}</span>
         {" → "}
-        <span className="tabular-nums font-bold">{entry.action === "DELETE" ? "—" : formatAuditValue(entry.after?.amount)}</span>
+        <span className="tabular-nums font-bold">{entry.after ? formatAuditValue(entry.after.amount) : "—"}</span>
       </div>
     );
   }

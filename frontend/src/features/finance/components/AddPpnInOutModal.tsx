@@ -37,7 +37,7 @@ interface PpnInOutRow {
   colE: string | number; dpp: string | number; status: string | number;
   colH: string | number; colI: string | number; colJ: string | number;
   colK: string | number; colM: string | number;
-  colN: string | number; colO: string | number; colP: string | number;
+  colN: string | number; colP: string | number;
   colQ: string | number; colR: string | number; colS: string | number;
 }
 
@@ -45,11 +45,13 @@ interface PpnInOutRow {
  * Urutan kolom workbook PPN 2026, A sampai S, supaya satu baris yang disalin
  * dari sana jatuh ke kolom yang benar. `null` adalah kolom L (BLANK): ikut
  * tersalin sebagai sel kosong, jadi harus dilompati - bukan dianggap Non WAPU.
+ * `null` kedua adalah kolom O (AP PPN Non WAPU): saldo berjalan yang dihitung
+ * sistem, jadi nilainya dari Excel dibuang - tapi posisinya tetap dimakan.
  * Sales (tahun) hanya ada di workbook 2025 dan tidak diisi dari sini.
  */
 const PASTE_ORDER: (keyof PpnInOutRow | null)[] = [
   'colA', 'colB', 'colC', 'colD', 'colE', 'dpp', 'status', 'colH', 'colI', 'colJ',
-  'colK', null, 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR', 'colS'
+  'colK', null, 'colM', 'colN', null, 'colP', 'colQ', 'colR', 'colS'
 ];
 
 const VISIBLE_COLS = PASTE_ORDER.filter((c): c is keyof PpnInOutRow => c !== null);
@@ -58,12 +60,12 @@ const LABELS: Record<keyof PpnInOutRow, string> = {
   colA: 'Masa', colB: 'PPN Type', colC: 'No Faktur', colD: 'Customer/Vendor',
   colE: 'Invoice No', dpp: 'DPP PPN', status: 'Status', colH: 'PPN',
   colI: 'WAPU', colJ: 'PAID', colK: 'AP PPN WAPU',
-  colM: 'Non WAPU', colN: 'Masukan', colO: 'AP PPN Non WAPU',
+  colM: 'Non WAPU', colN: 'Masukan',
   colP: 'Ledger', colQ: 'Sub Ledger-1', colR: 'Sub Ledger-2', colS: 'Sub Ledger-3'
 };
 
 const NUMERIC_COLS: (keyof PpnInOutRow)[] = [
-  'dpp', 'colH', 'colI', 'colJ', 'colK', 'colM', 'colN', 'colO'
+  'dpp', 'colH', 'colI', 'colJ', 'colK', 'colM', 'colN'
 ];
 
 const emptyRow = (): PpnInOutRow =>
@@ -410,6 +412,10 @@ export default function AddPpnInOutModal({ open, onOpenChange, onSuccess, year }
             <div className="flex items-center gap-2 italic normal-case opacity-80 pt-1 border-t border-primary/[0.03]">
               <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
               Tip: Copy any rectangular range from Excel and paste — rows/cols expand automatically.
+            </div>
+            <div className="flex items-center gap-2 italic normal-case opacity-80">
+              <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
+              AP PPN Non WAPU is calculated as a running balance (previous − Non WAPU + Masukan); its Excel column is skipped on paste.
             </div>
           </div>
           <div className="px-8 py-4 flex items-center justify-end w-full gap-3">

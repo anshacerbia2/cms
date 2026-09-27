@@ -126,6 +126,16 @@ export class PpnInOutController {
     return this.ppnInOutService.createBulkPpnInOut(body.data, body.tagYear);
   }
 
+  /**
+   * Menyisip baris di bawah `afterId` (null = paling atas); baris di bawahnya
+   * bergeser turun. Hak aksesnya sama dengan menambah baris.
+   */
+  @Post('insert')
+  @Permissions('ppn-in-out.create')
+  async insertPpnInOut(@Body() body: { rows: any[]; tagYear: number; afterId?: number | null }) {
+    return this.ppnInOutService.insertPpnInOut(body.rows, body.tagYear, body.afterId ?? null);
+  }
+
   @Post()
   @Permissions('ppn-in-out.create')
   async createPpnInOut(@Body() data: any) {

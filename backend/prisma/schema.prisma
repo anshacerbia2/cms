@@ -696,12 +696,19 @@ model PpnInOut {
   colL      String?   @db.Text // Blank
   colM      Decimal?  @db.Decimal(19, 4) // Non WAPU
   colN      Decimal?  @db.Decimal(19, 4) // Masukan
-  colO      Decimal?  @db.Decimal(19, 4) // AP PPN Non WAPU
+  /// AP PPN Non WAPU: saldo berjalan, dihitung sistem - baris sebelumnya
+  /// dikurangi Non WAPU (colM) ditambah Masukan (colN), mulai 0 tiap tahun,
+  /// menurut urutan row_no. Tidak diketik.
+  colO      Decimal?  @db.Decimal(19, 4)
   colP      String?   @db.Text // Ledger
   colQ      String?   @db.Text // Sub Ledger-1
   colR      String?   @db.Text // Sub Ledger-2
   colS      String?   @db.Text // Sub Ledger-3
   tagYear   Int
+  /// Urutan baris per tagYear, 1, 2, 3 ... - sama seperti Sales dan Bank
+  /// Statement. Menyisip menggeser baris di bawahnya; menghapus menutup lubangnya.
+  /// Dibaca selalu sebagai [{ rowNo: 'asc' }, { id: 'asc' }].
+  rowNo     Int?      @map("row_no")
   /// Siapa yang menaruh baris ini: 'SEED' kalau dimuat dari workbook, 'APP'
   /// kalau diinput lewat aplikasi. Seeder hanya menghapus barisnya sendiri,
   /// jadi baris yang diketik orang selamat saat seed ulang tanpa perlu dicatat
@@ -711,6 +718,7 @@ model PpnInOut {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
+  @@index([tagYear, rowNo])
   @@map("ppn_in_out")
 }
 

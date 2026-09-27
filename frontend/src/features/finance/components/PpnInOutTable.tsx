@@ -1,5 +1,4 @@
-import { useState, useMemo } from "react";
-import { History as HistoryIcon } from 'lucide-react';
+import { Fragment, useState, useMemo, useCallback, useEffect } from "react";
 import { HistoryDialog, historyTitle } from '@/features/audit-logs/components/HistoryDialog';
 import { Search, FilterX } from 'lucide-react';
 import { 
@@ -20,10 +19,13 @@ import { ExcelColumnFilter } from "./ExcelColumnFilter";
 import { formatCurrency, formatDate, getAmountColor } from "@/lib/utils";
 import { Decimal } from "decimal.js";
 import { toast } from "sonner";
-import { Edit2, Trash2, AlertCircle, Plus, Download, FileSpreadsheet, FileText, Eye } from "lucide-react";
+import { AlertCircle, Plus, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { downloadExcelFile, downloadPdfFile, exportFilter } from "@/lib/downloadFile";
 import { DetailModal } from "@/components/common/DetailModal";
-import EditPpnInOutModal from "./EditPpnInOutModal";
+import { LedgerErrorBoundary } from "./LedgerErrorBoundary";
+import { PpnDisplayRow, PPN_COLUMNS, rowNoCell } from "./PpnDisplayRow";
+import { PpnInlineEditRow, PpnInlineInsertRows, saldoBefore } from "./PpnInlineRows";
+import { draftPayload, type PpnDraft } from "./PpnRowEditor";
 import AddPpnInOutModal from "./AddPpnInOutModal";
 import {
   Dialog,
@@ -48,33 +50,8 @@ import {
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
 
-/**
- * Kolom 2025 dan 2026 digabung; DPP PPN hanya ada di 2026, jadi baris 2025
- * tampil "-". Sales (tahun, colF) dari workbook 2025 tetap tersimpan dan ikut
- * ekspor, tapi tidak ditampilkan di layar.
- */
-const COLS: { k: string; l: string; num?: boolean; isDate?: boolean }[] = [
-  { k: 'colA', l: 'Masa', isDate: true },
-  { k: 'colB', l: 'PPN Type' },
-  { k: 'colC', l: 'No Faktur' },
-  { k: 'colD', l: 'Customer/Vendor' },
-  { k: 'colE', l: 'Invoice No' },
-  { k: 'dpp', l: 'DPP PPN', num: true },
-  { k: 'status', l: 'Status' },
-  { k: 'colH', l: 'PPN', num: true },
-  { k: 'colI', l: 'WAPU', num: true },
-  { k: 'colJ', l: 'PAID', num: true },
-  { k: 'colK', l: 'AP PPN WAPU', num: true },
-  { k: 'colM', l: 'Non WAPU', num: true },
-  { k: 'colN', l: 'Masukan', num: true },
-  { k: 'colO', l: 'AP PPN Non WAPU', num: true },
-  { k: 'colP', l: 'Ledger' },
-  { k: 'colQ', l: 'Sub Ledger-1' },
-  { k: 'colR', l: 'Sub Ledger-2' },
-  { k: 'colS', l: 'Sub Ledger-3' },
-];
-
-const TOTAL_KEYS = COLS.filter((c) => c.num).map((c) => c.k);
+// Saldo berjalan (AP PPN Non WAPU) tidak dijumlah - sama dengan kolom saldo Bank Statement.
+const TOTAL_KEYS = PPN_COLUMNS.filter((c) => c.num && c.total !== false).map((c) => c.k);
 
 /** Angka mentah dari API disimpan di sebelah nilai tampilannya: colH → rawColH, dpp → rawDpp. */
 const rawKey = (k: string) => `raw${k[0].toUpperCase()}${k.slice(1)}`;
@@ -84,12 +61,21 @@ export function PpnInOutTable() {
   const [historyRow, setHistoryRow] = useState<any | null>(null);
   const limit = 10;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
   const [selectedViewRecord, setSelectedViewRecord] = useState<any>(null);
   const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Menyunting dan menyisip langsung di tabel, seperti Bank Statement dan Sales.
+  // Satu per satu: selama ada yang diketik, tombol sunting/sisip baris lain dikunci.
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [insertAfterId, setInsertAfterId] = useState<number | null>(null);
+  // Sisip di atas baris No 1 - disimpan dengan afterId null (paling atas).
+  const [insertAboveId, setInsertAboveId] = useState<number | null>(null);
+  const [savingInline, setSavingInline] = useState(false);
+  const inlineBusy = editingId !== null || insertAfterId !== null || insertAboveId !== null;
+  /** Filter rentang kolom No (inklusif), seperti Bank Statement dan Sales. */
+  const [rowNoRange, setRowNoRange] = useState<{ min: number | null; max: number | null }>({ min: null, max: null });
+  const isRowNoRangeActive = rowNoRange.min !== null || rowNoRange.max !== null;
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString());
   const yearNum = useMemo(() => Number(yearFilter), [yearFilter]);
 
@@ -102,15 +88,26 @@ export function PpnInOutTable() {
     return years;
   }, []);
 
-  const { getAllPpnInOut, deletePpnInOut } = usePpnInOut();
+  const { getAllPpnInOut, deletePpnInOut, updatePpnInOut, insertPpnInOut } = usePpnInOut();
+  // mutateAsync stabil antar render; objek mutasinya tidak.
+  const updatePpnAsync = updatePpnInOut.mutateAsync;
+  const insertPpnAsync = insertPpnInOut.mutateAsync;
   const ppnInOutQuery = getAllPpnInOut(
     yearFilter !== "all" ? yearNum : undefined,
     { enabled: !!yearFilter }
   );
   const { data: allDataRaw, isLoading } = ppnInOutQuery;
 
+  // Rentang No disaring di sini, sebelum filter kolom lain, supaya daftar nilai
+  // di filter lain, subtotal, dan grand total ikut mengikuti rentangnya.
   const displayData = useMemo(() => {
-    return (allDataRaw || []).map((row: any) => ({
+    const inRange = (row: any) => {
+      if (!isRowNoRangeActive) return true;
+      const no = row.rowNo === null || row.rowNo === undefined ? null : row.rowNo;
+      if (no === null) return false;
+      return (rowNoRange.min === null || no >= rowNoRange.min) && (rowNoRange.max === null || no <= rowNoRange.max);
+    };
+    return (allDataRaw || []).filter(inRange).map((row: any) => ({
       ...row,
       colA: formatDate(row.colA),
       rawColA: row.colA,
@@ -140,7 +137,7 @@ export function PpnInOutTable() {
       colR: row.colR || "-",
       colS: row.colS || "-",
     }));
-  }, [allDataRaw]);
+  }, [allDataRaw, isRowNoRangeActive, rowNoRange]);
 
   const {
     page,
@@ -153,12 +150,19 @@ export function PpnInOutTable() {
     setSort,
     getCascadingData,
     filteredAndSortedData,
-    clearFilters: handleClearFilters,
-    isAnyFilterActive
+    clearFilters: handleClearFiltersBase,
+    isAnyFilterActive: isExcelFilterActive
   } = useExcelFilter({
     data: displayData,
     searchFields: ['colC', 'colD', 'colE']
   });
+
+  const handleClearFilters = () => {
+    handleClearFiltersBase();
+    setRowNoRange({ min: null, max: null });
+  };
+
+  const isAnyFilterActive = isExcelFilterActive || isRowNoRangeActive;
 
   const paginatedData = useMemo(() => {
     const skip = (page - 1) * limit;
@@ -197,15 +201,97 @@ export function PpnInOutTable() {
   const subtotalTotals = useMemo(() => calcTotals(paginatedData), [paginatedData]);
   const grandTotals = useMemo(() => calcTotals(filteredAndSortedData), [filteredAndSortedData]);
 
-  const handleEdit = (id: number) => {
-    setSelectedRecordId(id);
-    setIsEditModalOpen(true);
-  };
+  // Baris mentah dari API, sebelum diformat - sumber draf yang disunting.
+  const rawById = useMemo(
+    () => new Map<number, any>((allDataRaw || []).map((r: any) => [r.id, r])),
+    [allDataRaw],
+  );
 
-  const handleView = (row: any) => {
+  // Semua callback baris stabil (useCallback), supaya PpnDisplayRow yang di-memo
+  // tidak ikut dirender ulang setiap halaman berubah.
+  const handleView = useCallback((row: any) => {
     setSelectedViewRecord(row);
     setIsViewModalOpen(true);
-  };
+  }, []);
+  const handleHistory = useCallback((row: any) => setHistoryRow(row), []);
+  const handleEdit = useCallback((row: any) => setEditingId(row.id), []);
+  const handleInsertAfter = useCallback((row: any) => setInsertAfterId(row.id), []);
+  const handleInsertAbove = useCallback((row: any) => setInsertAboveId(row.id), []);
+  const handleAskDelete = useCallback((id: number) => setRecordToDelete(id), []);
+  const cancelInline = useCallback(() => {
+    setEditingId(null);
+    setInsertAfterId(null);
+    setInsertAboveId(null);
+  }, []);
+  const refetchPpn = ppnInOutQuery.refetch;
+
+  const saveEdit = useCallback(
+    async (draft: PpnDraft) => {
+      if (editingId === null || savingInline) return;
+      setSavingInline(true);
+      try {
+        await updatePpnAsync({ id: editingId, data: draftPayload(draft) });
+        toast.success("PPN In/Out record updated.");
+        setEditingId(null);
+        refetchPpn();
+      } catch (error: any) {
+        toast.error(error?.response?.data?.message || "Failed to update PPN In/Out record.");
+      } finally {
+        setSavingInline(false);
+      }
+    },
+    [editingId, savingInline, updatePpnAsync, refetchPpn],
+  );
+
+  const saveInsert = useCallback(
+    async (drafts: PpnDraft[]) => {
+      const anchorId = insertAboveId ?? insertAfterId;
+      if (anchorId === null || savingInline) return;
+      const anchor = rawById.get(anchorId);
+      if (!anchor) return;
+      setSavingInline(true);
+      try {
+        // Sisip atas hanya ada di baris No 1, jadi "di atasnya" = paling atas.
+        await insertPpnAsync({
+          rows: drafts.map(draftPayload),
+          tagYear: anchor.tagYear,
+          afterId: insertAboveId !== null ? null : insertAfterId,
+        });
+        setInsertAfterId(null);
+        setInsertAboveId(null);
+        refetchPpn();
+      } catch {
+        // insertPpnInOut sudah menampilkan pesan galatnya; draf tetap di layar.
+      } finally {
+        setSavingInline(false);
+      }
+    },
+    [insertAfterId, insertAboveId, savingInline, rawById, insertPpnAsync, refetchPpn],
+  );
+
+  const canEdit = can('ppn-in-out.update');
+  const canCreate = can('ppn-in-out.create');
+  const canDelete = can('ppn-in-out.delete');
+  const canHistory = can('audit-logs.index');
+
+  // Ganti tahun, pencarian, filter kolom, urutan, atau rentang No: baris yang
+  // sedang diketik dibatalkan. Isi tabelnya sudah bukan yang tadi, dan menyisip
+  // "di bawah baris ini" di tampilan yang tersaring atau terurut lain
+  // membingungkan - posisinya tetap menurut urutan baris.
+  useEffect(() => {
+    cancelInline();
+  }, [yearFilter, search, filters, sort, rowNoRange, cancelInline]);
+
+  // Jaring pengaman untuk semua cara lain baris itu hilang dari layar - pindah
+  // halaman, filter kolom, pencarian. Tanpa ini editornya lenyap tapi statusnya
+  // masih "sedang mengetik", dan semua tombol edit/sisip terkunci tanpa ada
+  // tombol Batal yang bisa dipencet.
+  useEffect(() => {
+    const visible = (id: number) => paginatedData.some((r: any) => r.id === id);
+    if (editingId !== null && !visible(editingId)) setEditingId(null);
+    if (insertAfterId !== null && !visible(insertAfterId)) setInsertAfterId(null);
+    if (insertAboveId !== null && !visible(insertAboveId)) setInsertAboveId(null);
+  }, [paginatedData, editingId, insertAfterId, insertAboveId]);
 
   const handleDelete = async () => {
     if (!recordToDelete) return;
@@ -223,9 +309,10 @@ export function PpnInOutTable() {
   };
 
 
-  const cols = COLS;
-  // Label total mengisi kolom teks di depan angka pertama.
+  const cols = PPN_COLUMNS;
+  // Label total mengisi kolom No dan kolom teks di depan angka pertama.
   const leadCols = cols.findIndex((c) => c.num);
+  const colSpanAll = cols.length + 2; // No + kolom + Actions
 
   return (
     <div className="space-y-6 mt-6">
@@ -240,7 +327,7 @@ export function PpnInOutTable() {
           />
         </div>
         
-        <Select value={yearFilter} onValueChange={(v) => { setYearFilter(v); setPage(1); }}>
+        <Select value={yearFilter} onValueChange={(v) => { setYearFilter(v); setPage(1); setRowNoRange({ min: null, max: null }); }}>
           <SelectTrigger className="w-full xl:w-[130px] h-12 px-5 bg-white border-0 rounded-xl shadow-sm flex items-center gap-2 text-muted-foreground font-bold transition-all cursor-pointer">
             <SelectValue placeholder="Year" />
           </SelectTrigger>
@@ -269,7 +356,7 @@ export function PpnInOutTable() {
 
           {can('ppn-in-out.create') && (
             <Button
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={(e) => { e.stopPropagation(); cancelInline(); setIsAddModalOpen(true); }}
               className="h-12 px-6 flex-1 xl:flex-none bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-sm flex items-center justify-center gap-2 font-bold disabled:opacity-50 transition-all active:scale-95 shrink-0"
             >
               <Plus size={20} strokeWidth={3} />
@@ -307,9 +394,23 @@ export function PpnInOutTable() {
 
       <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-premium border border-primary/5 overflow-hidden">
         <div className="overflow-x-auto">
+          <LedgerErrorBoundary onReset={cancelInline} title="The PPN In/Out table could not be displayed.">
           <Table className="min-w-[3000px]">
             <TableHeader className="bg-slate-50/50">
               <TableRow className="hover:bg-transparent border-primary/5 whitespace-nowrap">
+                <TableHead className={rowNoCell}>
+                  <div className="flex items-center gap-1">
+                    No
+                    <ExcelColumnFilter
+                      columnKey="rowNo" label="No" data={[]} activeFilters={null} sortOnly sortLabels={['1 → 9', '9 → 1']}
+                      range={rowNoRange}
+                      onRangeChange={(r) => { setRowNoRange(r); setPage(1); }}
+                      onFilterChange={() => {}}
+                      onSort={(d) => setSort({ key: "rowNo", direction: d })}
+                      currentSort={sort}
+                    />
+                  </div>
+                </TableHead>
                 {cols.map((c) => (
                   <TableHead key={c.k} className={`${c.num ? 'text-right' : ''} px-4`}>
                     <div className={`flex items-center gap-1 ${c.num ? 'justify-end' : ''}`}>
@@ -335,7 +436,7 @@ export function PpnInOutTable() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={cols.length} className="h-96 text-center">
+                  <TableCell colSpan={colSpanAll} className="h-96 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <div className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full animate-spin" />
                       <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/40">Fetching PPN Details...</p>
@@ -344,50 +445,65 @@ export function PpnInOutTable() {
                 </TableRow>
               ) : paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={cols.length} className="h-64 text-center opacity-20">
+                  <TableCell colSpan={colSpanAll} className="h-64 text-center opacity-20">
                     <p className="font-black uppercase tracking-widest">No records found</p>
                   </TableCell>
                 </TableRow>
               ) : (
                 <>
                   {paginatedData.map((row: any) => (
-                    <TableRow key={row.id} className="hover:bg-slate-50/50 transition-colors whitespace-nowrap group">
-                      {cols.map((c) => (
-                        <TableCell key={c.k} className={`px-4 ${c.num ? 'text-right font-bold text-primary/80' : 'text-primary/60'}`}>
-                          {row[c.k]}
-                        </TableCell>
-                      ))}
-                      <TableCell className="px-4 text-center">
-                        <div className="flex items-center justify-center gap-1 transition-opacity">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleView(row); }}>
-                            <Eye size={12} strokeWidth={2.5} />
-                          </Button>
-                          {can('audit-logs.index') && (
-                            <Button variant="ghost" size="icon" title="History" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); setHistoryRow(row); }}>
-                              <HistoryIcon size={12} strokeWidth={2.5} />
-                            </Button>
-                          )}
-                          {can('ppn-in-out.update') && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-sm" onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }}>
-                              <Edit2 size={12} strokeWidth={2.5} />
-                            </Button>
-                          )}
-                          {can('ppn-in-out.delete') && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500/40 hover:text-rose-600 hover:bg-rose-50 rounded-sm" onClick={(e) => { e.stopPropagation(); setRecordToDelete(row.id); }}>
-                              <Trash2 size={12} strokeWidth={2.5} />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <Fragment key={row.id}>
+                      {insertAboveId === row.id && (
+                        <PpnInlineInsertRows
+                          anchorSaldo={saldoBefore(rawById.get(row.id))}
+                          anchorRowNo={0}
+                          colSpan={colSpanAll}
+                          saving={savingInline}
+                          onSave={saveInsert}
+                          onCancel={cancelInline}
+                        />
+                      )}
+                      {editingId === row.id ? (
+                        <PpnInlineEditRow
+                          raw={rawById.get(row.id)}
+                          saving={savingInline}
+                          onSave={saveEdit}
+                          onCancel={cancelInline}
+                        />
+                      ) : (
+                        <PpnDisplayRow
+                          row={row}
+                          busy={inlineBusy}
+                          canEdit={canEdit}
+                          canCreate={canCreate}
+                          canDelete={canDelete}
+                          onView={handleView}
+                          onHistory={canHistory ? handleHistory : undefined}
+                          onEdit={handleEdit}
+                          onInsert={handleInsertAfter}
+                          onInsertAbove={row.rowNo === 1 ? handleInsertAbove : undefined}
+                          onDelete={handleAskDelete}
+                        />
+                      )}
+                      {insertAfterId === row.id && (
+                        <PpnInlineInsertRows
+                          anchorSaldo={Number(rawById.get(row.id)?.colO || 0)}
+                          anchorRowNo={row.rowNo}
+                          colSpan={colSpanAll}
+                          saving={savingInline}
+                          onSave={saveInsert}
+                          onCancel={cancelInline}
+                        />
+                      )}
+                    </Fragment>
                   ))}
 
                   {/* Subtotal Row */}
                   <TableRow className="bg-secondary/5 border-t-2 border-secondary/30 font-bold whitespace-nowrap">
-                    <TableCell colSpan={leadCols} className="px-4 text-[11px] text-secondary/80 uppercase tracking-[0.2em]">
+                    <TableCell colSpan={leadCols + 1} className="px-4 text-[11px] text-secondary/80 uppercase tracking-[0.2em]">
                       Subtotal (Page {page})
                     </TableCell>
-                    {cols.slice(leadCols).map((c) => c.num ? (
+                    {cols.slice(leadCols).map((c) => c.num && c.total !== false ? (
                       <TableCell key={c.k} className={`text-right px-4 ${getAmountColor(subtotalTotals[c.k].toString())}`}>{formatCurrency(subtotalTotals[c.k].toString())}</TableCell>
                     ) : (
                       <TableCell key={c.k} className="bg-secondary/[0.02]" />
@@ -397,10 +513,10 @@ export function PpnInOutTable() {
 
                   {/* Grand Total Row */}
                   <TableRow className="bg-secondary/10 border-t border-secondary/30 font-bold whitespace-nowrap">
-                    <TableCell colSpan={leadCols} className="px-4 text-[11px] text-secondary uppercase tracking-[0.2em]">
+                    <TableCell colSpan={leadCols + 1} className="px-4 text-[11px] text-secondary uppercase tracking-[0.2em]">
                       Grand Totals ({filteredAndSortedData.length} records)
                     </TableCell>
-                    {cols.slice(leadCols).map((c) => c.num ? (
+                    {cols.slice(leadCols).map((c) => c.num && c.total !== false ? (
                       <TableCell key={c.k} className={`text-right px-4 ${getAmountColor(grandTotals[c.k].toString())}`}>{formatCurrency(grandTotals[c.k].toString())}</TableCell>
                     ) : (
                       <TableCell key={c.k} className="bg-secondary/[0.02]" />
@@ -411,6 +527,7 @@ export function PpnInOutTable() {
               )}
             </TableBody>
           </Table>
+          </LedgerErrorBoundary>
         </div>
       </div>
 
@@ -437,13 +554,6 @@ export function PpnInOutTable() {
 
         title={historyTitle(historyRow?.colC, historyRow?.colD)}
 
-      />
-
-      <EditPpnInOutModal 
-        open={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
-        recordId={selectedRecordId}
-        onSuccess={() => ppnInOutQuery.refetch()}
       />
 
       <AddPpnInOutModal 
@@ -483,10 +593,10 @@ export function PpnInOutTable() {
         onOpenChange={setIsViewModalOpen}
         title="PPN In/Out Details"
         subtitle={selectedViewRecord?.colC}
-        data={cols.map(c => ({
-          label: c.l,
-          value: selectedViewRecord?.[c.k]
-        }))}
+        data={[
+          { label: "No", value: selectedViewRecord?.rowNo ?? "-" },
+          ...cols.map(c => ({ label: c.l, value: selectedViewRecord?.[c.k] })),
+        ]}
       />
     </div>
   );

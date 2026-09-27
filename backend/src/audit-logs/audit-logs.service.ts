@@ -34,56 +34,85 @@ export class AuditLogsService {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(200, Math.max(1, Number(query.limit) || 50));
 
-    const and: Prisma.AuditLogWhereInput[] = [];
-
+    // Filter dipakai pada entri sesudah dilipat: tabel, id, dan aksi induknya.
+    const where: Prisma.Sql[] = [];
     if (query.table) {
       const tables = query.table.split(',').map((t) => t.trim()).filter(Boolean);
-      if (query.rowId) {
-        // Riwayat satu baris: baris itu sendiri, plus rincian per rekeningnya.
-        const rowId = BigInt(query.rowId);
-        const either: Prisma.AuditLogWhereInput[] = [{ tableName: { in: tables }, rowId }];
-        for (const t of tables) {
-          const child = CHILD_TABLES[t];
-          if (!child) continue;
-          const id = Number(rowId);
-          either.push(
-            { tableName: child.table, newData: { path: [child.parentKey], equals: id } },
-            { tableName: child.table, oldData: { path: [child.parentKey], equals: id } },
-          );
-        }
-        and.push({ OR: either });
-      } else {
-        const withChildren = tables.flatMap((t) => (CHILD_TABLES[t] ? [t, CHILD_TABLES[t].table] : [t]));
-        and.push({ tableName: { in: withChildren } });
-      }
-    } else if (query.rowId) {
-      and.push({ rowId: BigInt(query.rowId) });
+      if (tables.length) where.push(Prisma.sql`v.show_table IN (${Prisma.join(tables)})`);
     }
-
-    if (query.userId) and.push({ userId: BigInt(query.userId) });
-    if (query.action) and.push({ action: { in: query.action.split(',') } });
-    if (query.requestId) and.push({ requestId: query.requestId });
-    if (query.from) and.push({ occurredAt: { gte: new Date(query.from) } });
+    if (query.rowId) where.push(Prisma.sql`v.show_row_id = ${BigInt(query.rowId)}`);
+    if (query.userId) where.push(Prisma.sql`v.user_id = ${BigInt(query.userId)}`);
+    if (query.action) {
+      const actions = query.action.split(',').map((a) => a.trim()).filter(Boolean);
+      if (actions.length) where.push(Prisma.sql`v.show_action IN (${Prisma.join(actions)})`);
+    }
+    if (query.requestId) where.push(Prisma.sql`v.request_id = ${query.requestId}`);
+    if (query.from) where.push(Prisma.sql`v.occurred_at >= ${new Date(query.from)}`);
     if (query.to) {
       // Halaman mengirim batas hari menurut jam lokal user sebagai waktu
       // lengkap (eksklusif). Kalau yang datang tanggal polos, seluruh hari
       // itu (UTC) disertakan.
       const end = new Date(query.to);
       if (/^\d{4}-\d{2}-\d{2}$/.test(query.to)) end.setUTCDate(end.getUTCDate() + 1);
-      and.push({ occurredAt: { lt: end } });
+      where.push(Prisma.sql`v.occurred_at < ${end}`);
     }
+    const filter = where.length ? Prisma.sql`WHERE ${Prisma.join(where, ' AND ')}` : Prisma.empty;
 
-    const where: Prisma.AuditLogWhereInput = and.length ? { AND: and } : {};
+    const children = Prisma.join(
+      Object.entries(CHILD_TABLES).map(
+        ([parent, c]) => Prisma.sql`(${c.table}::text, ${parent}::text, ${c.parentKey}::text)`,
+      ),
+    );
 
-    const [rows, total] = await Promise.all([
-      this.prisma.auditLog.findMany({
-        where,
-        orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.prisma.auditLog.count({ where }),
+    /*
+     * Aksi di log adalah aksi pada RECORD: dibuat, diubah, dihapus. Rincian per
+     * rekening disimpan di tabel anak, dan mengisi atau mengosongkan satu
+     * rekening di sana tercatat sebagai baris anak yang dibuat/dihapus - padahal
+     * bagi record-nya itu perubahan nilai. Jadi entri anak dilipat ke induknya:
+     *   - Kalau simpanan yang sama (request_id) juga mencatat induknya, entri
+     *     anak disembunyikan - angkanya sudah ada di kolom induk (Non CB, BCA...).
+     *   - Kalau tidak (misalnya diubah lewat SQL), entri anak tampil sebagai
+     *     Updated pada record induknya.
+     * Isi audit_logs sendiri tidak diubah; ini hanya cara membacanya.
+     */
+    const folded = Prisma.sql`
+      WITH e AS (
+        SELECT a.id, a.occurred_at, a.table_name, a.row_id, a.action, a.user_id, a.request_id,
+               ch.parent AS parent_table,
+               (COALESCE(a.new_data, a.old_data) ->> ch.pkey)::bigint AS parent_id
+          FROM audit_logs a
+          LEFT JOIN (VALUES ${children}) AS ch(child, parent, pkey) ON ch.child = a.table_name
+      ), v AS (
+        SELECT e.id, e.occurred_at, e.user_id, e.request_id,
+               COALESCE(e.parent_table, e.table_name) AS show_table,
+               COALESCE(e.parent_id, e.row_id)        AS show_row_id,
+               CASE WHEN e.parent_table IS NULL THEN e.action ELSE 'UPDATE' END AS show_action
+          FROM e
+         WHERE e.parent_table IS NULL
+            OR NOT EXISTS (
+                 SELECT 1 FROM audit_logs p
+                  WHERE p.request_id = e.request_id
+                    AND p.table_name = e.parent_table
+                    AND p.row_id = e.parent_id
+               )
+      )`;
+
+    const [picked, counted] = await Promise.all([
+      this.prisma.$queryRaw<{ id: bigint; show_action: string }[]>`
+        ${folded}
+        SELECT v.id, v.show_action FROM v ${filter}
+         ORDER BY v.occurred_at DESC, v.id DESC
+         LIMIT ${limit} OFFSET ${(page - 1) * limit}`,
+      this.prisma.$queryRaw<{ n: bigint }[]>`${folded} SELECT count(*) AS n FROM v ${filter}`,
     ]);
+    const total = Number(counted[0]?.n ?? 0);
+    const actionOf = new Map(picked.map((p) => [p.id.toString(), p.show_action]));
+
+    const found = picked.length
+      ? await this.prisma.auditLog.findMany({ where: { id: { in: picked.map((p) => p.id) } } })
+      : [];
+    const byId = new Map(found.map((r) => [r.id.toString(), r]));
+    const rows = picked.map((p) => byId.get(p.id.toString())!).filter(Boolean);
 
     // Nama user dan nama rekening dicari sekali untuk seluruh halaman.
     const userIds = [...new Set(rows.map((r) => r.userId).filter((v): v is bigint => v !== null))];
@@ -119,7 +148,7 @@ export class AuditLogsService {
           occurredAt: r.occurredAt,
           table: r.tableName,
           rowId: r.rowId?.toString() ?? null,
-          action: r.action,
+          action: actionOf.get(r.id.toString()) ?? r.action,
           source: r.source,
           user: user ? { id: user.id.toString(), name: user.name, email: user.email } : r.userEmail ? { id: r.userId?.toString() ?? null, name: null, email: r.userEmail } : null,
           dbUser: r.dbUser,
