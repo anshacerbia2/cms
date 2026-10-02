@@ -2,18 +2,34 @@ import { Controller, Post, Patch, Body, UnauthorizedException, Get, UseGuards, R
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ChangeOwnPasswordDto } from './dto/change-own-password.dto';
+import { LoginDto } from './dto/login.dto';
+import { LoginRateLimiter } from './login-rate-limiter';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private loginLimiter: LoginRateLimiter,
+  ) {}
 
   @Post('login')
-  async login(@Body() body: any) {
+  async login(@Body() body: LoginDto, @Request() req: any) {
+    // Dibatasi per email (percobaan gagal) dan per IP - lihat LoginRateLimiter.
+    this.loginLimiter.check(req.ip ?? 'unknown', body.email);
     const user = await this.authService.validateUser(body.email, body.password);
     if (!user) {
+      this.loginLimiter.recordFailure(body.email);
       throw new UnauthorizedException('Invalid credentials');
     }
+    this.loginLimiter.recordSuccess(body.email);
     return this.authService.login(user);
+  }
+
+  /** Logout: token akun ini dicabut di server, bukan hanya dihapus dari browser. */
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  logout(@Request() req: any) {
+    return this.authService.logout(req.user.userId);
   }
 
   @UseGuards(JwtAuthGuard)

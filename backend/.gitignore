@@ -2,6 +2,9 @@ dist
 node_modules
 .env
 .env.production
+# Salinan .env apa pun (.env.save, .env.before-seed, ...) berisi secret prod.
+.env.*
+!.env.example
 .DS_Store
 *.local
 

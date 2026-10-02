@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -25,7 +26,12 @@ try {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // nginx di mesin yang sama meneruskan request; percayai X-Forwarded-For hanya
+  // dari loopback, supaya req.ip adalah IP pengguna dan bukan 127.0.0.1 (dipakai
+  // pembatas login per IP). Tanpa header itu req.ip tetap 127.0.0.1.
+  app.set('trust proxy', 'loopback');
 
   // Konteks activity log untuk setiap request: id request dulu, user-nya
   // menyusul lewat AuditUserInterceptor sesudah guard JWT. Harus dipasang
@@ -53,8 +59,24 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TransformInterceptor());
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
-  // CORS
-  app.enableCors();
+  // CORS: hanya frontend sendiri (pentest F-02). Token dikirim lewat header
+  // Bearer, bukan cookie, jadi `*` tidak langsung bisa dieksploitasi - tapi tak
+  // ada alasan origin lain boleh memanggil API ini. CORS_ORIGINS (dipisah koma)
+  // menimpa daftar bawaan; di luar production semua origin diizinkan supaya
+  // Vite dev server di localhost tetap jalan.
+  const corsOrigins = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  app.enableCors({
+    origin: corsOrigins.length
+      ? corsOrigins
+      : process.env.NODE_ENV === 'production'
+        ? ['https://pcmi-admin.online', 'https://www.pcmi-admin.online']
+        : true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+    credentials: false,
+  });
 
   const port = process.env.PORT || 3000;
   // Loopback only: nginx proxies from localhost, so nothing needs to reach this

@@ -12,7 +12,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 /** Matches the cost factor the auth seeder and login path already use. */
-const BCRYPT_ROUNDS = 10;
+export const BCRYPT_ROUNDS = 10;
 
 /** Every field of `users` except `password` and `remember_token`. */
 const SAFE_USER_SELECT = {
@@ -160,10 +160,19 @@ export class UsersService {
 
     await this.prisma.user.update({
       where: { id: BigInt(id) },
-      data: { password: await bcrypt.hash(password, BCRYPT_ROUNDS) },
+      // Password baru mematikan semua sesi lama akun ini (lihat JwtStrategy).
+      data: { password: await bcrypt.hash(password, BCRYPT_ROUNDS), tokenVersion: { increment: 1 } },
     });
 
     return { message: 'Password updated successfully' };
+  }
+
+  /** Mematikan semua token akun ini (logout). */
+  async revokeTokens(id: number) {
+    await this.prisma.user.update({
+      where: { id: BigInt(id) },
+      data: { tokenVersion: { increment: 1 } },
+    });
   }
 
   async remove(id: number, requesterId?: string) {

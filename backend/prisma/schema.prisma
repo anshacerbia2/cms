@@ -61,6 +61,10 @@ model User {
   phone           String?    @db.VarChar(255)
   location        String?    @db.VarChar(255)
   status          UserStatus @default(ACTIVE)
+  /// Naik setiap logout dan ganti password. Token membawa nilai ini (`tv`) dan
+  /// ditolak kalau sudah tidak sama - token lama mati seketika, tidak menunggu
+  /// kedaluwarsa (pentest F-04). Token tanpa `tv` dianggap 0.
+  tokenVersion    Int        @default(0) @map("token_version")
   roleId          BigInt?    @map("role_id")
   rememberToken   String?    @map("remember_token") @db.VarChar(100)
   createdAt       DateTime   @default(now()) @map("created_at")

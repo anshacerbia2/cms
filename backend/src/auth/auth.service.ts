@@ -1,7 +1,15 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { UsersService } from '../users/users.service';
+import { BCRYPT_ROUNDS, UsersService } from '../users/users.service';
+
+/**
+ * Hash pengganti untuk email yang tidak terdaftar. bcrypt tetap dijalankan
+ * terhadapnya, supaya login dengan email asing butuh waktu yang sama dengan
+ * email yang ada - tanpa ini, waktu respons membocorkan email mana yang
+ * terdaftar (pentest F-06). Cost-nya sama dengan hash password user.
+ */
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password-placeholder', BCRYPT_ROUNDS);
 
 @Injectable()
 export class AuthService {
@@ -12,7 +20,9 @@ export class AuthService {
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
-    if (user && (await bcrypt.compare(pass, user.password))) {
+    // Selalu satu bcrypt.compare, ada user atau tidak.
+    const matches = await bcrypt.compare(pass, user?.password ?? DUMMY_HASH);
+    if (user && matches) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...result } = user;
       return result;
@@ -31,7 +41,18 @@ export class AuthService {
     if (await bcrypt.compare(newPassword, user.password)) {
       throw new BadRequestException('New password must be different from the current one.');
     }
-    return this.usersService.changePassword(Number(userId), newPassword);
+    await this.usersService.changePassword(Number(userId), newPassword);
+    // Ganti password mematikan semua token akun ini, termasuk yang sedang dipakai.
+    // Sesi ini diberi token baru supaya tetap masuk; sesi lain harus login ulang.
+    const fresh = await this.usersService.findByEmail(user.email);
+    const { access_token } = await this.login(fresh);
+    return { message: 'Password updated successfully', access_token };
+  }
+
+  /** Logout di server: semua token akun ini berhenti berlaku, di perangkat mana pun. */
+  async logout(userId: string) {
+    await this.usersService.revokeTokens(Number(userId));
+    return { message: 'Signed out' };
   }
 
   async login(user: any) {
@@ -95,6 +116,8 @@ export class AuthService {
     const payload = { 
       email: user.email, 
       sub: user.id.toString(),
+      // Versi token akun ini; JwtStrategy menolak token yang versinya sudah usang.
+      tv: user.tokenVersion ?? 0,
       role: user.role?.slug,
       permissions
     };

@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, InternalAccountType } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as XLSX from 'xlsx';
@@ -38,32 +38,31 @@ function periodStatus(closedAt: Date | null): 'CLOSED' | 'ONGOING' {
 const WORKBOOK = 'PCMI-Bank Statements-14Sept26.xlsx';
 
 /**
- * Sheet name -> the InternalAccount it maps to. Keyed the same way as the 2025
- * seeder so both years point at the same account rows.
+ * Sheet name -> the display name of the InternalAccount it fills - the same
+ * key every other fiscal-year seeder uses to find an account.
+ *
+ * It used to be the account's number, type, holder and branch. Finance edits
+ * those in the app (prod: BNI got its account number, Cash IDR's holder became
+ * Petty Cash), and an edited account no longer matched: its sheet was skipped
+ * with a warning - after the year's rows had already been cleared, so its
+ * transactions were deleted and not reloaded.
  *
  * The 2026 workbook dropped the "Mandiri PM" and "BRI Tebet" sheets. They stay
  * listed here so that a sheet reappearing next year is picked up without edits,
  * and so an unknown sheet name is reported rather than silently skipped.
  */
-type AccountKey = {
-  type: InternalAccountType;
-  branch: string;
-  holderName: string;
-  accountNo: string;
-};
-
-const SHEET_TO_ACCOUNT: Record<string, AccountKey> = {
-  'BCA Sho': { type: 'BANK', branch: 'Sahardjo', holderName: 'RD Hidianitje', accountNo: '5750 489 666' },
-  'BCA Juanda': { type: 'BANK', branch: 'Juanda', holderName: 'PT Panconvince Mitra International', accountNo: '5350 285 999' },
-  'Mandiri MP': { type: 'BANK', branch: 'Mid Plaza', holderName: 'PT Panconvince Mitra International', accountNo: '122 000 487 5566' },
-  'Mandiri PM': { type: 'BANK', branch: 'PM', holderName: 'PT Panconvince Mitra International', accountNo: '' },
-  'BRI Sho': { type: 'BANK', branch: 'Sahardjo', holderName: 'PT Panconvince Mitra International', accountNo: '1125 0100 0255 301' },
-  'BRI Tebet': { type: 'BANK', branch: 'Tebet', holderName: 'PT Panconvince Mitra International', accountNo: '' },
-  'BTN': { type: 'BANK', branch: 'Sahardjo', holderName: 'PT Panconvince Mitra International', accountNo: '00001 01 30 001293 5' },
-  'Raya': { type: 'BANK', branch: '', holderName: 'PT Panconvince Mitra International', accountNo: '001 001 001 907 409' },
-  'BNI': { type: 'BANK', branch: '', holderName: 'PT Panconvince Mitra International', accountNo: '' },
-  'Cash IDR': { type: 'CASH', branch: '', holderName: 'Meery Ferdian', accountNo: '' },
-  'Non CB': { type: 'OTHER', branch: '', holderName: 'Non Cash & Bank', accountNo: '' },
+const SHEET_TO_ACCOUNT: Record<string, string> = {
+  'BCA Sho': 'BCA Sahardjo',
+  'BCA Juanda': 'BCA Juanda',
+  'Mandiri MP': 'Mandiri Mid Plaza',
+  'Mandiri PM': 'Mandiri Plasa Mandiri',
+  'BRI Sho': 'BRI Sahardjo',
+  'BRI Tebet': 'BRI Tebet',
+  'BTN': 'BTN',
+  'Raya': 'Bank Raya',
+  'BNI': 'BNI',
+  'Cash IDR': 'Cash IDR',
+  'Non CB': 'Non CB',
 };
 
 /** Column A of the header row, which is spelled either way across sheets. */
@@ -233,6 +232,26 @@ export async function seedBankStatements(prisma: PrismaClient, workbook?: XLSX.W
     wb = XLSX.readFile(filePath);
   }
 
+  // Every sheet's account is found BEFORE anything is cleared. A missing one
+  // stops the run with nothing changed; skipping it after the clear would
+  // delete that account's rows and not reload them.
+  const accountFor = new Map<string, Awaited<ReturnType<typeof prisma.internalAccount.findFirst>>>();
+  const missing: string[] = [];
+  for (const sheetName of wb.SheetNames) {
+    const displayName = SHEET_TO_ACCOUNT[sheetName];
+    if (!displayName) continue;
+    const account = await prisma.internalAccount.findFirst({ where: { displayName } });
+    if (account) accountFor.set(sheetName, account);
+    else missing.push(`"${sheetName}" → ${displayName}`);
+  }
+  if (missing.length > 0) {
+    console.error(
+      `❌ No internal account for sheet(s) ${missing.join(', ')}. Nothing cleared or seeded.` +
+        `\n   Add the account under Account & Bank (or run the bank master seeder) first.`,
+    );
+    return;
+  }
+
   // Scoped to this fiscal year so a re-run replaces 2026 and leaves 2025 intact.
   const removed = await prisma.financialTransaction.deleteMany({ where: { tagYear: FISCAL_YEAR, source: 'SEED' } });
   if (removed.count > 0) {
@@ -245,20 +264,9 @@ export async function seedBankStatements(prisma: PrismaClient, workbook?: XLSX.W
   const ledgers = await LedgerDirectory.load(prisma);
 
   for (const sheetName of wb.SheetNames) {
-    const mapping = SHEET_TO_ACCOUNT[sheetName];
-    if (!mapping) {
-      warnings.push(`Sheet "${sheetName}" has no account mapping — not seeded.`);
-      continue;
-    }
-
-    const internalAccount = await prisma.internalAccount.findUnique({
-      where: {
-        accountNo_type_holderName_branch: mapping,
-      },
-    });
-
+    const internalAccount = accountFor.get(sheetName);
     if (!internalAccount) {
-      warnings.push(`Internal account for "${sheetName}" is missing — run the bank master seeder first.`);
+      warnings.push(`Sheet "${sheetName}" has no account mapping — not seeded.`);
       continue;
     }
 
