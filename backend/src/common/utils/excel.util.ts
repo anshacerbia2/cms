@@ -1,5 +1,14 @@
 import * as XLSX from 'xlsx-js-style';
 
+/*
+ * xlsx-js-style membawa SheetJS 0.18.5, yang punya CVE-2023-30533 (prototype
+ * pollution) dan CVE-2024-22363 (ReDoS) - keduanya hanya di jalur MEMBACA file.
+ * Di sini xlsx-js-style dipakai untuk MENULIS ekspor saja (json_to_sheet,
+ * write), jadi celah itu tidak terjangkau (pentest F-07). Jangan pernah memanggil
+ * XLSX.read / readFile pada file kiriman user dengan pustaka ini; kalau impor
+ * Excel dibutuhkan, pakai SheetJS >= 0.20.2 (cdn.sheetjs.com) untuk membacanya.
+ */
+
 export function generateExcelBuffer(data: any[], sheetName: string = 'Sheet1', columnMapping?: Record<string, string>): Buffer {
   const safeData = data && data.length > 0 ? data : [];
   
