@@ -36,6 +36,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user || user.status !== 'ACTIVE') {
       throw new UnauthorizedException('Account is no longer active.');
     }
+    // Logout dan ganti password menaikkan token_version: token yang dibuat
+    // sebelumnya - termasuk yang tertinggal di browser lain atau dicuri - mati
+    // di sini. Token lama tanpa `tv` dianggap versi 0.
+    if ((payload.tv ?? 0) !== user.tokenVersion) {
+      throw new UnauthorizedException('Your session has ended. Please sign in again.');
+    }
 
     return {
       userId: user.id.toString(),

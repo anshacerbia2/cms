@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import * as z from "zod";
 import { KeyRound } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/api";
 import { strongPassword, PASSWORD_RULE_MESSAGE } from "@/lib/password";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -43,8 +44,13 @@ export function ChangeOwnPasswordDialog({ open, onOpenChange }: { open: boolean;
   const change = useMutation({
     mutationFn: (v: FormValues) =>
       api.patch("/auth/password", { currentPassword: v.currentPassword, newPassword: v.newPassword }),
-    onSuccess: () => {
-      toast.success("Password changed successfully.");
+    onSuccess: (res: any) => {
+      // Ganti password mencabut semua token lama; server mengirim token baru
+      // untuk sesi ini supaya tetap masuk. Sesi lain harus login ulang.
+      const token = res?.data?.access_token ?? res?.access_token;
+      const { user, setAuth } = useAuthStore.getState();
+      if (token && user) setAuth(user, token);
+      toast.success("Password changed successfully. Other sessions have been signed out.");
       onOpenChange(false);
     },
     onError: (error: any) => {

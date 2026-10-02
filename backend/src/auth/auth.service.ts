@@ -41,7 +41,18 @@ export class AuthService {
     if (await bcrypt.compare(newPassword, user.password)) {
       throw new BadRequestException('New password must be different from the current one.');
     }
-    return this.usersService.changePassword(Number(userId), newPassword);
+    await this.usersService.changePassword(Number(userId), newPassword);
+    // Ganti password mematikan semua token akun ini, termasuk yang sedang dipakai.
+    // Sesi ini diberi token baru supaya tetap masuk; sesi lain harus login ulang.
+    const fresh = await this.usersService.findByEmail(user.email);
+    const { access_token } = await this.login(fresh);
+    return { message: 'Password updated successfully', access_token };
+  }
+
+  /** Logout di server: semua token akun ini berhenti berlaku, di perangkat mana pun. */
+  async logout(userId: string) {
+    await this.usersService.revokeTokens(Number(userId));
+    return { message: 'Signed out' };
   }
 
   async login(user: any) {
@@ -105,6 +116,8 @@ export class AuthService {
     const payload = { 
       email: user.email, 
       sub: user.id.toString(),
+      // Versi token akun ini; JwtStrategy menolak token yang versinya sudah usang.
+      tv: user.tokenVersion ?? 0,
       role: user.role?.slug,
       permissions
     };

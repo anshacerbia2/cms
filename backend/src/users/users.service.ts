@@ -160,10 +160,19 @@ export class UsersService {
 
     await this.prisma.user.update({
       where: { id: BigInt(id) },
-      data: { password: await bcrypt.hash(password, BCRYPT_ROUNDS) },
+      // Password baru mematikan semua sesi lama akun ini (lihat JwtStrategy).
+      data: { password: await bcrypt.hash(password, BCRYPT_ROUNDS), tokenVersion: { increment: 1 } },
     });
 
     return { message: 'Password updated successfully' };
+  }
+
+  /** Mematikan semua token akun ini (logout). */
+  async revokeTokens(id: number) {
+    await this.prisma.user.update({
+      where: { id: BigInt(id) },
+      data: { tokenVersion: { increment: 1 } },
+    });
   }
 
   async remove(id: number, requesterId?: string) {

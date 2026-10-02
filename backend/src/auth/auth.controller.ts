@@ -25,6 +25,13 @@ export class AuthController {
     return this.authService.login(user);
   }
 
+  /** Logout: token akun ini dicabut di server, bukan hanya dihapus dari browser. */
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  logout(@Request() req: any) {
+    return this.authService.logout(req.user.userId);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   getProfile(@Request() req: any) {

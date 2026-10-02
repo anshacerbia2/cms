@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { SidebarProvider, useSidebar } from "@/context/SidebarContext";
 import { useAuthStore } from "@/store/authStore";
+import { signOut } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { Bell, Search, Menu, KeyRound, LogOut } from "lucide-react";
 import {
@@ -17,7 +18,7 @@ import { ChangeOwnPasswordDialog } from "@/features/auth/components/ChangeOwnPas
 
 function Header() {
   const { isCollapsed, toggleSidebar } = useSidebar();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const [passwordOpen, setPasswordOpen] = useState(false);
 
@@ -97,7 +98,7 @@ function Header() {
                   Change Password
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => { logout(); navigate("/login"); }}
+                  onClick={() => { void signOut(navigate); }}
                   className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground focus:text-primary"
                 >
                   <LogOut size={14} />

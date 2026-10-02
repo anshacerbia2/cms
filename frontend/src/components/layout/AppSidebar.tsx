@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
 import { useAuthStore } from "@/store/authStore";
+import { signOut } from "@/lib/session";
 import { useNavigate, NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
@@ -127,7 +128,7 @@ function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIco
 export function AppSidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
 
   return (
     <aside
@@ -197,7 +198,7 @@ export function AppSidebar() {
         {/* Sign Out */}
         <div className="px-4 mt-4">
           <button
-            onClick={() => { logout(); navigate("/login"); }}
+            onClick={() => { void signOut(navigate); }}
             className="flex items-center rounded-xl w-full py-2 text-muted-foreground hover:text-primary hover:bg-muted/50 transition-all duration-300 group cursor-pointer"
           >
             <div className="w-12 flex-shrink-0 flex justify-center items-center">
