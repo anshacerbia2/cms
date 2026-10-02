@@ -12,7 +12,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 /** Matches the cost factor the auth seeder and login path already use. */
-const BCRYPT_ROUNDS = 10;
+export const BCRYPT_ROUNDS = 10;
 
 /** Every field of `users` except `password` and `remember_token`. */
 const SAFE_USER_SELECT = {

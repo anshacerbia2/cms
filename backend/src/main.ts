@@ -53,8 +53,24 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TransformInterceptor());
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
-  // CORS
-  app.enableCors();
+  // CORS: hanya frontend sendiri (pentest F-02). Token dikirim lewat header
+  // Bearer, bukan cookie, jadi `*` tidak langsung bisa dieksploitasi - tapi tak
+  // ada alasan origin lain boleh memanggil API ini. CORS_ORIGINS (dipisah koma)
+  // menimpa daftar bawaan; di luar production semua origin diizinkan supaya
+  // Vite dev server di localhost tetap jalan.
+  const corsOrigins = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  app.enableCors({
+    origin: corsOrigins.length
+      ? corsOrigins
+      : process.env.NODE_ENV === 'production'
+        ? ['https://pcmi-admin.online', 'https://www.pcmi-admin.online']
+        : true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+    credentials: false,
+  });
 
   const port = process.env.PORT || 3000;
   // Loopback only: nginx proxies from localhost, so nothing needs to reach this
