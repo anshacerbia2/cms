@@ -25,9 +25,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ...(typeof message === 'object' ? message : { message }),
     };
 
-    console.error('--- EXCEPTION DETECTED ---');
-    console.error(exception);
-    console.error('--------------------------');
+    // Stack trace hanya untuk error server. Respons 4xx (validasi, 401, 429
+    // login) sudah dicatat oleh LoggingInterceptor dan kejadian login oleh
+    // SecurityEvents; stack trace-nya hanya menenggelamkan log (pentest N-04).
+    if (status >= 500) {
+      console.error('--- EXCEPTION DETECTED ---');
+      console.error(exception);
+      console.error('--------------------------');
+    }
 
     response.status(status).json(errorResponse);
   }

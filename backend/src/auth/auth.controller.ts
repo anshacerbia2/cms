@@ -15,10 +15,11 @@ export class AuthController {
   @Post('login')
   async login(@Body() body: LoginDto, @Request() req: any) {
     // Dibatasi per email (percobaan gagal) dan per IP - lihat LoginRateLimiter.
-    this.loginLimiter.check(req.ip ?? 'unknown', body.email);
+    const ip = req.ip ?? 'unknown';
+    this.loginLimiter.check(ip, body.email);
     const user = await this.authService.validateUser(body.email, body.password);
     if (!user) {
-      this.loginLimiter.recordFailure(body.email);
+      this.loginLimiter.recordFailure(ip, body.email);
       throw new UnauthorizedException('Invalid credentials');
     }
     this.loginLimiter.recordSuccess(body.email);
