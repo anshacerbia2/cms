@@ -38,6 +38,10 @@ async function bootstrap() {
   // sebelum apa pun menyentuh database.
   app.use((_req: any, _res: any, next: () => void) => auditContext.run({ requestId: randomUUID() }, next));
 
+  // Parser JSON bawaan, ditambah tipe yang dipakai browser untuk laporan CSP
+  // (POST /api/csp-report, pentest F-03). Batas ukurannya tetap bawaan (100kb).
+  app.useBodyParser('json', { type: ['application/json', 'application/csp-report', 'application/reports+json'] });
+
   // Global Prefix
   app.setGlobalPrefix('api');
 
