@@ -4,6 +4,7 @@ import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { pageLimit } from '../common/utils/query-params';
 
 const ROLE_DETAIL_INCLUDE = {
   permissions: { include: { permission: true } },
@@ -45,7 +46,7 @@ export class RolesService {
 
   async findAll(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || '';
 

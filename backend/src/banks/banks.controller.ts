@@ -53,20 +53,20 @@ export class BanksController {
 
   @Get('internal-accounts/:id')
   @Permissions('internal-accounts.show')
-  findOneInternalAccount(@Param('id') id: string) {
-    return this.banksService.findOneInternalAccount(+id);
+  findOneInternalAccount(@Param('id', ParseIntPipe) id: number) {
+    return this.banksService.findOneInternalAccount(id);
   }
 
   @Patch('internal-accounts/:id')
   @Permissions('internal-accounts.update')
-  updateInternalAccount(@Param('id') id: string, @Body() dto: UpdateInternalAccountDto) {
-    return this.banksService.updateInternalAccount(+id, dto);
+  updateInternalAccount(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateInternalAccountDto) {
+    return this.banksService.updateInternalAccount(id, dto);
   }
 
   @Delete('internal-accounts/:id')
   @Permissions('internal-accounts.delete')
-  removeInternalAccount(@Param('id') id: string) {
-    return this.banksService.removeInternalAccount(+id);
+  removeInternalAccount(@Param('id', ParseIntPipe) id: number) {
+    return this.banksService.removeInternalAccount(id);
   }
 
   // --- FISCAL PERIODS ---

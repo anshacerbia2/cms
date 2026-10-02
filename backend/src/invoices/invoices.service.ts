@@ -5,6 +5,7 @@ import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { InvoiceQueryDto } from './dto/invoice-query.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { serializeDecimals } from '../common/utils/format.utils';
+import { pageLimit, idParam } from '../common/utils/query-params';
 
 @Injectable()
 export class InvoicesService {
@@ -145,14 +146,14 @@ export class InvoicesService {
 
   async findAll(query: InvoiceQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || '';
 
     const where: any = {};
-    if (query.customerId) where.customerId = BigInt(query.customerId);
-    if (query.projectId) where.projectId = BigInt(query.projectId);
-    if (query.proposalId) where.proposalId = BigInt(query.proposalId);
+    if (query.customerId) where.customerId = idParam(query.customerId, 'customerId')!;
+    if (query.projectId) where.projectId = idParam(query.projectId, 'projectId')!;
+    if (query.proposalId) where.proposalId = idParam(query.proposalId, 'proposalId')!;
     if (query.status) where.status = query.status;
     if (query.paymentStatus) where.paymentStatus = query.paymentStatus;
     if (query.unpaid === 'true') where.paymentStatus = { not: 'FULLY_PAID' };

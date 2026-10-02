@@ -5,6 +5,7 @@ import { UpdateProposalDto } from './dto/update-proposal.dto';
 import { ProposalQueryDto } from './dto/proposal-query.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { serializeDecimals } from '../common/utils/format.utils';
+import { pageLimit, idParam } from '../common/utils/query-params';
 
 /** Sales item row as built by the pricing engine, before it gets a proposal id. */
 interface BuiltItem {
@@ -75,12 +76,12 @@ export class ProposalsService {
 
   async findAll(query: ProposalQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || '';
 
     const where: any = { deletedAt: null };
-    if (query.projectId) where.projectId = BigInt(query.projectId);
+    if (query.projectId) where.projectId = idParam(query.projectId, 'projectId')!;
     if (query.status) where.status = query.status;
     if (query.pricingModel) where.pricingModel = query.pricingModel;
 

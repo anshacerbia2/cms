@@ -10,6 +10,7 @@ import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { pageLimit } from '../common/utils/query-params';
 
 /** Matches the cost factor the auth seeder and login path already use. */
 export const BCRYPT_ROUNDS = 10;
@@ -35,7 +36,7 @@ export class UsersService {
 
   async findAll(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || '';
 

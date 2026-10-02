@@ -8,6 +8,7 @@ import { parseIntSafe, parseDateSafe, parseDecimalSafe } from '../../common/util
 import {
   syncAccountAmounts, SALES_RECORD_COLUMNS, findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
 import { lockSalesYear } from '../common/ledger-lock';
+import { pageLimit } from '../../common/utils/query-params';
 
 /**
  * Urutan register Sales di mana pun barisnya dibaca berderet: layar, export
@@ -25,7 +26,7 @@ export class SalesService {
 
   async getSales(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
