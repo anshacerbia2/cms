@@ -7,6 +7,10 @@ const ACTION_STYLE: Record<string, string> = {
   INSERT: "bg-emerald-50 text-emerald-700 border-emerald-200",
   UPDATE: "bg-amber-50 text-amber-700 border-amber-200",
   DELETE: "bg-rose-50 text-rose-700 border-rose-200",
+  LOGIN: "bg-sky-50 text-sky-700 border-sky-200",
+  LOGOUT: "bg-slate-50 text-slate-600 border-slate-200",
+  LOGIN_FAILED: "bg-rose-50 text-rose-700 border-rose-200",
+  LOGIN_LOCKED: "bg-rose-600 text-white border-rose-600",
 };
 
 export function formatAuditTime(iso: string) {

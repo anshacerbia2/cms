@@ -6,7 +6,8 @@ export type AuditEntry = {
   occurredAt: string;
   table: string;
   rowId: string | null;
-  action: "INSERT" | "UPDATE" | "DELETE";
+  /** INSERT/UPDATE/DELETE untuk data; LOGIN/LOGOUT/LOGIN_FAILED/LOGIN_LOCKED untuk tabel `auth`. */
+  action: "INSERT" | "UPDATE" | "DELETE" | "LOGIN" | "LOGOUT" | "LOGIN_FAILED" | "LOGIN_LOCKED";
   source: "APP" | "SQL";
   user: { id: string | null; name: string | null; email: string } | null;
   dbUser: string;
