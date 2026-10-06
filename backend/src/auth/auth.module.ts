@@ -10,11 +10,13 @@ import { LoginRateLimiter } from './login-rate-limiter';
 import { SessionService } from './session.service';
 import { AuthEventsService } from './auth-events.service';
 import { SecurityEvents } from './security-events';
+import { NotificationChannelsModule } from '../notification-channels/notification-channels.module';
 
 @Module({
   imports: [
     UsersModule,
     PassportModule,
+    NotificationChannelsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

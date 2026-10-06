@@ -5,8 +5,9 @@
  * Runs the real AuthController, LoginRateLimiter, SecurityEvents, ValidationPipe
  * and exception filter; AuthService is stubbed so no database is needed. Checks
  * that every failure, lockout and throttle is logged as one JSON line with IP
- * and email, that lockouts raise an alert once, and that the Google Chat alert is
- * sent when it is configured.
+ * and email, that lockouts raise an alert once, and that the alert reaches every
+ * active notification channel (Google Chat and Telegram) without leaking their
+ * credentials.
  *
  * The cookie session and the activity-log sign-in records are stubbed; they are
  * not what this suite checks.
@@ -22,10 +23,15 @@ import { SessionService } from '../src/auth/session.service';
 import { AuthEventsService } from '../src/auth/auth-events.service';
 import { UsersService } from '../src/users/users.service';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { NotificationChannelsService } from '../src/notification-channels/notification-channels.service';
+import { encryptSecret } from '../src/notification-channels/notification-secret';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 
 const GOOD = { email: 'admin@pcmi.com', password: 'right-password' };
 const WEBHOOK_URL = 'https://chat.googleapis.com/v1/spaces/TEST/messages?key=test-key&token=test-token';
+const BOT_TOKEN = '123456789:AAtest-bot-token-0123456789abcdefghijk';
+const TELEGRAM_URL = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
 
 describe('Login security events (N-04)', () => {
   let app: INestApplication;
@@ -49,7 +55,12 @@ describe('Login security events (N-04)', () => {
     request(app.getHttpServer()).post('/auth/login').set('X-Forwarded-For', ip).send({ email, password });
 
   beforeEach(async () => {
-    process.env.SECURITY_ALERT_GOOGLE_CHAT_WEBHOOK_URL = WEBHOOK_URL;
+    process.env.NOTIFICATION_SECRET_KEY = Buffer.alloc(32, 7).toString('base64');
+    // Dua channel aktif, tersimpan terenkripsi seperti di database.
+    const channels = [
+      { id: 1n, type: 'GOOGLE_CHAT', name: 'Ops chat', isActive: true, secret: encryptSecret({ webhookUrl: WEBHOOK_URL }) },
+      { id: 2n, type: 'TELEGRAM', name: 'Ops telegram', isActive: true, secret: encryptSecret({ botToken: BOT_TOKEN, chatId: '-1001234567890' }) },
+    ];
     fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200 });
     global.fetch = fetchMock as any;
     warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
@@ -73,6 +84,8 @@ describe('Login security events (N-04)', () => {
         { provide: SessionService, useValue: { issue: () => undefined, readToken: () => null, clear: () => undefined } },
         { provide: AuthEventsService, useValue: { record: async () => undefined } },
         { provide: JwtService, useValue: { verify: () => ({}) } },
+        NotificationChannelsService,
+        { provide: PrismaService, useValue: { notificationChannel: { findMany: async () => channels } } },
       ],
     }).compile();
     app = moduleRef.createNestApplication();
@@ -85,7 +98,7 @@ describe('Login security events (N-04)', () => {
   afterEach(async () => {
     await app.close();
     jest.restoreAllMocks();
-    delete process.env.SECURITY_ALERT_GOOGLE_CHAT_WEBHOOK_URL;
+    delete process.env.NOTIFICATION_SECRET_KEY;
   });
 
   it('logs a failed login with IP and email, without alerting', async () => {
@@ -111,10 +124,14 @@ describe('Login security events (N-04)', () => {
     );
 
     expect(alerts()).toEqual([expect.stringContaining('victim@example.com locked after 10 failed attempts')]);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe(WEBHOOK_URL);
-    expect(JSON.parse(init.body)).toEqual({ text: expect.stringContaining('victim@example.com') });
+    await new Promise((resolve) => setImmediate(resolve));
+    // Satu pesan ke setiap channel aktif.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const byUrl = Object.fromEntries(fetchMock.mock.calls.map(([url, init]) => [url, JSON.parse(init.body)]));
+    expect(byUrl[WEBHOOK_URL]).toEqual({ text: expect.stringContaining('victim@example.com') });
+    expect(byUrl[TELEGRAM_URL]).toEqual(
+      expect.objectContaining({ chat_id: '-1001234567890', text: expect.stringContaining('victim@example.com') }),
+    );
   });
 
   it('alerts once when an IP exceeds the per-minute limit', async () => {
@@ -124,7 +141,8 @@ describe('Login security events (N-04)', () => {
 
     expect(events().filter((e) => e.event === 'login_ip_throttled')).toHaveLength(2);
     expect(alerts()).toEqual([expect.stringContaining('IP 198.51.100.9 exceeded the login attempt limit')]);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('still answers the login when the alert channel is down', async () => {
@@ -134,8 +152,11 @@ describe('Login security events (N-04)', () => {
     expect(alerts()).toHaveLength(1);
     await new Promise((resolve) => setImmediate(resolve));
     const logged = error.mock.calls.map(([line]) => String(line));
-    expect(logged).toContain('Google Chat alert failed: network down');
+    expect(logged).toContain('Alert to "Ops chat" (GOOGLE_CHAT) failed: Could not reach the service.');
+    expect(logged).toContain('Alert to "Ops telegram" (TELEGRAM) failed: Could not reach the service.');
+    // Kredensial tidak pernah masuk log, juga saat gagal.
     expect(logged.join('\n')).not.toContain('test-token');
+    expect(logged.join('\n')).not.toContain(BOT_TOKEN);
   });
 
   it('a correct login is not logged as a security event', async () => {
