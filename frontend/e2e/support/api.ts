@@ -11,8 +11,29 @@ import { ACCOUNTS, API_URL, uniq, type RoleName } from "./env";
 export class Api {
   private constructor(
     private readonly ctx: APIRequestContext,
-    readonly token: string,
+    /** The session cookie the API set at sign-in; the context sends it by itself. */
+    readonly session: string,
   ) {}
+
+  /**
+   * A fresh request context the way the app's own client calls the API:
+   * cookies kept between calls, and the X-Requested-With header the API
+   * demands on anything that changes data.
+   */
+  static newContext() {
+    return request.newContext({ extraHTTPHeaders: { "X-Requested-With": "XMLHttpRequest" } });
+  }
+
+  /** Headers that carry this session from a different request context. */
+  get sessionHeaders() {
+    return { Cookie: `cms_session=${this.session}`, "X-Requested-With": "XMLHttpRequest" };
+  }
+
+  private static async sessionOf(ctx: APIRequestContext) {
+    const cookie = (await ctx.storageState()).cookies.find((c) => c.name === "cms_session");
+    if (!cookie) throw new Error("Sign-in succeeded but the API set no cms_session cookie.");
+    return cookie.value;
+  }
 
   /**
    * Refuses to run against anything but a local API.
@@ -41,7 +62,7 @@ export class Api {
     // semantics, so a leading slash replaces the whole path of the base —
     // "/auth/login" against "http://host/api" resolves to "http://host/auth/login"
     // and the /api prefix silently disappears. Every request here is absolute.
-    const ctx = await request.newContext();
+    const ctx = await Api.newContext();
     const res = await ctx.post(`${API_URL}/auth/login`, { data: ACCOUNTS[role] });
 
     if (!res.ok()) {
@@ -51,8 +72,7 @@ export class Api {
       );
     }
 
-    const body = await res.json();
-    return new Api(ctx, body.data.access_token);
+    return new Api(ctx, await Api.sessionOf(ctx));
   }
 
   /**
@@ -62,7 +82,7 @@ export class Api {
    */
   static async signInAs(email: string, password: string) {
     Api.assertLocal();
-    const ctx = await request.newContext();
+    const ctx = await Api.newContext();
     const res = await ctx.post(`${API_URL}/auth/login`, { data: { email, password } });
 
     if (!res.ok()) {
@@ -70,15 +90,16 @@ export class Api {
     }
 
     const body = await res.json();
-    return { api: new Api(ctx, body.data.access_token), user: body.data.user };
+    return { api: new Api(ctx, await Api.sessionOf(ctx)), user: body.data.user };
   }
 
   async dispose() {
     await this.ctx.dispose();
   }
 
+  /** The context already carries the cookie and X-Requested-With. */
   private get headers() {
-    return { Authorization: `Bearer ${this.token}` };
+    return {};
   }
 
   /** Unwraps the API's `{ statusCode, data }` envelope and throws on failure. */

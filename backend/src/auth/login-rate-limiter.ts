@@ -45,8 +45,10 @@ export class LoginRateLimiter {
     if (byIp.count > MAX_ATTEMPTS_PER_IP) throw this.tooMany(byIp.resetAt - now);
   }
 
-  recordFailure(email: string): void {
-    this.bump(this.failures, this.emailKey(email), EMAIL_WINDOW_MS, Date.now());
+  /** Mencatat satu kegagalan. true kalau kegagalan inilah yang mengunci email tersebut. */
+  recordFailure(email: string): boolean {
+    const c = this.bump(this.failures, this.emailKey(email), EMAIL_WINDOW_MS, Date.now());
+    return c.count === MAX_FAILURES_PER_EMAIL;
   }
 
   recordSuccess(email: string): void {
