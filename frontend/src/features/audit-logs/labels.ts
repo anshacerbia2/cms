@@ -23,6 +23,7 @@ export const TABLE_LABELS: Record<string, string> = {
   banks: "Bank",
   // Bukan tabel: login, logout, dan login yang gagal (lihat AuthEventsService di backend).
   auth: "Sign-in",
+  notification_channels: "Notification Channel",
 };
 
 /** Modul yang bisa dipilih di filter halaman Activity Log (tabel rincian ikut otomatis). */
@@ -41,6 +42,7 @@ export const FILTERABLE_TABLES = [
   "internal_accounts",
   "banks",
   "auth",
+  "notification_channels",
 ];
 
 const COMMON: Record<string, string> = {
@@ -52,6 +54,8 @@ const COMMON: Record<string, string> = {
 
 export const COLUMN_LABELS: Record<string, Record<string, string>> = {
   auth: { email: "Email", ip: "IP address", user_agent: "Browser" },
+  // `secret` selalu tercatat sebagai [redacted] (trigger audit_row_change_redacted).
+  notification_channels: { name: "Name", type: "Type", hint: "Destination", is_active: "Active", secret: "Credentials" },
   account_receivables: {
     colA: "Col A", colB: "Type", colC: "Year", colD: "Client", colE: "Description",
     colF: "Beginning Balance", colG: "EOY USD", colH: "USD Rate", colI: "Col I",
