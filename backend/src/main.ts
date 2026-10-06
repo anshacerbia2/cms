@@ -32,6 +32,8 @@ async function bootstrap() {
   // dari loopback, supaya req.ip adalah IP pengguna dan bukan 127.0.0.1 (dipakai
   // pembatas login per IP). Tanpa header itu req.ip tetap 127.0.0.1.
   app.set('trust proxy', 'loopback');
+  // Jangan umumkan framework-nya (pentest F-08).
+  app.disable('x-powered-by');
 
   // Konteks activity log untuk setiap request: id request dulu, user-nya
   // menyusul lewat AuditUserInterceptor sesudah guard JWT. Harus dipasang

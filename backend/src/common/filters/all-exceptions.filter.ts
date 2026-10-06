@@ -1,5 +1,51 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
+
+/**
+ * Kode error Prisma yang berarti input dari client salah, bukan server rusak.
+ * https://www.prisma.io/docs/orm/reference/error-reference
+ */
+const PRISMA_CLIENT_ERRORS: Record<string, { status: number; message: string }> = {
+  P2025: { status: HttpStatus.NOT_FOUND, message: 'Record not found.' },
+  P2001: { status: HttpStatus.NOT_FOUND, message: 'Record not found.' },
+  P2002: { status: HttpStatus.CONFLICT, message: 'A record with this value already exists.' },
+  P2003: { status: HttpStatus.CONFLICT, message: 'This record is linked to other data.' },
+  P2014: { status: HttpStatus.CONFLICT, message: 'This record is linked to other data.' },
+  P2000: { status: HttpStatus.BAD_REQUEST, message: 'A value is too long.' },
+  P2005: { status: HttpStatus.BAD_REQUEST, message: 'Invalid input.' },
+  P2006: { status: HttpStatus.BAD_REQUEST, message: 'Invalid input.' },
+  P2007: { status: HttpStatus.BAD_REQUEST, message: 'Invalid input.' },
+  P2009: { status: HttpStatus.BAD_REQUEST, message: 'Invalid input.' },
+  P2011: { status: HttpStatus.BAD_REQUEST, message: 'A required value is missing.' },
+  P2012: { status: HttpStatus.BAD_REQUEST, message: 'A required value is missing.' },
+  P2019: { status: HttpStatus.BAD_REQUEST, message: 'Invalid input.' },
+  P2020: { status: HttpStatus.BAD_REQUEST, message: 'A value is out of range.' },
+  P2023: { status: HttpStatus.BAD_REQUEST, message: 'Invalid input.' },
+};
+
+/**
+ * Error yang lahir dari input client yang salah bentuk (pentest, lampiran
+ * A10): id bukan angka yang sampai ke BigInt(), tanggal atau angka yang tidak
+ * valid sampai ke Prisma. Dulu semuanya jadi 500. Pesannya sengaja umum -
+ * detail Prisma menyebut nama tabel dan kolom.
+ */
+function clientError(exception: unknown): { status: number; message: string } | null {
+  if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+    return PRISMA_CLIENT_ERRORS[exception.code] ?? null;
+  }
+  if (exception instanceof Prisma.PrismaClientValidationError) {
+    return { status: HttpStatus.BAD_REQUEST, message: 'Invalid input.' };
+  }
+  // BigInt('abc') -> SyntaxError, BigInt(NaN) -> RangeError.
+  if ((exception instanceof SyntaxError || exception instanceof RangeError) && /BigInt/.test(exception.message)) {
+    return { status: HttpStatus.BAD_REQUEST, message: 'Invalid id.' };
+  }
+  if (exception instanceof Error && /\[DecimalError\]/.test(exception.message)) {
+    return { status: HttpStatus.BAD_REQUEST, message: 'Invalid number.' };
+  }
+  return null;
+}
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -8,15 +54,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
+    const mapped = exception instanceof HttpException ? null : clientError(exception);
+
     const status =
       exception instanceof HttpException
         ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+        : (mapped?.status ?? HttpStatus.INTERNAL_SERVER_ERROR);
 
     const message =
       exception instanceof HttpException
         ? exception.getResponse()
-        : { message: 'Internal server error' };
+        : { message: mapped?.message ?? 'Internal server error' };
 
     const errorResponse = {
       statusCode: status,
@@ -25,9 +73,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ...(typeof message === 'object' ? message : { message }),
     };
 
-    console.error('--- EXCEPTION DETECTED ---');
-    console.error(exception);
-    console.error('--------------------------');
+    // Stack lengkap hanya untuk error server. Kesalahan client (password salah,
+    // input tidak valid, sesi habis) cukup satu baris - dulu masing-masing
+    // menulis stack trace utuh dan log error pm2 ikut membengkak.
+    if (status >= 500) {
+      console.error('--- EXCEPTION DETECTED ---');
+      console.error(exception);
+      console.error('--------------------------');
+    } else {
+      const reason =
+        exception instanceof Error
+          ? `${exception.name}: ${exception.message.trim().split('\n').pop()?.trim()}`
+          : String(exception);
+      console.warn(`[${status}] ${request.method} ${request.url} - ${reason}`);
+    }
 
     response.status(status).json(errorResponse);
   }
