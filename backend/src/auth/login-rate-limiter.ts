@@ -1,4 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { SecurityEvents } from './security-events';
 
 /** Percobaan gagal per email sebelum email itu dikunci sementara. */
 const MAX_FAILURES_PER_EMAIL = 10;
@@ -25,28 +26,49 @@ type Counter = { count: number; resetAt: number };
  *
  * Disimpan di memori: backend berjalan sebagai satu proses (pm2 fork). Restart
  * menghapus hitungannya, yang tidak apa-apa untuk pembatas sependek ini.
+ *
+ * Setiap kegagalan, kunci, dan pembatasan dicatat lewat SecurityEvents dengan
+ * IP dan email-nya; kunci dan pembatasan juga dikirim sebagai alert (N-04).
  */
 @Injectable()
 export class LoginRateLimiter {
   private readonly failures = new Map<string, Counter>();
   private readonly attempts = new Map<string, Counter>();
 
+  constructor(private readonly events: SecurityEvents) {}
+
   /** Melempar 429 kalau IP atau email ini sedang dibatasi; kalau tidak, mencatat satu percobaan dari IP ini. */
   check(ip: string, email: string): void {
     const now = Date.now();
     this.prune(now);
 
-    const locked = this.failures.get(this.emailKey(email));
+    const key = this.emailKey(email);
+    const locked = this.failures.get(key);
     if (locked && locked.count >= MAX_FAILURES_PER_EMAIL && locked.resetAt > now) {
+      this.events.record('login_blocked', { ip, email: key, lockedUntil: new Date(locked.resetAt).toISOString() });
       throw this.tooMany(locked.resetAt - now);
     }
 
     const byIp = this.bump(this.attempts, ip, IP_WINDOW_MS, now);
-    if (byIp.count > MAX_ATTEMPTS_PER_IP) throw this.tooMany(byIp.resetAt - now);
+    if (byIp.count > MAX_ATTEMPTS_PER_IP) {
+      this.events.record('login_ip_throttled', { ip, email: key, attempts: byIp.count });
+      throw this.tooMany(byIp.resetAt - now);
+    }
   }
 
-  recordFailure(email: string): void {
-    this.bump(this.failures, this.emailKey(email), EMAIL_WINDOW_MS, Date.now());
+  /** Mencatat satu kegagalan. true kalau kegagalan inilah yang mengunci email tersebut. */
+  recordFailure(ip: string, email: string): boolean {
+    const key = this.emailKey(email);
+    const failed = this.bump(this.failures, key, EMAIL_WINDOW_MS, Date.now());
+    this.events.record('login_failed', { ip, email: key, failures: failed.count });
+    if (failed.count !== MAX_FAILURES_PER_EMAIL) return false;
+    this.events.record('login_locked', {
+      ip,
+      email: key,
+      failures: failed.count,
+      lockedUntil: new Date(failed.resetAt).toISOString(),
+    });
+    return true;
   }
 
   recordSuccess(email: string): void {

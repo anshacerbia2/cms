@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { formatDecimal } from '../../common/utils/format.utils';
 import { parseIntSafe, parseDateSafe, parseDecimalSafe } from '../../common/utils/parse.utils';
+import { pageLimit } from '../../common/utils/query-params';
 
 @Injectable()
 export class DepreciationService {
@@ -9,7 +10,7 @@ export class DepreciationService {
 
   async getPaginatedDepreciations(query: any) {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || "";
 

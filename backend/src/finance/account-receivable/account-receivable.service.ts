@@ -6,6 +6,7 @@ import { formatDecimal } from '../../common/utils/format.utils';
 import {
   syncAccountAmounts, ACCOUNT_RECEIVABLE_COLUMNS, findAccountColumns, serializeAmounts, type AccountColumn } from '../common/account-columns';
 import { parseIntSafe, parseDecimalSafe } from '../../common/utils/parse.utils';
+import { pageLimit } from '../../common/utils/query-params';
 
 @Injectable()
 export class AccountReceivableService {
@@ -13,7 +14,7 @@ export class AccountReceivableService {
 
   async getAR(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([

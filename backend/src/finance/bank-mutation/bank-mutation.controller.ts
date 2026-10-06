@@ -9,6 +9,7 @@ import { generatePdfBuffer } from '../../common/utils/pdf.util';
 import { pickExportRows } from '../../common/utils/export-rows.util';
 import type { Response } from 'express';
 import { Res } from '@nestjs/common';
+import { NumericIdPipe, RequiredNumericIdPipe } from '../../common/pipes/numeric-id.pipe';
 
 const BANK_MUTATION_COLUMN_MAPPING = {
   colA: 'Date',
@@ -37,7 +38,7 @@ export class BankMutationController {
   @Get('transactions/all')
   @Permissions('bank-mutation.index')
   async getAllTransactions(
-    @Query('accountId') accountId?: string,
+    @Query('accountId', NumericIdPipe) accountId?: string,
     @Query('year') year?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string
@@ -48,7 +49,7 @@ export class BankMutationController {
   @Get('export/excel')
   @Permissions('bank-mutation.index')
   async exportExcel(
-    @Query('accountId') accountId: string,
+    @Query('accountId', NumericIdPipe) accountId: string,
     @Query('year') year: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
@@ -74,7 +75,7 @@ export class BankMutationController {
   @Post('export/excel')
   @Permissions('bank-mutation.index')
   async exportExcelFiltered(
-    @Query('accountId') accountId: string,
+    @Query('accountId', NumericIdPipe) accountId: string,
     @Query('year') year: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
@@ -87,7 +88,7 @@ export class BankMutationController {
   @Get('export/pdf')
   @Permissions('bank-mutation.index')
   async exportPdf(
-    @Query('accountId') accountId: string,
+    @Query('accountId', NumericIdPipe) accountId: string,
     @Query('year') year: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
@@ -113,7 +114,7 @@ export class BankMutationController {
   @Post('export/pdf')
   @Permissions('bank-mutation.index')
   async exportPdfFiltered(
-    @Query('accountId') accountId: string,
+    @Query('accountId', NumericIdPipe) accountId: string,
     @Query('year') year: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
@@ -153,7 +154,7 @@ export class BankMutationController {
   @Get('anchor-balance/:accountId/:year')
   @Permissions('finance.anchor')
   async getAnchorBalance(
-    @Param('accountId') accountId: string,
+    @Param('accountId', NumericIdPipe) accountId: string,
     @Param('year', ParseIntPipe) year: number
   ) {
     return this.bankMutationService.getLatestAnchor(accountId, year);
@@ -162,7 +163,7 @@ export class BankMutationController {
   @Get('fiscal-periods')
   @Permissions('bank-mutation.index')
   async getFiscalPeriods(
-    @Query('accountId') accountId: string,
+    @Query('accountId', RequiredNumericIdPipe) accountId: string,
     @Query('year') year?: string
   ) {
     return this.bankMutationService.getFiscalPeriods(accountId, year ? Number(year) : undefined);

@@ -11,7 +11,7 @@ import {
   ParseIntPipe 
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
-import { CreateProductDto, CreateProductCategoryDto, UpdateProductCategoryDto } from './dto/create-product.dto';
+import { CreateProductDto, CreateProductCategoryDto, UpdateProductCategoryDto, UpdateProductDto } from './dto/create-product.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
@@ -73,19 +73,19 @@ export class ProductsController {
 
   @Get(':id')
   @Permissions('products.show')
-  findOne(@Param('id') id: string) {
-    return this.productsService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.productsService.findOne(id);
   }
 
   @Patch(':id')
   @Permissions('products.update')
-  update(@Param('id') id: string, @Body() dto: any) {
-    return this.productsService.update(+id, dto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductDto) {
+    return this.productsService.update(id, dto);
   }
 
   @Delete(':id')
   @Permissions('products.delete')
-  remove(@Param('id') id: string) {
-    return this.productsService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.productsService.remove(id);
   }
 }

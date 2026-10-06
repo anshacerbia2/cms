@@ -64,11 +64,12 @@ const signIn = (role: RoleName) =>
       );
     }
 
-    // The app persists the token under this key; waiting on the URL alone would
-    // save state before the write lands.
+    // The session is an HttpOnly cookie, saved with the storage state below; the
+    // app persists the user profile under this key. Waiting on the URL alone
+    // would save state before the write lands.
     await expect
-      .poll(() => page.evaluate(() => localStorage.getItem("token")), { timeout: 10_000 })
-      .not.toBeNull();
+      .poll(() => page.evaluate(() => localStorage.getItem("auth-storage")), { timeout: 10_000 })
+      .toContain('"user":{');
 
     await page.context().storageState({ path: `e2e/.auth/${role}.json` });
   });

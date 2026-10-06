@@ -32,11 +32,33 @@ async function bootstrap() {
   // dari loopback, supaya req.ip adalah IP pengguna dan bukan 127.0.0.1 (dipakai
   // pembatas login per IP). Tanpa header itu req.ip tetap 127.0.0.1.
   app.set('trust proxy', 'loopback');
+  // Jangan umumkan framework-nya (pentest F-08).
+  app.disable('x-powered-by');
 
   // Konteks activity log untuk setiap request: id request dulu, user-nya
   // menyusul lewat AuditUserInterceptor sesudah guard JWT. Harus dipasang
   // sebelum apa pun menyentuh database.
   app.use((_req: any, _res: any, next: () => void) => auditContext.run({ requestId: randomUUID() }, next));
+
+  // CSRF: sesi ada di cookie (SameSite=Strict), dan setiap request yang
+  // mengubah data wajib membawa header X-Requested-With. Form atau gambar dari
+  // situs lain tidak bisa memasang header itu, dan fetch lintas origin yang
+  // memasangnya tertahan preflight CORS.
+  // Pengecualiannya hanya laporan CSP dari browser, yang tidak membawa header
+  // itu dan tidak mengubah apa pun.
+  app.use((req: any, res: any, next: () => void) => {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.headers['x-requested-with']) return next();
+    if (req.method === 'POST' && req.path === '/api/csp-report') return next();
+    res.status(403).json({ statusCode: 403, message: 'Request rejected: missing X-Requested-With header.' });
+  });
+
+  // Parser JSON-nya ditulis ulang supaya juga membaca laporan CSP, yang datang
+  // dengan content-type sendiri. Ini MENGGANTI parser bawaan, jadi
+  // application/json dan batas bawaan 100kb harus tetap disebut.
+  app.useBodyParser('json', {
+    type: ['application/json', 'application/csp-report', 'application/reports+json'],
+    limit: '100kb',
+  });
 
   // Global Prefix
   app.setGlobalPrefix('api');
@@ -59,11 +81,11 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TransformInterceptor());
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
-  // CORS: hanya frontend sendiri (pentest F-02). Token dikirim lewat header
-  // Bearer, bukan cookie, jadi `*` tidak langsung bisa dieksploitasi - tapi tak
-  // ada alasan origin lain boleh memanggil API ini. CORS_ORIGINS (dipisah koma)
-  // menimpa daftar bawaan; di luar production semua origin diizinkan supaya
-  // Vite dev server di localhost tetap jalan.
+  // CORS: hanya frontend sendiri (pentest F-02). Sesi dikirim sebagai cookie,
+  // jadi credentials diizinkan - dan karena itu origin-nya wajib daftar tetap,
+  // tidak boleh `*`. CORS_ORIGINS (dipisah koma) menimpa daftar bawaan; di luar
+  // production origin pemanggil dipantulkan supaya Vite dev server di
+  // localhost tetap jalan.
   const corsOrigins = (process.env.CORS_ORIGINS ?? '')
     .split(',')
     .map((o) => o.trim())
@@ -75,7 +97,7 @@ async function bootstrap() {
         ? ['https://pcmi-admin.online', 'https://www.pcmi-admin.online']
         : true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
-    credentials: false,
+    credentials: true,
   });
 
   const port = process.env.PORT || 3000;

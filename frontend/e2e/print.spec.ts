@@ -8,9 +8,8 @@ import { openPage, rowAction } from "./support/ui";
  * Everything else about printing is asserted against the endpoint, which says
  * nothing about whether the menu item is wired to it. The hook opens a blank tab
  * synchronously on the click — a popup blocker rejects a window opened later
- * from an async callback — then fetches the HTML and writes it in, because the
- * route is behind the JWT guard and window.open would send no Authorization
- * header. So the thing to catch is the popup, and what lands in it.
+ * from an async callback — then fetches the HTML through the API client and
+ * writes it in. So the thing to catch is the popup, and what lands in it.
  */
 
 test("PRT-02 printing an invoice opens a tab carrying the rendered document", async ({ page }) => {

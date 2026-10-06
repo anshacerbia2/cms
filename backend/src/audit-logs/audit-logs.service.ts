@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { dateParam, idParam } from '../common/utils/query-params';
 
 /**
  * Rincian per rekening disimpan di tabel anaknya sendiri. Riwayat sebuah baris
@@ -40,19 +41,19 @@ export class AuditLogsService {
       const tables = query.table.split(',').map((t) => t.trim()).filter(Boolean);
       if (tables.length) where.push(Prisma.sql`v.show_table IN (${Prisma.join(tables)})`);
     }
-    if (query.rowId) where.push(Prisma.sql`v.show_row_id = ${BigInt(query.rowId)}`);
-    if (query.userId) where.push(Prisma.sql`v.user_id = ${BigInt(query.userId)}`);
+    if (query.rowId) where.push(Prisma.sql`v.show_row_id = ${idParam(query.rowId, 'rowId')!}`);
+    if (query.userId) where.push(Prisma.sql`v.user_id = ${idParam(query.userId, 'userId')!}`);
     if (query.action) {
       const actions = query.action.split(',').map((a) => a.trim()).filter(Boolean);
       if (actions.length) where.push(Prisma.sql`v.show_action IN (${Prisma.join(actions)})`);
     }
     if (query.requestId) where.push(Prisma.sql`v.request_id = ${query.requestId}`);
-    if (query.from) where.push(Prisma.sql`v.occurred_at >= ${new Date(query.from)}`);
+    if (query.from) where.push(Prisma.sql`v.occurred_at >= ${dateParam(query.from, 'from')!}`);
     if (query.to) {
       // Halaman mengirim batas hari menurut jam lokal user sebagai waktu
       // lengkap (eksklusif). Kalau yang datang tanggal polos, seluruh hari
       // itu (UTC) disertakan.
-      const end = new Date(query.to);
+      const end = dateParam(query.to, 'to')!;
       if (/^\d{4}-\d{2}-\d{2}$/.test(query.to)) end.setUTCDate(end.getUTCDate() + 1);
       where.push(Prisma.sql`v.occurred_at < ${end}`);
     }

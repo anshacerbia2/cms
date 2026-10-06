@@ -21,6 +21,8 @@ export const TABLE_LABELS: Record<string, string> = {
   sub_ledgers: "Sub Ledger 1",
   internal_accounts: "Account",
   banks: "Bank",
+  // Bukan tabel: login, logout, dan login yang gagal (lihat AuthEventsService di backend).
+  auth: "Sign-in",
 };
 
 /** Modul yang bisa dipilih di filter halaman Activity Log (tabel rincian ikut otomatis). */
@@ -38,6 +40,7 @@ export const FILTERABLE_TABLES = [
   "sub_ledgers",
   "internal_accounts",
   "banks",
+  "auth",
 ];
 
 const COMMON: Record<string, string> = {
@@ -48,6 +51,7 @@ const COMMON: Record<string, string> = {
 };
 
 export const COLUMN_LABELS: Record<string, Record<string, string>> = {
+  auth: { email: "Email", ip: "IP address", user_agent: "Browser" },
   account_receivables: {
     colA: "Col A", colB: "Type", colC: "Year", colD: "Client", colE: "Description",
     colF: "Beginning Balance", colG: "EOY USD", colH: "USD Rate", colI: "Col I",
@@ -155,4 +159,8 @@ export const ACTION_LABELS: Record<string, string> = {
   INSERT: "Created",
   UPDATE: "Edited",
   DELETE: "Deleted",
+  LOGIN: "Signed in",
+  LOGOUT: "Signed out",
+  LOGIN_FAILED: "Failed sign-in",
+  LOGIN_LOCKED: "Sign-in locked",
 };
