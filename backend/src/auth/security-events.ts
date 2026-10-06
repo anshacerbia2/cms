@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { NotificationChannelsService } from '../notification-channels/notification-channels.service';
 
 export type SecurityEvent =
   /** Satu login gagal (password salah atau email tidak terdaftar). */
@@ -14,7 +15,6 @@ export type SecurityEvent =
 const ALERT_EVENTS: SecurityEvent[] = ['login_locked', 'login_ip_throttled'];
 /** Alert yang sama (event + email/IP) tidak dikirim ulang dalam jendela ini. */
 const ALERT_COOLDOWN_MS = 15 * 60_000;
-const ALERT_TIMEOUT_MS = 5_000;
 
 /**
  * Catatan dan alert untuk kejadian login (pentest N-04).
@@ -22,8 +22,8 @@ const ALERT_TIMEOUT_MS = 5_000;
  * Setiap kejadian ditulis sebagai satu baris JSON di log pm2, lengkap dengan IP
  * dan email, supaya bisa dicari (`pm2 logs | grep '"event":"login_'`).
  * Kunci email dan pembatasan IP juga dikirim sebagai alert:
- *   - ke ruang Google Chat kalau SECURITY_ALERT_GOOGLE_CHAT_WEBHOOK_URL diisi
- *     (URL webhook ruang tersebut; berisi key dan token, jangan dicatat di log);
+ *   - ke setiap channel aktif di Settings > Notification Channels (Telegram,
+ *     Google Chat), lewat NotificationChannelsService;
  *   - selalu juga sebagai baris log berawalan "ALERT", untuk log watcher.
  * Pengiriman alert tidak pernah ditunggu dan tidak pernah menggagalkan login.
  */
@@ -31,6 +31,8 @@ const ALERT_TIMEOUT_MS = 5_000;
 export class SecurityEvents {
   private readonly logger = new Logger('Security');
   private readonly lastAlert = new Map<string, number>();
+
+  constructor(private readonly notifications: NotificationChannelsService) {}
 
   record(event: SecurityEvent, fields: { ip: string; email: string; [key: string]: unknown }): void {
     const entry = { event, at: new Date().toISOString(), ...fields };
@@ -52,22 +54,6 @@ export class SecurityEvents {
         ? `PCMI Admin: login for ${entry.email} locked after ${entry.failures} failed attempts (last from IP ${entry.ip}).`
         : `PCMI Admin: IP ${entry.ip} exceeded the login attempt limit (last email tried: ${entry.email}).`;
     this.logger.error(`ALERT ${text}`);
-    void this.sendGoogleChat(text);
-  }
-
-  private async sendGoogleChat(text: string) {
-    const webhookUrl = process.env.SECURITY_ALERT_GOOGLE_CHAT_WEBHOOK_URL;
-    if (!webhookUrl) return;
-    try {
-      const res = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
-        body: JSON.stringify({ text }),
-        signal: AbortSignal.timeout(ALERT_TIMEOUT_MS),
-      });
-      if (!res.ok) this.logger.error(`Google Chat alert failed: HTTP ${res.status}`);
-    } catch (err: any) {
-      this.logger.error(`Google Chat alert failed: ${err?.message ?? err}`);
-    }
+    void this.notifications.broadcast(text);
   }
 }

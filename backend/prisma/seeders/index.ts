@@ -9,6 +9,7 @@ import { seedPdfTemplates } from './pdf-templates.seeder';
 import { seedMasterDataPermissions } from './master-data.seeder';
 import { seedLedgers } from './ledgers.seeder';
 import { seedAuditLogPermissions } from './audit-logs.seeder';
+import { seedNotificationChannelPermissions } from './notification-channels.seeder';
 import { enforceViewerScope } from './utils/access-control';
 import { seedCustomers } from './customers.seeder';
 import { seedSuppliers } from './suppliers.seeder';
@@ -39,6 +40,7 @@ async function main() {
     // Master Ledger, penghubungan transaksi, dan permission + menu-nya.
     await seedLedgers(prisma);
     await seedAuditLogPermissions(prisma);
+    await seedNotificationChannelPermissions(prisma);
     await enforceViewerScope(prisma);
     
     // Independent entities

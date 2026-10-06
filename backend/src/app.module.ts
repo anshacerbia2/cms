@@ -28,6 +28,7 @@ import { BoqsModule } from './boqs/boqs.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { VouchersModule } from './vouchers/vouchers.module';
 import { CspReportModule } from './csp-report/csp-report.module';
+import { NotificationChannelsModule } from './notification-channels/notification-channels.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { CspReportModule } from './csp-report/csp-report.module';
     InvoicesModule,
     VouchersModule,
     CspReportModule,
+    NotificationChannelsModule,
   ],
   controllers: [],
   providers: [],

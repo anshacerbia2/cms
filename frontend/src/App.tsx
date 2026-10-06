@@ -29,6 +29,7 @@ import PermissionsPage from './features/access-control/pages/PermissionsPage';
 import MenusPage from './features/access-control/pages/MenusPage';
 import PdfTemplatesPage from './features/print-templates/pages/PdfTemplatesPage';
 import ActivityLogPage from './features/audit-logs/pages/ActivityLogPage';
+import NotificationChannelsPage from './features/notification-channels/pages/NotificationChannelsPage';
 
 const queryClient = new QueryClient();
 
@@ -77,6 +78,7 @@ function App() {
             <Route path="menus" element={<MenusPage />} />
             <Route path="pdf-templates" element={<PdfTemplatesPage />} />
             <Route path="audit-logs" element={<ActivityLogPage />} />
+            <Route path="notification-channels" element={<NotificationChannelsPage />} />
             <Route path="payment-vouchers" element={<PaymentVouchersPage />} />
           </Route>
         </Routes>
