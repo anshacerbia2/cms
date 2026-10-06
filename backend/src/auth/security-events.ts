@@ -22,8 +22,8 @@ const ALERT_TIMEOUT_MS = 5_000;
  * Setiap kejadian ditulis sebagai satu baris JSON di log pm2, lengkap dengan IP
  * dan email, supaya bisa dicari (`pm2 logs | grep '"event":"login_'`).
  * Kunci email dan pembatasan IP juga dikirim sebagai alert:
- *   - ke Telegram kalau SECURITY_ALERT_TELEGRAM_BOT_TOKEN dan
- *     SECURITY_ALERT_TELEGRAM_CHAT_ID diisi;
+ *   - ke ruang Google Chat kalau SECURITY_ALERT_GOOGLE_CHAT_WEBHOOK_URL diisi
+ *     (URL webhook ruang tersebut; berisi key dan token, jangan dicatat di log);
  *   - selalu juga sebagai baris log berawalan "ALERT", untuk log watcher.
  * Pengiriman alert tidak pernah ditunggu dan tidak pernah menggagalkan login.
  */
@@ -52,23 +52,22 @@ export class SecurityEvents {
         ? `PCMI Admin: login for ${entry.email} locked after ${entry.failures} failed attempts (last from IP ${entry.ip}).`
         : `PCMI Admin: IP ${entry.ip} exceeded the login attempt limit (last email tried: ${entry.email}).`;
     this.logger.error(`ALERT ${text}`);
-    void this.sendTelegram(text);
+    void this.sendGoogleChat(text);
   }
 
-  private async sendTelegram(text: string) {
-    const token = process.env.SECURITY_ALERT_TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.SECURITY_ALERT_TELEGRAM_CHAT_ID;
-    if (!token || !chatId) return;
+  private async sendGoogleChat(text: string) {
+    const webhookUrl = process.env.SECURITY_ALERT_GOOGLE_CHAT_WEBHOOK_URL;
+    if (!webhookUrl) return;
     try {
-      const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      const res = await fetch(webhookUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text }),
+        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify({ text }),
         signal: AbortSignal.timeout(ALERT_TIMEOUT_MS),
       });
-      if (!res.ok) this.logger.error(`Telegram alert failed: HTTP ${res.status}`);
+      if (!res.ok) this.logger.error(`Google Chat alert failed: HTTP ${res.status}`);
     } catch (err: any) {
-      this.logger.error(`Telegram alert failed: ${err?.message ?? err}`);
+      this.logger.error(`Google Chat alert failed: ${err?.message ?? err}`);
     }
   }
 }

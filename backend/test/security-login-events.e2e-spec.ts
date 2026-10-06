@@ -5,7 +5,7 @@
  * Runs the real AuthController, LoginRateLimiter, SecurityEvents, ValidationPipe
  * and exception filter; AuthService is stubbed so no database is needed. Checks
  * that every failure, lockout and throttle is logged as one JSON line with IP
- * and email, that lockouts raise an alert once, and that the Telegram alert is
+ * and email, that lockouts raise an alert once, and that the Google Chat alert is
  * sent when it is configured.
  */
 import { Test } from '@nestjs/testing';
@@ -18,6 +18,7 @@ import { SecurityEvents } from '../src/auth/security-events';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 
 const GOOD = { email: 'admin@pcmi.com', password: 'right-password' };
+const WEBHOOK_URL = 'https://chat.googleapis.com/v1/spaces/TEST/messages?key=test-key&token=test-token';
 
 describe('Login security events (N-04)', () => {
   let app: INestApplication;
@@ -41,8 +42,7 @@ describe('Login security events (N-04)', () => {
     request(app.getHttpServer()).post('/auth/login').set('X-Forwarded-For', ip).send({ email, password });
 
   beforeEach(async () => {
-    process.env.SECURITY_ALERT_TELEGRAM_BOT_TOKEN = 'test-token';
-    process.env.SECURITY_ALERT_TELEGRAM_CHAT_ID = '42';
+    process.env.SECURITY_ALERT_GOOGLE_CHAT_WEBHOOK_URL = WEBHOOK_URL;
     fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200 });
     global.fetch = fetchMock as any;
     warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
@@ -73,8 +73,7 @@ describe('Login security events (N-04)', () => {
   afterEach(async () => {
     await app.close();
     jest.restoreAllMocks();
-    delete process.env.SECURITY_ALERT_TELEGRAM_BOT_TOKEN;
-    delete process.env.SECURITY_ALERT_TELEGRAM_CHAT_ID;
+    delete process.env.SECURITY_ALERT_GOOGLE_CHAT_WEBHOOK_URL;
   });
 
   it('logs a failed login with IP and email, without alerting', async () => {
@@ -102,8 +101,8 @@ describe('Login security events (N-04)', () => {
     expect(alerts()).toEqual([expect.stringContaining('victim@example.com locked after 10 failed attempts')]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('https://api.telegram.org/bottest-token/sendMessage');
-    expect(JSON.parse(init.body)).toEqual({ chat_id: '42', text: expect.stringContaining('victim@example.com') });
+    expect(url).toBe(WEBHOOK_URL);
+    expect(JSON.parse(init.body)).toEqual({ text: expect.stringContaining('victim@example.com') });
   });
 
   it('alerts once when an IP exceeds the per-minute limit', async () => {
@@ -121,6 +120,10 @@ describe('Login security events (N-04)', () => {
     for (let i = 0; i < 10; i++) await login('victim@example.com').expect(401);
     await login('victim@example.com').expect(429);
     expect(alerts()).toHaveLength(1);
+    await new Promise((resolve) => setImmediate(resolve));
+    const logged = error.mock.calls.map(([line]) => String(line));
+    expect(logged).toContain('Google Chat alert failed: network down');
+    expect(logged.join('\n')).not.toContain('test-token');
   });
 
   it('a correct login is not logged as a security event', async () => {
