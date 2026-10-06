@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { NestFactory, Reflector } from '@nestjs/core';
-import { ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
+import { ValidationPipe, ClassSerializerInterceptor, Logger } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -49,6 +49,7 @@ async function bootstrap() {
   app.use((req: any, res: any, next: () => void) => {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.headers['x-requested-with']) return next();
     if (req.method === 'POST' && req.path === '/api/csp-report') return next();
+    new Logger('HTTP').warn(`${req.method} ${req.originalUrl} 403 - missing X-Requested-With`);
     res.status(403).json({ statusCode: 403, message: 'Request rejected: missing X-Requested-With header.' });
   });
 

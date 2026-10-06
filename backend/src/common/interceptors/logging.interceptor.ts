@@ -28,6 +28,8 @@ export class LoggingInterceptor implements NestInterceptor {
           // console.log('Response Data:', JSON.stringify(data).substring(0, 500));
         },
         error: (err) => {
+          // Sudah tercatat di sini; AllExceptionsFilter tidak perlu mencatatnya lagi.
+          request.httpLogged = true;
           const delay = Date.now() - now;
           this.logger.error(`${method} ${url} ${err.status || 500} - ${delay}ms`);
           this.logger.error(`Error details: ${err.message}`);

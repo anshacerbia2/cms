@@ -1,4 +1,4 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
 
@@ -49,6 +49,8 @@ function clientError(exception: unknown): { status: number; message: string } | 
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger('HTTP');
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -73,13 +75,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ...(typeof message === 'object' ? message : { message }),
     };
 
-    // Stack trace hanya untuk error server. Respons 4xx (validasi, 401, 429
-    // login) sudah dicatat oleh LoggingInterceptor dan kejadian login oleh
-    // SecurityEvents; stack trace-nya hanya menenggelamkan log (pentest N-04).
+    // Stack trace hanya untuk error server; stack trace untuk 4xx hanya
+    // menenggelamkan log (pentest N-04). Respons 4xx dari handler sudah dicatat
+    // LoggingInterceptor; yang ditolak sebelum sampai ke sana - guard (401 sesi
+    // habis, 403 permission), pipe, route tidak ada - dicatat di sini, satu baris.
     if (status >= 500) {
       console.error('--- EXCEPTION DETECTED ---');
       console.error(exception);
       console.error('--------------------------');
+    } else if (!(request as any).httpLogged) {
+      const reason = (exception as any)?.message ?? '';
+      this.logger.warn(`${request.method} ${request.url} ${status} - ${String(reason).slice(0, 200)}`);
     }
 
     response.status(status).json(errorResponse);
