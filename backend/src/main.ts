@@ -44,9 +44,20 @@ async function bootstrap() {
   // mengubah data wajib membawa header X-Requested-With. Form atau gambar dari
   // situs lain tidak bisa memasang header itu, dan fetch lintas origin yang
   // memasangnya tertahan preflight CORS.
+  // Pengecualiannya hanya laporan CSP dari browser, yang tidak membawa header
+  // itu dan tidak mengubah apa pun.
   app.use((req: any, res: any, next: () => void) => {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.headers['x-requested-with']) return next();
+    if (req.method === 'POST' && req.path === '/api/csp-report') return next();
     res.status(403).json({ statusCode: 403, message: 'Request rejected: missing X-Requested-With header.' });
+  });
+
+  // Parser JSON-nya ditulis ulang supaya juga membaca laporan CSP, yang datang
+  // dengan content-type sendiri. Ini MENGGANTI parser bawaan, jadi
+  // application/json dan batas bawaan 100kb harus tetap disebut.
+  app.useBodyParser('json', {
+    type: ['application/json', 'application/csp-report', 'application/reports+json'],
+    limit: '100kb',
   });
 
   // Global Prefix
