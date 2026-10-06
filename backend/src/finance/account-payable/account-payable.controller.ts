@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { AccountPayableService } from './account-payable.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -131,13 +131,13 @@ export class AccountPayableController {
 
   @Put(':id')
   @Permissions('account-payable.update')
-  async updateAccountPayable(@Param('id') id: string, @Body() data: any) {
-    return this.accountPayableService.updateAccountPayable(Number(id), data);
+  async updateAccountPayable(@Param('id', ParseIntPipe) id: number, @Body() data: any) {
+    return this.accountPayableService.updateAccountPayable(id, data);
   }
 
   @Delete(':id')
   @Permissions('account-payable.delete')
-  async deleteAccountPayable(@Param('id') id: string) {
-    return this.accountPayableService.deleteAccountPayable(Number(id));
+  async deleteAccountPayable(@Param('id', ParseIntPipe) id: number) {
+    return this.accountPayableService.deleteAccountPayable(id);
   }
 }

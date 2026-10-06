@@ -45,7 +45,6 @@
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "xlsx-js-style": "^1.2.0"
   },
   "devDependencies": {
@@ -76,7 +75,8 @@
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.71.1"
+    "typescript-eslint": "^8.71.1",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "prisma": {
     "seed": "tsx prisma/seeders/index.ts"
@@ -101,7 +101,10 @@
   "pnpm": {
     "overrides": {
       "deepmerge-ts": "^8.0.2",
-      "mysql2": "^3.24.5"
+      "mysql2": "^3.24.5",
+      "qs": "^6.16.0",
+      "body-parser": "^2.3.0",
+      "proxy-addr": "^2.0.8"
     }
   }
 }

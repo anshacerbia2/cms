@@ -5,13 +5,12 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateProductDto, CreateProductCategoryDto, UpdateProductCategoryDto } from './dto/create-product.dto';
-import { PartialType } from '@nestjs/mapped-types';
+import { CreateProductDto, CreateProductCategoryDto, UpdateProductCategoryDto, UpdateProductDto } from './dto/create-product.dto';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { serializeDecimals } from '../common/utils/format.utils';
+import { pageLimit, idParam } from '../common/utils/query-params';
 
-class UpdateProductDto extends PartialType(CreateProductDto) {}
 
 @Injectable()
 export class ProductsService {
@@ -64,7 +63,7 @@ export class ProductsService {
 
   async findAllCategories(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || '';
 
@@ -129,14 +128,14 @@ export class ProductsService {
 
   async findAll(query: PaginationQueryDto & { categoryId?: string }): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || '';
 
     const where: any = {
       deletedAt: null,
       AND: [
-        query.categoryId ? { categoryId: BigInt(query.categoryId) } : {},
+        query.categoryId ? { categoryId: idParam(query.categoryId, 'categoryId')! } : {},
         {
           OR: [
             { name: { contains: search, mode: 'insensitive' as const } },

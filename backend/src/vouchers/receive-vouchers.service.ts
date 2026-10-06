@@ -7,6 +7,7 @@ import {
 import { UpdateReceiveVoucherDto } from './dto/update-voucher.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { serializeDecimals } from '../common/utils/format.utils';
+import { pageLimit, idParam } from '../common/utils/query-params';
 
 @Injectable()
 export class ReceiveVouchersService {
@@ -31,14 +32,14 @@ export class ReceiveVouchersService {
 
   async findAll(query: ReceiveVoucherQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || '';
 
     const where: any = {};
     if (query.purpose) where.purpose = query.purpose;
     if (query.payerType) where.payerType = query.payerType;
-    if (query.invoiceId) where.invoices = { some: { invoiceId: BigInt(query.invoiceId) } };
+    if (query.invoiceId) where.invoices = { some: { invoiceId: idParam(query.invoiceId, 'invoiceId')! } };
 
     if (search) {
       where.OR = [

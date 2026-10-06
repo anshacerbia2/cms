@@ -9,6 +9,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { LoginRateLimiter } from './login-rate-limiter';
 import { SessionService } from './session.service';
 import { AuthEventsService } from './auth-events.service';
+import { SecurityEvents } from './security-events';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { AuthEventsService } from './auth-events.service';
       }),
     }),
   ],
-  providers: [AuthService, JwtStrategy, LoginRateLimiter, SessionService, AuthEventsService],
+  providers: [AuthService, JwtStrategy, LoginRateLimiter, SecurityEvents, SessionService, AuthEventsService],
   controllers: [AuthController],
   exports: [AuthService],
 })

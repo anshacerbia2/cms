@@ -5,6 +5,7 @@ import { UpdatePdfTemplateDto } from './dto/update-pdf-template.dto';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { renderTemplate, extractVariables, toPrintablePage } from './template-renderer';
+import { pageLimit } from '../common/utils/query-params';
 
 @Injectable()
 export class PdfTemplatesService {
@@ -26,7 +27,7 @@ export class PdfTemplatesService {
 
   async findAll(query: PaginationQueryDto & { type?: string }): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || '';
 

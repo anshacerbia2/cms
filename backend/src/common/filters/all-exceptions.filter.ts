@@ -73,19 +73,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ...(typeof message === 'object' ? message : { message }),
     };
 
-    // Stack lengkap hanya untuk error server. Kesalahan client (password salah,
-    // input tidak valid, sesi habis) cukup satu baris - dulu masing-masing
-    // menulis stack trace utuh dan log error pm2 ikut membengkak.
+    // Stack trace hanya untuk error server. Respons 4xx (validasi, 401, 429
+    // login) sudah dicatat oleh LoggingInterceptor dan kejadian login oleh
+    // SecurityEvents; stack trace-nya hanya menenggelamkan log (pentest N-04).
     if (status >= 500) {
       console.error('--- EXCEPTION DETECTED ---');
       console.error(exception);
       console.error('--------------------------');
-    } else {
-      const reason =
-        exception instanceof Error
-          ? `${exception.name}: ${exception.message.trim().split('\n').pop()?.trim()}`
-          : String(exception);
-      console.warn(`[${status}] ${request.method} ${request.url} - ${reason}`);
     }
 
     response.status(status).json(errorResponse);

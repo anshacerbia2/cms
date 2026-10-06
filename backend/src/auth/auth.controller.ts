@@ -26,10 +26,11 @@ export class AuthController {
   @HttpCode(200)
   async login(@Body() body: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     // Dibatasi per email (percobaan gagal) dan per IP - lihat LoginRateLimiter.
-    this.loginLimiter.check(req.ip ?? 'unknown', body.email);
+    const ip = req.ip ?? 'unknown';
+    this.loginLimiter.check(ip, body.email);
     const user = await this.authService.validateUser(body.email, body.password);
     if (!user) {
-      const locked = this.loginLimiter.recordFailure(body.email);
+      const locked = this.loginLimiter.recordFailure(ip, body.email);
       const account = await this.usersService.findByEmail(body.email);
       await this.events.record(locked ? 'LOGIN_LOCKED' : 'LOGIN_FAILED', req, {
         email: body.email,

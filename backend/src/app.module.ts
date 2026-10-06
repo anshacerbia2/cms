@@ -27,7 +27,7 @@ import { ProposalsModule } from './proposals/proposals.module';
 import { BoqsModule } from './boqs/boqs.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { VouchersModule } from './vouchers/vouchers.module';
-import { CspReportController } from './csp-report.controller';
+import { CspReportModule } from './csp-report/csp-report.module';
 
 @Module({
   imports: [
@@ -61,8 +61,9 @@ import { CspReportController } from './csp-report.controller';
     BoqsModule,
     InvoicesModule,
     VouchersModule,
+    CspReportModule,
   ],
-  controllers: [CspReportController],
+  controllers: [],
   providers: [],
 })
 export class AppModule {}

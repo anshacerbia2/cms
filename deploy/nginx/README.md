@@ -6,7 +6,7 @@ the live file plus the server-side fixes from the 2026-09-30 pentest:
 | Finding | Change |
 |---|---|
 | F-01 | `limit_req` on `/api/auth/login` (10/min per IP, burst 5, 429); `X-Real-IP` / `X-Forwarded-For` passed to the API so its own per-IP limit sees real clients |
-| F-03 | Content-Security-Policy, enforcing, violations reported to `/api/csp-report` |
+| F-03 | Content-Security-Policy, enforcing; violations reported to `/api/csp-report` and logged by the API |
 | F-08 | `server_tokens off`; `Referrer-Policy`, `Permissions-Policy`; `X-XSS-Protection: 0` |
 
 The file is not installed by any deploy step. To install it on the server:
@@ -20,27 +20,36 @@ curl -sI https://pcmi-admin.online/ | grep -iE "server|content-security|referrer
 
 `nginx -t` fails safely: nothing is reloaded until the config parses.
 
-## CSP
+## CSP rollout
 
-The policy is enforcing. It was checked before switching: the bundle has no
-inline scripts, `eval` or third-party connections; the print page's single
-inline script is allowed by hash; the print templates in the database load
-nothing from elsewhere; the template preview is a sandboxed iframe.
+The file ships with the **enforcing** `Content-Security-Policy` (since
+2026-10-05). The Report-Only period was replaced by a check of everything the
+policy governs:
 
-Anything the browser blocks is reported to `/api/csp-report` and logged by the
-API, rate-limited to 30 lines a minute:
+- the built frontend (`/var/www/cms`): one external module script, no inline
+  scripts or event handlers, no `eval`/`new Function`, no workers, WebSockets,
+  iframes or forms posting elsewhere; outside hosts are Google Fonts (allowed)
+  and QR images from `api.qrserver.com` (allowed by `img-src https:`);
+- the print page: its one inline script matches the hash in the policy;
+- the print templates stored in `pdf_templates`: no scripts, event handlers,
+  stylesheets or external URLs.
+
+Violations are still reported to `/api/csp-report` and logged by the API, now
+with `"mode":"enforce"`:
 
 ```bash
-grep -a "\[CSP\]" ~/.pm2/logs/backend-out.log | tail
+pm2 logs --nostream --lines 5000 | grep csp_violation
 ```
 
-If something legitimate is blocked, either widen the directive that the log
-line names, or go back to report-only while it is sorted out: rename the
-header to `Content-Security-Policy-Report-Only`, then `nginx -t` and reload.
+Browser extensions also cause reports (`blocked` = `chrome-extension`,
+`moz-extension`, or a `source` outside the site); those can be ignored.
 
-A print template that loads an image from another site is fine (`img-src
-https:`); one that loads a stylesheet, font or script from another site is
-blocked until that host is added to the policy.
+If something the app needs is blocked, fall back at once: comment out the
+`Content-Security-Policy` line, re-enable the `Content-Security-Policy-Report-Only`
+line above it, then `nginx -t` and reload. Fix the policy, then switch back.
+
+Re-check before adding a third-party script, an embed, or a print template
+that loads scripts or stylesheets from another host.
 
 If the print page's inline script in
 `backend/src/pdf-templates/template-renderer.ts` changes, recompute its hash:
