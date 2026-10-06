@@ -1,26 +1,18 @@
 import axios from 'axios';
-import { useAuthStore, expireSession, isLoginRequest } from '../store/authStore';
+import { expireSession, isLoginRequest } from '../store/authStore';
 
+// Sesi login ada di cookie HttpOnly yang dipasang server; browser mengirimnya
+// sendiri. withCredentials hanya berpengaruh saat API beda origin (dev dengan
+// VITE_API_URL). X-Requested-With wajib untuk request yang mengubah data - server
+// menolak tanpanya (perlindungan CSRF, lihat main.ts di backend).
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
   },
 });
-
-// Request interceptor for adding the token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token') || useAuthStore.getState().token;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
 
 // Response interceptor for unwrapping the standardized response
 api.interceptors.response.use(

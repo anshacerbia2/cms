@@ -2,10 +2,11 @@ import api from './api';
 import { useAuthStore } from '../store/authStore';
 
 /**
- * Keluar: token dicabut di server dulu (POST /auth/logout menaikkan versi token
+ * Keluar: sesi dicabut di server dulu (POST /auth/logout menaikkan versi token
  * akun ini, jadi token yang sama tidak bisa dipakai lagi di mana pun - pentest
- * F-04), baru dihapus dari browser. Ditunggu, karena request-nya butuh token
- * yang masih ada; gagal pun (misalnya sudah kedaluwarsa) tetap keluar.
+ * F-04 - lalu menghapus cookie sesinya), baru profilnya dihapus dari browser.
+ * Ditunggu, karena request-nya membawa cookie yang masih ada; gagal pun
+ * (misalnya server tak terjangkau) tetap keluar.
  */
 export async function signOut(navigate: (to: string) => void) {
   try {

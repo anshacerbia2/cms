@@ -7,9 +7,10 @@ type DocumentKind = 'invoices' | 'proposals';
 /**
  * Opens a document's printable page in a new tab.
  *
- * The endpoint is behind the JWT guard, so the URL cannot simply be handed to
- * window.open — the browser would send no Authorization header and get a 401.
- * The page is fetched through the API client instead and written into a tab.
+ * The page is fetched through the API client and written into a tab, rather
+ * than handing the URL to window.open: a failure (no active template, session
+ * ended) can then be shown as a readable message instead of raw JSON, and an
+ * expired session goes through the client's usual 401 handling.
  *
  * That tab is opened synchronously on the click, before the request starts:
  * popup blockers reject a window opened later from an async callback.

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Query, ParseIntPipe } from '@nestjs/common';
 import { AccountReceivableService } from './account-receivable.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -128,13 +128,13 @@ export class AccountReceivableController {
 
   @Put(':id')
   @Permissions('account-receivable.update')
-  async updateAR(@Param('id') id: string, @Body() data: any) {
-    return this.arService.updateAR(Number(id), data);
+  async updateAR(@Param('id', ParseIntPipe) id: number, @Body() data: any) {
+    return this.arService.updateAR(id, data);
   }
 
   @Delete(':id')
   @Permissions('account-receivable.delete')
-  async deleteAR(@Param('id') id: string) {
-    return this.arService.deleteAR(Number(id));
+  async deleteAR(@Param('id', ParseIntPipe) id: number) {
+    return this.arService.deleteAR(id);
   }
 }

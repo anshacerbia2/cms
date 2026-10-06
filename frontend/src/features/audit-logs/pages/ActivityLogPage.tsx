@@ -1,5 +1,5 @@
-import { Fragment, useState } from "react";
-import { Calendar as CalendarIcon, ChevronDown, ChevronRight, History, RotateCcw } from "lucide-react";
+import { Fragment, useMemo, useState } from "react";
+import { Calendar as CalendarIcon, ChevronDown, ChevronRight, History, RotateCcw, ShieldAlert } from "lucide-react";
 import { format, isValid, parseISO } from "date-fns";
 import { PageContainer } from "@/components/common/PageContainer";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -81,6 +81,7 @@ const dayAfter = (date: string) => {
 
 /** Ringkasan satu baris log untuk tabel: kolom apa yang berubah, atau jenis kejadiannya. */
 function summary(e: AuditEntry) {
+  if (e.table === "auth") return `${e.after?.email ?? "unknown"} from ${e.after?.ip ?? "unknown IP"}`;
   if (e.table.endsWith("_amounts")) return `Account amount: ${e.accountLabel ?? "account"}`;
   if (e.action === "UPDATE") {
     const cols = visibleChanges(e.table, e.changedColumns).map((c) => columnLabel(e.table, c));
@@ -116,6 +117,14 @@ export default function ActivityLogPage() {
   const { data: users = [] } = useAuditLogUsers();
   const entries = data?.data ?? [];
 
+  // Peringatan login gagal (pentest A09): dihitung untuk 24 jam terakhir,
+  // terlepas dari filter yang sedang dipakai.
+  const since = useMemo(() => new Date(Date.now() - 24 * 3_600_000).toISOString(), []);
+  const { data: failed } = useAuditLogs({ table: "auth", action: "LOGIN_FAILED,LOGIN_LOCKED", from: since, limit: 1 });
+  const { data: locked } = useAuditLogs({ table: "auth", action: "LOGIN_LOCKED", from: since, limit: 1 });
+  const failedCount = failed?.meta.total ?? 0;
+  const lockedCount = locked?.meta.total ?? 0;
+
   const reset = () => { setTable(ALL); setAction(ALL); setUserId(ALL); setFrom(""); setTo(""); setPage(1); };
   const toggle = (id: string) => setExpanded((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const onFilter = <T,>(set: (v: T) => void) => (v: T) => { set(v); setPage(1); };
@@ -134,9 +143,27 @@ export default function ActivityLogPage() {
     <PageContainer>
       <PageHeader
         title="Activity Log"
-        description="Every insert, edit and delete on the finance data: who made it, when, and the values before and after."
+        description="Every insert, edit and delete on the finance data: who made it, when, and the values before and after. Sign-ins are logged too."
         icon={History}
       />
+
+      {failedCount > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-4 px-4 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-[12px]">
+          <ShieldAlert size={16} className="shrink-0" />
+          <span className="font-bold">
+            {failedCount} failed sign-in attempt{failedCount === 1 ? "" : "s"} in the last 24 hours
+            {lockedCount > 0 && `, ${lockedCount} account lock${lockedCount === 1 ? "" : "s"}`}.
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 rounded-lg text-[11px] font-bold border-rose-200 bg-white hover:bg-rose-100"
+            onClick={() => { setTable("auth"); setAction(ALL); setUserId(ALL); setFrom(""); setTo(""); setPage(1); }}
+          >
+            Show sign-ins
+          </Button>
+        </div>
+      )}
 
       <div className="flex flex-col xl:flex-row flex-wrap items-stretch xl:items-center gap-3 bg-white/50 p-2 rounded-xl border border-primary/5 mb-6">
         <Select value={table} onValueChange={onFilter(setTable)}>
@@ -201,12 +228,15 @@ export default function ActivityLogPage() {
                       <TableCell className="text-[12px] font-bold">{e.user?.name || e.user?.email || (e.source === "SQL" ? `DB: ${e.dbUser}` : "System")}</TableCell>
                       <TableCell className="text-[12px]">{ACTION_LABELS[e.action]}</TableCell>
                       <TableCell className="text-[12px]">{TABLE_LABELS[e.table] ?? e.table}</TableCell>
-                      <TableCell className="text-[12px] tabular-nums">#{parentOf(e).rowId}</TableCell>
+                      <TableCell className="text-[12px] tabular-nums">{parentOf(e).rowId ? `#${parentOf(e).rowId}` : "—"}</TableCell>
                       <TableCell className="text-[12px] text-muted-foreground max-w-[320px] truncate">{summary(e)}</TableCell>
                       <TableCell className="text-right pr-6">
-                        <Button variant="ghost" size="sm" className="h-7 text-[11px] font-bold" onClick={(ev) => { ev.stopPropagation(); setHistoryOf(e); }}>
-                          View
-                        </Button>
+                        {/* Percobaan login dengan email yang tidak terdaftar tidak punya akun untuk dilihat riwayatnya. */}
+                        {parentOf(e).rowId && (
+                          <Button variant="ghost" size="sm" className="h-7 text-[11px] font-bold" onClick={(ev) => { ev.stopPropagation(); setHistoryOf(e); }}>
+                            View
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                     {open && (

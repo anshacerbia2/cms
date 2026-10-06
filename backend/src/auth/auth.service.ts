@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { BCRYPT_ROUNDS, UsersService } from '../users/users.service';
 
@@ -13,10 +12,7 @@ const DUMMY_HASH = bcrypt.hashSync('not-a-real-password-placeholder', BCRYPT_ROU
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private usersService: UsersService,
-    private jwtService: JwtService,
-  ) {}
+  constructor(private usersService: UsersService) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
@@ -43,10 +39,9 @@ export class AuthService {
     }
     await this.usersService.changePassword(Number(userId), newPassword);
     // Ganti password mematikan semua token akun ini, termasuk yang sedang dipakai.
-    // Sesi ini diberi token baru supaya tetap masuk; sesi lain harus login ulang.
-    const fresh = await this.usersService.findByEmail(user.email);
-    const { access_token } = await this.login(fresh);
-    return { message: 'Password updated successfully', access_token };
+    // User-nya dikembalikan dengan versi token yang baru, supaya sesi ini
+    // bisa diberi cookie baru; sesi lain harus login ulang.
+    return (await this.usersService.findByEmail(user.email))!;
   }
 
   /** Logout di server: semua token akun ini berhenti berlaku, di perangkat mana pun. */
@@ -113,17 +108,9 @@ export class AuthService {
     });
 
 
-    const payload = { 
-      email: user.email, 
-      sub: user.id.toString(),
-      // Versi token akun ini; JwtStrategy menolak token yang versinya sudah usang.
-      tv: user.tokenVersion ?? 0,
-      role: user.role?.slug,
-      permissions
-    };
-
+    // Token sesinya dibuat SessionService dan dikirim sebagai cookie HttpOnly,
+    // bukan di body ini - JavaScript di browser tidak perlu (dan tidak boleh) memegangnya.
     return {
-      access_token: this.jwtService.sign(payload),
       user: {
         id: user.id.toString(),
         name: user.name,

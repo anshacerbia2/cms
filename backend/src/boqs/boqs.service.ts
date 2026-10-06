@@ -5,6 +5,7 @@ import { UpdateBoqDto } from './dto/update-boq.dto';
 import { BoqQueryDto } from './dto/boq-query.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { serializeDecimals } from '../common/utils/format.utils';
+import { pageLimit, idParam } from '../common/utils/query-params';
 
 @Injectable()
 export class BoqsService {
@@ -45,12 +46,12 @@ export class BoqsService {
 
   async findAll(query: BoqQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || '';
 
     const where: any = {};
-    if (query.proposalId) where.proposalId = BigInt(query.proposalId);
+    if (query.proposalId) where.proposalId = idParam(query.proposalId, 'proposalId')!;
     if (query.unbound === 'true') where.proposalId = null;
 
     if (search) {

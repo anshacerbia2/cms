@@ -1,19 +1,25 @@
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
+import { SessionService, type SessionPayload } from './session.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
-    private configService: ConfigService,
+    configService: ConfigService,
     private prisma: PrismaService,
+    private session: SessionService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      // Token hanya dari cookie sesi HttpOnly (lihat SessionService); header
+      // Authorization tidak lagi diterima.
+      jwtFromRequest: (req: Request) => session.readToken(req),
       ignoreExpiration: false,
       secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
+      passReqToCallback: true,
     });
   }
 
@@ -23,7 +29,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * the claims at face value meant a revoked permission — or a deactivated
    * account — kept working until the token expired.
    */
-  async validate(payload: any) {
+  async validate(req: Request, payload: SessionPayload) {
     const user = await this.prisma.user.findUnique({
       where: { id: BigInt(payload.sub) },
       include: {
@@ -38,10 +44,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
     // Logout dan ganti password menaikkan token_version: token yang dibuat
     // sebelumnya - termasuk yang tertinggal di browser lain atau dicuri - mati
-    // di sini. Token lama tanpa `tv` dianggap versi 0.
+    // di sini.
     if ((payload.tv ?? 0) !== user.tokenVersion) {
       throw new UnauthorizedException('Your session has ended. Please sign in again.');
     }
+    if (this.session.isPastMaxAge(payload)) {
+      throw new UnauthorizedException('Your session has ended. Please sign in again.');
+    }
+
+    // Masih dipakai: geser umur sesinya.
+    this.session.renewIfDue(req, req.res, payload, user);
 
     return {
       userId: user.id.toString(),

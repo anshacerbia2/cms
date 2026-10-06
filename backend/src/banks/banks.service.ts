@@ -9,6 +9,7 @@ import { Prisma } from '@prisma/client';
 import { CreateBankDto, CreateInternalAccountDto, UpdateBankDto, UpdateInternalAccountDto } from './dto/create-bank.dto';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { pageLimit, idParam } from '../common/utils/query-params';
 
 const formatDecimal = (val: any): string => {
   if (val == null) return "0.0000";
@@ -36,7 +37,7 @@ export class BanksService {
 
   async findAllBanks(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || '';
 
@@ -187,7 +188,7 @@ export class BanksService {
 
   async findAllInternalAccounts(query: PaginationQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || '';
 
@@ -275,10 +276,10 @@ export class BanksService {
 
   async findAllFiscalPeriods(query: any) {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || '';
-    const accountId = query.accountId ? BigInt(query.accountId) : undefined;
+    const accountId = query.accountId ? idParam(query.accountId, 'accountId')! : undefined;
     const year = query.year ? Number(query.year) : undefined;
 
     const where: any = { AND: [] };

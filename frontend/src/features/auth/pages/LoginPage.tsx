@@ -53,8 +53,8 @@ export default function LoginPage() {
     setError(null);
     try {
       const response: any = await api.post('/auth/login', data);
-      const { user, access_token } = response.data;
-      setAuth(user, access_token);
+      // Sesinya sudah dipasang server sebagai cookie; yang diterima di sini hanya profil.
+      setAuth(response.data.user);
       navigate('/dashboard');
     } catch (err: any) {
       // `err` di sini sudah body respons (lihat api/axios.ts), bukan error axios.

@@ -4,6 +4,7 @@ import { CreatePaymentVoucherDto, PaymentVoucherQueryDto } from './dto/payment-v
 import { UpdatePaymentVoucherDto } from './dto/update-voucher.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { serializeDecimals } from '../common/utils/format.utils';
+import { pageLimit } from '../common/utils/query-params';
 
 @Injectable()
 export class PaymentVouchersService {
@@ -20,7 +21,7 @@ export class PaymentVouchersService {
 
   async findAll(query: PaymentVoucherQueryDto): Promise<PaginatedResult<any>> {
     const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const limit = pageLimit(query.limit);
     const skip = (page - 1) * limit;
     const search = query.search || '';
 
