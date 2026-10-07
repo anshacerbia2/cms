@@ -187,6 +187,176 @@ test.describe("REG-01/02 — P&L detail totals follow the filter", () => {
   });
 });
 
+test.describe("REG-18 — Balance Sheet detail totals follow the filter", () => {
+  /**
+   * The same defect REG-01 covers, in the other report. The footer showed the
+   * figure the clicked row carried, captured when the modal opened, so filtering
+   * the rows never moved it.
+   *
+   * Cash and Bank are excluded deliberately, not overlooked: their footer is the
+   * account's closing balance — the running balance on the last transaction —
+   * and summing running balances across a filtered subset means nothing. The fix
+   * leaves that branch alone, so a test that filtered it would be asserting the
+   * wrong behaviour.
+   */
+  /**
+   * Account rows carry the Tailwind marker class `group/item`, and only the
+   * clickable ones also carry `cursor-pointer` — a row whose name contains
+   * "depreciation" has no handler. The groups arrive already expanded, seeded
+   * from the backend's `isOpen` flag, so clicking a heading *collapses* it and
+   * hides exactly the rows this test needs.
+   */
+  const ITEM = 'div[class*="group/item"][class*="cursor-pointer"]';
+
+  test("the Total row sums only the visible rows", async ({ page }) => {
+    await openPage(page, "/finance-reports", /^financial reports$/i);
+    await page.getByRole("tab", { name: /^balance$/i }).click();
+
+    const modal = dialog(page);
+    const total = () => modal.locator("tfoot tr").first();
+    const yearSelect = page.getByRole("combobox").filter({ hasText: /^20\d{2}$/ }).first();
+
+    await yearSelect.click();
+    const options = page.getByRole("option");
+    await expect(options.first()).toBeVisible();
+    const years = await options.allTextContents();
+    await page.keyboard.press("Escape");
+    expect(years.length, "the report's year selector offered nothing").toBeGreaterThan(0);
+
+    const tried: string[] = [];
+    let opened = "";
+
+    for (const year of years) {
+      await yearSelect.click();
+      await page.getByRole("option", { name: year, exact: true }).click();
+
+      const items = page.locator(ITEM);
+      await expect(
+        items.first(),
+        `no clickable balance sheet account rendered for ${year}`,
+      ).toBeVisible();
+
+      const count = await items.count();
+      for (let i = 0; i < count; i++) {
+        const row = items.nth(i);
+        const label = ((await row.textContent()) ?? "").trim().slice(0, 40);
+
+        await row.click();
+        if (!(await modal.isVisible({ timeout: 4000 }).catch(() => false))) {
+          tried.push(`${year} "${label}": nothing opened`);
+          continue;
+        }
+
+        // Cash and Bank show a closing balance, not a sum, and are excluded from
+        // the fix on purpose — filtering one would assert the wrong behaviour.
+        const shape = (await modal.getByText(/Financial Audit Trail/i).first().textContent()) ?? "";
+        if (/Bank Statement Records/i.test(shape)) {
+          tried.push(`${year} "${label}": cash or bank, skipped by design`);
+          await page.keyboard.press("Escape");
+          await expect(modal).toBeHidden();
+          continue;
+        }
+
+        await Promise.race([
+          total().waitFor({ state: "visible", timeout: 8000 }).catch(() => {}),
+          modal.getByText(/no transactions found/i).waitFor({ state: "visible", timeout: 8000 }).catch(() => {}),
+        ]);
+
+        if (await total().count()) {
+          opened = `${label} (${year})`;
+          break;
+        }
+
+        tried.push(`${year} "${label}": modal held no rows`);
+        await page.keyboard.press("Escape");
+        await expect(modal).toBeHidden();
+      }
+      if (opened) break;
+    }
+
+    expect(
+      opened,
+      `No balance sheet account opened a detail modal with a Total row. Tried:\n  ${tried.join("\n  ")}`,
+    ).not.toBe("");
+
+    /**
+     * The invariant, asserted rather than "the number moved": the footer must
+     * equal the sum of the rows on screen. Every shape puts the amount in the
+     * last cell of the row, so this holds whichever category was opened.
+     *
+     * Checking it before the filter matters too: it proves the comparison itself
+     * is sound — right cell, right parser — so a failure afterwards is the
+     * total's fault and not the test's.
+     */
+    const visibleSum = async () => {
+      const cells = await modal.locator("tbody tr td:last-child").allTextContents();
+      return cells.reduce((sum, text) => sum + (parseIdr(text) || 0), 0);
+    };
+    const footer = async () => parseIdr((await total().textContent()) ?? "");
+    const agrees = async (when: string) => {
+      const [f, v] = [await footer(), await visibleSum()];
+      expect(Math.abs(f - v), `${when}: footer ${f} vs rows ${v}`).toBeLessThan(1);
+    };
+
+    await agrees("unfiltered");
+    const rowsBefore = await modal.locator("tbody tr").count();
+    expect(rowsBefore, "nothing to filter").toBeGreaterThan(1);
+
+    /**
+     * Which column can be partially filtered depends on the data, not on the
+     * shape: unticking a value in a column that holds one distinct value empties
+     * the table, and an empty table has no total to check. So try each column
+     * and keep the first that leaves rows behind, clearing up after the ones
+     * that do not.
+     */
+    const columns = modal.locator("thead th").filter({ has: page.locator("button") });
+    const columnCount = await columns.count();
+    const attempts: string[] = [];
+    let filtered = 0;
+
+    for (let i = 0; i < columnCount; i++) {
+      const header = columns.nth(i);
+      const name = ((await header.textContent()) ?? `column ${i}`).trim();
+
+      await header.locator("button").first().click();
+      const boxes = page.getByRole("checkbox");
+      await expect(boxes.first()).toBeVisible();
+
+      if ((await boxes.count()) - 1 < 2) {
+        attempts.push(`${name}: only one value to choose from`);
+        await page.getByRole("button", { name: /^Cancel$/ }).click();
+        continue;
+      }
+
+      await boxes.last().uncheck();
+      // Escape only closes the dropdown; handleApply runs on OK and nowhere else.
+      await page.getByRole("button", { name: /^OK$/ }).click();
+
+      await expect.poll(async () => modal.locator("tbody tr").count()).toBeLessThan(rowsBefore);
+      filtered = await modal.locator("tbody tr").count();
+      if (filtered > 0) {
+        attempts.push(`${name}: ${rowsBefore} -> ${filtered} rows`);
+        break;
+      }
+
+      // Emptied it. Put the column back and move on.
+      attempts.push(`${name}: emptied the table`);
+      await header.locator("button").first().click();
+      await expect(page.getByRole("checkbox").first()).toBeVisible();
+      await page.getByRole("button", { name: /^Clear$/ }).click();
+      await expect.poll(async () => modal.locator("tbody tr").count()).toBe(rowsBefore);
+    }
+
+    expect(
+      filtered,
+      `no column could be filtered without emptying the table:\n  ${attempts.join("\n  ")}`,
+    ).toBeGreaterThan(0);
+
+    await expect(total()).toBeVisible();
+    await agrees(`after filtering (${attempts[attempts.length - 1]})`);
+  });
+});
+
 test.describe("REG-17 — the sidebar keeps the menu tree to itself", () => {
   test("signing in logs nothing to the console", async ({ page }) => {
     const noise: string[] = [];
