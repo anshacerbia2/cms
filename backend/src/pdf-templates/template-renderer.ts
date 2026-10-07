@@ -47,6 +47,36 @@ export function extractVariables(html: string): string[] {
 }
 
 /**
+ * Content-Security-Policy for the printable page itself.
+ *
+ * The page is opened in a new tab via window.open('') + document.write (see the
+ * frontend's useDocumentPrint), so it is an about:blank document that never
+ * receives nginx's response-header CSP. Without a policy of its own, a <script>
+ * embedded in a stored print template would run at the app's origin in the
+ * browser of whoever prints the document (pentest N-06).
+ *
+ * script-src pins ONLY the auto-print script below, by hash - no 'unsafe-inline'
+ * - so that one script runs while any script a template tries to inject is
+ * blocked. The hash must stay in step with PRINT_SCRIPT (and with the hash in
+ * deploy/nginx/pcmi-admin.conf). style-src keeps 'unsafe-inline' because
+ * templates and the UI set inline styles; img-src mirrors the server CSP:
+ * 'self'/data:/blob: plus the QR-code host, not all of https: (pentest N-09),
+ * so a template cannot beacon to an arbitrary host on print. Add any other
+ * image host a template legitimately needs here and in the nginx config.
+ */
+const PRINT_SCRIPT = `window.addEventListener('load', function () { window.print(); });`;
+const PRINT_SCRIPT_HASH = 'sha256-JvP7+dR0/uG+XdJLQ3VY1tsCgjRYmPOpus5OtsH4uU8=';
+const PRINT_CSP = [
+  `default-src 'none'`,
+  `img-src 'self' data: blob: https://api.qrserver.com`,
+  `style-src 'unsafe-inline' https://fonts.googleapis.com`,
+  `font-src https://fonts.gstatic.com data:`,
+  `script-src '${PRINT_SCRIPT_HASH}'`,
+  `base-uri 'none'`,
+  `form-action 'none'`,
+].join('; ');
+
+/**
  * Wraps a rendered template into a standalone printable page.
  *
  * The legacy app pulled html2pdf from a CDN and converted in the browser. Using
@@ -54,14 +84,13 @@ export function extractVariables(html: string): string[] {
  * access to a third party, and its "Save as PDF" produces the same result.
  */
 export function toPrintablePage(html: string, title: string, autoPrint = true): string {
-  const script = autoPrint
-    ? `<script>window.addEventListener('load', function () { window.print(); });</script>`
-    : '';
+  const script = autoPrint ? `<script>${PRINT_SCRIPT}</script>` : '';
 
   return `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="${PRINT_CSP}">
 <title>${escapeHtml(title)}</title>
 <style>
   @page { size: A4; margin: 12mm; }
