@@ -48,6 +48,21 @@ import { Badge } from "@/components/ui/badge";
 /** Baris P&L yang bisa di-breakdown per project: Net Sales (Sales) + COGS. */
 const GROSS_PROFIT = "GROSS PROFIT";
 
+/**
+ * Teks kolom Channel, persis seperti yang tampil di sel: CASH, "BCA - Sahardjo",
+ * atau nama rekening non-bank (Non CB). Filter dan sort kolom ini memakainya.
+ * Dulu filter memakai bankBrand, yang kosong untuk rekening Cash dan non-bank,
+ * sehingga keduanya muncul sebagai satu pilihan "(Blank)".
+ */
+const channelLabel = (row: any): string => {
+  if (row.accountType === "CASH") return "CASH";
+  if (row.accountType === "BANK") {
+    const bank = row.bankBrand || row.bankName || "";
+    return row.branch ? `${bank} - ${row.branch}` : bank;
+  }
+  return row.holderName || "-";
+};
+
 export function ProfitLossTab() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear.toString());
@@ -267,6 +282,7 @@ export function ProfitLossTab() {
   const displayPlDetails = useMemo(() => {
     return (plDetails || []).map((row: any) => ({
       ...row,
+      channel: channelLabel(row),
       displayDate: formatDate(row.date),
       displayAmount: formatCurrency(row.amount),
       displayGross: row.gross !== undefined ? formatCurrency(row.gross) : undefined,
@@ -289,6 +305,7 @@ export function ProfitLossTab() {
   const displayCogsGroupDetails = useMemo(() => {
     return (cogsGroupDetails || []).map((row: any) => ({
       ...row,
+      channel: channelLabel(row),
       displayDate: formatDate(row.date),
       displayDebit: formatCurrency(row.debit),
       displayCredit: formatCurrency(row.credit),
@@ -311,6 +328,7 @@ export function ProfitLossTab() {
       'description', 
       'subItem', 
       'ledger', 
+      'channel', 
       'bankBrand', 
       'holderName', 
       'displayAmount', 
@@ -368,6 +386,7 @@ export function ProfitLossTab() {
       'displayCredit',
       'displayAmount', 
       'displayDate',
+      'channel',
       'bankBrand',
       'holderName'
     ]
@@ -1122,11 +1141,11 @@ export function ProfitLossTab() {
                         <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
                           <div className="flex items-center gap-1">
                             Channel
-                            <ExcelColumnFilter 
-                              columnKey="bankBrand" label="Channel" data={getPlCascadingData("bankBrand")} 
-                              activeFilters={plFilters["bankBrand"]} 
-                              onFilterChange={(v) => setPlFilters(p => ({...p, bankBrand: v}))}
-                              onSort={(d) => setPlSort({key: "bankBrand", direction: d})}
+                            <ExcelColumnFilter
+                              columnKey="channel" label="Channel" data={getPlCascadingData("channel")}
+                              activeFilters={plFilters["channel"]}
+                              onFilterChange={(v) => setPlFilters(p => ({...p, channel: v}))}
+                              onSort={(d) => setPlSort({key: "channel", direction: d})}
                               currentSort={plSort}
                             />
                           </div>
@@ -1193,7 +1212,7 @@ export function ProfitLossTab() {
                               ) : item.accountType === "BANK" ? (
                                 <>
                                   <p className="text-[11px] font-bold text-primary/70 uppercase">
-                                    {item.bankBrand || item.bankName} - {item.branch}
+                                    {item.channel}
                                   </p>
                                   <p className="text-[9px] font-medium text-primary/30">{item.accountNo}</p>
                                 </>
@@ -1459,11 +1478,11 @@ export function ProfitLossTab() {
                     <th className="pl-8 py-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-primary/40 bg-white">
                       <div className="flex items-center gap-1">
                         Channel
-                        <ExcelColumnFilter 
-                          columnKey="bankBrand" label="Channel" data={getCogsGroupCascadingData("bankBrand")} 
-                          activeFilters={cogsGroupFilters["bankBrand"]} 
-                          onFilterChange={(v) => setCogsGroupFilters(p => ({...p, bankBrand: v}))}
-                          onSort={(d) => setCogsGroupSort({key: "bankBrand", direction: d})}
+                        <ExcelColumnFilter
+                          columnKey="channel" label="Channel" data={getCogsGroupCascadingData("channel")}
+                          activeFilters={cogsGroupFilters["channel"]}
+                          onFilterChange={(v) => setCogsGroupFilters(p => ({...p, channel: v}))}
+                          onSort={(d) => setCogsGroupSort({key: "channel", direction: d})}
                           currentSort={cogsGroupSort}
                         />
                       </div>
@@ -1542,7 +1561,7 @@ export function ProfitLossTab() {
                           ) : item.accountType === "BANK" ? (
                             <>
                               <p className="text-[11px] font-bold text-primary/70 uppercase">
-                                {item.bankBrand || item.bankName} - {item.branch}
+                                {item.channel}
                               </p>
                               <p className="text-[9px] font-medium text-primary/30">{item.accountNo}</p>
                             </>
