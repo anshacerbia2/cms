@@ -848,6 +848,7 @@ test.describe("Access control", () => {
       name: "ACL deactivate",
       email,
       password: "deact12345",
+      // Role 1 = Administrator; it keeps users.index (Settings moved to Sys Admin).
       roleId: 1,
     });
 
@@ -859,12 +860,12 @@ test.describe("Access control", () => {
     });
     expect(login.status()).toBe(200);
 
-    const before = await theirs.get(`${API_URL}/roles`);
+    const before = await theirs.get(`${API_URL}/users`);
     expect(before.status()).toBe(200);
 
     await api.patch(`/users/${created.id}`, { status: "INACTIVE" });
 
-    const after = await theirs.get(`${API_URL}/roles`);
+    const after = await theirs.get(`${API_URL}/users`);
     expect(after.status(), "authorisation is read per request, not from the token").toBe(401);
 
     await theirs.dispose();

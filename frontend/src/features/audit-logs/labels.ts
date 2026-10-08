@@ -24,6 +24,8 @@ export const TABLE_LABELS: Record<string, string> = {
   // Bukan tabel: login, logout, dan login yang gagal (lihat AuthEventsService di backend).
   auth: "Sign-in",
   notification_channels: "Notification Channel",
+  roles: "Role",
+  users: "User",
 };
 
 /** Modul yang bisa dipilih di filter halaman Activity Log (tabel rincian ikut otomatis). */
@@ -43,6 +45,8 @@ export const FILTERABLE_TABLES = [
   "banks",
   "auth",
   "notification_channels",
+  "roles",
+  "users",
 ];
 
 const COMMON: Record<string, string> = {
@@ -54,6 +58,15 @@ const COMMON: Record<string, string> = {
 
 export const COLUMN_LABELS: Record<string, Record<string, string>> = {
   auth: { email: "Email", ip: "IP address", user_agent: "Browser" },
+  // permissions/menus: entri dari RolesService - "sebelum" = yang dicabut, "sesudah" = yang ditambahkan.
+  roles: {
+    name: "Name", slug: "Slug", description: "Description",
+    permissions: "Permissions (removed → added)", menus: "Menus (removed → added)",
+  },
+  users: {
+    name: "Name", email: "Email", phone: "Phone", location: "Location", status: "Status",
+    role_id: "Role", password: "Password", email_verified_at: "Email Verified",
+  },
   // `secret` selalu tercatat sebagai [redacted] (trigger audit_row_change_redacted).
   notification_channels: { name: "Name", type: "Type", hint: "Destination", is_active: "Active", secret: "Credentials" },
   account_receivables: {
@@ -131,6 +144,8 @@ export const HIDDEN_COLUMNS = new Set([
  */
 export const TABLE_HIDDEN_COLUMNS: Record<string, Set<string>> = {
   financial_transactions: new Set(["col_e", "ledger_id", "sub_ledger_id"]),
+  // Naik setiap logout; tidak dicatat sebagai perubahan (lihat trigger audit_users).
+  users: new Set(["token_version", "remember_token"]),
 };
 
 /**

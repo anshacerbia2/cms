@@ -1,10 +1,15 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { auditContext } from '../common/audit/audit-context';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { pageLimit } from '../common/utils/query-params';
+
+/** Akses sebuah role, dalam bentuk yang terbaca di activity log. */
+type Access = { permissions: string[]; menus: string[] };
 
 const ROLE_DETAIL_INCLUDE = {
   permissions: { include: { permission: true } },
@@ -39,6 +44,8 @@ export class RolesService {
           data: menuIds.map((menuId) => ({ roleId: role.id, menuId: BigInt(menuId) })),
         });
       }
+
+      await this.recordAccessChange(tx, role.id, { permissions: [], menus: [] }, await this.accessOf(tx, role.id));
 
       return tx.role.findUnique({ where: { id: role.id }, include: ROLE_DETAIL_INCLUDE });
     });
@@ -92,6 +99,7 @@ export class RolesService {
     await this.assertReferencesExist(permissionIds, menuIds);
 
     return this.prisma.$transaction(async (tx) => {
+      const before = await this.accessOf(tx, roleId);
       await tx.role.update({ where: { id: roleId }, data: roleData });
 
       // Both lists are absolute. `undefined` means "not being edited"; an empty
@@ -117,6 +125,8 @@ export class RolesService {
         }
       }
 
+      await this.recordAccessChange(tx, roleId, before, await this.accessOf(tx, roleId));
+
       return tx.role.findUnique({ where: { id: roleId }, include: ROLE_DETAIL_INCLUDE });
     });
   }
@@ -133,6 +143,50 @@ export class RolesService {
     }
 
     return this.prisma.role.delete({ where: { id: BigInt(id) } });
+  }
+
+  /** Permission (route) dan menu (nama) sebuah role saat ini, terurut. */
+  private async accessOf(tx: Prisma.TransactionClient, roleId: bigint): Promise<Access> {
+    const [permissions, menus] = await Promise.all([
+      tx.rolePermission.findMany({ where: { roleId }, select: { permission: { select: { route: true } } } }),
+      tx.roleMenu.findMany({ where: { roleId }, select: { menu: { select: { name: true } } } }),
+    ]);
+    return {
+      permissions: permissions.map((p) => p.permission.route).sort(),
+      menus: menus.map((m) => m.menu.name).sort(),
+    };
+  }
+
+  /**
+   * Satu entri activity log per simpan untuk akses sebuah role (pentest: siapa
+   * mengubah akses siapa harus terlacak). role_permission dan role_menu dihapus
+   * lalu diisi ulang setiap kali role disimpan, jadi trigger per baris akan
+   * mencatat ratusan baris; yang dicatat di sini hanya bedanya. old_data berisi
+   * yang dicabut, new_data yang ditambahkan - di layar terbaca sebagai
+   * "sebelum" yang dicoret dan "sesudah" yang baru. Tidak ada perubahan, tidak
+   * ada entri.
+   */
+  private async recordAccessChange(tx: Prisma.TransactionClient, roleId: bigint, before: Access, after: Access) {
+    const removed = (key: keyof Access) => before[key].filter((x) => !after[key].includes(x));
+    const added = (key: keyof Access) => after[key].filter((x) => !before[key].includes(x));
+    const changed = (['permissions', 'menus'] as const).filter((k) => removed(k).length || added(k).length);
+    if (!changed.length) return;
+
+    const ctx = auditContext.getStore();
+    await tx.auditLog.create({
+      data: {
+        tableName: 'roles',
+        rowId: roleId,
+        action: 'UPDATE',
+        userId: ctx?.userId ? BigInt(ctx.userId) : null,
+        userEmail: ctx?.email ?? null,
+        requestId: ctx?.requestId ?? null,
+        source: 'APP',
+        changedColumns: [...changed],
+        oldData: Object.fromEntries(changed.map((k) => [k, removed(k)])),
+        newData: Object.fromEntries(changed.map((k) => [k, added(k)])),
+      },
+    });
   }
 
   private async assertSlugFree(slug: string, exceptId?: bigint) {

@@ -133,9 +133,11 @@ there, the proxy connects to nothing, and the page sits on `/login` with no
 visible error. Naming `127.0.0.1` explicitly removes the guess.
 
 The other two: the database has no seeded users (`npx prisma db seed` in
-`backend/`), or the password differs from what `auth.seeder.ts` hashes for all
-three accounts — `admin123`. Override with `E2E_ADMIN_PASSWORD` and
-`E2E_VIEWER_PASSWORD`.
+`backend/`), or the password differs from what `auth.seeder.ts` seeds. The
+suite's `admin` is the full-access Sys Admin, `sys@dmin.com` / `Admin!23` (the
+Administrator role no longer holds the Settings modules); `viewer` is
+`viewer@pcmi.com` / `admin123`. Override with `E2E_ADMIN_EMAIL`,
+`E2E_ADMIN_PASSWORD` and `E2E_VIEWER_PASSWORD`.
 
 ## When the run dies before any test
 

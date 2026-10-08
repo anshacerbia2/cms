@@ -6,6 +6,12 @@ export const bankMutationService = {
     return Array.isArray(data) ? data : (data as any).data || [];
   },
 
+  /** All Transactions: semua rekening, hanya baca (tanpa saldo). */
+  getAllSourcesTransactions: async (year?: string, startDate?: string, endDate?: string): Promise<any[]> => {
+    const { data } = await api.get("/bank-mutation/all-sources", { params: { year, startDate, endDate } });
+    return Array.isArray(data) ? data : (data as any).data || [];
+  },
+
   createBulkTransactions: async (payload: { data: any[]; accountId: string; tagYear: number; startingBalance?: string }): Promise<any> => {
     const { data } = await api.post("/bank-mutation/transactions/bulk", payload);
     return data;
