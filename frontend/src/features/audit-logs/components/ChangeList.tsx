@@ -29,6 +29,8 @@ export function formatAuditValue(value: any, column?: string): string {
         : { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
     }
   }
+  // Daftar (permission, menu yang dicabut/ditambah): dipisah koma, kosong = "—".
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
 }
