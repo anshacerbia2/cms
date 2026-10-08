@@ -19,6 +19,7 @@ import { seedMasterDataPermissions } from './master-data.seeder';
 import { seedLedgerPermissions } from './ledgers.seeder';
 import { seedAuditLogPermissions } from './audit-logs.seeder';
 import { seedNotificationChannelPermissions } from './notification-channels.seeder';
+import { seedAllTransactionsPermissions } from './all-transactions.seeder';
 import { enforceViewerScope } from './utils/access-control';
 
 const pool = new Pool({
@@ -36,6 +37,7 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
   await seedLedgerPermissions(prisma);
   await seedAuditLogPermissions(prisma);
   await seedNotificationChannelPermissions(prisma);
+  await seedAllTransactionsPermissions(prisma);
   const viewer = await enforceViewerScope(prisma);
   console.log(`👁️  Viewer limited to Overview + Finance: withdrew ${viewer.menus} menu(s), ${viewer.permissions} permission(s).`);
   console.log('🚀 Access seeding completed.');

@@ -33,10 +33,77 @@ const LEDGER_ORDER: Prisma.FinancialTransactionOrderByWithRelationInput[] = [
  */
 const LEDGER_TX = { timeout: 60_000, maxWait: 30_000 };
 
+/**
+ * Nama sumber di All Transactions: nama tampilan rekening (BCA Juanda, Cash IDR,
+ * Non CB), sama dengan pilihan rekening di Bank Statement.
+ */
+function sourceLabel(acc: { displayName: string | null; type: string; branch: string | null; holderName: string | null; bank: { bankBrand: string | null } | null } | null): string {
+  if (!acc) return '-';
+  if (acc.displayName?.trim()) return acc.displayName.trim();
+  if (acc.type === 'CASH') return acc.branch?.trim() ? `CASH ${acc.branch.trim()}` : 'CASH';
+  return [acc.bank?.bankBrand ?? acc.holderName ?? '', acc.branch?.trim()].filter(Boolean).join(' ') || '-';
+}
+
 
 @Injectable()
 export class BankMutationService {
   constructor(private prisma: PrismaService) {}
+
+  /**
+   * All Transactions: transaksi semua rekening - bank, Cash, Non CB - dalam satu
+   * daftar, hanya untuk dibaca dan dicari. Membaca baris Bank Statement yang
+   * sama, jadi setiap tambahan atau revisi di sana langsung terlihat di sini.
+   *
+   * Tanpa saldo (colE): saldo berjalan hanya bermakna per rekening. Urutannya
+   * tanggal, lalu urutan rekening (display_order), lalu urutan baris di
+   * rekeningnya. Non CB tidak bertanggal, jadi barisnya di ujung.
+   */
+  async getAllSourcesTransactions(year?: number, startDate?: string, endDate?: string): Promise<any[]> {
+    const where: Prisma.FinancialTransactionWhereInput = {};
+    if (year && !isNaN(year)) where.tagYear = year;
+    const isSet = (v?: string) => !!v && v !== 'null' && v !== 'undefined';
+    if (isSet(startDate) || isSet(endDate)) {
+      where.colA = {
+        ...(isSet(startDate) && { gte: new Date(`${startDate}T00:00:00.000Z`) }),
+        ...(isSet(endDate) && { lte: new Date(`${endDate}T23:59:59.999Z`) }),
+      };
+    }
+
+    const data = await this.prisma.financialTransaction.findMany({
+      where,
+      orderBy: [
+        { colA: { sort: 'asc', nulls: 'last' } },
+        { internalAccount: { displayOrder: { sort: 'asc', nulls: 'last' } } },
+        { internalAccountId: 'asc' },
+        ...LEDGER_ORDER,
+      ],
+      include: {
+        ...LEDGER_NAMES_INCLUDE,
+        internalAccount: {
+          select: { displayName: true, type: true, branch: true, holderName: true, bank: { select: { bankBrand: true } } },
+        },
+      },
+    });
+
+    // Hanya kolom yang ditampilkan dan dicari: halaman ini memuat ribuan baris
+    // sekaligus (sekitar 6 ribu per tahun), jadi kolom teknis tidak ikut dikirim.
+    return data.map(withLedgerNames).map((t) => ({
+      id: Number(t.id),
+      internalAccountId: Number(t.internalAccountId),
+      tagYear: t.tagYear,
+      rowNo: t.rowNo,
+      source: sourceLabel(t.internalAccount),
+      sourceType: t.internalAccount?.type ?? null,
+      colA: t.colA,
+      colB: t.colB,
+      colC: formatDecimal(t.colC),
+      colD: formatDecimal(t.colD),
+      colF: t.colF,
+      colG: t.colG,
+      colH: t.colH,
+      colI: t.colI,
+    }));
+  }
 
   async getAllTransactions(accountId?: string, year?: number, startDate?: string, endDate?: string): Promise<any[]> {
     const where: any = {};

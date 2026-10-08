@@ -12,6 +12,7 @@ import BanksPage from './features/banks/pages/BanksPage';
 import StaffPage from './features/staff/pages/StaffPage';
 import FinancePage from './features/finance/pages/FinancePage';
 import BankMutationPage from './features/finance/pages/BankMutationPage';
+import AllTransactionsPage from './features/finance/pages/AllTransactionsPage';
 import AccountPayablePage from './features/finance/pages/AccountPayablePage';
 import AccountReceivablePage from './features/finance/pages/AccountReceivablePage';
 import PpnInOutPage from './features/finance/pages/PpnInOutPage';
@@ -62,6 +63,7 @@ function App() {
             <Route path="users" element={<StaffPage />} />
             <Route path="finance-reports" element={<FinancePage />} />
             <Route path="bank-mutation" element={<BankMutationPage />} />
+            <Route path="all-transactions" element={<AllTransactionsPage />} />
             <Route path="account-payable" element={<AccountPayablePage />} />
             <Route path="account-receivable" element={<AccountReceivablePage />} />
             <Route path="depreciation" element={<DepreciationPage />} />

@@ -10,6 +10,7 @@ import { seedMasterDataPermissions } from './master-data.seeder';
 import { seedLedgers } from './ledgers.seeder';
 import { seedAuditLogPermissions } from './audit-logs.seeder';
 import { seedNotificationChannelPermissions } from './notification-channels.seeder';
+import { seedAllTransactionsPermissions } from './all-transactions.seeder';
 import { enforceViewerScope } from './utils/access-control';
 import { seedCustomers } from './customers.seeder';
 import { seedSuppliers } from './suppliers.seeder';
@@ -41,6 +42,7 @@ async function main() {
     await seedLedgers(prisma);
     await seedAuditLogPermissions(prisma);
     await seedNotificationChannelPermissions(prisma);
+    await seedAllTransactionsPermissions(prisma);
     await enforceViewerScope(prisma);
     
     // Independent entities

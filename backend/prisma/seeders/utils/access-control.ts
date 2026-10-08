@@ -48,6 +48,7 @@ export const VIEWER_MODULES = new Set<string>([
   'dashboard',
   'finance',
   'bank-mutation',
+  'all-transactions',
   'account-payable',
   'account-receivable',
   'ppn-in-out',

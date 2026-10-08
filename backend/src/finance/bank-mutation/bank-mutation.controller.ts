@@ -23,6 +23,19 @@ const BANK_MUTATION_COLUMN_MAPPING = {
   colI: 'Sub Ledger 3',
 };
 
+/** Kolom ekspor All Transactions: sumbernya di depan, tanpa saldo. */
+const ALL_SOURCES_COLUMN_MAPPING = {
+  source: 'Source',
+  colA: 'Date',
+  colB: 'Description',
+  colC: 'Debit|accounting',
+  colD: 'Credit|accounting',
+  colF: 'Ledger',
+  colG: 'Sub Ledger 1',
+  colH: 'Sub Ledger 2',
+  colI: 'Sub Ledger 3',
+};
+
 /*
  * Akses diatur per endpoint lewat permission saja. Dulu seluruh controller juga
  * dikunci ke role admin/president_director, jadi role viewer - yang punya
@@ -44,6 +57,85 @@ export class BankMutationController {
     @Query('endDate') endDate?: string
   ) {
     return this.bankMutationService.getAllTransactions(accountId, year ? Number(year) : undefined, startDate, endDate);
+  }
+
+  /**
+   * All Transactions: semua rekening dalam satu daftar, hanya baca. Permission
+   * sendiri (all-transactions.index), terpisah dari Bank Statement, jadi bisa
+   * diberikan tanpa ikut memberi akses ke halaman yang bisa mengubah data.
+   */
+  @Get('all-sources')
+  @Permissions('all-transactions.index')
+  async getAllSources(
+    @Query('year') year?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.bankMutationService.getAllSourcesTransactions(year ? Number(year) : undefined, startDate, endDate);
+  }
+
+  @Get('all-sources/export/excel')
+  @Permissions('all-transactions.index')
+  async exportAllSourcesExcel(
+    @Query('year') year: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Res() res: Response,
+    ids?: string[],
+  ) {
+    const rows = await this.allSourcesExportRows(year, startDate, endDate, ids);
+    const buffer = generateExcelBuffer(rows, 'All Transactions', ALL_SOURCES_COLUMN_MAPPING);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=All_Transactions_${year || 'All'}.xlsx`);
+    res.send(buffer);
+  }
+
+  /** Kembaran POST: `ids` = baris yang lolos filter di layar (lihat export/excel di bawah). */
+  @Post('all-sources/export/excel')
+  @Permissions('all-transactions.index')
+  async exportAllSourcesExcelFiltered(
+    @Query('year') year: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportAllSourcesExcel(year, startDate, endDate, res, ids);
+  }
+
+  @Get('all-sources/export/pdf')
+  @Permissions('all-transactions.index')
+  async exportAllSourcesPdf(
+    @Query('year') year: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Res() res: Response,
+    ids?: string[],
+  ) {
+    const rows = await this.allSourcesExportRows(year, startDate, endDate, ids);
+    const buffer = await generatePdfBuffer(rows, 'All Transactions', ALL_SOURCES_COLUMN_MAPPING);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=All_Transactions_${year || 'All'}.pdf`);
+    res.send(buffer);
+  }
+
+  @Post('all-sources/export/pdf')
+  @Permissions('all-transactions.index')
+  async exportAllSourcesPdfFiltered(
+    @Query('year') year: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Body('ids') ids: string[],
+    @Res() res: Response,
+  ) {
+    return this.exportAllSourcesPdf(year, startDate, endDate, res, ids);
+  }
+
+  private async allSourcesExportRows(year: string, startDate: string, endDate: string, ids?: string[]) {
+    const data = await this.bankMutationService.getAllSourcesTransactions(year ? Number(year) : undefined, startDate, endDate);
+    return pickExportRows(data, ids).map(({ source, colA, colB, colC, colD, colF, colG, colH, colI }) => ({
+      source, colA, colB, colC, colD, colF, colG, colH, colI,
+    }));
   }
 
   @Get('export/excel')

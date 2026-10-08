@@ -35,6 +35,7 @@ import {
   Printer,
   BookOpen,
   BellRing,
+  Search,
 } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
 import { useAuthStore } from "@/store/authStore";
@@ -77,6 +78,7 @@ const iconMap: Record<string, LucideIcon> = {
   Printer,
   BookOpen,
   BellRing,
+  Search,
 };
 
 function SidebarNavItem({ icon: Icon, label, to, end = true }: { icon: LucideIcon; label: string; to: string; end?: boolean }) {

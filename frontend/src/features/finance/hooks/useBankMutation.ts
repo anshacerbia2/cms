@@ -11,6 +11,14 @@ export function useBankMutation() {
       ...options,
     });
 
+  const getAllSourcesTransactions = (year?: string, startDate?: string, endDate?: string, options?: any) =>
+    useQuery<any[]>({
+      // Di bawah ["finance", "bank-mutation"], jadi ikut segar setiap kali Bank Statement disimpan.
+      queryKey: ["finance", "bank-mutation", "all-sources", year, startDate, endDate],
+      queryFn: () => bankMutationService.getAllSourcesTransactions(year, startDate, endDate),
+      ...options,
+    });
+
   const createBulkTransactions = () => {
     return async (payload: { data: any[]; accountId: string; tagYear: number; startingBalance?: string }) => {
       const data = await bankMutationService.createBulkTransactions(payload);
@@ -85,6 +93,7 @@ export function useBankMutation() {
 
   return {
     getAllTransactions,
+    getAllSourcesTransactions,
     createBulkTransactions,
     getAnchorBalance,
     getFiscalPeriods,
