@@ -94,13 +94,40 @@ export const CRUD_ACTIONS: ActionSpec[] = [
 ];
 
 async function requireRoles(prisma: PrismaClient) {
-  const [admin, viewer] = await Promise.all([
+  const [admin, viewer, sysAdmin] = await Promise.all([
     prisma.role.findUnique({ where: { slug: 'admin' } }),
     prisma.role.findUnique({ where: { slug: 'viewer' } }),
+    prisma.role.findUnique({ where: { slug: 'sys-admin' } }),
   ]);
 
   if (!admin) throw new Error('Role "admin" not found — run the auth seeder first.');
-  return { admin, viewer };
+  return { admin, viewer, sysAdmin };
+}
+
+/**
+ * Siapa yang mendapat sebuah izin atau menu, dan siapa yang dicabut.
+ *
+ * Seperti di produksi sejak 2026-10-07: `sys-admin` (Sys Admin) memegang
+ * semuanya, dan modul administratif (`adminOnly` - Roles, Permissions, Menus,
+ * Print Templates, Activity Log, Notification Channels, grup Settings) HANYA
+ * miliknya; Administrator (`admin`) memegang sisanya. Kalau role sys-admin
+ * belum ada (database lama), admin tetap memegang modul administratif, supaya
+ * tidak ada keadaan tanpa satu role pun yang bisa mengatur akses.
+ */
+function grantPlan(
+  roles: { admin: { id: bigint }; viewer: { id: bigint } | null; sysAdmin: { id: bigint } | null },
+  adminOnly: boolean | undefined,
+  forViewer: boolean,
+) {
+  const { admin, viewer, sysAdmin } = roles;
+  const adminGets = !adminOnly || !sysAdmin;
+  const grant = [
+    ...(sysAdmin ? [sysAdmin] : []),
+    ...(adminGets ? [admin] : []),
+    ...(viewer && forViewer ? [viewer] : []),
+  ];
+  const revoke = [...(adminGets ? [] : [admin]), ...(viewer && !forViewer ? [viewer] : [])];
+  return { grant, revoke };
 }
 
 /**
@@ -115,7 +142,7 @@ export async function ensurePermissions(
   modules: ModuleSpec[],
   actions: ActionSpec[] = CRUD_ACTIONS,
 ) {
-  const { admin, viewer } = await requireRoles(prisma);
+  const roles = await requireRoles(prisma);
   let created = 0;
   let linked = 0;
   let revoked = 0;
@@ -133,9 +160,9 @@ export async function ensurePermissions(
       if (!existing) created++;
 
       const forViewer = readOnly && !adminOnly && VIEWER_MODULES.has(module);
-      const grantees = [admin, ...(viewer && forViewer ? [viewer] : [])];
+      const plan = grantPlan(roles, adminOnly, forViewer);
 
-      for (const role of grantees) {
+      for (const role of plan.grant) {
         await prisma.rolePermission.upsert({
           where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
           update: {},
@@ -145,10 +172,11 @@ export async function ensurePermissions(
       }
 
       // Withdraw an over-grant a previous run made before `adminOnly` existed,
-      // or outside what the viewer is allowed to see.
-      if (viewer && !forViewer) {
+      // outside what the viewer is allowed to see, or an administrative module
+      // on Administrator now that Sys Admin holds it.
+      for (const role of plan.revoke) {
         const { count } = await prisma.rolePermission.deleteMany({
-          where: { roleId: viewer.id, permissionId: permission.id },
+          where: { roleId: role.id, permissionId: permission.id },
         });
         revoked += count;
       }
@@ -160,7 +188,7 @@ export async function ensurePermissions(
 
 type Roles = Awaited<ReturnType<typeof requireRoles>>;
 
-/** Grants a menu to admin, and to viewer unless the entry is administrative. */
+/** Grants a menu per grantPlan: Sys Admin always, Administrator unless administrative, viewer for Overview/Finance. */
 async function grantMenu(
   prisma: PrismaClient,
   roles: Roles,
@@ -169,10 +197,10 @@ async function grantMenu(
   /** Grup menu tempat entri ini berada (atau id grup itu sendiri). */
   groupId: number = menuId,
 ) {
-  const { admin, viewer } = roles;
   const forViewer = !adminOnly && VIEWER_MENU_GROUPS.has(groupId);
+  const plan = grantPlan(roles, adminOnly, forViewer);
 
-  for (const role of [admin, ...(viewer && forViewer ? [viewer] : [])]) {
+  for (const role of plan.grant) {
     await prisma.roleMenu.upsert({
       where: { roleId_menuId: { roleId: role.id, menuId: BigInt(menuId) } },
       update: {},
@@ -180,14 +208,14 @@ async function grantMenu(
     });
   }
 
-  if (viewer && !forViewer) {
+  let revoked = 0;
+  for (const role of plan.revoke) {
     const { count } = await prisma.roleMenu.deleteMany({
-      where: { roleId: viewer.id, menuId: BigInt(menuId) },
+      where: { roleId: role.id, menuId: BigInt(menuId) },
     });
-    return count;
+    revoked += count;
   }
-
-  return 0;
+  return revoked;
 }
 
 /**

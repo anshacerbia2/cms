@@ -9,11 +9,16 @@ export const UI_URL = process.env.E2E_BASE_URL ?? "http://localhost:5173";
 export const API_URL = process.env.E2E_API_URL ?? "http://127.0.0.1:3000/api";
 
 /**
- * Seeded by `prisma db seed` — the password is the one `auth.seeder.ts` hashes
- * for all three accounts. See e2e/README.md before pointing this anywhere else.
+ * Seeded by `prisma db seed` (auth.seeder.ts). See e2e/README.md before
+ * pointing this anywhere else.
+ *
+ * `admin` is the full-access account the suite builds its preconditions with -
+ * roles, permissions, print templates included. Since 2026-10-07 that is Sys
+ * Admin (sys@dmin.com): the Administrator role (admin@pcmi.com) no longer holds
+ * the Settings modules, in production and in the seeder alike.
  */
 export const ACCOUNTS = {
-  admin: { email: "admin@pcmi.com", password: process.env.E2E_ADMIN_PASSWORD ?? "admin123" },
+  admin: { email: process.env.E2E_ADMIN_EMAIL ?? "sys@dmin.com", password: process.env.E2E_ADMIN_PASSWORD ?? "Admin!23" },
   viewer: { email: "viewer@pcmi.com", password: process.env.E2E_VIEWER_PASSWORD ?? "admin123" },
 } as const;
 

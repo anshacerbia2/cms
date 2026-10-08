@@ -26,6 +26,19 @@ export async function seedAuth(prisma: PrismaClient) {
     },
   });
 
+  // Sama dengan produksi sejak 2026-10-07: Sys Admin memegang semua akses,
+  // termasuk grup Settings yang tidak lagi dimiliki Administrator (lihat
+  // grantPlan di utils/access-control.ts).
+  const sysAdminRole = await prisma.role.upsert({
+    where: { slug: 'sys-admin' },
+    update: {},
+    create: {
+      name: 'Sys Admin',
+      slug: 'sys-admin',
+      description: 'Full access, including Settings (roles, permissions, menus, print templates, activity log, notifications)',
+    },
+  });
+
   const viewerRole = await prisma.role.upsert({
     where: { slug: 'viewer' },
     update: {},
@@ -169,6 +182,13 @@ export async function seedAuth(prisma: PrismaClient) {
       },
     });
 
+    // Sys Admin: semua izin.
+    await prisma.rolePermission.upsert({
+      where: { roleId_permissionId: { roleId: sysAdminRole.id, permissionId: perm.id } },
+      update: {},
+      create: { roleId: sysAdminRole.id, permissionId: perm.id },
+    });
+
     // Assign to President Director if in the list
     if (presidentDirectorPermissions.includes(p.route)) {
       await prisma.rolePermission.upsert({
@@ -252,10 +272,10 @@ export async function seedAuth(prisma: PrismaClient) {
       }
     });
 
-    // Assign parent to Admin
-    await prisma.roleMenu.create({
-      data: { roleId: adminRole.id, menuId: parentMenu.id }
-    });
+    // Assign parent to Admin and Sys Admin
+    for (const role of [adminRole, sysAdminRole]) {
+      await prisma.roleMenu.create({ data: { roleId: role.id, menuId: parentMenu.id } });
+    }
 
     // Assign parent to President Director if applicable
     if (group.forFinance) {
@@ -287,10 +307,10 @@ export async function seedAuth(prisma: PrismaClient) {
         }
       });
 
-      // Assign child to Admin
-      await prisma.roleMenu.create({
-        data: { roleId: adminRole.id, menuId: childMenu.id }
-      });
+      // Assign child to Admin and Sys Admin
+      for (const role of [adminRole, sysAdminRole]) {
+        await prisma.roleMenu.create({ data: { roleId: role.id, menuId: childMenu.id } });
+      }
 
       // Assign child to President Director if applicable
       if (item.forFinance) {
@@ -337,6 +357,20 @@ export async function seedAuth(prisma: PrismaClient) {
     },
   });
 
+  // Sys Admin - akun yang sama dengan di produksi (dibuat lewat UI 2026-10-07).
+  const sysAdminPassword = await bcrypt.hash('Admin!23', 10);
+  await prisma.user.upsert({
+    where: { email: 'sys@dmin.com' },
+    update: { password: sysAdminPassword, roleId: sysAdminRole.id },
+    create: {
+      name: 'System Admin',
+      email: 'sys@dmin.com',
+      password: sysAdminPassword,
+      roleId: sysAdminRole.id,
+      status: 'ACTIVE',
+    },
+  });
+
   // Viewer
   await prisma.user.upsert({
     where: { email: 'viewer@pcmi.com' },
@@ -351,5 +385,5 @@ export async function seedAuth(prisma: PrismaClient) {
   });
 
   console.log('✅ Auth seeding completed.');
-  return { adminRole, presidentDirectorRole, viewerRole };
+  return { adminRole, presidentDirectorRole, viewerRole, sysAdminRole };
 }
