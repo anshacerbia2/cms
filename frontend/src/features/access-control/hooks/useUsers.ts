@@ -42,6 +42,15 @@ export const useUsers = (params: AccessQueryParams = {}) => {
     },
   });
 
+  // HP hilang atau ganti: login berikutnya user diminta mendaftar ulang.
+  const resetTwoFactorMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.delete(`/users/${id}/two-factor`);
+      return data;
+    },
+    onSuccess: invalidate,
+  });
+
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
       const { data } = await api.delete(`/users/${id}`);
@@ -56,5 +65,6 @@ export const useUsers = (params: AccessQueryParams = {}) => {
     updateUser: updateUserMutation,
     changePassword: changePasswordMutation,
     deleteUser: deleteUserMutation,
+    resetTwoFactor: resetTwoFactorMutation,
   };
 };

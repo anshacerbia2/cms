@@ -71,6 +71,7 @@ export class Api {
           `Seed the database and check E2E_${role.toUpperCase()}_PASSWORD.`,
       );
     }
+    await Api.assertNoTwoFactor(res, ACCOUNTS[role].email);
 
     return new Api(ctx, await Api.sessionOf(ctx));
   }
@@ -88,9 +89,26 @@ export class Api {
     if (!res.ok()) {
       throw new Error(`Sign-in failed for ${email} (${res.status()}).`);
     }
+    await Api.assertNoTwoFactor(res, email);
 
     const body = await res.json();
     return { api: new Api(ctx, await Api.sessionOf(ctx)), user: body.data.user };
+  }
+
+  /**
+   * The password was right but the API asks for a Google Authenticator code
+   * instead of starting a session. The suite cannot type one: run the API with
+   * TWO_FACTOR_REQUIRED=0 against a database where the seeded accounts have no
+   * authenticator set up.
+   */
+  private static async assertNoTwoFactor(res: { json(): Promise<any> }, email: string) {
+    const step = (await res.json())?.data?.twoFactor;
+    if (step) {
+      throw new Error(
+        `Sign-in for ${email} asks for two-factor (${step}). Start the API with TWO_FACTOR_REQUIRED=0 ` +
+          `in backend/.env, and reset two-factor for this account if it was set up.`,
+      );
+    }
   }
 
   async dispose() {

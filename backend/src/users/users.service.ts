@@ -15,7 +15,7 @@ import { pageLimit } from '../common/utils/query-params';
 /** Matches the cost factor the auth seeder and login path already use. */
 export const BCRYPT_ROUNDS = 10;
 
-/** Every field of `users` except `password` and `remember_token`. */
+/** Every field of `users` except `password`, `remember_token` and the two-factor secret. */
 const SAFE_USER_SELECT = {
   id: true,
   name: true,
@@ -24,6 +24,7 @@ const SAFE_USER_SELECT = {
   phone: true,
   location: true,
   status: true,
+  twoFactorEnabledAt: true,
   roleId: true,
   createdAt: true,
   updatedAt: true,

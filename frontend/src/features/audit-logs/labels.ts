@@ -57,7 +57,7 @@ const COMMON: Record<string, string> = {
 };
 
 export const COLUMN_LABELS: Record<string, Record<string, string>> = {
-  auth: { email: "Email", ip: "IP address", user_agent: "Browser" },
+  auth: { email: "Email", ip: "IP address", user_agent: "Browser", reason: "Reason" },
   // permissions/menus: entri dari RolesService - "sebelum" = yang dicabut, "sesudah" = yang ditambahkan.
   roles: {
     name: "Name", slug: "Slug", description: "Description",
@@ -66,6 +66,7 @@ export const COLUMN_LABELS: Record<string, Record<string, string>> = {
   users: {
     name: "Name", email: "Email", phone: "Phone", location: "Location", status: "Status",
     role_id: "Role", password: "Password", email_verified_at: "Email Verified",
+    two_factor_secret: "Authenticator Key", two_factor_enabled_at: "Two-Factor Set Up",
   },
   // `secret` selalu tercatat sebagai [redacted] (trigger audit_row_change_redacted).
   notification_channels: { name: "Name", type: "Type", hint: "Destination", is_active: "Active", secret: "Credentials" },
@@ -145,7 +146,7 @@ export const HIDDEN_COLUMNS = new Set([
 export const TABLE_HIDDEN_COLUMNS: Record<string, Set<string>> = {
   financial_transactions: new Set(["col_e", "ledger_id", "sub_ledger_id"]),
   // Naik setiap logout; tidak dicatat sebagai perubahan (lihat trigger audit_users).
-  users: new Set(["token_version", "remember_token"]),
+  users: new Set(["token_version", "remember_token", "two_factor_last_step"]),
 };
 
 /**
@@ -182,4 +183,5 @@ export const ACTION_LABELS: Record<string, string> = {
   LOGOUT: "Signed out",
   LOGIN_FAILED: "Failed sign-in",
   LOGIN_LOCKED: "Sign-in locked",
+  TWO_FACTOR_ENABLED: "2FA set up",
 };

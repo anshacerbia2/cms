@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { auditContext } from '../common/audit/audit-context';
 
 /** Kejadian login yang dicatat. `auth` adalah nama "tabel"-nya di activity log. */
-export type AuthEvent = 'LOGIN' | 'LOGOUT' | 'LOGIN_FAILED' | 'LOGIN_LOCKED';
+export type AuthEvent = 'LOGIN' | 'LOGOUT' | 'LOGIN_FAILED' | 'LOGIN_LOCKED' | 'TWO_FACTOR_ENABLED';
 export const AUTH_EVENTS_TABLE = 'auth';
 
 /**
@@ -59,5 +59,18 @@ export class AuthEventsService {
       // Gagal mencatat tidak boleh menggagalkan login atau logout.
       this.logger.error(`Could not record ${event} for ${who.email}: ${(err as Error).message}`);
     }
+  }
+
+  /** IP tempat akun ini berhasil masuk dalam `days` hari terakhir. */
+  async recentSignInIps(accountId: bigint | string, days = 90): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<{ ip: string }[]>`
+      SELECT DISTINCT "new_data" ->> 'ip' AS ip
+        FROM "audit_logs"
+       WHERE "table_name" = ${AUTH_EVENTS_TABLE}
+         AND "action" = 'LOGIN'
+         AND "row_id" = ${BigInt(accountId)}
+         AND "occurred_at" > timezone('utc', now()) - make_interval(days => ${days})
+         AND "new_data" ->> 'ip' IS NOT NULL`;
+    return rows.map((r) => r.ip);
   }
 }

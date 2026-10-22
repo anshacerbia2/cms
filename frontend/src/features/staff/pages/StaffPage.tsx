@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Shield, Mail, KeyRound } from "lucide-react";
+import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Shield, Mail, KeyRound, Smartphone } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useUsers } from "@/features/access-control/hooks/useUsers";
 import { useRoles } from "@/features/access-control/hooks/useRoles";
@@ -38,7 +38,7 @@ export default function StaffPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { usersQuery, createUser, updateUser, changePassword, deleteUser } = useUsers({
+  const { usersQuery, createUser, updateUser, changePassword, deleteUser, resetTwoFactor } = useUsers({
     page,
     search: debouncedSearch,
     limit: 10
@@ -92,6 +92,17 @@ export default function StaffPage() {
       setIsPasswordDialogOpen(false);
     } catch (error: any) {
       toast.error(error?.response?.data?.message ?? "Failed to change password.");
+    }
+  };
+
+  const handleResetTwoFactor = async (user: User) => {
+    if (!confirm(`Reset two-factor sign-in for ${user.name}? They will set up Google Authenticator again at their next sign-in.`)) return;
+
+    try {
+      await resetTwoFactor.mutateAsync(user.id);
+      toast.success(`Two-factor sign-in reset for ${user.name}.`);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message ?? "Failed to reset two-factor sign-in.");
     }
   };
 
@@ -230,6 +241,19 @@ export default function StaffPage() {
                         }`} />
                         <span className="text-[10px] font-extrabold uppercase tracking-widest">{user.status}</span>
                       </Badge>
+                      <div
+                        className={`mt-1.5 flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-widest ${
+                          user.twoFactorEnabledAt ? "text-violet-600" : "text-muted-foreground/60"
+                        }`}
+                        title={
+                          user.twoFactorEnabledAt
+                            ? `Google Authenticator set up on ${new Date(user.twoFactorEnabledAt).toLocaleString("en-GB")}`
+                            : "Will be asked to set up Google Authenticator at the next sign-in"
+                        }
+                      >
+                        <Smartphone size={10} />
+                        {user.twoFactorEnabledAt ? "2FA on" : "2FA not set up"}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -255,6 +279,15 @@ export default function StaffPage() {
                                 <KeyRound size={14} />
                                 <span>Change Password</span>
                               </DropdownMenuItem>
+                              {user.twoFactorEnabledAt && (
+                                <DropdownMenuItem
+                                  onClick={() => handleResetTwoFactor(user)}
+                                  className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-primary focus:text-primary transition-colors"
+                                >
+                                  <Smartphone size={14} />
+                                  <span>Reset 2FA</span>
+                                </DropdownMenuItem>
+                              )}
                             </>
                           )}
                           {can('users.delete') && (

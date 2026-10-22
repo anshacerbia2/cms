@@ -9,8 +9,12 @@
  * active notification channel (Google Chat and Telegram) without leaking their
  * credentials.
  *
- * The cookie session and the activity-log sign-in records are stubbed; they are
- * not what this suite checks.
+ * Since the 19 Oct 2026 incident it also checks the alerts for a successful
+ * sign-in from a new network or a non-browser tool, and that an inactive
+ * account is refused before any session is issued.
+ *
+ * The cookie session, two-factor step and the activity-log sign-in records are
+ * stubbed; they are not what this suite checks (see two-factor-login.e2e-spec.ts).
  */
 import { Test } from '@nestjs/testing';
 import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
@@ -23,12 +27,15 @@ import { SessionService } from '../src/auth/session.service';
 import { AuthEventsService } from '../src/auth/auth-events.service';
 import { UsersService } from '../src/users/users.service';
 import { JwtService } from '@nestjs/jwt';
+import { TwoFactorService } from '../src/auth/two-factor.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { NotificationChannelsService } from '../src/notification-channels/notification-channels.service';
 import { encryptSecret } from '../src/notification-channels/notification-secret';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 
 const GOOD = { email: 'admin@pcmi.com', password: 'right-password' };
+const SUSPENDED = { email: 'finance@example.com', password: 'leaked-password' };
+const BROWSER = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36';
 const WEBHOOK_URL = 'https://chat.googleapis.com/v1/spaces/TEST/messages?key=test-key&token=test-token';
 const BOT_TOKEN = '123456789:AAtest-bot-token-0123456789abcdefghijk';
 const TELEGRAM_URL = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
@@ -51,8 +58,14 @@ describe('Login security events (N-04)', () => {
       .filter((e) => e?.event);
   const alerts = () => error.mock.calls.map(([line]) => String(line)).filter((l) => l.startsWith('ALERT '));
 
-  const login = (email: string, password = 'wrong', ip = '203.0.113.7') =>
-    request(app.getHttpServer()).post('/auth/login').set('X-Forwarded-For', ip).send({ email, password });
+  let issued: number;
+
+  const login = (email: string, password = 'wrong', ip = '203.0.113.7', userAgent = BROWSER) =>
+    request(app.getHttpServer())
+      .post('/auth/login')
+      .set('X-Forwarded-For', ip)
+      .set('User-Agent', userAgent)
+      .send({ email, password });
 
   beforeEach(async () => {
     process.env.NOTIFICATION_SECRET_KEY = Buffer.alloc(32, 7).toString('base64');
@@ -65,6 +78,7 @@ describe('Login security events (N-04)', () => {
     global.fetch = fetchMock as any;
     warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    issued = 0;
 
     const moduleRef = await Test.createTestingModule({
       controllers: [AuthController],
@@ -75,14 +89,20 @@ describe('Login security events (N-04)', () => {
           provide: AuthService,
           useValue: {
             validateUser: async (email: string, password: string) =>
-              email === GOOD.email && password === GOOD.password ? { id: 1, email } : null,
+              email === GOOD.email && password === GOOD.password
+                ? { id: 1, email, status: 'ACTIVE' }
+                : email === SUSPENDED.email && password === SUSPENDED.password
+                  ? { id: 6, email, status: 'SUSPENDED' }
+                  : null,
             login: async (user: any) => ({ user }),
           },
         },
         // Sesi cookie dan catatan sign-in di activity log tidak diuji di sini.
         { provide: UsersService, useValue: { findByEmail: async () => null } },
-        { provide: SessionService, useValue: { issue: () => undefined, readToken: () => null, clear: () => undefined } },
-        { provide: AuthEventsService, useValue: { record: async () => undefined } },
+        { provide: SessionService, useValue: { issue: () => issued++, readToken: () => null, clear: () => undefined } },
+        // admin@ biasa masuk dari jaringan 203.0.113.x.
+        { provide: AuthEventsService, useValue: { record: async () => undefined, recentSignInIps: async () => ['203.0.113.20'] } },
+        { provide: TwoFactorService, useValue: { isEnabled: () => false, required: false } },
         { provide: JwtService, useValue: { verify: () => ({}) } },
         NotificationChannelsService,
         { provide: PrismaService, useValue: { notificationChannel: { findMany: async () => channels } } },
@@ -159,8 +179,40 @@ describe('Login security events (N-04)', () => {
     expect(logged.join('\n')).not.toContain(BOT_TOKEN);
   });
 
-  it('a correct login is not logged as a security event', async () => {
+  it('a correct login from a known network in a browser is not logged as a security event', async () => {
     await login(GOOD.email, GOOD.password).expect(200);
     expect(events()).toHaveLength(0);
+    expect(issued).toBe(1);
+  });
+
+  it('alerts when a correct login comes from a new network', async () => {
+    await login(GOOD.email, GOOD.password, '202.46.68.181').expect(200);
+    expect(events()).toEqual([
+      expect.objectContaining({ event: 'login_suspicious', ip: '202.46.68.181', reasons: ['a new IP address'] }),
+    ]);
+    expect(alerts()).toEqual([expect.stringContaining('admin@pcmi.com signed in from a new IP address - IP 202.46.68.181')]);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('alerts when a correct login comes from curl or a script', async () => {
+    await login(GOOD.email, GOOD.password, '203.0.113.7', 'curl/8.5.0').expect(200);
+    await login(GOOD.email, GOOD.password, '165.99.95.11', 'Python-urllib/3.12').expect(200);
+    expect(events().map((e) => e.reasons)).toEqual([
+      ['a non-browser tool'],
+      ['a non-browser tool', 'a new IP address'],
+    ]);
+    expect(alerts()).toEqual([
+      expect.stringContaining('using "curl/8.5.0"'),
+      expect.stringContaining('using "Python-urllib/3.12"'),
+    ]);
+  });
+
+  it('refuses an inactive account with the right password, before any session, and alerts', async () => {
+    const res = await login(SUSPENDED.email, SUSPENDED.password).expect(403);
+    expect(res.body.message).toBe('This account is not active. Contact your administrator.');
+    expect(issued).toBe(0);
+    expect(events()).toEqual([expect.objectContaining({ event: 'login_inactive', status: 'SUSPENDED' })]);
+    expect(alerts()).toEqual([expect.stringContaining('correct password entered for SUSPENDED account finance@example.com')]);
   });
 });
