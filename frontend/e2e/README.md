@@ -16,8 +16,8 @@ npx prisma generate
 npx prisma migrate deploy
 npx prisma db seed          # roles, permissions, menus, sample master data
 
-# 2. api on :3000, with TWO_FACTOR_REQUIRED=0 in backend/.env - the suite
-#    cannot type Google Authenticator codes
+# 2. api on :3000 (leave TWO_FACTOR_REQUIRED unset or 0 - the suite cannot
+#    type Google Authenticator codes)
 pnpm start:dev
 
 # 3. the UI starts itself when the suite runs, but you can have it
@@ -133,9 +133,9 @@ loopback fix) while `localhost` resolves to `::1` first. Nothing is listening
 there, the proxy connects to nothing, and the page sits on `/login` with no
 visible error. Naming `127.0.0.1` explicitly removes the guess.
 
-**The API asks for a two-factor code.** Set `TWO_FACTOR_REQUIRED=0` in
-`backend/.env` and restart it. If the account already set up Google
-Authenticator, clear it: `UPDATE users SET two_factor_secret = NULL,
+**The API asks for a two-factor code.** The account has two-factor sign-in
+turned on (or `TWO_FACTOR_REQUIRED=1` is set in `backend/.env`). Turn it off
+from the profile menu, or clear it: `UPDATE users SET two_factor_secret = NULL,
 two_factor_enabled_at = NULL WHERE email = 'sys@dmin.com';`.
 
 The other two: the database has no seeded users (`npx prisma db seed` in

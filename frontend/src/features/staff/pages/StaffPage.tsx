@@ -96,11 +96,11 @@ export default function StaffPage() {
   };
 
   const handleResetTwoFactor = async (user: User) => {
-    if (!confirm(`Reset two-factor sign-in for ${user.name}? They will set up Google Authenticator again at their next sign-in.`)) return;
+    if (!confirm(`Turn off two-factor sign-in for ${user.name}? Use this when they lost or replaced their phone. They sign in with their password only until they turn it on again.`)) return;
 
     try {
       await resetTwoFactor.mutateAsync(user.id);
-      toast.success(`Two-factor sign-in reset for ${user.name}.`);
+      toast.success(`Two-factor sign-in turned off for ${user.name}.`);
     } catch (error: any) {
       toast.error(error?.response?.data?.message ?? "Failed to reset two-factor sign-in.");
     }
@@ -248,11 +248,11 @@ export default function StaffPage() {
                         title={
                           user.twoFactorEnabledAt
                             ? `Google Authenticator set up on ${new Date(user.twoFactorEnabledAt).toLocaleString("en-GB")}`
-                            : "Will be asked to set up Google Authenticator at the next sign-in"
+                            : "Signs in with a password only. They can turn on two-factor from their profile menu."
                         }
                       >
                         <Smartphone size={10} />
-                        {user.twoFactorEnabledAt ? "2FA on" : "2FA not set up"}
+                        {user.twoFactorEnabledAt ? "2FA on" : "2FA off"}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">

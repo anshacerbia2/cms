@@ -5,7 +5,7 @@ import { SidebarProvider, useSidebar } from "@/context/SidebarContext";
 import { useAuthStore } from "@/store/authStore";
 import { signOut } from "@/lib/session";
 import { cn } from "@/lib/utils";
-import { Bell, Search, Menu, KeyRound, LogOut } from "lucide-react";
+import { Bell, Search, Menu, KeyRound, LogOut, Smartphone } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,12 +15,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChangeOwnPasswordDialog } from "@/features/auth/components/ChangeOwnPasswordDialog";
+import { TwoFactorDialog } from "@/features/auth/components/TwoFactorDialog";
 
 function Header() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [twoFactorOpen, setTwoFactorOpen] = useState(false);
 
   return (
     <>
@@ -98,6 +100,13 @@ function Header() {
                   Change Password
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  onClick={() => setTwoFactorOpen(true)}
+                  className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground focus:text-primary"
+                >
+                  <Smartphone size={14} />
+                  Two-Factor Sign-In
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   onClick={() => { void signOut(navigate); }}
                   className="gap-2 px-3 py-2.5 rounded-lg cursor-pointer font-bold text-xs uppercase tracking-wider text-muted-foreground focus:text-primary"
                 >
@@ -111,6 +120,7 @@ function Header() {
       </div>
     </header>
     <ChangeOwnPasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
+    <TwoFactorDialog open={twoFactorOpen} onOpenChange={setTwoFactorOpen} />
     </>
   );
 }

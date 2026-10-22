@@ -7,8 +7,9 @@ import { TwoFactorService } from './two-factor.service';
 import { SecurityEvents } from './security-events';
 
 /**
- * Admin menghapus pendaftaran Google Authenticator seorang user (HP hilang
- * atau ganti). Login berikutnya meminta user mendaftar ulang.
+ * Admin mematikan Google Authenticator seorang user (HP hilang atau ganti).
+ * User-nya masuk dengan password saja sampai mengaktifkannya lagi dari menu
+ * profil (atau, kalau TWO_FACTOR_REQUIRED=1, saat login berikutnya).
  *
  * Di modul auth, bukan users, karena butuh TwoFactorService; rutenya tetap di
  * bawah /users. Perubahannya tercatat oleh trigger audit tabel users.

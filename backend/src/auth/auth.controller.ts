@@ -5,6 +5,7 @@ import {
   Body,
   UnauthorizedException,
   ForbiddenException,
+  BadRequestException,
   Get,
   UseGuards,
   Req,
@@ -17,7 +18,7 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ChangeOwnPasswordDto } from './dto/change-own-password.dto';
 import { LoginDto } from './dto/login.dto';
-import { LoginCodeDto } from './dto/login-code.dto';
+import { LoginCodeDto, TwoFactorCodeDto } from './dto/login-code.dto';
 import { LoginRateLimiter } from './login-rate-limiter';
 import { SessionService, type SessionPayload } from './session.service';
 import { AuthEventsService } from './auth-events.service';
@@ -130,13 +131,18 @@ export class AuthController {
     return user;
   }
 
-  /** Kode salah dihitung sebagai login gagal: 10 kali, akunnya terkunci (dan ada alert). */
-  private async rejectCode(req: Request, user: { id: bigint; email: string }): Promise<never> {
+  /**
+   * Kode salah dihitung sebagai login gagal: 10 kali, akunnya terkunci (dan ada
+   * alert). Di menu profil jawabannya 400, bukan 401 - 401 di sana dibaca
+   * frontend sebagai sesi habis.
+   */
+  private async rejectCode(req: Request, user: { id: bigint | string; email: string }, signedIn = false): Promise<never> {
     const locked = this.loginLimiter.recordFailure(req.ip ?? 'unknown', user.email);
     await this.events.record(locked ? 'LOGIN_LOCKED' : 'LOGIN_FAILED', req, { email: user.email, accountId: user.id }, {
       reason: 'Wrong authenticator code',
     });
-    throw new UnauthorizedException('The code is incorrect or has already been used.');
+    const message = 'The code is incorrect or has already been used.';
+    throw signedIn ? new BadRequestException(message) : new UnauthorizedException(message);
   }
 
   /** Password (dan kode, kalau diminta) sudah benar: pasang sesi. */
@@ -209,5 +215,68 @@ export class AuthController {
     const fresh = await this.authService.changeOwnPassword(req.user.userId, dto.currentPassword, dto.newPassword);
     this.session.issue(req, res, fresh);
     return { message: 'Password updated successfully' };
+  }
+
+  /** Status 2FA akun sendiri, untuk menu profil. */
+  @UseGuards(JwtAuthGuard)
+  @Get('two-factor')
+  async twoFactorStatus(@Req() req: any) {
+    const user = await this.usersService.findById(Number(req.user.userId));
+    return { enabled: !!user && this.twoFactor.isEnabled(user), enabledAt: user?.twoFactorEnabledAt ?? null };
+  }
+
+  /**
+   * Mulai mengaktifkan 2FA dari menu profil: QR code dan kunci baru, plus
+   * challenge 5 menit yang membawanya ke langkah aktifkan. Belum tersimpan apa-apa.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('two-factor/setup')
+  @HttpCode(200)
+  async startTwoFactor(@Req() req: any) {
+    const user = await this.usersService.findById(Number(req.user.userId));
+    if (!user) throw new UnauthorizedException();
+    if (this.twoFactor.isEnabled(user)) throw new BadRequestException('Two-factor sign-in is already on.');
+    const enrollment = await this.twoFactor.newEnrollment(user.email);
+    return { challenge: this.twoFactor.issueChallenge(user, 'setup', enrollment.secret), ...enrollment };
+  }
+
+  /** Aktifkan 2FA: kode dari aplikasi membuktikan QR-nya sudah discan. */
+  @UseGuards(JwtAuthGuard)
+  @Post('two-factor/enable')
+  @HttpCode(200)
+  async enableTwoFactor(@Req() req: any, @Body() body: LoginCodeDto) {
+    let challenge: LoginChallenge;
+    try {
+      challenge = this.twoFactor.readChallenge(body.challenge, 'setup');
+    } catch {
+      throw new BadRequestException('This setup has expired. Please start again.');
+    }
+    const user = await this.usersService.findById(Number(req.user.userId));
+    if (!user || challenge.sub !== user.id.toString() || !challenge.secret || this.twoFactor.isEnabled(user)) {
+      throw new BadRequestException('This setup has expired. Please start again.');
+    }
+    this.loginLimiter.check(req.ip ?? 'unknown', user.email);
+    if (!(await this.twoFactor.enable(user.id, challenge.secret, body.code))) await this.rejectCode(req, user, true);
+    this.security.record('two_factor_enabled', { ip: req.ip ?? 'unknown', email: user.email, userAgent: userAgentOf(req) });
+    await this.events.record('TWO_FACTOR_ENABLED', req, { email: user.email, accountId: user.id, signedIn: true });
+    return { message: 'Two-factor sign-in is now on.' };
+  }
+
+  /** Matikan 2FA: butuh kode yang berlaku, supaya sesi yang tertinggal saja tidak cukup. */
+  @UseGuards(JwtAuthGuard)
+  @Post('two-factor/disable')
+  @HttpCode(200)
+  async disableTwoFactor(@Req() req: any, @Body() body: TwoFactorCodeDto) {
+    const user = await this.usersService.findById(Number(req.user.userId));
+    if (!user || !this.twoFactor.isEnabled(user)) throw new BadRequestException('Two-factor sign-in is already off.');
+    if (this.twoFactor.required) {
+      throw new BadRequestException('Two-factor sign-in is required for every account and cannot be turned off.');
+    }
+    this.loginLimiter.check(req.ip ?? 'unknown', user.email);
+    if (!(await this.twoFactor.verifyLogin(user.id, body.code))) await this.rejectCode(req, user, true);
+    await this.twoFactor.reset(user.id);
+    this.security.record('two_factor_disabled', { ip: req.ip ?? 'unknown', email: user.email, userAgent: userAgentOf(req) });
+    await this.events.record('TWO_FACTOR_DISABLED', req, { email: user.email, accountId: user.id, signedIn: true });
+    return { message: 'Two-factor sign-in is now off.' };
   }
 }

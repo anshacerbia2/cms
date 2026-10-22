@@ -2,9 +2,12 @@
  * Two-factor sign-in with Google Authenticator (TOTP) - after the 19 Oct 2026
  * incident, where finance@'s leaked password was used from outside.
  *
+ * Two-factor is each user's choice (turned on from the profile menu) unless
+ * TWO_FACTOR_REQUIRED=1, which makes every account set it up at sign-in.
+ *
  * Runs the real AuthController, TwoFactorService, JwtService, LoginRateLimiter
  * and SecurityEvents against one in-memory user; the database, the cookie
- * session and the activity log are stubbed.
+ * session, the activity log and the session guard are stubbed.
  */
 import { Test } from '@nestjs/testing';
 import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
@@ -23,6 +26,7 @@ import { UsersService } from '../src/users/users.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { NotificationChannelsService } from '../src/notification-channels/notification-channels.service';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
+import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
 
 const EMAIL = 'finance@example.com';
 const PASSWORD = 'right-password';
@@ -95,7 +99,16 @@ describe('Two-factor sign-in (Google Authenticator)', () => {
           },
         },
       ],
-    }).compile();
+    })
+      // Sesi yang sudah masuk, untuk endpoint menu profil.
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
+        canActivate: (ctx: any) => {
+          ctx.switchToHttp().getRequest().user = { userId: user.id.toString(), email: user.email };
+          return true;
+        },
+      })
+      .compile();
     app = moduleRef.createNestApplication();
     (app as any).set('trust proxy', true);
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }));
@@ -105,7 +118,8 @@ describe('Two-factor sign-in (Google Authenticator)', () => {
 
   beforeEach(async () => {
     process.env.NOTIFICATION_SECRET_KEY = Buffer.alloc(32, 9).toString('base64');
-    env = {};
+    // Mendaftar saat login hanya terjadi kalau diwajibkan; suite ini mulai dari situ.
+    env = { TWO_FACTOR_REQUIRED: '1' };
     user = { id: 6n, email: EMAIL, status: 'ACTIVE', tokenVersion: 3, twoFactorSecret: null, twoFactorEnabledAt: null, twoFactorLastStep: null };
     issued = 0;
     recorded = [];
@@ -127,7 +141,7 @@ describe('Two-factor sign-in (Google Authenticator)', () => {
     return first.body.secret as string;
   }
 
-  it('a password alone gives no session: an account without 2FA is asked to set it up', async () => {
+  it('when required, a password alone gives no session: an account without 2FA is asked to set it up', async () => {
     const res = await login().expect(200);
     expect(res.body).toEqual({
       twoFactor: 'setup',
@@ -220,22 +234,91 @@ describe('Two-factor sign-in (Google Authenticator)', () => {
     await post('/auth/login/setup', { challenge: 'not-a-jwt', code: '123456' }).expect(400);
   });
 
-  it('with TWO_FACTOR_REQUIRED=0, an account without 2FA signs in with its password only', async () => {
+  it('by default (not required), an account without 2FA signs in with its password only', async () => {
     await app.close();
-    env = { TWO_FACTOR_REQUIRED: '0' };
+    env = {};
     await start();
     const res = await login().expect(200);
     expect(res.body.user).toEqual({ id: '6', email: EMAIL });
     expect(issued).toBe(1);
   });
 
-  it('with TWO_FACTOR_REQUIRED=0, an account that has 2FA still needs its code', async () => {
+  it('by default, an account that turned 2FA on still needs its code', async () => {
     await enroll();
     await app.close();
-    env = { TWO_FACTOR_REQUIRED: '0' };
+    env = {};
     await start();
     issued = 0;
     expect((await login().expect(200)).body.twoFactor).toBe('verify');
     expect(issued).toBe(0);
+  });
+
+  describe('profile menu (opt-in)', () => {
+    beforeEach(async () => {
+      await app.close();
+      env = {};
+      await start();
+    });
+
+    const get = (path: string) => request(app.getHttpServer()).get(path).set('X-Forwarded-For', '203.0.113.7');
+
+    it('turns 2FA on: QR first, saved only once a code from the app proves the scan', async () => {
+      expect((await get('/auth/two-factor').expect(200)).body).toEqual({ enabled: false, enabledAt: null });
+
+      const start = await post('/auth/two-factor/setup', {}).expect(200);
+      expect(start.body).toEqual({
+        challenge: expect.any(String),
+        secret: expect.stringMatching(/^[A-Z2-7]{32}$/),
+        qrCode: expect.stringMatching(/^data:image\/svg\+xml;base64,/),
+      });
+      expect(user.twoFactorEnabledAt).toBeNull();
+
+      // Kode salah: 400, bukan 401 (401 di sini dibaca frontend sebagai sesi habis).
+      await post('/auth/two-factor/enable', { challenge: start.body.challenge, code: codeFor(start.body.secret, 5) }).expect(400);
+      await post('/auth/two-factor/enable', { challenge: start.body.challenge, code: codeFor(start.body.secret) }).expect(200);
+      expect(user.twoFactorSecret).toMatch(/^v1:/);
+      expect((await get('/auth/two-factor').expect(200)).body.enabled).toBe(true);
+      expect(alerts()).toEqual([expect.stringContaining(`${EMAIL} set up Google Authenticator`)]);
+
+      // Mulai dari sini login meminta kode.
+      expect((await login().expect(200)).body).toEqual({ twoFactor: 'verify', challenge: expect.any(String) });
+      await post('/auth/two-factor/setup', {}).expect(400);
+    });
+
+    it("refuses another account's setup challenge and an expired or forged one", async () => {
+      const other = new JwtService({ secret: 'session-secret:login-challenge' }).sign({
+        sub: '99', email: 'other@example.com', tv: 0, purpose: 'setup', secret: 'A'.repeat(32),
+      });
+      await post('/auth/two-factor/enable', { challenge: other, code: totpAt('A'.repeat(32), currentStep()) }).expect(400);
+      const forged = new JwtService({ secret: 'wrong' }).sign({ sub: '6', email: EMAIL, tv: 3, purpose: 'setup', secret: 'A'.repeat(32) });
+      await post('/auth/two-factor/enable', { challenge: forged, code: totpAt('A'.repeat(32), currentStep()) }).expect(400);
+      expect(user.twoFactorEnabledAt).toBeNull();
+    });
+
+    it('turns 2FA off only with a valid code, and alerts', async () => {
+      const start = await post('/auth/two-factor/setup', {}).expect(200);
+      await post('/auth/two-factor/enable', { challenge: start.body.challenge, code: codeFor(start.body.secret) }).expect(200);
+
+      // Kode yang sama sudah terpakai saat mengaktifkan.
+      await post('/auth/two-factor/disable', { code: codeFor(start.body.secret) }).expect(400);
+      expect(user.twoFactorEnabledAt).toBeInstanceOf(Date);
+
+      await post('/auth/two-factor/disable', { code: codeFor(start.body.secret, 1) }).expect(200);
+      expect(user.twoFactorSecret).toBeNull();
+      expect(user.twoFactorEnabledAt).toBeNull();
+      expect(recorded.map((r) => r.event)).toEqual(['TWO_FACTOR_ENABLED', 'LOGIN_FAILED', 'TWO_FACTOR_DISABLED']);
+      expect(alerts().at(-1)).toContain(`${EMAIL} turned off two-factor sign-in`);
+      expect((await login().expect(200)).body.user).toEqual({ id: '6', email: EMAIL });
+    });
+
+    it('cannot be turned off while it is required for everyone', async () => {
+      await app.close();
+      env = { TWO_FACTOR_REQUIRED: '1' };
+      await start();
+      await enroll();
+      const res = await post('/auth/two-factor/disable', { code: '123456' }).expect(400);
+      expect(res.body.message).toContain('required for every account');
+      expect(user.twoFactorEnabledAt).toBeInstanceOf(Date);
+    });
   });
 });

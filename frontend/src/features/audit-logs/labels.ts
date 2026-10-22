@@ -66,7 +66,7 @@ export const COLUMN_LABELS: Record<string, Record<string, string>> = {
   users: {
     name: "Name", email: "Email", phone: "Phone", location: "Location", status: "Status",
     role_id: "Role", password: "Password", email_verified_at: "Email Verified",
-    two_factor_secret: "Authenticator Key", two_factor_enabled_at: "Two-Factor Set Up",
+    two_factor_secret: "Authenticator Key", two_factor_enabled_at: "Two-Factor On Since",
   },
   // `secret` selalu tercatat sebagai [redacted] (trigger audit_row_change_redacted).
   notification_channels: { name: "Name", type: "Type", hint: "Destination", is_active: "Active", secret: "Credentials" },
@@ -183,5 +183,6 @@ export const ACTION_LABELS: Record<string, string> = {
   LOGOUT: "Signed out",
   LOGIN_FAILED: "Failed sign-in",
   LOGIN_LOCKED: "Sign-in locked",
-  TWO_FACTOR_ENABLED: "2FA set up",
+  TWO_FACTOR_ENABLED: "2FA turned on",
+  TWO_FACTOR_DISABLED: "2FA turned off",
 };

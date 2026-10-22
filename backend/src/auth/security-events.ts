@@ -16,6 +16,8 @@ export type SecurityEvent =
   | 'login_suspicious'
   /** Sebuah akun mendaftarkan Google Authenticator. */
   | 'two_factor_enabled'
+  /** User mematikan Google Authenticator di akunnya sendiri. */
+  | 'two_factor_disabled'
   /** Admin menghapus pendaftaran Google Authenticator sebuah akun. */
   | 'two_factor_reset';
 
@@ -26,6 +28,7 @@ const ALERT_EVENTS: SecurityEvent[] = [
   'login_inactive',
   'login_suspicious',
   'two_factor_enabled',
+  'two_factor_disabled',
   'two_factor_reset',
 ];
 /** Alert yang sama (event + email/IP) tidak dikirim ulang dalam jendela ini. */
@@ -89,7 +92,9 @@ function alertText(entry: { event: SecurityEvent; ip: string; email: string; [ke
     case 'two_factor_enabled':
       return `${entry.email} set up Google Authenticator from IP ${entry.ip}${agent}. If this was not them, reset its two-factor and password.`;
     case 'two_factor_reset':
-      return `two-factor for ${entry.email} was reset by ${entry.by} (IP ${entry.ip}). The next sign-in will ask to set it up again.`;
+      return `two-factor for ${entry.email} was turned off by ${entry.by} (IP ${entry.ip}). The account signs in with its password only until it is set up again.`;
+    case 'two_factor_disabled':
+      return `${entry.email} turned off two-factor sign-in from IP ${entry.ip}${agent}. If this was not them, suspend the account and reset its password.`;
     default:
       return `${entry.event} for ${entry.email} from IP ${entry.ip}.`;
   }

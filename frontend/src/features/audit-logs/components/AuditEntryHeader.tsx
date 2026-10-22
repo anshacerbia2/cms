@@ -12,6 +12,7 @@ const ACTION_STYLE: Record<string, string> = {
   LOGIN_FAILED: "bg-rose-50 text-rose-700 border-rose-200",
   LOGIN_LOCKED: "bg-rose-600 text-white border-rose-600",
   TWO_FACTOR_ENABLED: "bg-violet-50 text-violet-700 border-violet-200",
+  TWO_FACTOR_DISABLED: "bg-amber-50 text-amber-700 border-amber-200",
 };
 
 export function formatAuditTime(iso: string) {

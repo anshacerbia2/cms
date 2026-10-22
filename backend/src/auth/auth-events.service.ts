@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { auditContext } from '../common/audit/audit-context';
 
 /** Kejadian login yang dicatat. `auth` adalah nama "tabel"-nya di activity log. */
-export type AuthEvent = 'LOGIN' | 'LOGOUT' | 'LOGIN_FAILED' | 'LOGIN_LOCKED' | 'TWO_FACTOR_ENABLED';
+export type AuthEvent = 'LOGIN' | 'LOGOUT' | 'LOGIN_FAILED' | 'LOGIN_LOCKED' | 'TWO_FACTOR_ENABLED' | 'TWO_FACTOR_DISABLED';
 export const AUTH_EVENTS_TABLE = 'auth';
 
 /**

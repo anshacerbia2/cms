@@ -47,7 +47,7 @@ export interface User {
   phone?: string | null;
   location?: string | null;
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
-  /** Kapan Google Authenticator didaftarkan; kosong = belum (diminta saat login berikutnya). */
+  /** Kapan Google Authenticator diaktifkan; kosong = 2FA mati (pilihan tiap user). */
   twoFactorEnabledAt?: string | null;
   roleId?: string | null;
   role?: Role | null;

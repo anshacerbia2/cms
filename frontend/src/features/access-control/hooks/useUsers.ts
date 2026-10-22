@@ -42,7 +42,7 @@ export const useUsers = (params: AccessQueryParams = {}) => {
     },
   });
 
-  // HP hilang atau ganti: login berikutnya user diminta mendaftar ulang.
+  // HP hilang atau ganti: 2FA user itu dimatikan; dia bisa menyalakannya lagi dari menu profil.
   const resetTwoFactorMutation = useMutation({
     mutationFn: async (id: string) => {
       const { data } = await api.delete(`/users/${id}/two-factor`);

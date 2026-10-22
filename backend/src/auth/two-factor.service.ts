@@ -30,13 +30,13 @@ type ChallengeUser = { id: bigint | string; email: string; tokenVersion?: number
  * Verifikasi dua langkah dengan Google Authenticator (TOTP) - insiden 19 Okt
  * 2026: password finance@ bocor dan dipakai dari luar.
  *
- * Alurnya:
+ * Pilihan tiap user: diaktifkan sendiri dari menu profil (Two-Factor
+ * Sign-In), lewat /auth/two-factor/*. Untuk akun yang mengaktifkannya:
  *   1. POST /auth/login dengan password yang benar tidak langsung memberi sesi.
- *      Server menjawab `twoFactor: 'verify'` (sudah terdaftar) atau
- *      `twoFactor: 'setup'` (belum; ikut QR code untuk discan), plus
- *      `challenge` yang berlaku 5 menit.
- *   2. POST /auth/login/verify atau /auth/login/setup dengan challenge dan
- *      kode 6 digit. Baru di sini cookie sesi dipasang.
+ *      Server menjawab `twoFactor: 'verify'` plus `challenge` yang berlaku
+ *      5 menit.
+ *   2. POST /auth/login/verify dengan challenge dan kode 6 digit. Baru di sini
+ *      cookie sesi dipasang.
  *
  * Kode yang salah dihitung sebagai login gagal (10 kali = akun terkunci 15
  * menit, ada alert), dan kode yang sudah dipakai tidak bisa dipakai lagi.
@@ -44,8 +44,9 @@ type ChallengeUser = { id: bigint | string; email: string; tokenVersion?: number
  * Kunci rahasianya disimpan terenkripsi dengan NOTIFICATION_SECRET_KEY, kunci
  * yang sama dengan kredensial channel notifikasi.
  *
- * TWO_FACTOR_REQUIRED=0 mematikan kewajiban mendaftar (dev lokal, tes e2e);
- * akun yang sudah mendaftar tetap diminta kodenya.
+ * TWO_FACTOR_REQUIRED=1 mewajibkannya untuk semua akun: yang belum mendaftar
+ * dijawab `twoFactor: 'setup'` (ikut QR code) dan mendaftar lewat
+ * /auth/login/setup sebelum mendapat sesi. Bawaannya tidak wajib.
  */
 @Injectable()
 export class TwoFactorService {
@@ -59,7 +60,7 @@ export class TwoFactorService {
   ) {
     // Kunci terpisah dari token sesi: challenge tidak akan pernah lolos sebagai sesi.
     this.challengeSecret = `${config.getOrThrow<string>('JWT_SECRET')}:login-challenge`;
-    this.required = !['0', 'false', 'off'].includes(String(config.get('TWO_FACTOR_REQUIRED', '1')).toLowerCase());
+    this.required = ['1', 'true', 'on'].includes(String(config.get('TWO_FACTOR_REQUIRED', '0')).toLowerCase());
   }
 
   isEnabled(user: { twoFactorEnabledAt?: Date | null; twoFactorSecret?: string | null }) {
@@ -132,7 +133,7 @@ export class TwoFactorService {
     return true;
   }
 
-  /** Admin menghapus pendaftaran (HP hilang/ganti): login berikutnya diminta mendaftar ulang. */
+  /** Mematikan 2FA: oleh user sendiri, atau oleh admin kalau HP-nya hilang/ganti. */
   async reset(userId: bigint) {
     await this.prisma.user.update({
       where: { id: userId },
