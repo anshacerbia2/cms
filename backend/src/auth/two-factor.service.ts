@@ -1,9 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
-import { decryptSecret, encryptSecret } from '../notification-channels/notification-secret';
+import { decryptSecret, encryptSecret, MissingSecretKeyError } from '../notification-channels/notification-secret';
 import { generateTotpSecret, otpauthUrl, verifyTotp } from './totp';
 
 /** Nama yang tampil di aplikasi authenticator. */
@@ -41,8 +41,9 @@ type ChallengeUser = { id: bigint | string; email: string; tokenVersion?: number
  * Kode yang salah dihitung sebagai login gagal (10 kali = akun terkunci 15
  * menit, ada alert), dan kode yang sudah dipakai tidak bisa dipakai lagi.
  *
- * Kunci rahasianya disimpan terenkripsi dengan NOTIFICATION_SECRET_KEY, kunci
- * yang sama dengan kredensial channel notifikasi.
+ * Kunci rahasianya disimpan terenkripsi dengan TWO_FACTOR_SECRET_KEY di .env -
+ * kunci sendiri, terpisah dari kunci channel notifikasi. Tanpa kunci itu 2FA
+ * tidak bisa dinyalakan, dan akun yang sudah menyalakannya tidak bisa login.
  *
  * TWO_FACTOR_REQUIRED=1 mewajibkannya untuk semua akun: yang belum mendaftar
  * dijawab `twoFactor: 'setup'` (ikut QR code) dan mendaftar lewat
@@ -90,6 +91,8 @@ export class TwoFactorService {
 
   /** Kunci baru untuk didaftarkan, lengkap dengan QR code-nya (SVG data URL). */
   async newEnrollment(email: string) {
+    // Gagal di sini, sebelum user menscan QR yang tidak akan bisa disimpan.
+    this.seal('check');
     const secret = generateTotpSecret();
     const url = otpauthUrl(ISSUER, email, secret);
     const svg = await QRCode.toString(url, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
@@ -106,7 +109,7 @@ export class TwoFactorService {
       select: { twoFactorSecret: true, twoFactorLastStep: true },
     });
     if (!user?.twoFactorSecret) return false;
-    const { secret } = decryptSecret<{ secret: string }>(user.twoFactorSecret);
+    const { secret } = this.unseal(user.twoFactorSecret);
     const step = verifyTotp(secret, code, user.twoFactorLastStep);
     if (step == null) return false;
     // Atomik: dua request dengan kode yang sama pada saat bersamaan - hanya satu yang lolos.
@@ -125,7 +128,7 @@ export class TwoFactorService {
     await this.prisma.user.update({
       where: { id: userId },
       data: {
-        twoFactorSecret: encryptSecret({ secret }),
+        twoFactorSecret: this.seal(secret),
         twoFactorEnabledAt: new Date(),
         twoFactorLastStep: step,
       },
@@ -139,5 +142,31 @@ export class TwoFactorService {
       where: { id: userId },
       data: { twoFactorSecret: null, twoFactorEnabledAt: null, twoFactorLastStep: null },
     });
+  }
+
+  private seal(secret: string): string {
+    try {
+      return encryptSecret({ secret }, 'TWO_FACTOR_SECRET_KEY');
+    } catch (err) {
+      throw this.unavailable(err);
+    }
+  }
+
+  private unseal(stored: string): { secret: string } {
+    try {
+      return decryptSecret<{ secret: string }>(stored, 'TWO_FACTOR_SECRET_KEY');
+    } catch (err) {
+      throw this.unavailable(err);
+    }
+  }
+
+  /** Kunci di .env hilang/salah: jelaskan ke user, catat penyebabnya di log lewat filter. */
+  private unavailable(err: unknown) {
+    if (err instanceof MissingSecretKeyError) {
+      return new ServiceUnavailableException('Two-factor sign-in is not available right now. Contact your administrator.', {
+        cause: err,
+      });
+    }
+    return err;
   }
 }

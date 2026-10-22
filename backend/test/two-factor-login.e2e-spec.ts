@@ -26,6 +26,7 @@ import { UsersService } from '../src/users/users.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { NotificationChannelsService } from '../src/notification-channels/notification-channels.service';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
+import { decryptSecret } from '../src/notification-channels/notification-secret';
 import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
 
 const EMAIL = 'finance@example.com';
@@ -117,7 +118,7 @@ describe('Two-factor sign-in (Google Authenticator)', () => {
   }
 
   beforeEach(async () => {
-    process.env.NOTIFICATION_SECRET_KEY = Buffer.alloc(32, 9).toString('base64');
+    process.env.TWO_FACTOR_SECRET_KEY = Buffer.alloc(32, 9).toString('base64');
     // Mendaftar saat login hanya terjadi kalau diwajibkan; suite ini mulai dari situ.
     env = { TWO_FACTOR_REQUIRED: '1' };
     user = { id: 6n, email: EMAIL, status: 'ACTIVE', tokenVersion: 3, twoFactorSecret: null, twoFactorEnabledAt: null, twoFactorLastStep: null };
@@ -131,7 +132,7 @@ describe('Two-factor sign-in (Google Authenticator)', () => {
   afterEach(async () => {
     await app.close();
     jest.restoreAllMocks();
-    delete process.env.NOTIFICATION_SECRET_KEY;
+    delete process.env.TWO_FACTOR_SECRET_KEY;
   });
 
   /** Mendaftar lewat langkah setup; mengembalikan kunci rahasianya. */
@@ -309,6 +310,24 @@ describe('Two-factor sign-in (Google Authenticator)', () => {
       expect(recorded.map((r) => r.event)).toEqual(['TWO_FACTOR_ENABLED', 'LOGIN_FAILED', 'TWO_FACTOR_DISABLED']);
       expect(alerts().at(-1)).toContain(`${EMAIL} turned off two-factor sign-in`);
       expect((await login().expect(200)).body.user).toEqual({ id: '6', email: EMAIL });
+    });
+
+    it('uses its own key, TWO_FACTOR_SECRET_KEY, never the notification channels key', async () => {
+      process.env.NOTIFICATION_SECRET_KEY = Buffer.alloc(32, 1).toString('base64');
+      const start = await post('/auth/two-factor/setup', {}).expect(200);
+      await post('/auth/two-factor/enable', { challenge: start.body.challenge, code: codeFor(start.body.secret) }).expect(200);
+      expect(decryptSecret(user.twoFactorSecret, 'TWO_FACTOR_SECRET_KEY')).toEqual({ secret: start.body.secret });
+      expect(() => decryptSecret(user.twoFactorSecret, 'NOTIFICATION_SECRET_KEY')).toThrow();
+      delete process.env.NOTIFICATION_SECRET_KEY;
+    });
+
+    it('without TWO_FACTOR_SECRET_KEY it cannot be turned on, and says so instead of showing a QR', async () => {
+      delete process.env.TWO_FACTOR_SECRET_KEY;
+      process.env.NOTIFICATION_SECRET_KEY = Buffer.alloc(32, 1).toString('base64');
+      const res = await post('/auth/two-factor/setup', {}).expect(503);
+      expect(res.body.message).toBe('Two-factor sign-in is not available right now. Contact your administrator.');
+      expect(res.body.qrCode).toBeUndefined();
+      delete process.env.NOTIFICATION_SECRET_KEY;
     });
 
     it('cannot be turned off while it is required for everyone', async () => {
