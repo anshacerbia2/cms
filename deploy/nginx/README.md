@@ -8,6 +8,7 @@ the live file plus the server-side fixes from the 2026-09-30 pentest:
 | F-01 | `limit_req` on `/api/auth/login` (10/min per IP, burst 5, 429); `X-Real-IP` / `X-Forwarded-For` passed to the API so its own per-IP limit sees real clients |
 | F-03 | Content-Security-Policy, enforcing; violations reported to `/api/csp-report` and logged by the API |
 | F-08 | `server_tokens off`; `Referrer-Policy`, `Permissions-Policy`; `X-XSS-Protection: 0` |
+| Incident 2026-10-19 | `/api/` (login included) answers 403 to any client whose User-Agent does not start with `Mozilla/5.0` - curl, wget, Python, Go, empty. The login location is a prefix match so the two-factor step (`/api/auth/login/verify`, `/setup`) shares its rate limit |
 
 The file is not installed by any deploy step. To install it on the server:
 
@@ -16,6 +17,8 @@ sudo cp /etc/nginx/sites-available/pcmi-admin /etc/nginx/sites-available/pcmi-ad
 sudo cp deploy/nginx/pcmi-admin.conf /etc/nginx/sites-available/pcmi-admin
 sudo nginx -t && sudo systemctl reload nginx
 curl -sI https://pcmi-admin.online/ | grep -iE "server|content-security|referrer|permissions|x-xss"
+# expect 403: scripts are refused on the API
+curl -s -o /dev/null -w '%{http_code}\n' https://pcmi-admin.online/api/auth/profile
 ```
 
 `nginx -t` fails safely: nothing is reloaded until the config parses.

@@ -11,6 +11,8 @@ import { SessionService } from './session.service';
 import { AuthEventsService } from './auth-events.service';
 import { SecurityEvents } from './security-events';
 import { NotificationChannelsModule } from '../notification-channels/notification-channels.module';
+import { TwoFactorService } from './two-factor.service';
+import { TwoFactorAdminController } from './two-factor-admin.controller';
 
 @Module({
   imports: [
@@ -26,8 +28,16 @@ import { NotificationChannelsModule } from '../notification-channels/notificatio
       }),
     }),
   ],
-  providers: [AuthService, JwtStrategy, LoginRateLimiter, SecurityEvents, SessionService, AuthEventsService],
-  controllers: [AuthController],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    LoginRateLimiter,
+    SecurityEvents,
+    SessionService,
+    AuthEventsService,
+    TwoFactorService,
+  ],
+  controllers: [AuthController, TwoFactorAdminController],
   exports: [AuthService],
 })
 export class AuthModule {}

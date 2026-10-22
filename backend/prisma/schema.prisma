@@ -65,6 +65,13 @@ model User {
   /// ditolak kalau sudah tidak sama - token lama mati seketika, tidak menunggu
   /// kedaluwarsa (pentest F-04). Token tanpa `tv` dianggap 0.
   tokenVersion    Int        @default(0) @map("token_version")
+  /// Verifikasi dua langkah (Google Authenticator) - lihat auth/two-factor.service.ts.
+  /// Kunci rahasia TOTP, terenkripsi; kosong = belum mendaftar.
+  twoFactorSecret String?    @map("two_factor_secret") @db.Text
+  /// Kapan 2FA diaktifkan.
+  twoFactorEnabledAt DateTime? @map("two_factor_enabled_at")
+  /// Langkah waktu kode terakhir yang diterima - kode yang sama tidak bisa dipakai ulang.
+  twoFactorLastStep Int?     @map("two_factor_last_step")
   roleId          BigInt?    @map("role_id")
   rememberToken   String?    @map("remember_token") @db.VarChar(100)
   createdAt       DateTime   @default(now()) @map("created_at")

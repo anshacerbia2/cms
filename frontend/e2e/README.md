@@ -16,7 +16,8 @@ npx prisma generate
 npx prisma migrate deploy
 npx prisma db seed          # roles, permissions, menus, sample master data
 
-# 2. api on :3000
+# 2. api on :3000 (leave TWO_FACTOR_REQUIRED unset or 0 - the suite cannot
+#    type Google Authenticator codes)
 pnpm start:dev
 
 # 3. the UI starts itself when the suite runs, but you can have it
@@ -114,7 +115,7 @@ UPDATE internal_accounts SET is_non_vat_settlement = false;
 ## When sign-in fails
 
 `auth.setup.ts` reports what went wrong rather than timing out silently, and the
-message names the three causes worth checking. The most common by far:
+message names the causes worth checking. The most common by far:
 
 **The app cannot reach the API.** Copy `.env.example` to `.env` and restart
 `pnpm dev` — Vite reads it only at startup, so editing it while the dev server
@@ -131,6 +132,11 @@ which fails on Windows, because the API binds `127.0.0.1` (IPv4 only, from the
 loopback fix) while `localhost` resolves to `::1` first. Nothing is listening
 there, the proxy connects to nothing, and the page sits on `/login` with no
 visible error. Naming `127.0.0.1` explicitly removes the guess.
+
+**The API asks for a two-factor code.** The account has two-factor sign-in
+turned on (or `TWO_FACTOR_REQUIRED=1` is set in `backend/.env`). Turn it off
+from the profile menu, or clear it: `UPDATE users SET two_factor_secret = NULL,
+two_factor_enabled_at = NULL WHERE email = 'sys@dmin.com';`.
 
 The other two: the database has no seeded users (`npx prisma db seed` in
 `backend/`), or the password differs from what `auth.seeder.ts` seeds. The
